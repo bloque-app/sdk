@@ -4,6 +4,7 @@
   "commit": false,
   "linked": [
     [
+      "@bloque/sdk-core",
       "@bloque/sdk"
     ]
   ],
