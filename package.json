@@ -13,10 +13,10 @@
     "version": "changeset version",
     "publish": "changeset publish"
   },
-  "homepage": "git+https://github.com/bloque-app/payments.git#readme",
+  "homepage": "git+https://github.com/bloque-app/sdk.git#readme",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/bloque-app/payments.git"
+    "url": "git+https://github.com/bloque-app/sdk.git"
   },
   "devDependencies": {
     "@biomejs/biome": "catalog:",
