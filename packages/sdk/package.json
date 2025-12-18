@@ -1,0 +1,53 @@
+{
+  "name": "@bloque/sdk",
+  "version": "0.0.2",
+  "description": "Official Bloque SDK",
+  "type": "module",
+  "keywords": [
+    "bloque",
+    "sdk",
+    "api"
+  ],
+  "license": "MIT",
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
+  "homepage": "git+https://github.com/bloque-app/sdk.git#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/bloque-app/sdk.git",
+    "directory": "packages/sdk"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "main": "./dist/index.cjs",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "build": "rslib build",
+    "dev": "rslib build --watch",
+    "clean": "rm -rf node_modules && rm -rf dist",
+    "check": "biome check --write",
+    "typecheck": "tsgo --noEmit"
+  },
+  "dependencies": {
+    "@bloque/sdk-core": "workspace:*"
+  },
+  "devDependencies": {
+    "@rslib/core": "catalog:",
+    "@types/node": "catalog:",
+    "@typescript/native-preview": "catalog:",
+    "typescript": "catalog:"
+  }
+}

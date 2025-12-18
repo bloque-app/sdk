@@ -1,0 +1,41 @@
+{
+  "name": "payments",
+  "private": true,
+  "author": "Nestor Cortina <nexckycort@gmail.com>",
+  "license": "MIT",
+  "scripts": {
+    "postinstall": "lefthook install",
+    "build:foundation": "bun --filter @bloque/payments-core build && bun --filter @bloque/payments build",
+    "build:ui": "bun --filter @bloque/payments-elements build && bun --filter @bloque/payments-react build",
+    "build:packages": "bun run build:foundation && bun run build:ui",
+    "build": "bun run build:packages",
+    "clean": "bun run -r --parallel --filter='./packages/*' clean",
+    "changeset": "changeset",
+    "version": "changeset version",
+    "publish": "changeset publish"
+  },
+  "homepage": "git+https://github.com/bloque-app/payments.git#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/bloque-app/payments.git"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "catalog:",
+    "@changesets/cli": "2.29.8",
+    "lefthook": "^2.0.12",
+    "typescript": "catalog:"
+  },
+  "workspaces": {
+    "packages": [
+      "packages/*"
+    ],
+    "catalog": {
+      "@biomejs/biome": "^2.3.9",
+      "@rsbuild/core": "~1.6.14",
+      "@rslib/core": "^0.18.4",
+      "@types/node": "^24.10.1",
+      "@typescript/native-preview": "latest",
+      "typescript": "^5.9.3"
+    }
+  }
+}
