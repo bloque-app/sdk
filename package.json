@@ -5,9 +5,8 @@
   "license": "MIT",
   "scripts": {
     "postinstall": "lefthook install",
-    "build:foundation": "bun --filter @bloque/payments-core build && bun --filter @bloque/payments build",
-    "build:ui": "bun --filter @bloque/payments-elements build && bun --filter @bloque/payments-react build",
-    "build:packages": "bun run build:foundation && bun run build:ui",
+    "build:foundation": "bun --filter @bloque/sdk-core build && bun --filter @bloque/sdk build",
+    "build:packages": "bun run build:foundation",
     "build": "bun run build:packages",
     "clean": "bun run -r --parallel --filter='./packages/*' clean",
     "changeset": "changeset",
