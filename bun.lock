@@ -3,7 +3,7 @@
   "configVersion": 1,
   "workspaces": {
     "": {
-      "name": "bloque-payments",
+      "name": "sdk",
       "devDependencies": {
         "@biomejs/biome": "catalog:",
         "@changesets/cli": "2.29.8",
@@ -13,7 +13,7 @@
     },
     "packages/core": {
       "name": "@bloque/sdk-core",
-      "version": "0.0.1",
+      "version": "0.0.2",
       "devDependencies": {
         "@rslib/core": "catalog:",
         "@types/node": "catalog:",
@@ -23,7 +23,7 @@
     },
     "packages/orgs": {
       "name": "@bloque/sdk-orgs",
-      "version": "0.0.1",
+      "version": "0.0.2",
       "dependencies": {
         "@bloque/sdk-core": "workspace:*",
       },
@@ -36,7 +36,7 @@
     },
     "packages/sdk": {
       "name": "@bloque/sdk",
-      "version": "0.0.1",
+      "version": "0.0.2",
       "dependencies": {
         "@bloque/sdk-core": "workspace:*",
         "@bloque/sdk-orgs": "workspace:*",
