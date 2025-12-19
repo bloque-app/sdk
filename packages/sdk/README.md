@@ -1,46 +1,56 @@
-# Bloque Payments SDK
+# Bloque SDK
 
-The official TypeScript/JavaScript SDK for integrating [Bloque](https://www.bloque.app) payments into your applications.
+The official TypeScript/JavaScript SDK for integrating [Bloque](https://www.bloque.app) into your applications.
 
 ## Features
 
 - **TypeScript First**: Built with TypeScript for complete type safety
-- **Simple API**: Intuitive interface for creating and managing checkouts
-- **Multiple Payment Methods**: Support for cards, PSE, and cash payments
+- **Simple API**: Intuitive interface for managing organizations
 - **Fully Async**: Promise-based API for modern JavaScript workflows
 - **Lightweight**: Minimal dependencies for optimal bundle size
+- **Modular**: Import only what you need with tree-shakeable exports
 
 ## Installation
 
 ```bash
-bun add @bloque/payments
+bun add @bloque/sdk
 ```
 
 ## Quick Start
 
 ```typescript
-import { Bloque, type PaymentSubmitPayload } from '@bloque/payments';
+import { SDK } from '@bloque/sdk';
+import type { CreateOrgParams } from '@bloque/sdk/orgs';
 
 // Initialize the SDK (server-side only)
-const bloque = new Bloque({
+const bloque = new SDK({
   apiKey: process.env.BLOQUE_API_KEY!,
-  server: 'production', // or 'sandbox' for testing
+  mode: 'production', // or 'sandbox' for testing
 });
 
-app.post('/api/payments', async (req, res) => {
-  try {
-    const payload: PaymentSubmitPayload = req.body;
+// Create an organization
+async function createOrganization() {
+  const params: CreateOrgParams = {
+    org_type: 'business',
+    profile: {
+      legal_name: 'Acme Corporation',
+      tax_id: '123456789',
+      incorporation_date: '2020-01-01',
+      business_type: 'llc',
+      incorporation_country_code: 'US',
+      incorporation_state: 'CA',
+      address_line1: '123 Main St',
+      postal_code: '12345',
+      city: 'San Francisco',
+    },
+    metadata: {
+      source: 'api',
+    },
+  };
 
-    // Create payment using SDK
-    const payment = await bloque.payments.create({
-      payment: payload,
-    });
-
-    res.json({ success: true, payment });
-  } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
-  }
-});
+  const organization = await bloque.orgs.create(params);
+  console.log('Organization created:', organization);
+}
 ```
 
 ## Configuration
@@ -48,366 +58,236 @@ app.post('/api/payments', async (req, res) => {
 ### Initialize the SDK
 
 ```typescript
-import { Bloque } from '@bloque/payments';
+import { SDK } from '@bloque/sdk';
+import type { BloqueConfig } from '@bloque/sdk';
 
-const bloque = new Bloque({
+const bloque = new SDK({
   apiKey: 'your-api-key-here',    // Required: Your Bloque API key
-  server: 'sandbox',               // Required: 'sandbox' or 'production'
+  mode: 'sandbox',                 // Required: 'sandbox' or 'production'
 });
 ```
 
-### Environment Options
+### Configuration Options
 
-- **`sandbox`**: For testing and development
-- **`production`**: For live payments
+- **`apiKey`** (string, required): Your Bloque API key
+- **`mode`** ('sandbox' | 'production', required): Environment mode
+  - `sandbox`: For testing and development
+  - `production`: For live operations
 
 ## API Reference
 
-### Payments
+### Organizations
 
-The payments resource allows you to create payments for existing checkout sessions.
+The organizations resource allows you to create and manage organizations in the Bloque platform.
 
-#### Create a Payment
-
-```typescript
-const payment = await bloque.payments.create({
-  checkoutId: string;        // Required: Checkout ID from an existing checkout
-  payment: {
-    type: 'card' | 'pse' | 'cash',
-    data: {
-      // Payment method specific data
-    }
-  }
-});
-```
-
-**Payment Types**:
-
-**Card Payment**:
-```typescript
-{
-  type: 'card',
-  data: {
-    cardNumber: string;        // 16-digit card number
-    cardholderName: string;    // Name on the card
-    expiryMonth: string;       // MM format
-    expiryYear: string;        // YY or YYYY format
-    cvv: string;               // 3-4 digit CVV
-    email?: string;            // Optional customer email
-  }
-}
-```
-
-**PSE Payment** (Colombian online banking):
-```typescript
-{
-  type: 'pse',
-  data: {
-    personType: 'natural' | 'juridica';  // Person type
-    documentType: string;                 // Document type (e.g., 'CC', 'NIT')
-    documentNumber: string;               // Document number
-    bankCode: string;                     // Bank code
-    email: string;                        // Customer email
-  }
-}
-```
-
-**Cash Payment**:
-```typescript
-{
-  type: 'cash',
-  data: {
-    email: string;            // Customer email
-    documentType: string;     // Document type
-    documentNumber: string;   // Document number
-    fullName: string;         // Full name
-  }
-}
-```
-
-**Payment Response**:
-```typescript
-{
-  id: string;                       // Payment ID
-  object: 'payment';                // Object type
-  status: 'pending' | 'processing' | 'completed' | 'failed';
-  checkout: Checkout;               // Associated checkout
-  payment_method: 'card' | 'pse' | 'cash';
-  amount: number;                   // Payment amount
-  currency: string;                 // Currency
-  created_at: string;               // Creation timestamp
-  updated_at: string;               // Last update timestamp
-}
-```
-
-### Checkout
-
-The checkout resource allows you to create payment sessions.
-
-#### Create a Checkout
+#### Create an Organization
 
 ```typescript
-const checkout = await bloque.checkout.create({
-  name: string;              // Required: Name of the checkout
-  description?: string;      // Optional: Description
-  image_url?: string;        // Optional: Product/checkout image URL
-  items: CheckoutItem[];     // Required: Items to be purchased
-  success_url: string;       // Required: Redirect URL after success
-  cancel_url: string;        // Required: Redirect URL after cancellation
-  metadata?: Record<string, string | number | boolean>; // Optional: Custom metadata
-  expires_at?: string;       // Optional: Expiration date (ISO 8601)
-});
-```
-
-**Checkout Item**:
-```typescript
-{
-  name: string;        // Item name
-  amount: number;      // Price in smallest currency unit (e.g., cents)
-  quantity: number;    // Quantity
-  image_url?: string;  // Item image URL
-}
-```
-
-#### Checkout Response
-
-```typescript
-{
-  id: string;                // Unique checkout identifier
-  object: 'checkout';        // Object type
-  url: string;               // Public payment URL for the customer
-  status: string;            // Current checkout status
-  amount_total: number;      // Total amount
-  amount_subtotal: number;   // Subtotal amount
-  currency: 'USD';           // Currency
-  items: CheckoutItem[];     // Items in the checkout
-  metadata?: Metadata;       // Custom metadata
-  created_at: string;        // Creation timestamp (ISO 8601)
-  updated_at: string;        // Last update timestamp (ISO 8601)
-  expires_at: string;        // Expiration timestamp (ISO 8601)
-}
-```
-
-#### Retrieve a Checkout
-
-Retrieve the details of an existing checkout by its ID.
-
-```typescript
-const checkout = await bloque.checkout.retrieve('checkout_id_here');
+const organization = await bloque.orgs.create(params);
 ```
 
 **Parameters**:
-- `checkoutId` (string): The ID of the checkout to retrieve
-
-**Returns**: A `Checkout` object with all the checkout details.
-
-#### Cancel a Checkout
-
-Cancel an existing checkout that hasn't been completed yet.
 
 ```typescript
-const checkout = await bloque.checkout.cancel('checkout_id_here');
+interface CreateOrgParams {
+  org_type: 'business' | 'individual';  // Organization type
+  profile: OrgProfile;                   // Organization profile details
+  metadata?: Record<string, unknown>;    // Optional custom metadata
+}
+
+interface OrgProfile {
+  legal_name: string;                    // Legal name of the organization
+  tax_id: string;                        // Tax ID number
+  incorporation_date: string;            // Date of incorporation (YYYY-MM-DD)
+  business_type: string;                 // Type of business (e.g., 'llc', 'corporation')
+  incorporation_country_code: string;    // Country code (ISO 3166-1 alpha-2)
+  incorporation_state?: string;          // State/province (optional)
+  address_line1: string;                 // Primary address line
+  address_line2?: string;                // Secondary address line (optional)
+  postal_code: string;                   // Postal/ZIP code
+  city: string;                          // City
+  logo_url?: string;                     // Logo URL (optional)
+  places?: Place[];                      // Additional places/locations (optional)
+}
+
+interface Place {
+  country_code: string;                  // Country code
+  state: string;                         // State/province
+  address_line1: string;                 // Address line 1
+  postal_code: string;                   // Postal code
+  city: string;                          // City
+  is_primary: boolean;                   // Whether this is the primary place
+}
 ```
 
-**Parameters**:
-- `checkoutId` (string): The ID of the checkout to cancel
+**Response**:
 
-**Returns**: A `Checkout` object with updated status reflecting the cancellation.
+```typescript
+interface Organization {
+  urn: string;                           // Unique resource name
+  org_type: 'business' | 'individual';   // Organization type
+  profile: OrgProfile;                   // Organization profile
+  metadata?: Record<string, unknown>;    // Custom metadata
+  status: OrgStatus;                     // Organization status
+}
+
+type OrgStatus =
+  | 'awaiting_compliance_verification'
+  | 'active'
+  | 'suspended'
+  | 'closed';
+```
 
 ## Examples
 
-### Processing Payments
+### Creating a Business Organization
 
 ```typescript
-import { Bloque, type PaymentSubmitPayload } from '@bloque/payments';
+import { SDK } from '@bloque/sdk';
+import type { CreateOrgParams } from '@bloque/sdk/orgs';
 
 // Initialize SDK with your API key
-const bloque = new Bloque({
+const bloque = new SDK({
   apiKey: process.env.BLOQUE_API_KEY!,
-  server: 'production',
+  mode: 'production',
 });
 
-// API endpoint handler
-app.post('/api/payments', async (req, res) => {
-  try {
-    // Receive payment data from frontend
-    const payload: PaymentSubmitPayload = req.body;
+// Create a business organization
+const params: CreateOrgParams = {
+  org_type: 'business',
+  profile: {
+    legal_name: 'Acme Corporation',
+    tax_id: '12-3456789',
+    incorporation_date: '2020-01-15',
+    business_type: 'llc',
+    incorporation_country_code: 'US',
+    incorporation_state: 'CA',
+    address_line1: '123 Market Street',
+    address_line2: 'Suite 400',
+    postal_code: '94103',
+    city: 'San Francisco',
+    logo_url: 'https://example.com/logo.png',
+  },
+  metadata: {
+    source: 'web_app',
+    campaign: 'q1_2024',
+  },
+};
 
-    // Create payment using SDK
-    const payment = await bloque.payments.create({
-      payment: payload,
-    });
-
-    res.json({ success: true, payment });
-  } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
-  }
-});
-```
-
-### Payment Methods Examples
-
-#### Card Payment
-
-```typescript
-// Receive payload from frontend
-const cardPayment: PaymentSubmitPayload = req.body;
-// Example payload:
-// {
-//   type: 'card',
-//   data: {
-//     cardNumber: '4111111111111111',
-//     cardholderName: 'John Doe',
-//     expiryMonth: '12',
-//     expiryYear: '2025',
-//     cvv: '123',
-//     email: 'john@example.com'
-//   }
-// }
-
-const payment = await bloque.payments.create({
-  payment: cardPayment,
-});
-```
-
-#### PSE Payment (Colombian online banking)
-
-```typescript
-// Receive payload from frontend
-const psePayment: PaymentSubmitPayload = req.body;
-// Example payload:
-// {
-//   type: 'pse',
-//   data: {
-//     personType: 'natural',
-//     documentType: 'CC',
-//     documentNumber: '1234567890',
-//     bankCode: '1022',
-//     email: 'maria@example.com'
-//   }
-// }
-
-const payment = await bloque.payments.create({
-  payment: psePayment,
-});
-```
-
-#### Cash Payment
-
-```typescript
-// Receive payload from frontend
-const cashPayment: PaymentSubmitPayload = req.body;
-// Example payload:
-// {
-//   type: 'cash',
-//   data: {
-//     email: 'carlos@example.com',
-//     documentType: 'CC',
-//     documentNumber: '9876543210',
-//     fullName: 'Carlos García'
-//   }
-// }
-
-const payment = await bloque.payments.create({
-  payment: cashPayment,
-});
-```
-
-### Type-Safe Payment Creation
-
-The `PaymentSubmitPayload` type is a discriminated union that provides automatic type narrowing:
-
-```typescript
-// Backend API handler
-async function handlePayment(payload: PaymentSubmitPayload) {
-  // TypeScript automatically narrows the type based on the 'type' field
-  switch (payload.type) {
-    case 'card':
-      // payload.data is CardPaymentFormData
-      console.log('Processing card ending in:', payload.data.cardNumber.slice(-4));
-      break;
-
-    case 'pse':
-      // payload.data is PSEPaymentFormData
-      console.log('Processing PSE for bank:', payload.data.bankCode);
-      break;
-
-    case 'cash':
-      // payload.data is CashPaymentFormData
-      console.log('Processing cash payment for:', payload.data.fullName);
-      break;
-  }
-
-  // Create payment using SDK
-  return await bloque.payments.create({
-    payment: payload,
-  });
+try {
+  const organization = await bloque.orgs.create(params);
+  console.log('Organization created:', organization.urn);
+  console.log('Status:', organization.status);
+} catch (error) {
+  console.error('Failed to create organization:', error);
 }
 ```
 
-### Basic Checkout with Single Item
+### Creating an Individual Organization
 
 ```typescript
-const checkout = await bloque.checkout.create({
-  name: 'E-book Purchase',
-  description: 'Learn TypeScript in 30 Days',
-  items: [
-    {
-      name: 'TypeScript E-book',
-      amount: 19_99,
-      quantity: 1,
-    },
-  ],
-  success_url: 'https://yourapp.com/success',
-  cancel_url: 'https://yourapp.com/cancel',
+import { SDK } from '@bloque/sdk';
+import type { CreateOrgParams } from '@bloque/sdk/orgs';
+
+const bloque = new SDK({
+  apiKey: process.env.BLOQUE_API_KEY!,
+  mode: 'sandbox',
 });
-```
 
-### Checkout with Multiple Items
-
-```typescript
-const checkout = await bloque.checkout.create({
-  name: 'Shopping Cart',
-  description: 'Your selected items',
-  items: [
-    {
-      name: 'Wireless Mouse',
-      amount: 25_00,
-      quantity: 1,
-      image_url: 'https://example.com/mouse.jpg',
-    },
-    {
-      name: 'USB Cable',
-      amount: 10_00,
-      quantity: 2,
-      image_url: 'https://example.com/cable.jpg',
-    },
-  ],
-  success_url: 'https://yourapp.com/success',
-  cancel_url: 'https://yourapp.com/cancel',
-});
-```
-
-### Checkout with Metadata and Expiration
-
-```typescript
-const checkout = await bloque.checkout.create({
-  name: 'Limited Time Offer',
-  items: [
-    {
-      name: 'Premium Course',
-      amount: 99_00,
-      quantity: 1,
-    },
-  ],
-  success_url: 'https://yourapp.com/success',
-  cancel_url: 'https://yourapp.com/cancel',
-  metadata: {
-    user_id: '12345',
-    campaign: 'summer_sale',
-    discount_applied: true,
+const params: CreateOrgParams = {
+  org_type: 'individual',
+  profile: {
+    legal_name: 'John Doe',
+    tax_id: '123-45-6789',
+    incorporation_date: '1990-05-20',
+    business_type: 'sole_proprietorship',
+    incorporation_country_code: 'US',
+    address_line1: '456 Oak Avenue',
+    postal_code: '10001',
+    city: 'New York',
   },
-  expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(), // 24 hours
+};
+
+const organization = await bloque.orgs.create(params);
+console.log('Individual organization created:', organization);
+```
+
+### Organization with Multiple Locations
+
+```typescript
+import { SDK } from '@bloque/sdk';
+import type { CreateOrgParams } from '@bloque/sdk/orgs';
+
+const bloque = new SDK({
+  apiKey: process.env.BLOQUE_API_KEY!,
+  mode: 'production',
+});
+
+const params: CreateOrgParams = {
+  org_type: 'business',
+  profile: {
+    legal_name: 'Global Tech Solutions Inc.',
+    tax_id: '98-7654321',
+    incorporation_date: '2018-03-10',
+    business_type: 'corporation',
+    incorporation_country_code: 'US',
+    incorporation_state: 'DE',
+    address_line1: '789 Corporate Blvd',
+    postal_code: '19801',
+    city: 'Wilmington',
+    places: [
+      {
+        country_code: 'US',
+        state: 'CA',
+        address_line1: '100 Silicon Valley Drive',
+        postal_code: '94025',
+        city: 'Menlo Park',
+        is_primary: true,
+      },
+      {
+        country_code: 'US',
+        state: 'NY',
+        address_line1: '250 Broadway',
+        postal_code: '10007',
+        city: 'New York',
+        is_primary: false,
+      },
+    ],
+  },
+};
+
+const organization = await bloque.orgs.create(params);
+console.log('Multi-location organization created');
+```
+
+### Using in an API Endpoint
+
+```typescript
+import { SDK } from '@bloque/sdk';
+import type { CreateOrgParams } from '@bloque/sdk/orgs';
+
+const bloque = new SDK({
+  apiKey: process.env.BLOQUE_API_KEY!,
+  mode: process.env.NODE_ENV === 'production' ? 'production' : 'sandbox',
+});
+
+app.post('/api/organizations', async (req, res) => {
+  try {
+    const params: CreateOrgParams = req.body;
+
+    const organization = await bloque.orgs.create(params);
+
+    res.json({
+      success: true,
+      organization,
+    });
+  } catch (error) {
+    console.error('Organization creation failed:', error);
+    res.status(500).json({
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error',
+    });
+  }
 });
 ```
 
@@ -417,15 +297,34 @@ const checkout = await bloque.checkout.create({
 The SDK uses standard JavaScript errors. Always wrap API calls in try-catch blocks:
 
 ```typescript
+import { SDK } from '@bloque/sdk';
+
+const bloque = new SDK({
+  apiKey: process.env.BLOQUE_API_KEY!,
+  mode: 'production',
+});
+
 try {
-  const checkout = await bloque.checkout.create({
-    name: 'Product',
-    items: [{ name: 'Item', amount: 1000, quantity: 1 }],
-    success_url: 'https://yourapp.com/success',
-    cancel_url: 'https://yourapp.com/cancel',
+  const organization = await bloque.orgs.create({
+    org_type: 'business',
+    profile: {
+      legal_name: 'Acme Corp',
+      tax_id: '123456789',
+      incorporation_date: '2020-01-01',
+      business_type: 'llc',
+      incorporation_country_code: 'US',
+      address_line1: '123 Main St',
+      postal_code: '12345',
+      city: 'San Francisco',
+    },
   });
+  console.log('Success:', organization);
 } catch (error) {
-  console.error('Failed to create checkout:', error);
+  if (error instanceof Error) {
+    console.error('Failed to create organization:', error.message);
+  } else {
+    console.error('Unknown error:', error);
+  }
 }
 ```
 
@@ -434,61 +333,70 @@ try {
 This SDK is written in TypeScript and includes complete type definitions. You'll get full autocomplete and type checking when using TypeScript or modern editors like VS Code:
 
 ```typescript
+import { SDK } from '@bloque/sdk';
 import type {
-  // Payment types
-  PaymentSubmitPayload,
-  PaymentResponse,
-  CreatePaymentParams,
-  // Checkout types
-  Checkout,
-  CheckoutStatus,
-  CheckoutItem,
-  CheckoutParams,
-} from '@bloque/payments';
+  BloqueConfig,
+  CreateOrgParams,
+  Organization,
+  OrgProfile,
+  OrgStatus,
+  OrgType,
+  Place,
+} from '@bloque/sdk/orgs';
 
-const item: CheckoutItem = {
-  name: 'Product',
-  amount: 5000,
-  quantity: 1,
+// Type-safe configuration
+const config: BloqueConfig = {
+  apiKey: 'your-api-key',
+  mode: 'sandbox',
 };
 
-// Type-safe payment data
-const cardPayment: PaymentSubmitPayload = {
-  type: 'card',
-  data: {
-    cardNumber: '4111111111111111',
-    cardholderName: 'John Doe',
-    expiryMonth: '12',
-    expiryYear: '2025',
-    cvv: '123',
+const bloque = new SDK(config);
+
+// Type-safe organization profile
+const profile: OrgProfile = {
+  legal_name: 'Tech Startup Inc.',
+  tax_id: '12-3456789',
+  incorporation_date: '2023-01-15',
+  business_type: 'llc',
+  incorporation_country_code: 'US',
+  incorporation_state: 'CA',
+  address_line1: '456 Innovation Dr',
+  postal_code: '94025',
+  city: 'Menlo Park',
+};
+
+// Type-safe organization creation
+const params: CreateOrgParams = {
+  org_type: 'business',
+  profile,
+  metadata: {
+    vertical: 'fintech',
+    employees: 50,
   },
 };
+
+// TypeScript infers the return type as Organization
+const org = await bloque.orgs.create(params);
 ```
 
-**Discriminated Union Types**:
+**Available Types**:
 
-The SDK uses TypeScript discriminated unions for payment types, which enables automatic type narrowing:
+The SDK exports all necessary types for type-safe development:
 
 ```typescript
-// Backend API handler
-async function handlePaymentFromFrontend(payment: PaymentSubmitPayload) {
-  switch (payment.type) {
-    case 'card':
-      // TypeScript knows payment.data is CardPaymentFormData
-      console.log('Card payment for:', payment.data.cardholderName);
-      break;
-    case 'pse':
-      // TypeScript knows payment.data is PSEPaymentFormData
-      console.log('PSE payment, bank:', payment.data.bankCode);
-      break;
-    case 'cash':
-      // TypeScript knows payment.data is CashPaymentFormData
-      console.log('Cash payment for:', payment.data.fullName);
-      break;
-  }
+// Main SDK types
+import type { SDK, BloqueConfig } from '@bloque/sdk';
 
-  return await bloque.payments.create({ payment });
-}
+// Organization types
+import type {
+  Organization,
+  CreateOrgParams,
+  CreateOrgResponse,
+  OrgProfile,
+  OrgType,
+  OrgStatus,
+  Place,
+} from '@bloque/sdk/orgs';
 ```
 
 ## Development
@@ -526,8 +434,16 @@ bun run check
 ## Links
 
 - [Homepage](https://www.bloque.app)
-- [GitHub Repository](git+https://github.com/bloque-app/bloque-payments.git)
-- [Issue Tracker](git+https://github.com/bloque-app/bloque-payments.git/issues)
+- [GitHub Repository](https://github.com/bloque-app/sdk)
+- [Issue Tracker](https://github.com/bloque-app/sdk/issues)
+
+## Package Structure
+
+This monorepo contains the following packages:
+
+- **`@bloque/sdk`**: Main SDK package
+- **`@bloque/sdk-core`**: Core utilities and HTTP client
+- **`@bloque/sdk-orgs`**: Organizations API client
 
 ## License
 
