@@ -1,3 +1,2 @@
-export const sum = (a: number, b: number): number => {
-  return a + b;
-}
+export { SDK } from './bloque';
+export type { BloqueConfig } from '@bloque/sdk-core';

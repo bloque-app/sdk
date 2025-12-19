@@ -5,7 +5,7 @@
   "license": "MIT",
   "scripts": {
     "postinstall": "lefthook install",
-    "build:foundation": "bun --filter @bloque/sdk-core build && bun --filter @bloque/sdk build",
+    "build:foundation": "bun --filter @bloque/sdk-core build && bun --filter @bloque/sdk-orgs build && bun --filter @bloque/sdk build",
     "build:packages": "bun run build:foundation",
     "build": "bun run build:packages",
     "clean": "bun run -r --parallel --filter='./packages/*' clean",
