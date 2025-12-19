@@ -1,0 +1,110 @@
+# Bloque SDK
+
+Official TypeScript/JavaScript SDK for [Bloque](https://www.bloque.app) platform.
+
+## Packages
+
+This monorepo contains the following packages:
+
+- **[@bloque/sdk](./packages/sdk)** - Main SDK package for Bloque platform integration
+- **[@bloque/sdk-core](./packages/core)** - Core utilities, HTTP client, and shared types
+- **[@bloque/sdk-orgs](./packages/orgs)** - Organizations API client
+
+## Installation
+
+```bash
+bun add @bloque/sdk
+```
+
+## Quick Start
+
+```typescript
+import { SDK } from '@bloque/sdk';
+
+const bloque = new SDK({
+  apiKey: process.env.BLOQUE_API_KEY!,
+  mode: 'production', // or 'sandbox'
+});
+
+// Create an organization
+const organization = await bloque.orgs.create({
+  org_type: 'business',
+  profile: {
+    legal_name: 'Acme Corporation',
+    tax_id: '123456789',
+    incorporation_date: '2020-01-01',
+    business_type: 'llc',
+    incorporation_country_code: 'US',
+    address_line1: '123 Main St',
+    postal_code: '12345',
+    city: 'San Francisco',
+  },
+});
+```
+
+For detailed documentation, see the [@bloque/sdk package README](./packages/sdk/README.md).
+
+## Development
+
+### Prerequisites
+
+- Node.js 22.x or higher / Bun 1.x or higher
+- TypeScript 5.x or higher
+
+### Setup
+
+```bash
+# Install dependencies
+bun install
+
+# Build all packages
+bun run build
+
+# Clean all packages
+bun run clean
+```
+
+### Available Scripts
+
+- `bun run build` - Build all packages in the correct order
+- `bun run clean` - Clean all package builds and node_modules
+- `bun run changeset` - Create a new changeset for versioning
+- `bun run version` - Apply changesets and version packages
+- `bun run publish` - Publish packages to npm
+
+### Package Development
+
+Each package has its own development scripts:
+
+```bash
+# Navigate to a package
+cd packages/sdk
+
+# Build the package
+bun run build
+
+# Watch mode for development
+bun run dev
+
+# Type check
+bun run typecheck
+
+# Code quality checks
+bun run check
+```
+
+## Contributing
+
+Contributions are welcome! Please ensure all tests pass and code quality checks are satisfied before submitting a PR.
+
+## License
+
+[MIT](./LICENSE)
+
+Copyright (c) 2025-present Bloque Copilot Inc.
+
+## Links
+
+- [Homepage](https://www.bloque.app)
+- [GitHub Repository](https://github.com/bloque-app/sdk)
+- [Issue Tracker](https://github.com/bloque-app/sdk/issues)
