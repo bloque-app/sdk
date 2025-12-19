@@ -24,6 +24,11 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js",
       "require": "./dist/index.cjs"
+    },
+    "./orgs": {
+      "types": "./dist/orgs.d.ts",
+      "import": "./dist/orgs.js",
+      "require": "./dist/orgs.cjs"
     }
   },
   "main": "./dist/index.cjs",
@@ -42,7 +47,8 @@
     "typecheck": "tsgo --noEmit"
   },
   "dependencies": {
-    "@bloque/sdk-core": "workspace:*"
+    "@bloque/sdk-core": "workspace:*",
+    "@bloque/sdk-orgs": "workspace:*"
   },
   "devDependencies": {
     "@rslib/core": "catalog:",
