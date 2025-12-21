@@ -11,6 +11,19 @@
         "typescript": "catalog:",
       },
     },
+    "packages/accounts": {
+      "name": "@bloque/sdk-accounts",
+      "version": "0.0.2",
+      "dependencies": {
+        "@bloque/sdk-core": "workspace:*",
+      },
+      "devDependencies": {
+        "@rslib/core": "catalog:",
+        "@types/node": "catalog:",
+        "@typescript/native-preview": "catalog:",
+        "typescript": "catalog:",
+      },
+    },
     "packages/compliance": {
       "name": "@bloque/sdk-compliance",
       "version": "0.0.2",
@@ -51,6 +64,7 @@
       "name": "@bloque/sdk",
       "version": "0.0.2",
       "dependencies": {
+        "@bloque/sdk-accounts": "workspace:*",
         "@bloque/sdk-compliance": "workspace:*",
         "@bloque/sdk-core": "workspace:*",
         "@bloque/sdk-orgs": "workspace:*",
@@ -113,6 +127,8 @@
     "@biomejs/cli-win32-x64": ["@biomejs/cli-win32-x64@2.3.9", "", { "os": "win32", "cpu": "x64" }, "sha512-90+J63VT7qImy9s3pkWL0ZX27VzVwMNCRzpLpe5yMzMYPbO1vcjL/w/Q5f/juAGMvP7a2Fd0H7IhAR6F7/i78A=="],
 
     "@bloque/sdk": ["@bloque/sdk@workspace:packages/sdk"],
+
+    "@bloque/sdk-accounts": ["@bloque/sdk-accounts@workspace:packages/accounts"],
 
     "@bloque/sdk-compliance": ["@bloque/sdk-compliance@workspace:packages/compliance"],
 

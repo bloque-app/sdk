@@ -1,12 +1,13 @@
 {
-  "name": "@bloque/sdk",
+  "name": "@bloque/sdk-accounts",
   "version": "0.0.2",
-  "description": "Official Bloque SDK",
   "type": "module",
   "keywords": [
     "bloque",
     "sdk",
-    "api"
+    "api",
+    "accounts",
+    "payments"
   ],
   "license": "MIT",
   "publishConfig": {
@@ -17,28 +18,13 @@
   "repository": {
     "type": "git",
     "url": "git+https://github.com/bloque-app/sdk.git",
-    "directory": "packages/sdk"
+    "directory": "packages/accounts"
   },
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js",
       "require": "./dist/index.cjs"
-    },
-    "./orgs": {
-      "types": "./dist/orgs.d.ts",
-      "import": "./dist/orgs.js",
-      "require": "./dist/orgs.cjs"
-    },
-    "./compliance": {
-      "types": "./dist/compliance.d.ts",
-      "import": "./dist/compliance.js",
-      "require": "./dist/compliance.cjs"
-    },
-    "./accounts": {
-      "types": "./dist/accounts.d.ts",
-      "import": "./dist/accounts.js",
-      "require": "./dist/accounts.cjs"
     }
   },
   "main": "./dist/index.cjs",
@@ -57,10 +43,7 @@
     "typecheck": "tsgo --noEmit"
   },
   "dependencies": {
-    "@bloque/sdk-accounts": "workspace:*",
-    "@bloque/sdk-core": "workspace:*",
-    "@bloque/sdk-compliance": "workspace:*",
-    "@bloque/sdk-orgs": "workspace:*"
+    "@bloque/sdk-core": "workspace:*"
   },
   "devDependencies": {
     "@rslib/core": "catalog:",
