@@ -164,6 +164,14 @@ interface KycVerificationParams {
    * @example "did:bloque:origin:..."
    */
   urn: string;
+
+  /**
+   * URL where webhook notifications will be sent when the verification
+   * status changes (optional).
+   *
+   * @example "https://api.example.com/webhooks/kyc"
+   */
+  webhookUrl?: string;
 }
 ```
 
@@ -173,6 +181,40 @@ interface KycVerificationParams {
 interface KycVerificationResponse {
   url: string;  // URL where the user should complete the verification
   status: 'awaiting_compliance_verification' | 'approved' | 'rejected';
+}
+```
+
+#### Get KYC Verification Status
+
+Get the current status of a KYC verification:
+
+```typescript
+const status = await bloque.compliance.kyc.getVerification({
+  urn: 'did:bloque:user:123e4567',
+});
+```
+
+**Parameters**:
+
+```typescript
+interface GetKycVerificationParams {
+  /**
+   * URN (Uniform Resource Name) that uniquely identifies the user
+   * within the system.
+   *
+   * @example "did:bloque:user:123e4567"
+   */
+  urn: string;
+}
+```
+
+**Response**:
+
+```typescript
+interface KycVerificationStatus {
+  status: 'awaiting_compliance_verification' | 'approved' | 'rejected';
+  url: string;                                  // URL for verification
+  completedAt: string | null;                               // Completion date (ISO 8601)
 }
 ```
 
@@ -312,6 +354,7 @@ const bloque = new SDK({
 // Start KYC verification for a user
 const params: KycVerificationParams = {
   urn: 'did:bloque:origin:user-123',
+  webhookUrl: 'https://api.example.com/webhooks/kyc', // Optional webhook URL
 };
 
 try {
@@ -321,8 +364,44 @@ try {
   console.log('Status:', verification.status);
 
   // Redirect the user to verification.url to complete KYC
+  // Webhook notifications will be sent to the provided webhookUrl
 } catch (error) {
   console.error('Failed to start KYC verification:', error);
+}
+```
+
+### Getting KYC Verification Status
+
+```typescript
+import { SDK } from '@bloque/sdk';
+import type { GetKycVerificationParams } from '@bloque/sdk/compliance';
+
+const bloque = new SDK({
+  apiKey: process.env.BLOQUE_API_KEY!,
+  mode: 'production',
+});
+
+// Get verification status
+const params: GetKycVerificationParams = {
+  urn: 'did:bloque:user:123e4567',
+};
+
+try {
+  const status = await bloque.compliance.kyc.getVerification(params);
+
+  console.log('Status:', status.status);
+  console.log('Verification URL:', status.url);
+  console.log('Completed At:', status.completedAt);
+
+  if (status.status === 'approved') {
+    console.log('User verification approved!');
+  } else if (status.status === 'rejected') {
+    console.log('User verification rejected');
+  } else {
+    console.log('Verification still pending');
+  }
+} catch (error) {
+  console.error('Failed to get verification status:', error);
 }
 ```
 
@@ -468,6 +547,8 @@ import type {
 import type {
   KycVerificationParams,
   KycVerificationResponse,
+  GetKycVerificationParams,
+  KycVerificationStatus,
 } from '@bloque/sdk/compliance';
 ```
 

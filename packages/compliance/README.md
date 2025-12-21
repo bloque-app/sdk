@@ -84,6 +84,17 @@ interface KycVerificationParams {
    * @example "did:bloque:origin:user-123"
    */
   urn: string;
+
+  /**
+   * URL where webhook notifications will be sent when the verification
+   * status changes.
+   *
+   * This is optional. If provided, the platform will send POST requests
+   * to this URL with verification status updates.
+   *
+   * @example "https://api.example.com/webhooks/kyc"
+   */
+  webhookUrl?: string;
 }
 ```
 
@@ -109,6 +120,7 @@ interface KycVerificationResponse {
 ```typescript
 const verification = await bloque.compliance.kyc.startVerification({
   urn: 'did:bloque:origin:user-123',
+  webhookUrl: 'https://api.example.com/webhooks/kyc', // Optional
 });
 
 // Redirect user to verification.url
@@ -183,10 +195,14 @@ const bloque = new SDK({
   mode: 'production',
 });
 
-async function startUserVerification(userUrn: string) {
+async function startUserVerification(
+  userUrn: string,
+  webhookUrl?: string,
+) {
   try {
     const params: KycVerificationParams = {
       urn: userUrn,
+      webhookUrl,
     };
 
     const verification = await bloque.compliance.kyc.startVerification(params);
@@ -203,7 +219,10 @@ async function startUserVerification(userUrn: string) {
 }
 
 // Usage
-await startUserVerification('did:bloque:origin:user-123');
+await startUserVerification(
+  'did:bloque:origin:user-123',
+  'https://api.example.com/webhooks/kyc',
+);
 ```
 
 ### Getting Verification Status
@@ -257,6 +276,7 @@ import type {
 // Type-safe verification start
 const startParams: KycVerificationParams = {
   urn: 'did:bloque:origin:user-123',
+  webhookUrl: 'https://api.example.com/webhooks/kyc', // Optional
 };
 
 const verification: KycVerificationResponse =

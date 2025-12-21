@@ -30,6 +30,7 @@ export class KycClient {
         urn: params.urn,
         type: 'kyc',
         accompliceType: 'person',
+        ...(params.webhookUrl && { webhookUrl: params.webhookUrl }),
       },
     });
     return {

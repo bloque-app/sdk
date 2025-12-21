@@ -9,6 +9,17 @@ export interface KycVerificationParams {
    * @example "did:bloque:origin:..."
    */
   urn: string;
+
+  /**
+   * URL where webhook notifications will be sent when the verification
+   * status changes.
+   *
+   * This is optional. If provided, the platform will send POST requests
+   * to this URL with verification status updates.
+   *
+   * @example "https://api.example.com/webhooks/kyc"
+   */
+  webhookUrl?: string;
 }
 
 export interface KycVerificationResponse {

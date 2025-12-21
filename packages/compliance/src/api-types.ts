@@ -4,6 +4,7 @@ export interface StartKycVerificationRequest {
   urn: string;
   type: 'kyc' | 'kyb';
   accompliceType: AccompliceType;
+  webhookUrl?: string;
 }
 
 export interface StartKycVerificationResponse {
