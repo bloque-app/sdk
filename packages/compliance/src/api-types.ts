@@ -13,3 +13,12 @@ export interface StartKycVerificationResponse {
   provider: 'AMLBOT';
   status: 'awaiting_compliance_verification' | 'approved' | 'rejected';
 }
+
+export interface GetKycVerificationResponse {
+  type: 'kyc' | 'kyb';
+  level: 'basic';
+  provider: 'AMLBOT';
+  status: 'awaiting_compliance_verification' | 'approved' | 'rejected';
+  verification_url: string;
+  completed_at: string | null;
+}
