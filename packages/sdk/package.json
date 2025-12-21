@@ -48,6 +48,7 @@
   },
   "dependencies": {
     "@bloque/sdk-core": "workspace:*",
+    "@bloque/sdk-compliance": "workspace:*",
     "@bloque/sdk-orgs": "workspace:*"
   },
   "devDependencies": {

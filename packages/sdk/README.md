@@ -5,7 +5,7 @@ The official TypeScript/JavaScript SDK for integrating [Bloque](https://www.bloq
 ## Features
 
 - **TypeScript First**: Built with TypeScript for complete type safety
-- **Simple API**: Intuitive interface for managing organizations
+- **Simple API**: Intuitive interface for managing organizations and compliance
 - **Fully Async**: Promise-based API for modern JavaScript workflows
 - **Lightweight**: Minimal dependencies for optimal bundle size
 - **Modular**: Import only what you need with tree-shakeable exports
@@ -138,6 +138,44 @@ type OrgStatus =
   | 'closed';
 ```
 
+### Compliance
+
+The compliance resource provides KYC (Know Your Customer) verification functionality.
+
+#### Start KYC Verification
+
+Start a KYC verification process for a user:
+
+```typescript
+const verification = await bloque.compliance.kyc.startVerification({
+  urn: 'did:bloque:origin:user-id',
+});
+```
+
+**Parameters**:
+
+```typescript
+interface KycVerificationParams {
+  /**
+   * URN (Uniform Resource Name) that uniquely identifies the user
+   * within the system. This value is used to associate the KYC
+   * verification process with a specific user.
+   *
+   * @example "did:bloque:origin:..."
+   */
+  urn: string;
+}
+```
+
+**Response**:
+
+```typescript
+interface KycVerificationResponse {
+  url: string;  // URL where the user should complete the verification
+  status: 'awaiting_compliance_verification' | 'approved' | 'rejected';
+}
+```
+
 ## Examples
 
 ### Creating a Business Organization
@@ -258,6 +296,34 @@ const params: CreateOrgParams = {
 
 const organization = await bloque.orgs.create(params);
 console.log('Multi-location organization created');
+```
+
+### Starting KYC Verification
+
+```typescript
+import { SDK } from '@bloque/sdk';
+import type { KycVerificationParams } from '@bloque/sdk/compliance';
+
+const bloque = new SDK({
+  apiKey: process.env.BLOQUE_API_KEY!,
+  mode: 'production',
+});
+
+// Start KYC verification for a user
+const params: KycVerificationParams = {
+  urn: 'did:bloque:origin:user-123',
+};
+
+try {
+  const verification = await bloque.compliance.kyc.startVerification(params);
+
+  console.log('Verification URL:', verification.url);
+  console.log('Status:', verification.status);
+
+  // Redirect the user to verification.url to complete KYC
+} catch (error) {
+  console.error('Failed to start KYC verification:', error);
+}
 ```
 
 ### Using in an API Endpoint
@@ -397,6 +463,12 @@ import type {
   OrgStatus,
   Place,
 } from '@bloque/sdk/orgs';
+
+// Compliance types
+import type {
+  KycVerificationParams,
+  KycVerificationResponse,
+} from '@bloque/sdk/compliance';
 ```
 
 ## Development
@@ -444,6 +516,7 @@ This monorepo contains the following packages:
 - **`@bloque/sdk`**: Main SDK package
 - **`@bloque/sdk-core`**: Core utilities and HTTP client
 - **`@bloque/sdk-orgs`**: Organizations API client
+- **`@bloque/sdk-compliance`**: Compliance and KYC verification API client
 
 ## License
 

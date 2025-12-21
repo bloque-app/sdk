@@ -9,6 +9,7 @@ This monorepo contains the following packages:
 - **[@bloque/sdk](./packages/sdk)** - Main SDK package for Bloque platform integration
 - **[@bloque/sdk-core](./packages/core)** - Core utilities, HTTP client, and shared types
 - **[@bloque/sdk-orgs](./packages/orgs)** - Organizations API client
+- **[@bloque/sdk-compliance](./packages/compliance)** - Compliance and KYC verification API client
 
 ## Installation
 
