@@ -26,7 +26,7 @@ export class HttpClient {
     }
   }
 
-  async request<T>(options: RequestOptions): Promise<T> {
+  async request<T, U = unknown>(options: RequestOptions<U>): Promise<T> {
     const { method, path, body, headers = {} } = options;
 
     const url = `${this.baseUrl}${path}`;

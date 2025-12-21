@@ -5,10 +5,10 @@ export interface BloqueConfig {
   mode: Mode;
 }
 
-export interface RequestOptions {
+export interface RequestOptions<U = unknown> {
   method: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH';
   path: string;
-  body?: unknown;
+  body?: U;
   headers?: Record<string, string>;
 }
 
