@@ -5,7 +5,7 @@ The official TypeScript/JavaScript SDK for integrating [Bloque](https://www.bloq
 ## Features
 
 - **TypeScript First**: Built with TypeScript for complete type safety
-- **Simple API**: Intuitive interface for managing organizations and compliance
+- **Simple API**: Intuitive interface for managing organizations, compliance, and accounts
 - **Fully Async**: Promise-based API for modern JavaScript workflows
 - **Lightweight**: Minimal dependencies for optimal bundle size
 - **Modular**: Import only what you need with tree-shakeable exports
@@ -50,6 +50,17 @@ async function createOrganization() {
 
   const organization = await bloque.orgs.create(params);
   console.log('Organization created:', organization);
+}
+
+// Create a virtual card
+async function createCard() {
+  const card = await bloque.accounts.card.create({
+    urn: 'did:bloque:user:123e4567',
+    name: 'My Virtual Card',
+  });
+
+  console.log('Card created:', card.urn);
+  console.log('Last four digits:', card.lastFour);
 }
 ```
 
@@ -215,6 +226,57 @@ interface KycVerificationStatus {
   status: 'awaiting_compliance_verification' | 'approved' | 'rejected';
   url: string;                                  // URL for verification
   completedAt: string | null;                               // Completion date (ISO 8601)
+}
+```
+
+### Accounts
+
+The accounts resource allows you to create virtual cards for users.
+
+#### Create a Virtual Card
+
+Create a virtual card for a user:
+
+```typescript
+const card = await bloque.accounts.card.create({
+  urn: 'did:bloque:user:123e4567',
+  name: 'My Virtual Card', // Optional
+});
+```
+
+**Parameters**:
+
+```typescript
+interface CreateCardParams {
+  /**
+   * URN of the account holder (user or organization)
+   * @example "did:bloque:user:123e4567"
+   */
+  urn: string;
+
+  /**
+   * Display name for the card (optional)
+   */
+  name?: string;
+}
+```
+
+**Response**:
+
+```typescript
+interface CardAccount {
+  urn: string;                    // Unique resource name
+  id: string;                     // Card account ID
+  lastFour: string;               // Last four digits
+  productType: 'CREDIT' | 'DEBIT'; // Card product type
+  status: 'active' | 'disabled' | 'frozen' | 'deleted' | 'creation_in_progress' | 'creation_failed';
+  cardType: 'VIRTUAL' | 'PHYSICAL'; // Card type
+  detailsUrl: string;             // PCI-compliant URL to view card details
+  ownerUrn: string;               // Owner URN
+  webhookUrl: string | null;      // Webhook URL (if configured)
+  metadata?: Record<string, unknown>; // Custom metadata
+  createdAt: string;              // Creation timestamp (ISO 8601)
+  updatedAt: string;              // Last update timestamp (ISO 8601)
 }
 ```
 
@@ -405,6 +467,43 @@ try {
 }
 ```
 
+### Creating a Virtual Card
+
+```typescript
+import { SDK } from '@bloque/sdk';
+import type { CreateCardParams } from '@bloque/sdk/accounts';
+
+const bloque = new SDK({
+  apiKey: process.env.BLOQUE_API_KEY!,
+  mode: 'production',
+});
+
+// Create a virtual card
+const params: CreateCardParams = {
+  urn: 'did:bloque:user:123e4567',
+  name: 'My Business Card', // Optional
+};
+
+try {
+  const card = await bloque.accounts.card.create(params);
+
+  console.log('Card created:', card.urn);
+  console.log('Last four digits:', card.lastFour);
+  console.log('Card type:', card.cardType);
+  console.log('Status:', card.status);
+  console.log('Details URL:', card.detailsUrl);
+
+  // Check if card is ready to use
+  if (card.status === 'active') {
+    console.log('Card is active and ready to use!');
+  } else if (card.status === 'creation_in_progress') {
+    console.log('Card is being created...');
+  }
+} catch (error) {
+  console.error('Failed to create card:', error);
+}
+```
+
 ### Using in an API Endpoint
 
 ```typescript
@@ -550,6 +649,12 @@ import type {
   GetKycVerificationParams,
   KycVerificationStatus,
 } from '@bloque/sdk/compliance';
+
+// Accounts types
+import type {
+  CardAccount,
+  CreateCardParams,
+} from '@bloque/sdk/accounts';
 ```
 
 ## Development
@@ -598,6 +703,7 @@ This monorepo contains the following packages:
 - **`@bloque/sdk-core`**: Core utilities and HTTP client
 - **`@bloque/sdk-orgs`**: Organizations API client
 - **`@bloque/sdk-compliance`**: Compliance and KYC verification API client
+- **`@bloque/sdk-accounts`**: Accounts and virtual cards API client
 
 ## License
 
