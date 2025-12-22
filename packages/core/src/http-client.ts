@@ -9,7 +9,7 @@ export class HttpClient {
   constructor(config: BloqueConfig) {
     this.validateConfig(config);
     this.config = config;
-    this.baseUrl = API_BASE_URLS[config.mode];
+    this.baseUrl = API_BASE_URLS[config.mode ?? 'production'];
   }
 
   private validateConfig(config: BloqueConfig): void {

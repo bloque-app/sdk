@@ -19,26 +19,32 @@
     "url": "git+https://github.com/bloque-app/sdk.git",
     "directory": "packages/sdk"
   },
+  "sideEffects": false,
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js",
       "require": "./dist/index.cjs"
     },
-    "./orgs": {
-      "types": "./dist/orgs.d.ts",
-      "import": "./dist/orgs.js",
-      "require": "./dist/orgs.cjs"
+    "./init": {
+      "types": "./dist/init.d.ts",
+      "import": "./dist/init.js",
+      "require": "./dist/init.cjs"
+    },
+    "./accounts": {
+      "types": "./dist/accounts.d.ts",
+      "import": "./dist/accounts.js",
+      "require": "./dist/accounts.cjs"
     },
     "./compliance": {
       "types": "./dist/compliance.d.ts",
       "import": "./dist/compliance.js",
       "require": "./dist/compliance.cjs"
     },
-    "./accounts": {
-      "types": "./dist/accounts.d.ts",
-      "import": "./dist/accounts.js",
-      "require": "./dist/accounts.cjs"
+    "./orgs": {
+      "types": "./dist/orgs.d.ts",
+      "import": "./dist/orgs.js",
+      "require": "./dist/orgs.cjs"
     }
   },
   "main": "./dist/index.cjs",
