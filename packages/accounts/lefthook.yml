@@ -1,0 +1,13 @@
+pre-commit:
+  parallel: true
+  commands:
+    typecheck-accounts:
+      root: packages/accounts
+      run: bun typecheck
+      fail_text: "TypeScript type checking failed for accounts package"
+    biome-accounts:
+      root: packages/accounts
+      glob: "*.{js,ts,jsx,tsx}"
+      run: bun check {staged_files}
+      stage_fixed: true
+      fail_text: "Biome linting/formatting failed for accounts package"
