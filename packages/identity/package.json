@@ -1,7 +1,6 @@
 {
-  "name": "@bloque/sdk",
+  "name": "@bloque/sdk-identity",
   "version": "0.0.2",
-  "description": "Official Bloque SDK",
   "type": "module",
   "keywords": [
     "bloque",
@@ -17,39 +16,13 @@
   "repository": {
     "type": "git",
     "url": "git+https://github.com/bloque-app/sdk.git",
-    "directory": "packages/sdk"
+    "directory": "packages/identity"
   },
-  "sideEffects": false,
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js",
       "require": "./dist/index.cjs"
-    },
-    "./init": {
-      "types": "./dist/init.d.ts",
-      "import": "./dist/init.js",
-      "require": "./dist/init.cjs"
-    },
-    "./accounts": {
-      "types": "./dist/accounts.d.ts",
-      "import": "./dist/accounts.js",
-      "require": "./dist/accounts.cjs"
-    },
-    "./compliance": {
-      "types": "./dist/compliance.d.ts",
-      "import": "./dist/compliance.js",
-      "require": "./dist/compliance.cjs"
-    },
-    "./identity": {
-      "types": "./dist/identity.d.ts",
-      "import": "./dist/identity.js",
-      "require": "./dist/identity.cjs"
-    },
-    "./orgs": {
-      "types": "./dist/orgs.d.ts",
-      "import": "./dist/orgs.js",
-      "require": "./dist/orgs.cjs"
     }
   },
   "main": "./dist/index.cjs",
@@ -68,11 +41,7 @@
     "typecheck": "tsgo --noEmit"
   },
   "dependencies": {
-    "@bloque/sdk-accounts": "workspace:*",
-    "@bloque/sdk-compliance": "workspace:*",
-    "@bloque/sdk-core": "workspace:*",
-    "@bloque/sdk-identity": "workspace:*",
-    "@bloque/sdk-orgs": "workspace:*"
+    "@bloque/sdk-core": "workspace:*"
   },
   "devDependencies": {
     "@rslib/core": "catalog:",

@@ -11,6 +11,7 @@ This monorepo contains the following packages:
 - **[@bloque/sdk-orgs](./packages/orgs)** - Organizations API client
 - **[@bloque/sdk-compliance](./packages/compliance)** - Compliance and KYC verification API client
 - **[@bloque/sdk-accounts](./packages/accounts)** - Accounts and virtual cards API client
+- **[@bloque/sdk-identity](./packages/identity)** - Identity and aliases API client
 
 ## Installation
 

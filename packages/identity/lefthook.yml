@@ -1,0 +1,13 @@
+pre-commit:
+  parallel: true
+  commands:
+    typecheck-identity:
+      root: packages/identity
+      run: bun typecheck
+      fail_text: "TypeScript type checking failed for identity package"
+    biome-identity:
+      root: packages/identity
+      glob: "*.{js,ts,jsx,tsx}"
+      run: bun check {staged_files}
+      stage_fixed: true
+      fail_text: "Biome linting/formatting failed for identity package"

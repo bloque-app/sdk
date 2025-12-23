@@ -5,7 +5,7 @@ The official TypeScript/JavaScript SDK for integrating [Bloque](https://www.bloq
 ## Features
 
 - **TypeScript First**: Built with TypeScript for complete type safety
-- **Simple API**: Intuitive interface for managing organizations, compliance, and accounts
+- **Simple API**: Intuitive interface for managing organizations, compliance, accounts, and identity
 - **Fully Async**: Promise-based API for modern JavaScript workflows
 - **Lightweight**: Minimal dependencies for optimal bundle size
 - **Modular**: Import only what you need with tree-shakeable exports
@@ -280,6 +280,49 @@ interface CardAccount {
 }
 ```
 
+### Identity
+
+The identity resource allows you to retrieve user aliases (alternative identifiers like email or phone).
+
+#### Get Alias
+
+Retrieve alias information by the alias value:
+
+```typescript
+const alias = await bloque.identity.aliases.get('user@example.com');
+```
+
+**Parameters**:
+
+```typescript
+// Pass the alias string directly
+const alias: string = 'user@example.com' | '+1234567890';
+```
+
+**Response**:
+
+```typescript
+interface Alias {
+  id: string;                                  // Unique alias ID
+  alias: string;                               // Alias value
+  type: 'phone' | 'email' | string;           // Alias type
+  urn: string;                                 // Associated user URN
+  origin: string;                              // Origin identifier
+  details: {
+    phone?: string;                            // Phone details (if applicable)
+  };
+  metadata: {
+    alias: string;                             // Alias in metadata
+    [key: string]: unknown;                    // Additional metadata
+  };
+  status: 'active' | 'inactive' | 'revoked';  // Alias status
+  is_public: boolean;                          // Whether alias is public
+  is_primary: boolean;                         // Whether this is the primary alias
+  created_at: string;                          // Creation timestamp (ISO 8601)
+  updated_at: string;                          // Last update timestamp (ISO 8601)
+}
+```
+
 ## Examples
 
 ### Creating a Business Organization
@@ -504,6 +547,45 @@ try {
 }
 ```
 
+### Retrieving User Alias Information
+
+```typescript
+import { SDK } from '@bloque/sdk';
+
+const bloque = new SDK({
+  apiKey: process.env.BLOQUE_API_KEY!,
+  mode: 'production',
+});
+
+// Get alias information by email
+try {
+  const alias = await bloque.identity.aliases.get('user@example.com');
+
+  console.log('Alias ID:', alias.id);
+  console.log('Alias type:', alias.type);
+  console.log('Associated URN:', alias.urn);
+  console.log('Status:', alias.status);
+  console.log('Is primary:', alias.is_primary);
+  console.log('Is public:', alias.is_public);
+
+  if (alias.status === 'active') {
+    console.log('Alias is active');
+  }
+} catch (error) {
+  console.error('Failed to retrieve alias:', error);
+}
+
+// Get alias information by phone number
+try {
+  const phoneAlias = await bloque.identity.aliases.get('+1234567890');
+
+  console.log('Phone alias:', phoneAlias.alias);
+  console.log('Phone details:', phoneAlias.details.phone);
+} catch (error) {
+  console.error('Failed to retrieve phone alias:', error);
+}
+```
+
 ### Using in an API Endpoint
 
 ```typescript
@@ -655,6 +737,11 @@ import type {
   CardAccount,
   CreateCardParams,
 } from '@bloque/sdk/accounts';
+
+// Identity types
+import type {
+  Alias,
+} from '@bloque/sdk/identity';
 ```
 
 ## Development
@@ -704,6 +791,7 @@ This monorepo contains the following packages:
 - **`@bloque/sdk-orgs`**: Organizations API client
 - **`@bloque/sdk-compliance`**: Compliance and KYC verification API client
 - **`@bloque/sdk-accounts`**: Accounts and virtual cards API client
+- **`@bloque/sdk-identity`**: Identity and aliases API client
 
 ## License
 
