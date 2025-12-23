@@ -53,3 +53,10 @@ export type CardDetails = {
   card_type: CardType;
   user_id: string;
 };
+
+export type BancolombiaDetails = {
+  id: string;
+  reference_code: string;
+  payment_agreement_code: string;
+  network: string[];
+};

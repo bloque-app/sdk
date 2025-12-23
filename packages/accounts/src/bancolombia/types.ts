@@ -1,6 +1,4 @@
-import type { CardType } from '../api-types';
-
-export interface CreateCardParams {
+export interface CreateBancolombiaAccountParams {
   /**
    * URN of the account holder (user or organization)
    *
@@ -12,63 +10,68 @@ export interface CreateCardParams {
    */
   name?: string;
   /**
-   * Custom metadata to associate with the card
+   * URN of an existing card to link with the Bancolombia account
+   *
+   * @example "did:bloque:card:123e4567"
+   */
+  cardUrn?: string;
+
+  /**
+   * Custom metadata to attach to the Bancolombia account
    */
   metadata?: Record<string, unknown>;
 }
 
-export interface CardAccount {
+/**
+ * Bancolombia account response
+ */
+export interface BancolombiaAccount {
   /**
-   * Unique resource name for the card account
+   * Unique resource name for the Bancolombia account
    */
   urn: string;
+
   /**
-   * Card account ID
+   * Account ID
    */
   id: string;
+
   /**
-   * Last four digits of the card
+   * Reference code for the Bancolombia account
    */
-  lastFour: string;
+  referenceCode: string;
+
   /**
-   * Type of card product (CREDIT, DEBIT)
-   */
-  productType: 'CREDIT' | 'DEBIT';
-  /**
-   * Current status of the card
+   * Account status
    */
   status:
+    | 'creation_in_progress'
     | 'active'
     | 'disabled'
     | 'frozen'
     | 'deleted'
-    | 'creation_in_progress'
     | 'creation_failed';
-  /**
-   * Type of card (VIRTUAL, PHYSICAL)
-   */
-  cardType: CardType;
-  /**
-   * URL to view card details (PCI-compliant)
-   */
-  detailsUrl: string;
 
   /**
    * Owner URN
    */
   ownerUrn: string;
+
   /**
    * Webhook URL (if configured)
    */
   webhookUrl: string | null;
+
   /**
    * Custom metadata
    */
   metadata?: Record<string, unknown>;
+
   /**
    * Creation timestamp
    */
   createdAt: string;
+
   /**
    * Last update timestamp
    */

@@ -1,13 +1,15 @@
 import type { HttpClient } from '@bloque/sdk-core';
 import type {
-  CardDetails,
+  BancolombiaDetails,
   CreateAccountRequest,
   CreateAccountResponse,
-  CreateCardAccountInput,
 } from '../api-types';
-import type { CardAccount, CreateCardParams } from './types';
+import type {
+  BancolombiaAccount,
+  CreateBancolombiaAccountParams,
+} from './types';
 
-export class CardClient {
+export class BancolombiaClient {
   private readonly httpClient: HttpClient;
 
   constructor(httpClient: HttpClient) {
@@ -15,40 +17,39 @@ export class CardClient {
   }
 
   /**
-   * Create a new card account
+   * Create a new Bancolombia account
    *
-   * @param params - Card creation parameters
-   * @returns Promise resolving to the created card account
+   * @param params - Bancolombia account creation parameters
+   * @returns Promise resolving to the created Bancolombia account
    *
    * @example
    * ```typescript
-   * const card = await bloque.accounts.card.create({
+   * const account = await bloque.accounts.bancolombia.create({
    *   urn: 'did:bloque:user:123',
-   *   name: 'My Card',
+   *   name: 'Main Account'
    * });
    * ```
    */
-  async create(params: CreateCardParams): Promise<CardAccount> {
-    const request: CreateAccountRequest<CreateCardAccountInput> = {
+  async create(
+    params: CreateBancolombiaAccountParams,
+  ): Promise<BancolombiaAccount> {
+    const request: CreateAccountRequest = {
       holder_urn: params.urn,
-      input: {
-        create: {
-          card_type: 'VIRTUAL',
-        },
-      },
+      input: {},
       metadata: {
         source: 'sdk-typescript',
         name: params.name,
+        card_urn: params.cardUrn,
         ...params.metadata,
       },
     };
 
     const response = await this.httpClient.request<
-      CreateAccountResponse<CardDetails>,
-      CreateAccountRequest<CreateCardAccountInput>
+      CreateAccountResponse<BancolombiaDetails>,
+      CreateAccountRequest
     >({
       method: 'POST',
-      path: '/api/mediums/card',
+      path: '/api/mediums/bancolombia',
       body: request,
     });
 
@@ -57,11 +58,8 @@ export class CardClient {
     return {
       urn: account.urn,
       id: account.id,
-      lastFour: account.details.card_last_four,
-      productType: account.details.card_product_type,
+      referenceCode: account.details.reference_code,
       status: account.status,
-      cardType: account.details.card_type,
-      detailsUrl: account.details.card_url_details,
       ownerUrn: account.owner_urn,
       webhookUrl: account.webhook_url,
       metadata: account.metadata,

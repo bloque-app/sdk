@@ -1,4 +1,5 @@
 import type { HttpClient } from '@bloque/sdk-core';
+import { BancolombiaClient } from './bancolombia/client';
 import { CardClient } from './card/client';
 
 /**
@@ -13,10 +14,12 @@ import { CardClient } from './card/client';
  */
 export class AccountsClient {
   private readonly httpClient: HttpClient;
-  public readonly card: CardClient;
+  readonly bancolombia: BancolombiaClient;
+  readonly card: CardClient;
 
   constructor(httpClient: HttpClient) {
     this.httpClient = httpClient;
+    this.bancolombia = new BancolombiaClient(this.httpClient);
     this.card = new CardClient(this.httpClient);
   }
 }
