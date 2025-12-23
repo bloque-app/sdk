@@ -2,12 +2,17 @@
   "$schema": "https://unpkg.com/@changesets/config@3.1.2/schema.json",
   "changelog": "@changesets/cli/changelog",
   "commit": false,
-  "linked": [
+  "fixed": [
     [
       "@bloque/sdk-core",
+      "@bloque/sdk-accounts",
+      "@bloque/sdk-compliance",
+      "@bloque/sdk-identity",
+      "@bloque/sdk-orgs",
       "@bloque/sdk"
     ]
   ],
   "access": "public",
-  "baseBranch": "main"
+  "baseBranch": "main",
+  "updateInternalDependencies": "patch"
 }
