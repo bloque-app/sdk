@@ -1,0 +1,9 @@
+# @bloque/sdk-accounts
+
+## 0.0.3
+
+### Patch Changes
+
+- implementing client version
+- Updated dependencies
+  - @bloque/sdk-core@0.0.3
