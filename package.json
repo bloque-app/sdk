@@ -17,7 +17,7 @@
     "clean": "bun run -r --parallel --filter='./packages/*' clean",
     "changeset": "changeset",
     "version": "changeset version",
-    "publish": "changeset publish"
+    "publish": "bun run -r --parallel --filter='./packages/*' publish"
   },
   "homepage": "git+https://github.com/bloque-app/sdk.git#readme",
   "repository": {
