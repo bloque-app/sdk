@@ -5,6 +5,7 @@ Financial accounts and payment methods client for the [Bloque](https://www.bloqu
 ## Features
 
 - **Virtual Cards**: Create virtual cards instantly
+- **Bancolombia Accounts**: Create Bancolombia accounts with reference codes
 - **TypeScript First**: Built with TypeScript for complete type safety
 - **Simple API**: Minimal input required - just URN and optional name
 - **Fully Async**: Promise-based API for modern JavaScript workflows
@@ -46,6 +47,17 @@ console.log('Card created:', card.urn);
 console.log('Last four digits:', card.lastFour);
 console.log('Card details URL:', card.detailsUrl);
 console.log('Status:', card.status);
+
+// Create a Bancolombia account
+const bancolombiaAccount = await bloque.accounts.bancolombia.create({
+  urn: 'did:bloque:user:123',
+  name: 'Main Account', // Optional
+  cardUrn: card.urn, // Optional - link with existing card
+});
+
+console.log('Bancolombia account created:', bancolombiaAccount.urn);
+console.log('Reference code:', bancolombiaAccount.referenceCode);
+console.log('Status:', bancolombiaAccount.status);
 ```
 
 ## API Reference
@@ -91,6 +103,64 @@ interface CardAccount {
   status: 'active' | 'disabled' | 'frozen' | 'deleted' | 'creation_in_progress' | 'creation_failed';
   cardType: 'VIRTUAL' | 'PHYSICAL'; // Card type
   detailsUrl: string;             // PCI-compliant URL to view card details
+  ownerUrn: string;               // Owner URN
+  webhookUrl: string | null;      // Webhook URL (if configured)
+  metadata?: Record<string, unknown>; // Custom metadata
+  createdAt: string;              // Creation timestamp (ISO 8601)
+  updatedAt: string;              // Last update timestamp (ISO 8601)
+}
+```
+
+### Bancolombia Accounts
+
+Create Bancolombia accounts with reference codes for local payments.
+
+#### `bancolombia.create(params)`
+
+```typescript
+const account = await bloque.accounts.bancolombia.create({
+  urn: 'did:bloque:user:123',
+  name: 'Main Account', // Optional
+  cardUrn: 'did:bloque:card:456', // Optional - link with existing card
+});
+```
+
+**Parameters**:
+
+```typescript
+interface CreateBancolombiaAccountParams {
+  /**
+   * URN of the account holder (user or organization)
+   * @example "did:bloque:user:123e4567"
+   */
+  urn: string;
+
+  /**
+   * Display name for the account (optional)
+   */
+  name?: string;
+
+  /**
+   * URN of an existing card to link with the Bancolombia account (optional)
+   * @example "did:bloque:card:123e4567"
+   */
+  cardUrn?: string;
+
+  /**
+   * Custom metadata to attach to the Bancolombia account (optional)
+   */
+  metadata?: Record<string, unknown>;
+}
+```
+
+**Returns**:
+
+```typescript
+interface BancolombiaAccount {
+  urn: string;                    // Unique resource name
+  id: string;                     // Account ID
+  referenceCode: string;          // Reference code for payments
+  status: 'active' | 'disabled' | 'frozen' | 'deleted' | 'creation_in_progress' | 'creation_failed';
   ownerUrn: string;               // Owner URN
   webhookUrl: string | null;      // Webhook URL (if configured)
   metadata?: Record<string, unknown>; // Custom metadata
@@ -199,6 +269,81 @@ try {
 }
 ```
 
+### Basic Bancolombia Account Creation
+
+```typescript
+import { SDK } from '@bloque/sdk';
+
+const bloque = new SDK({
+  apiKey: process.env.BLOQUE_API_KEY!,
+  mode: 'production',
+});
+
+// Create a Bancolombia account with just URN
+const account = await bloque.accounts.bancolombia.create({
+  urn: 'did:bloque:user:123e4567',
+});
+
+console.log('Account created:', account.urn);
+console.log('Reference code:', account.referenceCode);
+console.log('Status:', account.status);
+```
+
+### Bancolombia Account with Card Link
+
+```typescript
+import { SDK } from '@bloque/sdk';
+
+const bloque = new SDK({
+  apiKey: process.env.BLOQUE_API_KEY!,
+  mode: 'production',
+});
+
+const userUrn = 'did:bloque:user:123e4567';
+
+// Create a card first
+const card = await bloque.accounts.card.create({
+  urn: userUrn,
+  name: 'My Card',
+});
+
+// Create Bancolombia account and link it to the card
+const account = await bloque.accounts.bancolombia.create({
+  urn: userUrn,
+  name: 'Main Account',
+  cardUrn: card.urn, // Link to existing card
+});
+
+console.log('Card URN:', card.urn);
+console.log('Account URN:', account.urn);
+console.log('Reference code for payments:', account.referenceCode);
+```
+
+### Bancolombia Account with Metadata
+
+```typescript
+import { SDK } from '@bloque/sdk';
+
+const bloque = new SDK({
+  apiKey: process.env.BLOQUE_API_KEY!,
+  mode: 'production',
+});
+
+// Create Bancolombia account with custom metadata
+const account = await bloque.accounts.bancolombia.create({
+  urn: 'did:bloque:user:123e4567',
+  name: 'Business Account',
+  metadata: {
+    purpose: 'business-payments',
+    department: 'sales',
+    customField: 'custom-value',
+  },
+});
+
+console.log('Account created with metadata:', account.metadata);
+console.log('Reference code:', account.referenceCode);
+```
+
 ## TypeScript Support
 
 This package is written in TypeScript and includes complete type definitions:
@@ -207,32 +352,47 @@ This package is written in TypeScript and includes complete type definitions:
 import type {
   CardAccount,
   CreateCardParams,
+  BancolombiaAccount,
+  CreateBancolombiaAccountParams,
 } from '@bloque/sdk-accounts';
 
 // Type-safe card creation
-const params: CreateCardParams = {
+const cardParams: CreateCardParams = {
   urn: 'did:bloque:user:123e4567',
   name: 'My Card', // Optional
 };
 
-const card: CardAccount = await bloque.accounts.card.create(params);
+const card: CardAccount = await bloque.accounts.card.create(cardParams);
 
 // TypeScript infers all card properties with full type safety
 console.log(card.lastFour); // string
 console.log(card.status);   // 'active' | 'disabled' | 'frozen' | 'deleted' | 'creation_in_progress' | 'creation_failed'
 console.log(card.cardType); // 'VIRTUAL' | 'PHYSICAL'
+
+// Type-safe Bancolombia account creation
+const accountParams: CreateBancolombiaAccountParams = {
+  urn: 'did:bloque:user:123e4567',
+  name: 'Main Account', // Optional
+  cardUrn: card.urn, // Optional
+};
+
+const account: BancolombiaAccount = await bloque.accounts.bancolombia.create(accountParams);
+
+// TypeScript infers all account properties with full type safety
+console.log(account.referenceCode); // string
+console.log(account.status);        // 'active' | 'disabled' | 'frozen' | 'deleted' | 'creation_in_progress' | 'creation_failed'
 ```
 
-## Card Status
+## Account Status
 
-Cards have a status field indicating their current state:
+Both cards and Bancolombia accounts have a status field indicating their current state:
 
-- `creation_in_progress`: Card is being created
-- `creation_failed`: Card creation failed
-- `active`: Card is active and ready to use
-- `disabled`: Card has been disabled
-- `frozen`: Card has been temporarily frozen
-- `deleted`: Card has been deleted
+- `creation_in_progress`: Account/card is being created
+- `creation_failed`: Account/card creation failed
+- `active`: Account/card is active and ready to use
+- `disabled`: Account/card has been disabled
+- `frozen`: Account/card has been temporarily frozen
+- `deleted`: Account/card has been deleted
 
 ## Requirements
 
