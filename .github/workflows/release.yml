@@ -35,11 +35,8 @@ jobs:
         run: bun run build
 
       - name: Publish Packages
-        env:
-          NPM_CONFIG_TOKEN: ${{ secrets.NPM_TOKEN }}
-        run: |
-          npm config set "//registry.npmjs.org/:_authToken" "${NPM_TOKEN}"
-          npm run release
+        run:
+          NODE_AUTH_TOKEN="" npm run release
 
       - name: Generate Changelog
         id: changelog
