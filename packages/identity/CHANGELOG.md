@@ -1,5 +1,13 @@
 # @bloque/sdk-identity
 
+## 0.0.12
+
+### Patch Changes
+
+- dummy
+- Updated dependencies
+  - @bloque/sdk-core@0.0.12
+
 ## 0.0.11
 
 ### Patch Changes
