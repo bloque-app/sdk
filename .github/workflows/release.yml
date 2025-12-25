@@ -33,7 +33,6 @@ jobs:
         env:
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
-          npm config set "//registry.npmjs.org/:_authToken" "${NPM_TOKEN}"
           bun run release
 
       - name: Generate Changelog
