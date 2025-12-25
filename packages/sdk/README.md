@@ -2,6 +2,30 @@
 
 The official TypeScript/JavaScript SDK for integrating [Bloque](https://www.bloque.app) into your applications.
 
+> **⚠️ Development Notice**
+>
+> This SDK is currently under active development. Breaking changes may occur between versions.
+> We strongly recommend pinning to a specific version in your `package.json` to avoid unexpected issues.
+>
+> ```json
+> {
+>   "dependencies": {
+>     "@bloque/sdk": "x.x.x"
+>   }
+> }
+> ```
+>
+> Replace `x.x.x` with the latest version from [npm](https://www.npmjs.com/package/@bloque/sdk).
+
+## Platform Support
+
+This SDK is compatible with multiple JavaScript runtimes:
+
+- **Node.js** 22.x or higher
+- **Bun** 1.x or higher
+- **Deno** Latest version
+- **Web/Browsers** Modern browsers with ES2020+ support
+
 ## Features
 
 - **TypeScript First**: Built with TypeScript for complete type safety
@@ -773,8 +797,8 @@ bun run check
 
 ## Requirements
 
-- Node.js 22.x or higher / Bun 1.x or higher
-- TypeScript 5.x or higher (for TypeScript projects)
+- One of the supported runtimes: Node.js 22.x+, Bun 1.x+, Deno, or modern browsers
+- TypeScript 5.x or higher (for TypeScript projects, optional)
 
 ## Links
 
