@@ -21,16 +21,25 @@ jobs:
         uses: oven-sh/setup-bun@v2
         with:
           bun-version: latest
-          registry-url: "https://registry.npmjs.org"
+          registry-url: 'https://registry.npmjs.org'
 
-      - run: bun install
-      - run: bun run build
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '24.x'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Install packages
+        run: bun install
+
+      - name: Build code
+        run: bun run build
 
       - name: Publish Packages
         env:
           NPM_CONFIG_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
-          bun run release
+          npm config set "//registry.npmjs.org/:_authToken" "${NPM_TOKEN}"
+          npm run release
 
       - name: Generate Changelog
         id: changelog
