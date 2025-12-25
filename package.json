@@ -17,7 +17,7 @@
     "clean": "bun run -r --parallel --filter='./packages/*' clean",
     "changeset": "changeset",
     "version": "changeset version",
-    "release": "changeset publish --provenance --access=public"
+    "release": "bun run -r --parallel --filter='./packages/*' release"
   },
   "homepage": "git+https://github.com/bloque-app/sdk.git#readme",
   "repository": {
@@ -27,8 +27,11 @@
   "devDependencies": {
     "@biomejs/biome": "catalog:",
     "@changesets/cli": "2.29.8",
+    "@types/node": "catalog:",
+    "bun-types": "latest",
     "lefthook": "^2.0.12",
-    "typescript": "catalog:"
+    "typescript": "catalog:",
+    "@types/bun": "latest"
   },
   "workspaces": {
     "packages": [

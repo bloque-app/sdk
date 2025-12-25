@@ -23,11 +23,6 @@ jobs:
           bun-version: latest
           registry-url: 'https://registry.npmjs.org'
 
-      - uses: actions/setup-node@v5
-        with:
-          node-version: '24.x'
-          registry-url: 'https://registry.npmjs.org'
-
       - name: Install packages
         run: bun install
 
@@ -35,8 +30,11 @@ jobs:
         run: bun run build
 
       - name: Publish Packages
-        run:
-          NODE_AUTH_TOKEN="" npm run release
+        env:
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          npm config set "//registry.npmjs.org/:_authToken" "${NPM_TOKEN}"
+          bun run release
 
       - name: Generate Changelog
         id: changelog
