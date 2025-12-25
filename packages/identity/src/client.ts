@@ -1,12 +1,15 @@
 import type { HttpClient } from '@bloque/sdk-core';
 import { AliasesClient } from './aliases/client';
+import { OriginsClient } from './origins/client';
 
 export class IdentityClient {
   private readonly httpClient: HttpClient;
   readonly aliases: AliasesClient;
+  readonly origins: OriginsClient;
 
   constructor(httpClient: HttpClient) {
     this.httpClient = httpClient;
     this.aliases = new AliasesClient(this.httpClient);
+    this.origins = new OriginsClient(this.httpClient);
   }
 }
