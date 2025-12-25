@@ -1,5 +1,13 @@
 # @bloque/sdk-orgs
 
+## 0.0.10
+
+### Patch Changes
+
+- dummy
+- Updated dependencies
+  - @bloque/sdk-core@0.0.10
+
 ## 0.0.6
 
 ### Patch Changes

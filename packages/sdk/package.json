@@ -1,6 +1,6 @@
 {
   "name": "@bloque/sdk",
-  "version": "0.0.6",
+  "version": "0.0.10",
   "description": "Official Bloque SDK",
   "type": "module",
   "keywords": [
@@ -61,7 +61,7 @@
     "node": ">=22"
   },
   "scripts": {
-    "publish": "bun publish",
+    "release": "bun publish",
     "build": "rslib build",
     "dev": "rslib build --watch",
     "clean": "rm -rf node_modules && rm -rf dist",
