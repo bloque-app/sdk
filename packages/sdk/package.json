@@ -61,7 +61,7 @@
     "node": ">=22"
   },
   "scripts": {
-    "release": "bun publish",
+    "release": "bun publish --provenance",
     "build": "rslib build",
     "dev": "rslib build --watch",
     "clean": "rm -rf node_modules && rm -rf dist",
