@@ -12,6 +12,10 @@ export interface CreateCardParams {
    */
   name?: string;
   /**
+   * Webhook URL to receive card events
+   */
+  webhookUrl?: string;
+  /**
    * Custom metadata to associate with the card
    */
   metadata?: Record<string, unknown>;
@@ -57,6 +61,10 @@ export interface CardAccount {
    * Owner URN
    */
   ownerUrn: string;
+  /**
+   * Ledger account ID associated with the card
+   */
+  ledgerId: string;
   /**
    * Webhook URL (if configured)
    */

@@ -31,6 +31,7 @@ export class CardClient {
   async create(params: CreateCardParams): Promise<CardAccount> {
     const request: CreateAccountRequest<CreateCardAccountInput> = {
       holder_urn: params.urn,
+      webhook_url: params.webhookUrl,
       input: {
         create: {
           card_type: 'VIRTUAL',
@@ -63,6 +64,7 @@ export class CardClient {
       cardType: account.details.card_type,
       detailsUrl: account.details.card_url_details,
       ownerUrn: account.owner_urn,
+      ledgerId: account.ledger_account_id,
       webhookUrl: account.webhook_url,
       metadata: account.metadata,
       createdAt: account.created_at,

@@ -15,7 +15,10 @@ export interface CreateBancolombiaAccountParams {
    * @example "did:bloque:card:123e4567"
    */
   cardUrn?: string;
-
+  /**
+   * Webhook URL to receive account events
+   */
+  webhookUrl?: string;
   /**
    * Custom metadata to attach to the Bancolombia account
    */
@@ -56,6 +59,11 @@ export interface BancolombiaAccount {
    * Owner URN
    */
   ownerUrn: string;
+
+  /**
+   * Ledger account ID associated with the card
+   */
+  ledgerId: string;
 
   /**
    * Webhook URL (if configured)

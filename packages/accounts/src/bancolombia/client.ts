@@ -35,6 +35,7 @@ export class BancolombiaClient {
   ): Promise<BancolombiaAccount> {
     const request: CreateAccountRequest = {
       holder_urn: params.urn,
+      webhook_url: params.webhookUrl,
       input: {},
       metadata: {
         source: 'sdk-typescript',
@@ -61,6 +62,7 @@ export class BancolombiaClient {
       referenceCode: account.details.reference_code,
       status: account.status,
       ownerUrn: account.owner_urn,
+      ledgerId: account.ledger_account_id,
       webhookUrl: account.webhook_url,
       metadata: account.metadata,
       createdAt: account.created_at,

@@ -3,6 +3,7 @@ interface Account<TDetails = unknown> {
   urn: string;
   medium: 'bancolombia' | 'card';
   details: TDetails;
+  ledger_account_id: string;
   status:
     | 'active'
     | 'disabled'
