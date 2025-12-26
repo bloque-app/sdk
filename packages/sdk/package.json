@@ -19,7 +19,9 @@
     "url": "git+https://github.com/bloque-app/sdk.git",
     "directory": "packages/sdk"
   },
-  "sideEffects": false,
+  "sideEffects": [
+    "./dist/init.js"
+  ],
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",

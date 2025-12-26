@@ -8,9 +8,10 @@ export type {
   Place,
 } from '@bloque/sdk-orgs';
 
-import { HttpClient } from '@bloque/sdk-core';
 import { OrgsClient } from '@bloque/sdk-orgs';
-import { getConfig } from './config';
+import { getHttpClient } from './http';
+import { lazyClient } from './lazy';
 
-const httpClient = new HttpClient(getConfig());
-export const Orgs = new OrgsClient(httpClient);
+export const Orgs = lazyClient<OrgsClient>(
+  () => new OrgsClient(getHttpClient()),
+);

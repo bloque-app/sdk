@@ -1,7 +1,10 @@
-import type { BloqueConfig } from '@bloque/sdk-core';
+import { type BloqueConfig, HttpClient } from '@bloque/sdk-core';
 
-import { setConfig } from './config.js';
+import { getConfig, setConfig } from './config.js';
+import { setHttpClient } from './http.js';
 
 export function init(config: BloqueConfig) {
   setConfig(config);
+
+  setHttpClient(new HttpClient(getConfig()));
 }

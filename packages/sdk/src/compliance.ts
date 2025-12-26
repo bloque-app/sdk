@@ -5,8 +5,9 @@ export type {
 } from '@bloque/sdk-compliance';
 
 import { ComplianceClient } from '@bloque/sdk-compliance';
-import { HttpClient } from '@bloque/sdk-core';
-import { getConfig } from './config';
+import { getHttpClient } from './http';
+import { lazyClient } from './lazy';
 
-const httpClient = new HttpClient(getConfig());
-export const Compliance = new ComplianceClient(httpClient);
+export const Compliance = lazyClient<ComplianceClient>(
+  () => new ComplianceClient(getHttpClient()),
+);

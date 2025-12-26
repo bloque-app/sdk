@@ -4,8 +4,9 @@ export type {
 } from '@bloque/sdk-accounts';
 
 import { AccountsClient } from '@bloque/sdk-accounts';
-import { HttpClient } from '@bloque/sdk-core';
-import { getConfig } from './config';
+import { getHttpClient } from './http';
+import { lazyClient } from './lazy';
 
-const httpClient = new HttpClient(getConfig());
-export const Accounts = new AccountsClient(httpClient);
+export const Accounts = lazyClient<AccountsClient>(
+  () => new AccountsClient(getHttpClient()),
+);
