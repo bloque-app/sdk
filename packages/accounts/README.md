@@ -167,6 +167,23 @@ interface UpdateCardMetadataParams {
 
 **Returns**: `CardAccount`
 
+#### `card.updateName(urn, name)`
+
+Update the name of a card account.
+
+```typescript
+const card = await bloque.accounts.card.updateName(
+  'did:bloque:mediums:card:account:123',
+  'My Business Card'
+);
+```
+
+**Parameters**:
+- `urn: string` - Card account URN
+- `name: string` - New name for the card
+
+**Returns**: `CardAccount`
+
 #### `card.activate(urn)`
 
 Activate a card account.
@@ -308,6 +325,23 @@ interface UpdateBancolombiaMetadataParams {
 
 **Returns**: `BancolombiaAccount`
 
+#### `bancolombia.updateName(urn, name)`
+
+Update the name of a Bancolombia account.
+
+```typescript
+const account = await bloque.accounts.bancolombia.updateName(
+  'did:bloque:mediums:bancolombia:account:123',
+  'Main Business Account'
+);
+```
+
+**Parameters**:
+- `urn: string` - Bancolombia account URN
+- `name: string` - New name for the account
+
+**Returns**: `BancolombiaAccount`
+
 #### `bancolombia.activate(urn)`
 
 Activate a Bancolombia account.
@@ -446,6 +480,25 @@ const updatedCard = await bloque.accounts.card.updateMetadata({
 });
 
 console.log('Card metadata updated:', updatedCard.metadata);
+```
+
+### Updating Card Name
+
+```typescript
+import { SDK } from '@bloque/sdk';
+
+const bloque = new SDK({
+  apiKey: process.env.BLOQUE_API_KEY!,
+  mode: 'production',
+});
+
+// Update the card name
+const updatedCard = await bloque.accounts.card.updateName(
+  'did:bloque:mediums:card:account:123',
+  'My Personal Card'
+);
+
+console.log('Card name updated:', updatedCard.metadata?.name); // 'My Personal Card'
 ```
 
 ### Updating Card Status
@@ -617,6 +670,25 @@ const updatedAccount = await bloque.accounts.bancolombia.updateMetadata({
 });
 
 console.log('Account metadata updated:', updatedAccount.metadata);
+```
+
+### Updating Bancolombia Account Name
+
+```typescript
+import { SDK } from '@bloque/sdk';
+
+const bloque = new SDK({
+  apiKey: process.env.BLOQUE_API_KEY!,
+  mode: 'production',
+});
+
+// Update the account name
+const updatedAccount = await bloque.accounts.bancolombia.updateName(
+  'did:bloque:mediums:bancolombia:account:123',
+  'Main Business Account'
+);
+
+console.log('Account name updated:', updatedAccount.metadata?.name); // 'Main Business Account'
 ```
 
 ### Updating Bancolombia Account Status

@@ -98,6 +98,40 @@ export class BancolombiaClient {
   }
 
   /**
+   * Update Bancolombia account name
+   *
+   * @param urn - Bancolombia account URN
+   * @param name - New name for the account
+   * @returns Promise resolving to the updated Bancolombia account
+   *
+   * @example
+   * ```typescript
+   * const account = await bloque.accounts.bancolombia.updateName(
+   *   'did:bloque:mediums:bancolombia:account:123',
+   *   'Main Business Account'
+   * );
+   * ```
+   */
+  async updateName(urn: string, name: string): Promise<BancolombiaAccount> {
+    const request: UpdateAccountRequest = {
+      metadata: {
+        name,
+      },
+    };
+
+    const response = await this.httpClient.request<
+      UpdateAccountResponse<BancolombiaDetails>,
+      UpdateAccountRequest
+    >({
+      method: 'PATCH',
+      path: `/api/accounts/${urn}`,
+      body: request,
+    });
+
+    return this._mapAccountResponse(response.result.account);
+  }
+
+  /**
    * Activate a Bancolombia account
    *
    * @param urn - Bancolombia account URN

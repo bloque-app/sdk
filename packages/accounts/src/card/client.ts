@@ -99,6 +99,40 @@ export class CardClient {
   }
 
   /**
+   * Update card account name
+   *
+   * @param urn - Card account URN
+   * @param name - New name for the card
+   * @returns Promise resolving to the updated card account
+   *
+   * @example
+   * ```typescript
+   * const card = await bloque.accounts.card.updateName(
+   *   'did:bloque:mediums:card:account:123',
+   *   'My Business Card'
+   * );
+   * ```
+   */
+  async updateName(urn: string, name: string): Promise<CardAccount> {
+    const request: UpdateAccountRequest = {
+      metadata: {
+        name,
+      },
+    };
+
+    const response = await this.httpClient.request<
+      UpdateAccountResponse<CardDetails>,
+      UpdateAccountRequest
+    >({
+      method: 'PATCH',
+      path: `/api/accounts/${urn}`,
+      body: request,
+    });
+
+    return this._mapAccountResponse(response.result.account);
+  }
+
+  /**
    * Activate a card account
    *
    * @param urn - Card account URN
