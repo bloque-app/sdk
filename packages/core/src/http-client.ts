@@ -25,7 +25,11 @@ export class HttpClient {
   private readonly config: BloqueConfig;
   private readonly baseUrl: string;
 
-  private readonly publicRoutes = ['/api/aliases', '/api/origins/*/assert'];
+  private readonly publicRoutes = [
+    '/api/aliases',
+    '/api/origins/*/assert',
+    '/api/origins',
+  ];
 
   constructor(config: BloqueConfig) {
     this.validateConfig(config);

@@ -4,6 +4,7 @@ Identity, aliases, and OTP authentication API client for the Bloque SDK.
 
 ## Features
 
+- **Origin Management**: List and discover all available authentication origins
 - **Aliases**: Get user identity information by email or phone
 - **OTP Origins**: Send OTP codes via WhatsApp or Email
 - **Custom Origins**: Support for custom authentication origins
@@ -155,6 +156,29 @@ const otp = await customOrigin.assert('identifier');
 
 **Returns**: `OriginClient<OTPAssertion>` instance with `assert()` method
 
+#### `origins.list()`
+
+List all available origins with their current status:
+
+```typescript
+const origins = await identity.origins.list();
+```
+
+**Response**:
+
+```typescript
+interface Origin {
+  namespace: string;                         // Unique namespace identifier
+  provider: string;                          // Provider type (e.g., 'evm', 'auth0', 'whatsapp')
+  status: 'active' | 'inactive' | 'disabled'; // Current status
+  metadata: Record<string, unknown>;         // Additional metadata
+  created_at: string;                        // Creation timestamp (ISO 8601)
+  updated_at: string;                        // Last update timestamp (ISO 8601)
+}
+```
+
+**Returns**: `Promise<Origin[]>` - Array of all registered origins
+
 ## Examples
 
 ### Get Email Alias
@@ -274,6 +298,40 @@ async function authenticateUser(email: string) {
 await authenticateUser('user@example.com');
 ```
 
+### List Available Origins
+
+```typescript
+import { SDK } from '@bloque/sdk';
+
+const bloque = new SDK({
+  apiKey: process.env.BLOQUE_API_KEY!,
+  mode: 'production',
+});
+
+try {
+  const origins = await bloque.identity.origins.list();
+
+  // Filter active origins
+  const activeOrigins = origins.filter(o => o.status === 'active');
+  console.log(`Found ${activeOrigins.length} active origins`);
+
+  // Find specific origins
+  const whatsappOrigins = origins.filter(o => o.provider === 'whatsapp');
+  const evmOrigins = origins.filter(o => o.provider === 'evm');
+
+  console.log('WhatsApp origins:', whatsappOrigins.map(o => o.namespace));
+  console.log('EVM origins:', evmOrigins.map(o => o.namespace));
+
+  // Get metadata from specific origin
+  const auth0Origin = origins.find(o => o.namespace === 'bloque-auth0');
+  if (auth0Origin) {
+    console.log('Auth0 metadata:', auth0Origin.metadata);
+  }
+} catch (error) {
+  console.error('Failed to list origins:', error);
+}
+```
+
 ### Using Custom Origin
 
 ```typescript
@@ -344,6 +402,7 @@ This package is written in TypeScript and includes complete type definitions:
 ```typescript
 import type {
   Alias,
+  Origin,
   OTPAssertionEmail,
   OTPAssertionWhatsApp,
   OTPAssertion,
@@ -355,6 +414,9 @@ import type {
 
 // Type-safe alias retrieval
 const alias: Alias = await identity.aliases.get('user@example.com');
+
+// Type-safe origins list
+const origins: Origin[] = await identity.origins.list();
 
 // Type-safe OTP with WhatsApp
 const whatsappOTP: OTPAssertionWhatsApp =
@@ -391,6 +453,12 @@ const otp = await bloque.identity.origins.whatsapp.assert('+1234567890');
 ```
 
 ## Key Features
+
+### Origin Management
+
+- **List Origins**: Retrieve all available authentication origins
+- **Filter by Provider**: Find origins by provider type (evm, auth0, whatsapp, etc.)
+- **Check Status**: Monitor origin availability and status
 
 ### OTP Authentication Channels
 

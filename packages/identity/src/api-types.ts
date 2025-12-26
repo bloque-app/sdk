@@ -41,3 +41,30 @@ export interface OTPAssertionWhatsApp extends OTPBase {
 }
 
 export type OTPAssertion = OTPAssertionEmail | OTPAssertionWhatsApp;
+
+export interface Origin {
+  /**
+   * Unique namespace identifier for the origin
+   */
+  namespace: string;
+  /**
+   * Provider type (e.g., 'evm', 'auth0', 'whatsapp', 'email', 'api-key')
+   */
+  provider: ' evm' | 'auth0' | 'whatsapp' | 'email' | 'api-key';
+  /**
+   * Current status of the origin
+   */
+  status: 'active' | 'inactive' | 'disabled';
+  /**
+   * Additional metadata about the origin
+   */
+  metadata: Record<string, unknown>;
+  /**
+   * Creation timestamp (ISO 8601)
+   */
+  created_at: string;
+  /**
+   * Last update timestamp (ISO 8601)
+   */
+  updated_at: string;
+}
