@@ -1,5 +1,13 @@
 # @bloque/sdk-accounts
 
+## 0.0.17
+
+### Patch Changes
+
+- dummy
+- Updated dependencies
+  - @bloque/sdk-core@0.0.17
+
 ## 0.0.16
 
 ### Patch Changes
