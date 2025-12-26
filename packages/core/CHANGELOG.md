@@ -1,5 +1,11 @@
 # @bloque/sdk-core
 
+## 0.0.19
+
+### Patch Changes
+
+- adding method to list all origins
+
 ## 0.0.18
 
 ### Patch Changes

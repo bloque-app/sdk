@@ -1,5 +1,13 @@
 # @bloque/sdk-accounts
 
+## 0.0.19
+
+### Patch Changes
+
+- adding method to list all origins
+- Updated dependencies
+  - @bloque/sdk-core@0.0.19
+
 ## 0.0.18
 
 ### Patch Changes
