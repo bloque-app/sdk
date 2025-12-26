@@ -1,11 +1,18 @@
 import type { HttpClient } from '@bloque/sdk-core';
 import type {
+  AccountStatus,
   CardDetails,
   CreateAccountRequest,
   CreateAccountResponse,
   CreateCardAccountInput,
+  UpdateAccountRequest,
+  UpdateAccountResponse,
 } from '../api-types';
-import type { CardAccount, CreateCardParams } from './types';
+import type {
+  CardAccount,
+  CreateCardParams,
+  UpdateCardMetadataParams,
+} from './types';
 
 export class CardClient {
   private readonly httpClient: HttpClient;
@@ -54,8 +61,123 @@ export class CardClient {
       body: request,
     });
 
-    const account = response.result.account;
+    return this._mapAccountResponse(response.result.account);
+  }
 
+  /**
+   * Update card account metadata
+   *
+   * @param params - Metadata update parameters
+   * @returns Promise resolving to the updated card account
+   *
+   * @example
+   * ```typescript
+   * const card = await bloque.accounts.card.updateMetadata({
+   *   urn: 'did:bloque:mediums:card:account:123',
+   *   metadata: {
+   *     updated_by: 'admin',
+   *     update_reason: 'customer_request'
+   *   }
+   * });
+   * ```
+   */
+  async updateMetadata(params: UpdateCardMetadataParams): Promise<CardAccount> {
+    const request: UpdateAccountRequest = {
+      metadata: params.metadata,
+    };
+
+    const response = await this.httpClient.request<
+      UpdateAccountResponse<CardDetails>,
+      UpdateAccountRequest
+    >({
+      method: 'PATCH',
+      path: `/api/accounts/${params.urn}`,
+      body: request,
+    });
+
+    return this._mapAccountResponse(response.result.account);
+  }
+
+  /**
+   * Activate a card account
+   *
+   * @param urn - Card account URN
+   * @returns Promise resolving to the updated card account
+   *
+   * @example
+   * ```typescript
+   * const card = await bloque.accounts.card.activate(
+   *   'did:bloque:mediums:card:account:123'
+   * );
+   * ```
+   */
+  async activate(urn: string): Promise<CardAccount> {
+    return this._updateStatus(urn, 'active');
+  }
+
+  /**
+   * Freeze a card account
+   *
+   * @param urn - Card account URN
+   * @returns Promise resolving to the updated card account
+   *
+   * @example
+   * ```typescript
+   * const card = await bloque.accounts.card.freeze(
+   *   'did:bloque:mediums:card:account:123'
+   * );
+   * ```
+   */
+  async freeze(urn: string): Promise<CardAccount> {
+    return this._updateStatus(urn, 'frozen');
+  }
+
+  /**
+   * Disable a card account
+   *
+   * @param urn - Card account URN
+   * @returns Promise resolving to the updated card account
+   *
+   * @example
+   * ```typescript
+   * const card = await bloque.accounts.card.disable(
+   *   'did:bloque:mediums:card:account:123'
+   * );
+   * ```
+   */
+  async disable(urn: string): Promise<CardAccount> {
+    return this._updateStatus(urn, 'disabled');
+  }
+
+  /**
+   * Private method to update card status
+   */
+  private async _updateStatus(
+    urn: string,
+    status: AccountStatus,
+  ): Promise<CardAccount> {
+    const request: UpdateAccountRequest = {
+      status,
+    };
+
+    const response = await this.httpClient.request<
+      UpdateAccountResponse<CardDetails>,
+      UpdateAccountRequest
+    >({
+      method: 'PATCH',
+      path: `/api/accounts/${urn}`,
+      body: request,
+    });
+
+    return this._mapAccountResponse(response.result.account);
+  }
+
+  /**
+   * Private method to map API response to CardAccount
+   */
+  private _mapAccountResponse(
+    account: UpdateAccountResponse<CardDetails>['result']['account'],
+  ): CardAccount {
     return {
       urn: account.urn,
       id: account.id,

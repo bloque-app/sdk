@@ -1,12 +1,16 @@
 import type { HttpClient } from '@bloque/sdk-core';
 import type {
+  AccountStatus,
   BancolombiaDetails,
   CreateAccountRequest,
   CreateAccountResponse,
+  UpdateAccountRequest,
+  UpdateAccountResponse,
 } from '../api-types';
 import type {
   BancolombiaAccount,
   CreateBancolombiaAccountParams,
+  UpdateBancolombiaMetadataParams,
 } from './types';
 
 export class BancolombiaClient {
@@ -54,8 +58,125 @@ export class BancolombiaClient {
       body: request,
     });
 
-    const account = response.result.account;
+    return this._mapAccountResponse(response.result.account);
+  }
 
+  /**
+   * Update Bancolombia account metadata
+   *
+   * @param params - Metadata update parameters
+   * @returns Promise resolving to the updated Bancolombia account
+   *
+   * @example
+   * ```typescript
+   * const account = await bloque.accounts.bancolombia.updateMetadata({
+   *   urn: 'did:bloque:mediums:bancolombia:account:123',
+   *   metadata: {
+   *     updated_by: 'admin',
+   *     update_reason: 'customer_request'
+   *   }
+   * });
+   * ```
+   */
+  async updateMetadata(
+    params: UpdateBancolombiaMetadataParams,
+  ): Promise<BancolombiaAccount> {
+    const request: UpdateAccountRequest = {
+      metadata: params.metadata,
+    };
+
+    const response = await this.httpClient.request<
+      UpdateAccountResponse<BancolombiaDetails>,
+      UpdateAccountRequest
+    >({
+      method: 'PATCH',
+      path: `/api/accounts/${params.urn}`,
+      body: request,
+    });
+
+    return this._mapAccountResponse(response.result.account);
+  }
+
+  /**
+   * Activate a Bancolombia account
+   *
+   * @param urn - Bancolombia account URN
+   * @returns Promise resolving to the updated Bancolombia account
+   *
+   * @example
+   * ```typescript
+   * const account = await bloque.accounts.bancolombia.activate(
+   *   'did:bloque:mediums:bancolombia:account:123'
+   * );
+   * ```
+   */
+  async activate(urn: string): Promise<BancolombiaAccount> {
+    return this._updateStatus(urn, 'active');
+  }
+
+  /**
+   * Freeze a Bancolombia account
+   *
+   * @param urn - Bancolombia account URN
+   * @returns Promise resolving to the updated Bancolombia account
+   *
+   * @example
+   * ```typescript
+   * const account = await bloque.accounts.bancolombia.freeze(
+   *   'did:bloque:mediums:bancolombia:account:123'
+   * );
+   * ```
+   */
+  async freeze(urn: string): Promise<BancolombiaAccount> {
+    return this._updateStatus(urn, 'frozen');
+  }
+
+  /**
+   * Disable a Bancolombia account
+   *
+   * @param urn - Bancolombia account URN
+   * @returns Promise resolving to the updated Bancolombia account
+   *
+   * @example
+   * ```typescript
+   * const account = await bloque.accounts.bancolombia.disable(
+   *   'did:bloque:mediums:bancolombia:account:123'
+   * );
+   * ```
+   */
+  async disable(urn: string): Promise<BancolombiaAccount> {
+    return this._updateStatus(urn, 'disabled');
+  }
+
+  /**
+   * Private method to update Bancolombia account status
+   */
+  private async _updateStatus(
+    urn: string,
+    status: AccountStatus,
+  ): Promise<BancolombiaAccount> {
+    const request: UpdateAccountRequest = {
+      status,
+    };
+
+    const response = await this.httpClient.request<
+      UpdateAccountResponse<BancolombiaDetails>,
+      UpdateAccountRequest
+    >({
+      method: 'PATCH',
+      path: `/api/accounts/${urn}`,
+      body: request,
+    });
+
+    return this._mapAccountResponse(response.result.account);
+  }
+
+  /**
+   * Private method to map API response to BancolombiaAccount
+   */
+  private _mapAccountResponse(
+    account: UpdateAccountResponse<BancolombiaDetails>['result']['account'],
+  ): BancolombiaAccount {
     return {
       urn: account.urn,
       id: account.id,

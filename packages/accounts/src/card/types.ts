@@ -25,6 +25,22 @@ export interface CreateCardParams {
   metadata?: Record<string, unknown>;
 }
 
+export interface UpdateCardMetadataParams {
+  /**
+   * URN of the card account to update
+   *
+   * @example "did:bloque:mediums:card:account:123e4567"
+   */
+  urn: string;
+  /**
+   * Metadata to update (name and source are reserved fields and cannot be modified)
+   */
+  metadata: Record<string, unknown> & {
+    name?: never;
+    source?: never;
+  };
+}
+
 export interface CardAccount {
   /**
    * Unique resource name for the card account

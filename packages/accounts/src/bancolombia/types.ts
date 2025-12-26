@@ -23,6 +23,22 @@ export interface CreateBancolombiaAccountParams {
   metadata?: Record<string, unknown>;
 }
 
+export interface UpdateBancolombiaMetadataParams {
+  /**
+   * URN of the Bancolombia account to update
+   *
+   * @example "did:bloque:mediums:bancolombia:account:123e4567"
+   */
+  urn: string;
+  /**
+   * Metadata to update (name and source are reserved fields and cannot be modified)
+   */
+  metadata: Record<string, unknown> & {
+    name?: never;
+    source?: never;
+  };
+}
+
 /**
  * Bancolombia account response
  */

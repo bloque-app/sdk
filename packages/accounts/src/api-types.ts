@@ -1,16 +1,18 @@
+export type AccountStatus =
+  | 'active'
+  | 'disabled'
+  | 'frozen'
+  | 'deleted'
+  | 'creation_in_progress'
+  | 'creation_failed';
+
 interface Account<TDetails = unknown> {
   id: string;
   urn: string;
   medium: 'bancolombia' | 'card';
   details: TDetails;
   ledger_account_id: string;
-  status:
-    | 'active'
-    | 'disabled'
-    | 'frozen'
-    | 'deleted'
-    | 'creation_in_progress'
-    | 'creation_failed';
+  status: AccountStatus;
   owner_urn: string;
   created_at: string;
   updated_at: string;
@@ -62,3 +64,16 @@ export type BancolombiaDetails = {
   payment_agreement_code: string;
   network: string[];
 };
+
+export interface UpdateAccountRequest<TInput = unknown> {
+  input?: TInput;
+  metadata?: Record<string, unknown>;
+  status?: AccountStatus;
+}
+
+export interface UpdateAccountResponse<TDetails = unknown> {
+  result: {
+    account: Account<TDetails>;
+  };
+  req_id: string;
+}

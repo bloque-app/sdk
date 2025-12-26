@@ -131,6 +131,84 @@ interface CardAccount {
 }
 ```
 
+#### `card.updateMetadata(params)`
+
+Update the metadata of an existing card account.
+
+```typescript
+const card = await bloque.accounts.card.updateMetadata({
+  urn: 'did:bloque:mediums:card:account:123',
+  metadata: {
+    updated_by: 'admin',
+    update_reason: 'customer_request',
+  },
+});
+```
+
+**Parameters**:
+
+```typescript
+interface UpdateCardMetadataParams {
+  /**
+   * URN of the card account to update
+   * @example "did:bloque:mediums:card:account:123e4567"
+   */
+  urn: string;
+
+  /**
+   * Metadata to update (name and source are reserved fields and cannot be modified)
+   */
+  metadata: Record<string, unknown> & {
+    name?: never;
+    source?: never;
+  };
+}
+```
+
+**Returns**: `CardAccount`
+
+#### `card.activate(urn)`
+
+Activate a card account.
+
+```typescript
+const card = await bloque.accounts.card.activate(
+  'did:bloque:mediums:card:account:123'
+);
+```
+
+**Parameters**: `urn: string` - Card account URN
+
+**Returns**: `CardAccount`
+
+#### `card.freeze(urn)`
+
+Freeze a card account.
+
+```typescript
+const card = await bloque.accounts.card.freeze(
+  'did:bloque:mediums:card:account:123'
+);
+```
+
+**Parameters**: `urn: string` - Card account URN
+
+**Returns**: `CardAccount`
+
+#### `card.disable(urn)`
+
+Disable a card account.
+
+```typescript
+const card = await bloque.accounts.card.disable(
+  'did:bloque:mediums:card:account:123'
+);
+```
+
+**Parameters**: `urn: string` - Card account URN
+
+**Returns**: `CardAccount`
+
 ### Bancolombia Accounts
 
 Create Bancolombia accounts with reference codes for local payments.
@@ -193,6 +271,84 @@ interface BancolombiaAccount {
   updatedAt: string;              // Last update timestamp (ISO 8601)
 }
 ```
+
+#### `bancolombia.updateMetadata(params)`
+
+Update the metadata of an existing Bancolombia account.
+
+```typescript
+const account = await bloque.accounts.bancolombia.updateMetadata({
+  urn: 'did:bloque:mediums:bancolombia:account:123',
+  metadata: {
+    updated_by: 'admin',
+    update_reason: 'customer_request',
+  },
+});
+```
+
+**Parameters**:
+
+```typescript
+interface UpdateBancolombiaMetadataParams {
+  /**
+   * URN of the Bancolombia account to update
+   * @example "did:bloque:mediums:bancolombia:account:123e4567"
+   */
+  urn: string;
+
+  /**
+   * Metadata to update (name and source are reserved fields and cannot be modified)
+   */
+  metadata: Record<string, unknown> & {
+    name?: never;
+    source?: never;
+  };
+}
+```
+
+**Returns**: `BancolombiaAccount`
+
+#### `bancolombia.activate(urn)`
+
+Activate a Bancolombia account.
+
+```typescript
+const account = await bloque.accounts.bancolombia.activate(
+  'did:bloque:mediums:bancolombia:account:123'
+);
+```
+
+**Parameters**: `urn: string` - Bancolombia account URN
+
+**Returns**: `BancolombiaAccount`
+
+#### `bancolombia.freeze(urn)`
+
+Freeze a Bancolombia account.
+
+```typescript
+const account = await bloque.accounts.bancolombia.freeze(
+  'did:bloque:mediums:bancolombia:account:123'
+);
+```
+
+**Parameters**: `urn: string` - Bancolombia account URN
+
+**Returns**: `BancolombiaAccount`
+
+#### `bancolombia.disable(urn)`
+
+Disable a Bancolombia account.
+
+```typescript
+const account = await bloque.accounts.bancolombia.disable(
+  'did:bloque:mediums:bancolombia:account:123'
+);
+```
+
+**Parameters**: `urn: string` - Bancolombia account URN
+
+**Returns**: `BancolombiaAccount`
 
 ## Complete Examples
 
@@ -261,6 +417,67 @@ const businessCard = await bloque.accounts.card.create({
 
 console.log('Personal card:', personalCard.lastFour);
 console.log('Business card:', businessCard.lastFour);
+```
+
+### Updating Card Metadata
+
+```typescript
+import { SDK } from '@bloque/sdk';
+
+const bloque = new SDK({
+  apiKey: process.env.BLOQUE_API_KEY!,
+  mode: 'production',
+});
+
+// Create a card first
+const card = await bloque.accounts.card.create({
+  urn: 'did:bloque:user:123e4567',
+  name: 'My Card',
+});
+
+// Update the card metadata
+const updatedCard = await bloque.accounts.card.updateMetadata({
+  urn: card.urn,
+  metadata: {
+    updated_by: 'admin',
+    update_reason: 'customer_request',
+    custom_field: 'custom_value',
+  },
+});
+
+console.log('Card metadata updated:', updatedCard.metadata);
+```
+
+### Updating Card Status
+
+```typescript
+import { SDK } from '@bloque/sdk';
+
+const bloque = new SDK({
+  apiKey: process.env.BLOQUE_API_KEY!,
+  mode: 'production',
+});
+
+// Freeze a card
+const frozenCard = await bloque.accounts.card.freeze(
+  'did:bloque:mediums:card:account:123'
+);
+
+console.log('Card status:', frozenCard.status); // 'frozen'
+
+// Reactivate the card
+const activeCard = await bloque.accounts.card.activate(
+  'did:bloque:mediums:card:account:123'
+);
+
+console.log('Card status:', activeCard.status); // 'active'
+
+// Disable a card
+const disabledCard = await bloque.accounts.card.disable(
+  'did:bloque:mediums:card:account:123'
+);
+
+console.log('Card status:', disabledCard.status); // 'disabled'
 ```
 
 ### Error Handling
@@ -373,6 +590,67 @@ console.log('Account created with metadata:', account.metadata);
 console.log('Reference code:', account.referenceCode);
 ```
 
+### Updating Bancolombia Account Metadata
+
+```typescript
+import { SDK } from '@bloque/sdk';
+
+const bloque = new SDK({
+  apiKey: process.env.BLOQUE_API_KEY!,
+  mode: 'production',
+});
+
+// Create a Bancolombia account first
+const account = await bloque.accounts.bancolombia.create({
+  urn: 'did:bloque:user:123e4567',
+  name: 'Main Account',
+});
+
+// Update the account metadata
+const updatedAccount = await bloque.accounts.bancolombia.updateMetadata({
+  urn: account.urn,
+  metadata: {
+    updated_by: 'admin',
+    update_reason: 'customer_request',
+    department: 'finance',
+  },
+});
+
+console.log('Account metadata updated:', updatedAccount.metadata);
+```
+
+### Updating Bancolombia Account Status
+
+```typescript
+import { SDK } from '@bloque/sdk';
+
+const bloque = new SDK({
+  apiKey: process.env.BLOQUE_API_KEY!,
+  mode: 'production',
+});
+
+// Freeze a Bancolombia account
+const frozenAccount = await bloque.accounts.bancolombia.freeze(
+  'did:bloque:mediums:bancolombia:account:123'
+);
+
+console.log('Account status:', frozenAccount.status); // 'frozen'
+
+// Reactivate the account
+const activeAccount = await bloque.accounts.bancolombia.activate(
+  'did:bloque:mediums:bancolombia:account:123'
+);
+
+console.log('Account status:', activeAccount.status); // 'active'
+
+// Disable an account
+const disabledAccount = await bloque.accounts.bancolombia.disable(
+  'did:bloque:mediums:bancolombia:account:123'
+);
+
+console.log('Account status:', disabledAccount.status); // 'disabled'
+```
+
 ## TypeScript Support
 
 This package is written in TypeScript and includes complete type definitions:
@@ -381,8 +659,10 @@ This package is written in TypeScript and includes complete type definitions:
 import type {
   CardAccount,
   CreateCardParams,
+  UpdateCardMetadataParams,
   BancolombiaAccount,
   CreateBancolombiaAccountParams,
+  UpdateBancolombiaMetadataParams,
 } from '@bloque/sdk-accounts';
 
 // Type-safe card creation
