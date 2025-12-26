@@ -9,7 +9,7 @@ export type {
 } from '@bloque/sdk-orgs';
 
 import { OrgsClient } from '@bloque/sdk-orgs';
-import { getHttpClient } from './http';
+import { getHttpClient } from './config';
 import { lazyClient } from './lazy';
 
 export const Orgs = lazyClient<OrgsClient>(
