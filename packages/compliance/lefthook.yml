@@ -1,0 +1,13 @@
+pre-commit:
+  parallel: true
+  commands:
+    typecheck-compliance:
+      root: packages/compliance
+      run: bun typecheck
+      fail_text: "TypeScript type checking failed for compliance package"
+    biome-compliance:
+      root: packages/compliance
+      glob: "*.{js,ts,jsx,tsx}"
+      run: bun check {staged_files}
+      stage_fixed: true
+      fail_text: "Biome linting/formatting failed for compliance package"

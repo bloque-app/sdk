@@ -15,11 +15,17 @@ export default defineConfig({
     {
       format: 'esm',
       syntax: ['node 22'],
+      output: {
+        minify: true,
+      },
       dts: true,
     },
     {
       format: 'cjs',
       syntax: ['node 22'],
+      output: {
+        minify: true,
+      },
     },
   ],
 });

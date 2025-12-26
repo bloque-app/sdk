@@ -1,5 +1,53 @@
 # @bloque/sdk
 
+## 0.0.16
+
+### Patch Changes
+
+- dummy
+- Updated dependencies
+  - @bloque/sdk-compliance@0.0.16
+  - @bloque/sdk-accounts@0.0.16
+  - @bloque/sdk-identity@0.0.16
+  - @bloque/sdk-core@0.0.16
+  - @bloque/sdk-orgs@0.0.16
+
+## 0.0.15
+
+### Patch Changes
+
+- dummy
+- Updated dependencies
+  - @bloque/sdk-compliance@0.0.15
+  - @bloque/sdk-accounts@0.0.15
+  - @bloque/sdk-identity@0.0.15
+  - @bloque/sdk-orgs@0.0.15
+  - @bloque/sdk-core@0.0.15
+
+## 0.0.14
+
+### Patch Changes
+
+- dummmy
+- Updated dependencies
+  - @bloque/sdk-accounts@0.0.14
+  - @bloque/sdk-compliance@0.0.14
+  - @bloque/sdk-core@0.0.14
+  - @bloque/sdk-identity@0.0.14
+  - @bloque/sdk-orgs@0.0.14
+
+## 0.0.13
+
+### Patch Changes
+
+- dummy
+- Updated dependencies
+  - @bloque/sdk-compliance@0.0.13
+  - @bloque/sdk-accounts@0.0.13
+  - @bloque/sdk-identity@0.0.13
+  - @bloque/sdk-core@0.0.13
+  - @bloque/sdk-orgs@0.0.13
+
 ## 0.0.12
 
 ### Patch Changes

@@ -27,8 +27,11 @@
   "devDependencies": {
     "@biomejs/biome": "catalog:",
     "@changesets/cli": "2.29.8",
+    "@types/node": "catalog:",
+    "bun-types": "latest",
     "lefthook": "^2.0.12",
-    "typescript": "catalog:"
+    "typescript": "catalog:",
+    "@types/bun": "latest"
   },
   "workspaces": {
     "packages": [

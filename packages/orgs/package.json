@@ -1,6 +1,6 @@
 {
   "name": "@bloque/sdk-orgs",
-  "version": "0.0.12",
+  "version": "0.0.16",
   "type": "module",
   "keywords": [
     "bloque",
@@ -34,7 +34,8 @@
     "node": ">=22"
   },
   "scripts": {
-    "release": "bun publish",
+    "prerelease": "bun ../../scripts/prerelease.ts",
+    "release": "bun publish --provenance",
     "build": "rslib build",
     "dev": "rslib build --watch",
     "clean": "rm -rf node_modules && rm -rf dist",

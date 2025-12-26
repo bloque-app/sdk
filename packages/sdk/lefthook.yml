@@ -1,0 +1,13 @@
+pre-commit:
+  parallel: true
+  commands:
+    typecheck-sdk:
+      root: packages/sdk
+      run: bun typecheck
+      fail_text: "TypeScript type checking failed for sdk package"
+    biome-sdk:
+      root: packages/sdk
+      glob: "*.{js,ts,jsx,tsx}"
+      run: bun check {staged_files}
+      stage_fixed: true
+      fail_text: "Biome linting/formatting failed for sdk package"

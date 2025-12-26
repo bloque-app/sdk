@@ -1,5 +1,29 @@
 # @bloque/sdk-core
 
+## 0.0.16
+
+### Patch Changes
+
+- dummy
+
+## 0.0.15
+
+### Patch Changes
+
+- dummy
+
+## 0.0.14
+
+### Patch Changes
+
+- dummmy
+
+## 0.0.13
+
+### Patch Changes
+
+- dummy
+
 ## 0.0.12
 
 ### Patch Changes

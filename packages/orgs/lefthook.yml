@@ -1,0 +1,13 @@
+pre-commit:
+  parallel: true
+  commands:
+    typecheck-orgs:
+      root: packages/orgs
+      run: bun typecheck
+      fail_text: "TypeScript type checking failed for orgs package"
+    biome-orgs:
+      root: packages/orgs
+      glob: "*.{js,ts,jsx,tsx}"
+      run: bun check {staged_files}
+      stage_fixed: true
+      fail_text: "Biome linting/formatting failed for orgs package"
