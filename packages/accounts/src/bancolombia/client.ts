@@ -36,11 +36,11 @@ export class BancolombiaClient {
     const request: CreateAccountRequest = {
       holder_urn: params.urn,
       webhook_url: params.webhookUrl,
+      ledger_account_id: params.ledgerId,
       input: {},
       metadata: {
         source: 'sdk-typescript',
         name: params.name,
-        card_urn: params.cardUrn,
         ...params.metadata,
       },
     };

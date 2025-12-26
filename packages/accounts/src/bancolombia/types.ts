@@ -10,11 +10,9 @@ export interface CreateBancolombiaAccountParams {
    */
   name?: string;
   /**
-   * URN of an existing card to link with the Bancolombia account
-   *
-   * @example "did:bloque:card:123e4567"
+   * Ledger account ID to associate with the Bancolombia account
    */
-  cardUrn?: string;
+  ledgerId?: string;
   /**
    * Webhook URL to receive account events
    */

@@ -41,22 +41,25 @@ const bloque = new SDK({
 const card = await bloque.accounts.card.create({
   urn: 'did:bloque:user:123',
   name: 'My Virtual Card', // Optional
+  ledgerId: 'ledger_123', // Optional - associate with ledger account
 });
 
 console.log('Card created:', card.urn);
 console.log('Last four digits:', card.lastFour);
 console.log('Card details URL:', card.detailsUrl);
+console.log('Ledger ID:', card.ledgerId);
 console.log('Status:', card.status);
 
 // Create a Bancolombia account
 const bancolombiaAccount = await bloque.accounts.bancolombia.create({
   urn: 'did:bloque:user:123',
   name: 'Main Account', // Optional
-  cardUrn: card.urn, // Optional - link with existing card
+  ledgerId: 'ledger_123', // Optional - associate with ledger account
 });
 
 console.log('Bancolombia account created:', bancolombiaAccount.urn);
 console.log('Reference code:', bancolombiaAccount.referenceCode);
+console.log('Ledger ID:', bancolombiaAccount.ledgerId);
 console.log('Status:', bancolombiaAccount.status);
 ```
 
@@ -72,6 +75,7 @@ Create virtual cards instantly.
 const card = await bloque.accounts.card.create({
   urn: 'did:bloque:user:123',
   name: 'My Virtual Card', // Optional
+  ledgerId: 'ledger_123', // Optional
 });
 ```
 
@@ -89,6 +93,21 @@ interface CreateCardParams {
    * Display name for the card (optional)
    */
   name?: string;
+
+  /**
+   * Ledger account ID to associate with the card (optional)
+   */
+  ledgerId?: string;
+
+  /**
+   * Webhook URL to receive card events (optional)
+   */
+  webhookUrl?: string;
+
+  /**
+   * Custom metadata to associate with the card (optional)
+   */
+  metadata?: Record<string, unknown>;
 }
 ```
 
@@ -104,6 +123,7 @@ interface CardAccount {
   cardType: 'VIRTUAL' | 'PHYSICAL'; // Card type
   detailsUrl: string;             // PCI-compliant URL to view card details
   ownerUrn: string;               // Owner URN
+  ledgerId: string;               // Ledger account ID
   webhookUrl: string | null;      // Webhook URL (if configured)
   metadata?: Record<string, unknown>; // Custom metadata
   createdAt: string;              // Creation timestamp (ISO 8601)
@@ -121,7 +141,7 @@ Create Bancolombia accounts with reference codes for local payments.
 const account = await bloque.accounts.bancolombia.create({
   urn: 'did:bloque:user:123',
   name: 'Main Account', // Optional
-  cardUrn: 'did:bloque:card:456', // Optional - link with existing card
+  ledgerId: 'ledger_123', // Optional
 });
 ```
 
@@ -141,10 +161,14 @@ interface CreateBancolombiaAccountParams {
   name?: string;
 
   /**
-   * URN of an existing card to link with the Bancolombia account (optional)
-   * @example "did:bloque:card:123e4567"
+   * Ledger account ID to associate with the Bancolombia account (optional)
    */
-  cardUrn?: string;
+  ledgerId?: string;
+
+  /**
+   * Webhook URL to receive account events (optional)
+   */
+  webhookUrl?: string;
 
   /**
    * Custom metadata to attach to the Bancolombia account (optional)
@@ -162,6 +186,7 @@ interface BancolombiaAccount {
   referenceCode: string;          // Reference code for payments
   status: 'active' | 'disabled' | 'frozen' | 'deleted' | 'creation_in_progress' | 'creation_failed';
   ownerUrn: string;               // Owner URN
+  ledgerId: string;               // Ledger account ID
   webhookUrl: string | null;      // Webhook URL (if configured)
   metadata?: Record<string, unknown>; // Custom metadata
   createdAt: string;              // Creation timestamp (ISO 8601)
@@ -289,7 +314,7 @@ console.log('Reference code:', account.referenceCode);
 console.log('Status:', account.status);
 ```
 
-### Bancolombia Account with Card Link
+### Bancolombia Account with Ledger Association
 
 ```typescript
 import { SDK } from '@bloque/sdk';
@@ -300,22 +325,26 @@ const bloque = new SDK({
 });
 
 const userUrn = 'did:bloque:user:123e4567';
+const ledgerId = 'ledger_abc123';
 
-// Create a card first
+// Create a card associated with a ledger
 const card = await bloque.accounts.card.create({
   urn: userUrn,
   name: 'My Card',
+  ledgerId: ledgerId,
 });
 
-// Create Bancolombia account and link it to the card
+// Create Bancolombia account with the same ledger
 const account = await bloque.accounts.bancolombia.create({
   urn: userUrn,
   name: 'Main Account',
-  cardUrn: card.urn, // Link to existing card
+  ledgerId: ledgerId,
 });
 
 console.log('Card URN:', card.urn);
+console.log('Card Ledger ID:', card.ledgerId);
 console.log('Account URN:', account.urn);
+console.log('Account Ledger ID:', account.ledgerId);
 console.log('Reference code for payments:', account.referenceCode);
 ```
 
@@ -373,13 +402,14 @@ console.log(card.cardType); // 'VIRTUAL' | 'PHYSICAL'
 const accountParams: CreateBancolombiaAccountParams = {
   urn: 'did:bloque:user:123e4567',
   name: 'Main Account', // Optional
-  cardUrn: card.urn, // Optional
+  ledgerId: 'ledger_123', // Optional
 };
 
 const account: BancolombiaAccount = await bloque.accounts.bancolombia.create(accountParams);
 
 // TypeScript infers all account properties with full type safety
 console.log(account.referenceCode); // string
+console.log(account.ledgerId);      // string
 console.log(account.status);        // 'active' | 'disabled' | 'frozen' | 'deleted' | 'creation_in_progress' | 'creation_failed'
 ```
 

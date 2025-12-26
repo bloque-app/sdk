@@ -16,6 +16,10 @@ export interface CreateCardParams {
    */
   webhookUrl?: string;
   /**
+   * Ledger account ID to associate with the card
+   */
+  ledgerId?: string;
+  /**
    * Custom metadata to associate with the card
    */
   metadata?: Record<string, unknown>;

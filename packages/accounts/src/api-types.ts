@@ -22,6 +22,7 @@ export type CardType = 'VIRTUAL' | 'PHYSICAL';
 
 export interface CreateAccountRequest<TInput = unknown> {
   holder_urn: string;
+  ledger_account_id?: string;
   input: TInput;
   metadata?: Record<string, unknown>;
   webhook_url?: string;

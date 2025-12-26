@@ -32,6 +32,7 @@ export class CardClient {
     const request: CreateAccountRequest<CreateCardAccountInput> = {
       holder_urn: params.urn,
       webhook_url: params.webhookUrl,
+      ledger_account_id: params.ledgerId,
       input: {
         create: {
           card_type: 'VIRTUAL',
