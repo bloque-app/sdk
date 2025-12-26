@@ -1,5 +1,11 @@
 # @bloque/sdk-core
 
+## 0.0.18
+
+### Patch Changes
+
+- adding methods to update card metadata and status
+
 ## 0.0.17
 
 ### Patch Changes

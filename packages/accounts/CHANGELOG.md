@@ -1,5 +1,13 @@
 # @bloque/sdk-accounts
 
+## 0.0.18
+
+### Patch Changes
+
+- adding methods to update card metadata and status
+- Updated dependencies
+  - @bloque/sdk-core@0.0.18
+
 ## 0.0.17
 
 ### Patch Changes

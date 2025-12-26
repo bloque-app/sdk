@@ -1,5 +1,17 @@
 # @bloque/sdk
 
+## 0.0.18
+
+### Patch Changes
+
+- adding methods to update card metadata and status
+- Updated dependencies
+  - @bloque/sdk-accounts@0.0.18
+  - @bloque/sdk-compliance@0.0.18
+  - @bloque/sdk-core@0.0.18
+  - @bloque/sdk-identity@0.0.18
+  - @bloque/sdk-orgs@0.0.18
+
 ## 0.0.17
 
 ### Patch Changes
