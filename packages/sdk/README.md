@@ -30,6 +30,7 @@ This SDK is compatible with multiple JavaScript runtimes:
 
 - **TypeScript First**: Built with TypeScript for complete type safety
 - **Simple API**: Intuitive interface for managing organizations, compliance, accounts, and identity
+- **Identity Registration**: Register individual users (KYC) and businesses (KYB) with multi-method authentication
 - **Fully Async**: Promise-based API for modern JavaScript workflows
 - **Lightweight**: Minimal dependencies for optimal bundle size
 - **Modular**: Import only what you need with tree-shakeable exports
@@ -306,7 +307,152 @@ interface CardAccount {
 
 ### Identity
 
-The identity resource allows you to retrieve user aliases (alternative identifiers like email or phone).
+The identity resource allows you to register identities, retrieve user aliases, and manage authentication origins.
+
+#### Register Identity
+
+Register a new user or business identity to an authentication origin. Supports individual users (KYC) and businesses (KYB):
+
+```typescript
+// Register individual user
+const individual = await bloque.identity.origins.register('ethereum-mainnet', {
+  assertionResult: {
+    alias: '0x742d35Cc6634C0532925a3b8D4C9db96C4b4d8b6',
+    challengeType: 'SIGNING_CHALLENGE',
+    value: {
+      signature: '0x1234567890abcdef...',
+      alias: '0x742d35Cc6634C0532925a3b8D4C9db96C4b4d8b6'
+    }
+  },
+  type: 'individual',
+  profile: {
+    firstName: 'John',
+    lastName: 'Doe',
+    email: 'john@example.com'
+  }
+});
+
+// Register business
+const business = await bloque.identity.origins.register('bloque-api', {
+  assertionResult: {
+    alias: 'business-123',
+    challengeType: 'API_KEY',
+    value: {
+      apiKey: 'sk_live_abc123',
+      alias: 'business-123'
+    }
+  },
+  type: 'business',
+  profile: {
+    legalName: 'Acme Corporation',
+    name: 'Acme Corp',
+    taxId: '12-3456789',
+    type: 'LLC',
+    incorporationDate: '2020-01-15',
+    addressLine1: '123 Business St',
+    city: 'New York',
+    state: 'NY',
+    postalCode: '10001',
+    country: 'United States'
+  }
+});
+```
+
+**Parameters**:
+
+```typescript
+// Registration parameters (discriminated union by type)
+type RegisterParams = IndividualRegisterParams | BusinessRegisterParams;
+
+interface IndividualRegisterParams {
+  assertionResult: AssertionResult;
+  extraContext?: Record<string, unknown>;
+  type: 'individual';
+  profile: UserProfile;
+}
+
+interface BusinessRegisterParams {
+  assertionResult: AssertionResult;
+  extraContext?: Record<string, unknown>;
+  type: 'business';
+  profile: BusinessProfile;
+}
+
+// Assertion result for challenge verification
+interface AssertionResult {
+  alias: string;                                  // Identity identifier
+  challengeType: 'SIGNING_CHALLENGE' | 'API_KEY' | 'OAUTH_REDIRECT' | 'WEBAUTHN' | 'OTP' | 'PASSWORD';
+  value: {
+    signature?: string;                           // For SIGNING_CHALLENGE
+    apiKey?: string;                              // For API_KEY
+    alias: string;
+  };
+  originalChallengeParams?: {
+    challenge: string;
+    timestamp: number;
+  };
+}
+
+// Individual user profile (KYC)
+interface UserProfile {
+  firstName?: string;
+  lastName?: string;
+  birthdate?: string;                             // ISO 8601 (YYYY-MM-DD)
+  email?: string;
+  phone?: string;
+  gender?: string;
+  addressLine1?: string;
+  addressLine2?: string;
+  city?: string;
+  state?: string;
+  postalCode?: string;
+  neighborhood?: string;
+  countryOfBirthCode?: string;
+  countryOfResidenceCode?: string;
+  personalIdType?: string;
+  personalIdNumber?: string;
+}
+
+// Business profile (KYB)
+interface BusinessProfile {
+  // Required fields
+  addressLine1: string;
+  city: string;
+  country: string;
+  incorporationDate: string;
+  legalName: string;
+  name: string;
+  postalCode: string;
+  state: string;
+  taxId: string;
+  type: string;
+
+  // Optional fields
+  addressLine2?: string;
+  countryCode?: string;
+  email?: string;
+  logo?: string;
+  phone?: string;
+
+  // Beneficial owner information
+  ownerName?: string;
+  ownerIdType?: string;
+  ownerIdNumber?: string;
+  ownerAddressLine1?: string;
+  ownerCity?: string;
+  ownerState?: string;
+  ownerPostalCode?: string;
+  ownerCountryCode?: string;
+}
+```
+
+**Response**:
+
+```typescript
+interface RegisterResult {
+  accessToken: string;  // JWT access token for authenticated sessions
+}
+```
 
 #### Get Alias
 
@@ -610,6 +756,128 @@ try {
 }
 ```
 
+### Registering Individual User Identity (KYC)
+
+```typescript
+import { SDK } from '@bloque/sdk';
+import type { IndividualRegisterParams } from '@bloque/sdk/identity';
+
+const bloque = new SDK({
+  apiKey: process.env.BLOQUE_API_KEY!,
+  mode: 'production',
+});
+
+// Register an individual with blockchain signature
+const params: IndividualRegisterParams = {
+  assertionResult: {
+    alias: '0x742d35Cc6634C0532925a3b8D4C9db96C4b4d8b6',
+    challengeType: 'SIGNING_CHALLENGE',
+    value: {
+      signature: '0x1234567890abcdef...',
+      alias: '0x742d35Cc6634C0532925a3b8D4C9db96C4b4d8b6'
+    },
+    originalChallengeParams: {
+      challenge: 'bloque-challenge-1234567890',
+      timestamp: 1640995200
+    }
+  },
+  type: 'individual',
+  profile: {
+    firstName: 'John',
+    lastName: 'Doe',
+    email: 'john.doe@example.com',
+    phone: '+1234567890',
+    birthdate: '1990-01-15',
+    city: 'New York',
+    state: 'NY',
+    postalCode: '10001',
+    addressLine1: '123 Main St',
+    countryOfBirthCode: 'USA',
+    countryOfResidenceCode: 'USA',
+    personalIdType: 'SSN',
+    personalIdNumber: '123-45-6789'
+  }
+};
+
+try {
+  const result = await bloque.identity.origins.register('ethereum-mainnet', params);
+
+  console.log('User registered successfully!');
+  console.log('Access token:', result.accessToken);
+
+  // Store the access token securely for the user's session
+  // Use it for subsequent authenticated API calls
+} catch (error) {
+  console.error('Registration failed:', error);
+}
+```
+
+### Registering Business Identity (KYB)
+
+```typescript
+import { SDK } from '@bloque/sdk';
+import type { BusinessRegisterParams } from '@bloque/sdk/identity';
+
+const bloque = new SDK({
+  apiKey: process.env.BLOQUE_API_KEY!,
+  mode: 'production',
+});
+
+// Register a business with API key authentication
+const params: BusinessRegisterParams = {
+  assertionResult: {
+    alias: 'business-123',
+    challengeType: 'API_KEY',
+    value: {
+      apiKey: 'sk_live_abc123def456',
+      alias: 'business-123'
+    }
+  },
+  type: 'business',
+  profile: {
+    // Required business information
+    legalName: 'Acme Corporation',
+    name: 'Acme Corp',
+    taxId: '12-3456789',
+    type: 'LLC',
+    incorporationDate: '2020-01-15',
+    addressLine1: '123 Business St',
+    city: 'New York',
+    state: 'NY',
+    postalCode: '10001',
+    country: 'United States',
+
+    // Optional business information
+    addressLine2: 'Suite 100',
+    countryCode: 'US',
+    email: 'contact@acme.com',
+    phone: '+1-555-0123',
+    logo: 'https://acme.com/logo.png',
+
+    // Beneficial owner information (for compliance)
+    ownerName: 'Jane Smith',
+    ownerIdType: 'SSN',
+    ownerIdNumber: '123-45-6789',
+    ownerAddressLine1: '456 Owner Ave',
+    ownerCity: 'New York',
+    ownerState: 'NY',
+    ownerPostalCode: '10002',
+    ownerCountryCode: 'US'
+  }
+};
+
+try {
+  const result = await bloque.identity.origins.register('bloque-api', params);
+
+  console.log('Business registered successfully!');
+  console.log('Access token:', result.accessToken);
+
+  // Use the access token for authenticated API calls
+} catch (error) {
+  console.error('Business registration failed:', error);
+}
+```
+
 ### Using in an API Endpoint
 
 ```typescript
@@ -765,6 +1033,13 @@ import type {
 // Identity types
 import type {
   Alias,
+  RegisterParams,
+  IndividualRegisterParams,
+  BusinessRegisterParams,
+  RegisterResult,
+  UserProfile,
+  BusinessProfile,
+  AssertionResult,
 } from '@bloque/sdk/identity';
 ```
 

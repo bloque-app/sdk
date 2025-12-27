@@ -4,7 +4,12 @@
 
 ### Patch Changes
 
-- dummy
+- Added identity registration support with `origins.register()` method
+  - Individual user registration (KYC) with complete profile fields
+  - Business registration (KYB) with company and beneficial owner information
+  - Support for multiple authentication methods: SIGNING_CHALLENGE, API_KEY, OAUTH_REDIRECT, WEBAUTHN, OTP, PASSWORD
+  - New types: `RegisterParams`, `IndividualRegisterParams`, `BusinessRegisterParams`, `RegisterResult`, `UserProfile`, `BusinessProfile`
+  - Cross-origin registration capabilities for blockchain, OAuth, and custom providers
 - Updated dependencies
   - @bloque/sdk-core@0.0.20
 

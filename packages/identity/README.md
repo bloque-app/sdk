@@ -4,10 +4,13 @@ Identity, aliases, and OTP authentication API client for the Bloque SDK.
 
 ## Features
 
+- **Identity Registration**: Register individual users (KYC) and businesses (KYB) to authentication origins
+- **Multi-Origin Support**: Register identities across blockchain, OAuth, API key, and custom origins
 - **Origin Management**: List and discover all available authentication origins
 - **Aliases**: Get user identity information by email or phone
 - **OTP Origins**: Send OTP codes via WhatsApp or Email
 - **Custom Origins**: Support for custom authentication origins
+- **Multiple Authentication Methods**: SIGNING_CHALLENGE, API_KEY, OAUTH_REDIRECT, WEBAUTHN, OTP, PASSWORD
 - **TypeScript First**: Built with TypeScript for complete type safety
 
 ## Installation
@@ -178,6 +181,133 @@ interface Origin {
 ```
 
 **Returns**: `Promise<Origin[]>` - Array of all registered origins
+
+#### `origins.register(origin, params)`
+
+Register a new user or business identity to a specific origin. Supports both individual users (KYC) and businesses (KYB) with various authentication methods:
+
+```typescript
+// Register individual with blockchain signature
+const individual = await identity.origins.register('ethereum-mainnet', {
+  assertionResult: {
+    alias: '0x742d35Cc6634C0532925a3b8D4C9db96C4b4d8b6',
+    challengeType: 'SIGNING_CHALLENGE',
+    value: {
+      signature: '0x1234...',
+      alias: '0x742d35Cc6634C0532925a3b8D4C9db96C4b4d8b6'
+    }
+  },
+  type: 'individual',
+  profile: {
+    firstName: 'John',
+    lastName: 'Doe',
+    email: 'john@example.com'
+  }
+});
+
+// Register business with API key
+const business = await identity.origins.register('bloque-api', {
+  assertionResult: {
+    alias: 'business-123',
+    challengeType: 'API_KEY',
+    value: {
+      apiKey: 'sk_live_abc123',
+      alias: 'business-123'
+    }
+  },
+  type: 'business',
+  profile: {
+    legalName: 'Acme Corporation',
+    name: 'Acme Corp',
+    taxId: '12-3456789',
+    type: 'LLC',
+    incorporationDate: '2020-01-15',
+    addressLine1: '123 Business St',
+    city: 'New York',
+    state: 'NY',
+    postalCode: '10001',
+    country: 'United States'
+  }
+});
+```
+
+**Parameters**:
+- `origin` (string): Origin namespace to register to (e.g., 'ethereum-mainnet', 'bloque-api')
+- `params` (RegisterParams): Registration parameters
+
+**Assertion Challenge Types**:
+- `SIGNING_CHALLENGE`: Blockchain signature verification
+- `API_KEY`: Traditional API key authentication
+- `OAUTH_REDIRECT`: OAuth-based flows
+- `WEBAUTHN`: WebAuthn/passkey authentication
+- `OTP`: One-time password verification
+- `PASSWORD`: Password-based authentication
+
+**Individual Profile (KYC)**:
+```typescript
+interface UserProfile {
+  firstName?: string;
+  lastName?: string;
+  birthdate?: string;           // ISO 8601 (YYYY-MM-DD)
+  email?: string;
+  phone?: string;
+  gender?: string;
+  addressLine1?: string;
+  addressLine2?: string;
+  city?: string;
+  state?: string;
+  postalCode?: string;
+  neighborhood?: string;
+  countryOfBirthCode?: string;
+  countryOfResidenceCode?: string;
+  personalIdType?: string;
+  personalIdNumber?: string;
+}
+```
+
+**Business Profile (KYB)**:
+```typescript
+interface BusinessProfile {
+  // Required fields
+  addressLine1: string;
+  city: string;
+  country: string;
+  incorporationDate: string;    // YYYY-MM-DD
+  legalName: string;
+  name: string;
+  postalCode: string;
+  state: string;
+  taxId: string;
+  type: string;                 // LLC, Corporation, etc.
+
+  // Optional fields
+  addressLine2?: string;
+  countryCode?: string;
+  email?: string;
+  logo?: string;
+  phone?: string;
+
+  // Owner information
+  ownerName?: string;
+  ownerIdType?: string;
+  ownerIdNumber?: string;
+  ownerAddressLine1?: string;
+  ownerAddressLine2?: string;
+  ownerCity?: string;
+  ownerState?: string;
+  ownerPostalCode?: string;
+  ownerCountryCode?: string;
+}
+```
+
+**Response**:
+```typescript
+interface RegisterResult {
+  accessToken: string;  // JWT token for authenticated sessions
+}
+```
+
+**Returns**: `Promise<RegisterResult>` - Registration result with access token
 
 ## Examples
 
@@ -395,6 +525,204 @@ async function sendOTPWithRetry(phone: string, maxRetries = 3) {
 await sendOTPWithRetry('+1234567890');
 ```
 
+### Register Individual User (KYC)
+
+```typescript
+import { SDK } from '@bloque/sdk';
+
+const bloque = new SDK({
+  apiKey: process.env.BLOQUE_API_KEY!,
+  mode: 'production',
+});
+
+try {
+  // Register individual with blockchain signature
+  const result = await bloque.identity.origins.register('ethereum-mainnet', {
+    assertionResult: {
+      alias: '0x742d35Cc6634C0532925a3b8D4C9db96C4b4d8b6',
+      challengeType: 'SIGNING_CHALLENGE',
+      value: {
+        signature: '0x1234567890abcdef...',
+        alias: '0x742d35Cc6634C0532925a3b8D4C9db96C4b4d8b6'
+      },
+      originalChallengeParams: {
+        challenge: 'bloque-challenge-1234567890',
+        timestamp: 1640995200
+      }
+    },
+    type: 'individual',
+    profile: {
+      firstName: 'John',
+      lastName: 'Doe',
+      email: 'john.doe@example.com',
+      phone: '+1234567890',
+      birthdate: '1990-01-15',
+      city: 'New York',
+      state: 'NY',
+      postalCode: '10001',
+      addressLine1: '123 Main St',
+      countryOfBirthCode: 'USA',
+      countryOfResidenceCode: 'USA',
+      personalIdType: 'SSN',
+      personalIdNumber: '123-45-6789'
+    }
+  });
+
+  console.log('User registered successfully!');
+  console.log('Access token:', result.accessToken);
+
+  // Use the access token for authenticated API calls
+  // Store it securely for the user's session
+} catch (error) {
+  console.error('Registration failed:', error);
+}
+```
+
+### Register Business (KYB)
+
+```typescript
+import { SDK } from '@bloque/sdk';
+
+const bloque = new SDK({
+  apiKey: process.env.BLOQUE_API_KEY!,
+  mode: 'production',
+});
+
+try {
+  // Register business with API key authentication
+  const result = await bloque.identity.origins.register('bloque-api', {
+    assertionResult: {
+      alias: 'business-123',
+      challengeType: 'API_KEY',
+      value: {
+        apiKey: 'sk_live_abc123def456',
+        alias: 'business-123'
+      }
+    },
+    type: 'business',
+    profile: {
+      // Required business information
+      legalName: 'Acme Corporation',
+      name: 'Acme Corp',
+      taxId: '12-3456789',
+      type: 'LLC',
+      incorporationDate: '2020-01-15',
+      addressLine1: '123 Business St',
+      city: 'New York',
+      state: 'NY',
+      postalCode: '10001',
+      country: 'United States',
+
+      // Optional business information
+      addressLine2: 'Suite 100',
+      countryCode: 'US',
+      email: 'contact@acme.com',
+      phone: '+1-555-0123',
+      logo: 'https://acme.com/logo.png',
+
+      // Beneficial owner information
+      ownerName: 'Jane Smith',
+      ownerIdType: 'SSN',
+      ownerIdNumber: '123-45-6789',
+      ownerAddressLine1: '456 Owner Ave',
+      ownerCity: 'New York',
+      ownerState: 'NY',
+      ownerPostalCode: '10002',
+      ownerCountryCode: 'US'
+    }
+  });
+
+  console.log('Business registered successfully!');
+  console.log('Access token:', result.accessToken);
+
+  // Use the access token for authenticated API calls
+} catch (error) {
+  console.error('Business registration failed:', error);
+}
+```
+
+### Multi-Origin Registration Flow
+
+```typescript
+import { SDK } from '@bloque/sdk';
+
+const bloque = new SDK({
+  apiKey: process.env.BLOQUE_API_KEY!,
+  mode: 'production',
+});
+
+async function registerUserAcrossOrigins(userProfile: any) {
+  try {
+    // Step 1: List available origins
+    const origins = await bloque.identity.origins.list();
+    const activeOrigins = origins.filter(o => o.status === 'active');
+
+    console.log(`Found ${activeOrigins.length} active origins`);
+
+    // Step 2: Register on blockchain origin
+    const ethereumOrigin = activeOrigins.find(o => o.namespace === 'ethereum-mainnet');
+
+    if (ethereumOrigin) {
+      const ethereumResult = await bloque.identity.origins.register('ethereum-mainnet', {
+        assertionResult: {
+          alias: userProfile.walletAddress,
+          challengeType: 'SIGNING_CHALLENGE',
+          value: {
+            signature: userProfile.signature,
+            alias: userProfile.walletAddress
+          }
+        },
+        type: 'individual',
+        profile: userProfile.personalInfo
+      });
+
+      console.log('Registered on Ethereum:', ethereumResult.accessToken);
+    }
+
+    // Step 3: Register on custom origin
+    const customResult = await bloque.identity.origins.register('bloque-custom', {
+      assertionResult: {
+        alias: userProfile.customId,
+        challengeType: 'API_KEY',
+        value: {
+          apiKey: userProfile.apiKey,
+          alias: userProfile.customId
+        }
+      },
+      type: 'individual',
+      profile: userProfile.personalInfo
+    });
+
+    console.log('Registered on custom origin:', customResult.accessToken);
+
+    return {
+      ethereum: ethereumOrigin ? true : false,
+      custom: true,
+      tokens: {
+        ethereum: ethereumOrigin ? 'stored' : null,
+        custom: 'stored'
+      }
+    };
+  } catch (error) {
+    console.error('Multi-origin registration failed:', error);
+    throw error;
+  }
+}
+
+// Usage
+await registerUserAcrossOrigins({
+  walletAddress: '0x742d35Cc6634C0532925a3b8D4C9db96C4b4d8b6',
+  signature: '0xabcdef...',
+  customId: 'user-123',
+  apiKey: 'sk_live_abc123',
+  personalInfo: {
+    firstName: 'Alice',
+    lastName: 'Johnson',
+    email: 'alice@example.com'
+  }
+});
+```
+
 ## TypeScript Support
 
 This package is written in TypeScript and includes complete type definitions:
@@ -410,6 +738,13 @@ import type {
   AliasesClient,
   OriginsClient,
   OriginClient,
+  // Registration types
+  RegisterParams,
+  IndividualRegisterParams,
+  BusinessRegisterParams,
+  RegisterResult,
+  UserProfile,
+  BusinessProfile,
 } from '@bloque/sdk-identity';
 
 // Type-safe alias retrieval
@@ -433,6 +768,55 @@ const otp: OTPAssertion =
 // Custom origin client
 const customOrigin: OriginClient<OTPAssertion> =
   identity.origins.custom('my-origin');
+
+// Type-safe individual registration
+const individualParams: IndividualRegisterParams = {
+  assertionResult: {
+    alias: '0x742d35Cc6634C0532925a3b8D4C9db96C4b4d8b6',
+    challengeType: 'SIGNING_CHALLENGE',
+    value: {
+      signature: '0x123...',
+      alias: '0x742d35Cc6634C0532925a3b8D4C9db96C4b4d8b6'
+    }
+  },
+  type: 'individual',
+  profile: {
+    firstName: 'John',
+    lastName: 'Doe',
+    email: 'john@example.com'
+  }
+};
+
+const individualResult: RegisterResult =
+  await identity.origins.register('ethereum-mainnet', individualParams);
+
+// Type-safe business registration
+const businessParams: BusinessRegisterParams = {
+  assertionResult: {
+    alias: 'business-123',
+    challengeType: 'API_KEY',
+    value: {
+      apiKey: 'sk_live_abc123',
+      alias: 'business-123'
+    }
+  },
+  type: 'business',
+  profile: {
+    legalName: 'Acme Corp',
+    name: 'Acme',
+    taxId: '12-3456789',
+    type: 'LLC',
+    incorporationDate: '2020-01-15',
+    addressLine1: '123 Business St',
+    city: 'New York',
+    state: 'NY',
+    postalCode: '10001',
+    country: 'United States'
+  }
+};
+
+const businessResult: RegisterResult =
+  await identity.origins.register('bloque-api', businessParams);
 ```
 
 ## Use with Main SDK
@@ -454,11 +838,20 @@ const otp = await bloque.identity.origins.whatsapp.assert('+1234567890');
 
 ## Key Features
 
+### Identity Registration
+
+- **Individual Registration (KYC)**: Register users with Know Your Customer compliance
+- **Business Registration (KYB)**: Register businesses with Know Your Business compliance
+- **Multi-Method Authentication**: Support for blockchain signatures, API keys, OAuth, WebAuthn, OTP, and passwords
+- **Cross-Origin Support**: Register identities across multiple authentication origins
+- **Secure Token Generation**: Receive JWT access tokens for authenticated sessions
+
 ### Origin Management
 
 - **List Origins**: Retrieve all available authentication origins
 - **Filter by Provider**: Find origins by provider type (evm, auth0, whatsapp, etc.)
 - **Check Status**: Monitor origin availability and status
+- **Custom Registration**: Register to custom authentication providers
 
 ### OTP Authentication Channels
 
@@ -479,6 +872,12 @@ OTP assertions include built-in rate limiting:
 - Check user status (active, inactive, revoked)
 - Support for primary and public aliases
 - Rich metadata support
+
+### Compliance Support
+
+- **KYC (Know Your Customer)**: Complete individual profile fields including identity verification
+- **KYB (Know Your Business)**: Business entity information with beneficial owner details
+- **Data Privacy**: Secure handling of sensitive personal and business information
 
 ## Requirements
 

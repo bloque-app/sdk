@@ -4,3 +4,4 @@ export * from './api-types';
 export * from './client';
 export * from './origins/client';
 export * from './origins/origin';
+export * from './origins/types';
