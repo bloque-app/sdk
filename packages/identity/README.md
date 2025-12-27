@@ -344,7 +344,10 @@ try {
 import { SDK } from '@bloque/sdk';
 
 const bloque = new SDK({
-  apiKey: process.env.BLOQUE_API_KEY!,
+  auth: {
+    type: 'apiKey',
+    apiKey: process.env.BLOQUE_API_KEY!,
+  },
   mode: 'production',
 });
 
@@ -367,7 +370,10 @@ try {
 import { SDK } from '@bloque/sdk';
 
 const bloque = new SDK({
-  apiKey: process.env.BLOQUE_API_KEY!,
+  auth: {
+    type: 'apiKey',
+    apiKey: process.env.BLOQUE_API_KEY!,
+  },
   mode: 'production',
 });
 
@@ -390,7 +396,10 @@ try {
 import { SDK } from '@bloque/sdk';
 
 const bloque = new SDK({
-  apiKey: process.env.BLOQUE_API_KEY!,
+  auth: {
+    type: 'apiKey',
+    apiKey: process.env.BLOQUE_API_KEY!,
+  },
   mode: 'production',
 });
 
@@ -434,7 +443,10 @@ await authenticateUser('user@example.com');
 import { SDK } from '@bloque/sdk';
 
 const bloque = new SDK({
-  apiKey: process.env.BLOQUE_API_KEY!,
+  auth: {
+    type: 'apiKey',
+    apiKey: process.env.BLOQUE_API_KEY!,
+  },
   mode: 'production',
 });
 
@@ -468,7 +480,10 @@ try {
 import { SDK } from '@bloque/sdk';
 
 const bloque = new SDK({
-  apiKey: process.env.BLOQUE_API_KEY!,
+  auth: {
+    type: 'apiKey',
+    apiKey: process.env.BLOQUE_API_KEY!,
+  },
   mode: 'production',
 });
 
@@ -491,7 +506,10 @@ try {
 import { SDK } from '@bloque/sdk';
 
 const bloque = new SDK({
-  apiKey: process.env.BLOQUE_API_KEY!,
+  auth: {
+    type: 'apiKey',
+    apiKey: process.env.BLOQUE_API_KEY!,
+  },
   mode: 'production',
 });
 
@@ -531,7 +549,10 @@ await sendOTPWithRetry('+1234567890');
 import { SDK } from '@bloque/sdk';
 
 const bloque = new SDK({
-  apiKey: process.env.BLOQUE_API_KEY!,
+  auth: {
+    type: 'apiKey',
+    apiKey: process.env.BLOQUE_API_KEY!,
+  },
   mode: 'production',
 });
 
@@ -584,7 +605,10 @@ try {
 import { SDK } from '@bloque/sdk';
 
 const bloque = new SDK({
-  apiKey: process.env.BLOQUE_API_KEY!,
+  auth: {
+    type: 'apiKey',
+    apiKey: process.env.BLOQUE_API_KEY!,
+  },
   mode: 'production',
 });
 
@@ -647,7 +671,10 @@ try {
 import { SDK } from '@bloque/sdk';
 
 const bloque = new SDK({
-  apiKey: process.env.BLOQUE_API_KEY!,
+  auth: {
+    type: 'apiKey',
+    apiKey: process.env.BLOQUE_API_KEY!,
+  },
   mode: 'production',
 });
 
@@ -827,7 +854,10 @@ When using through the main `@bloque/sdk` package:
 import { SDK } from '@bloque/sdk';
 
 const bloque = new SDK({
-  apiKey: process.env.BLOQUE_API_KEY!,
+  auth: {
+    type: 'apiKey',
+    apiKey: process.env.BLOQUE_API_KEY!,
+  },
   mode: 'production',
 });
 

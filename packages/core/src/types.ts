@@ -14,33 +14,72 @@ export type Mode =
    */
   | 'sandbox';
 
-export type Runtime =
+export type Platform =
   /**
-   * Server runtime (default).
+   * Node.js runtime.
    *
-   * Intended for backend environments such as Node.js, Bun,
-   * Deno, Edge runtimes, or any server-side execution context.
+   * Intended for backend environments running on Node.js.
    *
-   * Allows the use of private API keys.
+   * Typical use cases:
+   * - APIs
+   * - Backend services
+   * - Server-side workers
+   *
+   * Supports the use of private API keys.
    */
-  | 'server'
+  | 'node'
 
   /**
-   * Client runtime.
+   * Deno runtime.
    *
-   * Intended for browsers or frontend runtimes.
+   * Intended for backend environments running on Deno.
    *
-   * In the current version of the SDK:
-   * - The client authenticates using the `auth` module.
-   * - The SDK automatically obtains and manages a JWT.
-   * - The JWT is used to authenticate all subsequent requests.
-   * - An authenticated client can execute any operation
-   *   exposed by the API.
+   * Typical use cases:
+   * - Serverless functions
+   * - Edge-like services
    *
-   * Authorization and security enforcement are handled
-   * exclusively by the backend.
+   * Supports the use of private API keys.
    */
-  | 'client';
+  | 'deno'
+
+  /**
+   * Bun runtime.
+   *
+   * Intended for backend environments running on Bun.
+   *
+   * Typical use cases:
+   * - High-performance backend services
+   * - Local development servers
+   *
+   * Supports the use of private API keys.
+   */
+  | 'bun'
+
+  /**
+   * Browser runtime.
+   *
+   * Intended for web browsers and browser-like environments.
+   *
+   * Characteristics:
+   * - No access to private API keys
+   * - Authentication is performed via JWT
+   * - Token persistence must be explicitly configured
+   *   (e.g. localStorage, sessionStorage, in-memory)
+   */
+  | 'browser'
+
+  /**
+   * React Native runtime.
+   *
+   * Intended for React Native applications (iOS / Android).
+   *
+   * Characteristics:
+   * - No access to private API keys
+   * - Authentication is performed via JWT
+   * - Token persistence must be provided by the consumer
+   *   (e.g. AsyncStorage, secure storage, in-memory)
+   */
+  | 'react-native';
 
 /**
  * Interface that defines how the SDK stores and retrieves
@@ -70,6 +109,8 @@ export interface TokenStorage {
   clear(): void;
 }
 
+export type AuthStrategy = { type: 'apiKey'; apiKey: string } | { type: 'jwt' };
+
 /**
  * Main configuration object for the Bloque SDK.
  *
@@ -78,13 +119,35 @@ export interface TokenStorage {
  */
 export interface BloqueConfig {
   /**
-   * Bloque API key.
+   * Platform where the SDK is executed.
    *
-   * - In `server` runtime, a private API key is expected.
-   * - In `client` runtime, the API key is not used directly;
-   *   authentication is performed via JWT instead.
+   * Determines the runtime environment and its capabilities.
+   *
+   * - `node` (default): backend runtime (Node.js, Bun, Deno).
+   *   Supports authentication using private API keys.
+   *
+   * - `browser`: web browser environment.
+   *   Does not allow private API keys.
+   *   Authentication must be performed using JWT.
+   *
+   * - `react-native`: React Native environment (iOS / Android).
+   *   Does not allow private API keys.
+   *   Authentication must be performed using JWT.
+   *
+   * If not specified, the SDK defaults to `node`.
    */
-  apiKey: string;
+  platform?: Platform;
+
+  /**
+   * Authentication strategy used by the SDK.
+   *
+   * - `apiKey`: intended for backend platforms (`node`, `bun`, `deno`).
+   * - `jwt`: intended for frontend platforms (`browser`, `react-native`).
+   *
+   * The SDK validates the compatibility between the selected
+   * platform and the authentication strategy at runtime.
+   */
+  auth: AuthStrategy;
   /**
    * SDK operation mode.
    *
@@ -94,15 +157,6 @@ export interface BloqueConfig {
    * If not specified, the SDK defaults to `production`.
    */
   mode?: Mode;
-  /**
-   * Runtime environment where the SDK is executed.
-   *
-   * - `server` (default): backend runtime using API keys.
-   * - `client`: frontend runtime using JWT authentication.
-   *
-   * If not specified, the SDK defaults to `server`.
-   */
-  runtime?: 'server' | 'client';
   /**
    * JWT token storage strategy.
    *

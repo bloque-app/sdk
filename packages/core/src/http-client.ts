@@ -2,6 +2,9 @@ import { API_BASE_URLS, DEFAULT_HEADERS } from './constants';
 import { BloqueAPIError, BloqueConfigError } from './errors';
 import type { BloqueConfig, RequestOptions, TokenStorage } from './types';
 
+const isFrontendPlatform = (platform?: string) =>
+  platform === 'browser' || platform === 'react-native';
+
 const createLocalStorageAdapter = (): TokenStorage => ({
   get: () => {
     if (typeof localStorage === 'undefined') {
@@ -37,6 +40,43 @@ export class HttpClient {
     this.baseUrl = API_BASE_URLS[config.mode ?? 'production'];
   }
 
+  private validateConfig(config: BloqueConfig): void {
+    config.mode ??= 'production';
+    config.platform ??= 'node';
+
+    if (!['sandbox', 'production'].includes(config.mode)) {
+      throw new BloqueConfigError(
+        'Mode must be either "sandbox" or "production"',
+      );
+    }
+
+    if (config.auth.type === 'apiKey') {
+      if (!config.auth.apiKey?.trim()) {
+        throw new BloqueConfigError(
+          'API key is required for apiKey authentication',
+        );
+      }
+
+      if (isFrontendPlatform(config.platform)) {
+        throw new BloqueConfigError(
+          'API key authentication is not allowed in frontend platforms',
+        );
+      }
+    }
+
+    if (config.auth.type === 'jwt') {
+      if (!config.tokenStorage) {
+        if (config.platform === 'browser') {
+          config.tokenStorage = createLocalStorageAdapter();
+        } else {
+          throw new BloqueConfigError(
+            'tokenStorage must be provided when using JWT authentication',
+          );
+        }
+      }
+    }
+  }
+
   private isPublicRoute(path: string): boolean {
     const pathWithoutQuery = path.split('?')[0];
     return this.publicRoutes.some((route) => {
@@ -46,21 +86,29 @@ export class HttpClient {
     });
   }
 
-  private validateConfig(config: BloqueConfig): void {
-    if (!config.apiKey || config.apiKey.trim() === '') {
-      throw new BloqueConfigError('API key is required');
+  private buildAuthHeaders(path: string): Record<string, string> {
+    if (this.isPublicRoute(path)) {
+      return {};
     }
-    if (!config.mode) {
-      config.mode = 'production';
+
+    if (this.config.auth.type === 'apiKey') {
+      return {
+        Authorization: this.config.auth.apiKey,
+      };
     }
-    if (!['sandbox', 'production'].includes(config.mode)) {
-      throw new BloqueConfigError(
-        'Mode must be either "sandbox" or "production"',
-      );
+
+    if (this.config.auth.type === 'jwt') {
+      const token = this.config.tokenStorage?.get();
+      if (!token) {
+        throw new BloqueConfigError('Authentication token is missing');
+      }
+
+      return {
+        Authorization: `Bearer ${token}`,
+      };
     }
-    if (config.runtime === 'client' && !config.tokenStorage) {
-      config.tokenStorage = createLocalStorageAdapter();
-    }
+
+    return {};
   }
 
   async request<T, U = unknown>(options: RequestOptions<U>): Promise<T> {
@@ -70,17 +118,9 @@ export class HttpClient {
 
     const requestHeaders: Record<string, string> = {
       ...DEFAULT_HEADERS,
-      Authorization: this.config.apiKey,
+      ...this.buildAuthHeaders(path),
       ...headers,
     };
-
-    if (this.config.runtime === 'client' && !this.isPublicRoute(path)) {
-      const token = this.config.tokenStorage?.get();
-      if (!token) {
-        throw new BloqueConfigError('Authentication token is missing');
-      }
-      requestHeaders.Authorization = `Bearer ${token}`;
-    }
 
     try {
       const response = await fetch(url, {

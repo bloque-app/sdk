@@ -43,14 +43,20 @@ bun add @bloque/sdk
 
 ## Quick Start
 
+### Backend (Node.js, Bun, Deno)
+
 ```typescript
 import { SDK } from '@bloque/sdk';
 import type { CreateOrgParams } from '@bloque/sdk/orgs';
 
-// Initialize the SDK (server-side only)
+// Initialize the SDK with API key (backend only)
 const bloque = new SDK({
-  apiKey: process.env.BLOQUE_API_KEY!,
+  auth: {
+    type: 'apiKey',
+    apiKey: process.env.BLOQUE_API_KEY!,
+  },
   mode: 'production', // or 'sandbox' for testing
+  platform: 'node', // optional: 'node' | 'bun' | 'deno'
 });
 
 // Create an organization
@@ -89,26 +95,115 @@ async function createCard() {
 }
 ```
 
+### Frontend (Browser, React Native)
+
+```typescript
+import { SDK } from '@bloque/sdk';
+
+// Initialize the SDK with JWT authentication
+const bloque = new SDK({
+  auth: { type: 'jwt' },
+  mode: 'production',
+  platform: 'browser', // or 'react-native'
+  // tokenStorage is optional for browser (uses localStorage by default)
+  // for react-native, provide a custom storage implementation
+});
+
+// After user registration, the SDK automatically stores the JWT
+const result = await bloque.identity.origins.register('ethereum-mainnet', {
+  assertionResult: { /* ... */ },
+  type: 'individual',
+  profile: { /* ... */ }
+});
+
+// The token is now stored and used for subsequent requests
+const alias = await bloque.identity.aliases.get('user@example.com');
+```
+
 ## Configuration
 
 ### Initialize the SDK
 
+The SDK supports different authentication methods depending on where it's running:
+
+#### Backend Configuration (API Key)
+
+For server-side applications (Node.js, Bun, Deno):
+
 ```typescript
 import { SDK } from '@bloque/sdk';
-import type { BloqueConfig } from '@bloque/sdk';
 
 const bloque = new SDK({
-  apiKey: 'your-api-key-here',    // Required: Your Bloque API key
-  mode: 'sandbox',                 // Required: 'sandbox' or 'production'
+  auth: {
+    type: 'apiKey',
+    apiKey: process.env.BLOQUE_API_KEY!, // Your Bloque API key
+  },
+  mode: 'production', // 'sandbox' or 'production'
+  platform: 'node', // optional: 'node' | 'bun' | 'deno' (defaults to 'node')
+});
+```
+
+#### Frontend Configuration (JWT)
+
+For client-side applications (Browser, React Native):
+
+```typescript
+import { SDK } from '@bloque/sdk';
+
+// Browser
+const bloque = new SDK({
+  auth: { type: 'jwt' },
+  mode: 'production',
+  platform: 'browser',
+  // tokenStorage is optional - uses localStorage by default
+});
+
+// React Native (with custom storage)
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
+const bloque = new SDK({
+  auth: { type: 'jwt' },
+  mode: 'production',
+  platform: 'react-native',
+  tokenStorage: {
+    get: async () => await AsyncStorage.getItem('access_token'),
+    set: async (token: string) => await AsyncStorage.setItem('access_token', token),
+    clear: async () => await AsyncStorage.removeItem('access_token'),
+  },
 });
 ```
 
 ### Configuration Options
 
-- **`apiKey`** (string, required): Your Bloque API key
-- **`mode`** ('sandbox' | 'production', required): Environment mode
+- **`auth`** (object, required): Authentication configuration
+  - `type: 'apiKey'`: For backend platforms
+    - `apiKey` (string, required): Your Bloque API key
+  - `type: 'jwt'`: For frontend platforms
+    - Requires storing and managing JWT tokens via `tokenStorage`
+
+- **`mode`** ('sandbox' | 'production', optional): Environment mode
   - `sandbox`: For testing and development
-  - `production`: For live operations
+  - `production`: For live operations (default)
+
+- **`platform`** (string, optional): Execution platform
+  - Backend: `'node'` (default) | `'bun'` | `'deno'`
+  - Frontend: `'browser'` | `'react-native'`
+  - Determines available authentication methods
+
+- **`tokenStorage`** (object, optional): JWT token storage mechanism
+  - Required for JWT authentication on non-browser platforms
+  - Browser automatically uses `localStorage` if not provided
+  - Must implement: `get()`, `set(token)`, `clear()`
+
+### Platform and Authentication Compatibility
+
+| Platform | API Key Auth | JWT Auth | Token Storage |
+|----------|--------------|----------|---------------|
+| `node` | ✅ | ✅ | Required for JWT |
+| `bun` | ✅ | ✅ | Required for JWT |
+| `deno` | ✅ | ✅ | Required for JWT |
+| `browser` | ❌ | ✅ | Optional (uses localStorage) |
+| `react-native` | ❌ | ✅ | Required |
 
 ## API Reference
 
@@ -503,7 +598,10 @@ import type { CreateOrgParams } from '@bloque/sdk/orgs';
 
 // Initialize SDK with your API key
 const bloque = new SDK({
-  apiKey: process.env.BLOQUE_API_KEY!,
+  auth: {
+    type: 'apiKey',
+    apiKey: process.env.BLOQUE_API_KEY!,
+  },
   mode: 'production',
 });
 
@@ -545,7 +643,10 @@ import { SDK } from '@bloque/sdk';
 import type { CreateOrgParams } from '@bloque/sdk/orgs';
 
 const bloque = new SDK({
-  apiKey: process.env.BLOQUE_API_KEY!,
+  auth: {
+    type: 'apiKey',
+    apiKey: process.env.BLOQUE_API_KEY!,
+  },
   mode: 'sandbox',
 });
 
@@ -574,7 +675,10 @@ import { SDK } from '@bloque/sdk';
 import type { CreateOrgParams } from '@bloque/sdk/orgs';
 
 const bloque = new SDK({
-  apiKey: process.env.BLOQUE_API_KEY!,
+  auth: {
+    type: 'apiKey',
+    apiKey: process.env.BLOQUE_API_KEY!,
+  },
   mode: 'production',
 });
 
@@ -622,7 +726,10 @@ import { SDK } from '@bloque/sdk';
 import type { KycVerificationParams } from '@bloque/sdk/compliance';
 
 const bloque = new SDK({
-  apiKey: process.env.BLOQUE_API_KEY!,
+  auth: {
+    type: 'apiKey',
+    apiKey: process.env.BLOQUE_API_KEY!,
+  },
   mode: 'production',
 });
 
@@ -652,7 +759,10 @@ import { SDK } from '@bloque/sdk';
 import type { GetKycVerificationParams } from '@bloque/sdk/compliance';
 
 const bloque = new SDK({
-  apiKey: process.env.BLOQUE_API_KEY!,
+  auth: {
+    type: 'apiKey',
+    apiKey: process.env.BLOQUE_API_KEY!,
+  },
   mode: 'production',
 });
 
@@ -687,7 +797,10 @@ import { SDK } from '@bloque/sdk';
 import type { CreateCardParams } from '@bloque/sdk/accounts';
 
 const bloque = new SDK({
-  apiKey: process.env.BLOQUE_API_KEY!,
+  auth: {
+    type: 'apiKey',
+    apiKey: process.env.BLOQUE_API_KEY!,
+  },
   mode: 'production',
 });
 
@@ -723,7 +836,10 @@ try {
 import { SDK } from '@bloque/sdk';
 
 const bloque = new SDK({
-  apiKey: process.env.BLOQUE_API_KEY!,
+  auth: {
+    type: 'apiKey',
+    apiKey: process.env.BLOQUE_API_KEY!,
+  },
   mode: 'production',
 });
 
@@ -763,7 +879,10 @@ import { SDK } from '@bloque/sdk';
 import type { IndividualRegisterParams } from '@bloque/sdk/identity';
 
 const bloque = new SDK({
-  apiKey: process.env.BLOQUE_API_KEY!,
+  auth: {
+    type: 'apiKey',
+    apiKey: process.env.BLOQUE_API_KEY!,
+  },
   mode: 'production',
 });
 
@@ -819,7 +938,10 @@ import { SDK } from '@bloque/sdk';
 import type { BusinessRegisterParams } from '@bloque/sdk/identity';
 
 const bloque = new SDK({
-  apiKey: process.env.BLOQUE_API_KEY!,
+  auth: {
+    type: 'apiKey',
+    apiKey: process.env.BLOQUE_API_KEY!,
+  },
   mode: 'production',
 });
 
@@ -885,7 +1007,10 @@ import { SDK } from '@bloque/sdk';
 import type { CreateOrgParams } from '@bloque/sdk/orgs';
 
 const bloque = new SDK({
-  apiKey: process.env.BLOQUE_API_KEY!,
+  auth: {
+    type: 'apiKey',
+    apiKey: process.env.BLOQUE_API_KEY!,
+  },
   mode: process.env.NODE_ENV === 'production' ? 'production' : 'sandbox',
 });
 
