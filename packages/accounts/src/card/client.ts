@@ -127,7 +127,7 @@ export class CardClient extends BaseClient {
    * // With pagination and filters
    * const recentMovements = await bloque.accounts.card.movements({
    *   urn: 'did:bloque:account:card:usr-123:crd-456',
-   *   asset: 'USD', // Automatically converts to DUSD/6
+   *   asset: 'DUSD/6',
    *   limit: 50,
    *   direction: 'in',
    *   after: '2025-01-01T00:00:00Z',
@@ -138,7 +138,11 @@ export class CardClient extends BaseClient {
     const queryParams = new URLSearchParams();
 
     const asset = params.asset || 'DUSD/6';
-    queryParams.set('asset', asset === 'USD' ? 'DUSD/6' : asset);
+    if (asset !== 'DUSD/6' && asset !== 'KSM/12') {
+      throw new Error('Invalid asset type. Supported assets are USD and KSM.');
+    }
+
+    queryParams.set('asset', asset);
 
     if (params.limit !== undefined) {
       queryParams.set('limit', params.limit.toString());

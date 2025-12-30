@@ -148,3 +148,55 @@ export interface ListMovementsResponse {
 export interface GetBalanceResponse {
   balance: Record<string, TokenBalance>;
 }
+
+export type SupportedAsset = 'DUSD/6' | 'KSM/12';
+
+export interface TransferParams {
+  /**
+   * URN of the source account
+   * @example "did:bloque:account:card:usr-123:crd-456"
+   */
+  sourceUrn: string;
+  /**
+   * URN of the destination account
+   * @example "did:bloque:account:virtual:acc-67890"
+   */
+  destinationUrn: string;
+  /**
+   * Amount to transfer
+   * @example "1000000000000"
+   */
+  amount: string;
+  /**
+   * Asset to transfer
+   * @example "USD"
+   */
+  asset: SupportedAsset;
+  /**
+   * Optional metadata for the transfer
+   * @example { reference: "payment-123", note: "Monthly subscription" }
+   */
+  metadata?: Record<string, unknown>;
+}
+
+export interface TransferRequest {
+  destination_account_urn: string;
+  amount: string;
+  asset: string;
+  metadata?: Record<string, unknown>;
+}
+
+export interface TransferResult {
+  queueId: string;
+  status: 'queued' | 'processing' | 'completed' | 'failed';
+  message: string;
+}
+
+export interface TransferResponse {
+  result: {
+    queue_id: string;
+    status: 'queued' | 'processing' | 'completed' | 'failed';
+    message: string;
+  };
+  req_id: string;
+}

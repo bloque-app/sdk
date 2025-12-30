@@ -1,4 +1,9 @@
-import type { CardType, TokenBalance, Transaction } from '../api-types';
+import type {
+  CardType,
+  SupportedAsset,
+  TokenBalance,
+  Transaction,
+} from '../api-types';
 
 export interface ListCardParams {
   /**
@@ -21,7 +26,7 @@ export interface ListMovementsParams {
    *
    * @example "USD" (defaults to "USD" if "USD" is provided)
    */
-  asset?: string;
+  asset?: SupportedAsset;
   /**
    * Maximum number of transactions to return
    *

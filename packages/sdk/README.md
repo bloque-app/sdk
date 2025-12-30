@@ -559,7 +559,7 @@ const movements = await bloque.accounts.card.movements({
 // With pagination and filters
 const recentIncoming = await bloque.accounts.card.movements({
   urn: 'did:bloque:account:card:usr-123:crd-456',
-  asset: 'USD', // Automatically converts to DUSD/6
+  asset: 'DUSD/6',
   limit: 50,
   direction: 'in', // Only incoming transactions
   after: '2025-01-01T00:00:00Z',
@@ -578,11 +578,11 @@ interface ListMovementsParams {
 
   /**
    * Asset to filter transactions by
+   * Supported assets: 'DUSD/6' | 'KSM/12'
    * Defaults to "DUSD/6" if not provided
-   * "USD" is automatically converted to "DUSD/6"
-   * @example "DUSD/6"
+   * @example "DUSD/6" or "KSM/12"
    */
-  asset?: string;
+  asset?: 'DUSD/6' | 'KSM/12';
 
   /**
    * Maximum number of transactions to return
@@ -649,6 +649,72 @@ interface CardMovement {
   };
 }
 ```
+
+#### Transfer Between Accounts
+
+Transfer funds between any accounts (card, virtual, bancolombia, etc.):
+
+```typescript
+const transfer = await bloque.accounts.transfer({
+  sourceUrn: 'did:bloque:account:card:usr-123:crd-456',
+  destinationUrn: 'did:bloque:account:virtual:acc-67890',
+  amount: '1000000000000',
+  asset: 'KSM/12',
+  metadata: {
+    reference: 'payment-123',
+    note: 'Monthly subscription'
+  }
+});
+```
+
+**Parameters**:
+
+```typescript
+interface TransferParams {
+  /**
+   * URN of the source account
+   * @example "did:bloque:account:card:usr-123:crd-456"
+   */
+  sourceUrn: string;
+
+  /**
+   * URN of the destination account
+   * @example "did:bloque:account:virtual:acc-67890"
+   */
+  destinationUrn: string;
+
+  /**
+   * Amount to transfer
+   * @example "1000000000000"
+   */
+  amount: string;
+
+  /**
+   * Asset to transfer
+   * Supported assets: 'DUSD/6' | 'KSM/12'
+   * @example "KSM/12"
+   */
+  asset: 'DUSD/6' | 'KSM/12';
+
+  /**
+   * Optional metadata for the transfer
+   * @example { reference: "payment-123", note: "Monthly subscription" }
+   */
+  metadata?: Record<string, unknown>;
+}
+```
+
+**Response**: `Promise<TransferResult>` - Transfer result
+
+```typescript
+interface TransferResult {
+  queueId: string;    // Queue ID for tracking the transfer
+  status: 'queued' | 'processing' | 'completed' | 'failed';
+  message: string;    // Status message
+}
+```
+
+The transfer is queued for signing and submission. You can track its progress using the returned `queueId`.
 
 ### Identity
 
@@ -1220,7 +1286,7 @@ const bloque = new SDK({
 try {
   const movements = await bloque.accounts.card.movements({
     urn: 'did:bloque:account:card:usr-123:crd-456',
-    asset: 'USD', // Automatically converts to DUSD/6
+    asset: 'DUSD/6',
     limit: 50,
     direction: 'in', // Only incoming transactions
     after: '2025-01-01T00:00:00Z',
@@ -1327,6 +1393,88 @@ async function getAllTransactions() {
 }
 
 getAllTransactions();
+```
+
+### Transferring Funds Between Accounts
+
+```typescript
+import { SDK } from '@bloque/sdk';
+
+const bloque = new SDK({
+  origin: 'your-origin',
+  auth: {
+    type: 'apiKey',
+    apiKey: process.env.BLOQUE_API_KEY!,
+  },
+  mode: 'production',
+});
+
+// Transfer from card to virtual account
+try {
+  const transfer = await bloque.accounts.transfer({
+    sourceUrn: 'did:bloque:account:card:usr-123:crd-456',
+    destinationUrn: 'did:bloque:account:virtual:acc-67890',
+    amount: '1000000000000',
+    asset: 'KSM/12',
+    metadata: {
+      reference: 'payment-123',
+      note: 'Monthly subscription payment'
+    }
+  });
+
+  console.log('Transfer initiated:');
+  console.log('  Queue ID:', transfer.queueId);
+  console.log('  Status:', transfer.status);
+  console.log('  Message:', transfer.message);
+
+  // The transfer is now queued for processing
+  // You can track its status using the queueId
+} catch (error) {
+  console.error('Transfer failed:', error);
+}
+```
+
+### Different Transfer Scenarios
+
+```typescript
+import { SDK } from '@bloque/sdk';
+
+const bloque = new SDK({
+  origin: 'your-origin',
+  auth: {
+    type: 'apiKey',
+    apiKey: process.env.BLOQUE_API_KEY!,
+  },
+  mode: 'production',
+});
+
+// Transfer DUSD from card to Bancolombia account
+const dusdTransfer = await bloque.accounts.transfer({
+  sourceUrn: 'did:bloque:account:card:usr-123:crd-456',
+  destinationUrn: 'did:bloque:account:bancolombia:acc-12345',
+  amount: '5000000', // 5 DUSD (6 decimals)
+  asset: 'DUSD/6',
+  metadata: {
+    reference: 'withdrawal-001',
+    type: 'savings'
+  }
+});
+
+console.log(`DUSD transfer queued: ${dusdTransfer.queueId}`);
+
+// Transfer KSM between virtual accounts
+const ksmTransfer = await bloque.accounts.transfer({
+  sourceUrn: 'did:bloque:account:virtual:acc-11111',
+  destinationUrn: 'did:bloque:account:virtual:acc-22222',
+  amount: '2000000000000', // 2 KSM (12 decimals)
+  asset: 'KSM/12',
+  metadata: {
+    reference: 'internal-transfer-42',
+    department: 'operations'
+  }
+});
+
+console.log(`KSM transfer queued: ${ksmTransfer.queueId}`);
 ```
 
 ### Retrieving User Alias Information
@@ -1657,6 +1805,8 @@ import type {
   ListCardParams,
   ListMovementsParams,
   TokenBalance,
+  TransferParams,
+  TransferResult,
 } from '@bloque/sdk/accounts';
 
 // Identity types
