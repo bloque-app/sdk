@@ -502,6 +502,154 @@ interface ListCardParams {
 
 Each card in the response includes all standard fields plus a `balance` object containing token balances with current, pending, in, and out amounts for each token.
 
+#### Get Card Balance
+
+Get the current balance for a specific card account:
+
+```typescript
+const balances = await bloque.accounts.card.balance({
+  urn: 'did:bloque:account:card:usr-123:crd-456',
+});
+```
+
+**Parameters**:
+
+```typescript
+interface GetBalanceParams {
+  /**
+   * URN of the card account
+   * @example "did:bloque:account:card:usr-123:crd-456"
+   */
+  urn: string;
+}
+```
+
+**Response**: `Promise<Record<string, TokenBalance>>` - Token balances by asset
+
+Returns an object with token balances for each asset:
+
+```typescript
+{
+  'DUSD/6': {
+    current: '1262500',  // Current balance
+    pending: '0',        // Pending balance
+    in: '5072000',       // Total incoming
+    out: '3809500'       // Total outgoing
+  },
+  'KSM/12': {
+    current: '1989000011',
+    pending: '0',
+    in: '2000000000',
+    out: '10999989'
+  }
+}
+```
+
+#### List Card Movements
+
+List transactions/movements for a card account with pagination and filtering:
+
+```typescript
+// Basic usage
+const movements = await bloque.accounts.card.movements({
+  urn: 'did:bloque:account:card:usr-123:crd-456',
+  asset: 'DUSD/6',
+});
+
+// With pagination and filters
+const recentIncoming = await bloque.accounts.card.movements({
+  urn: 'did:bloque:account:card:usr-123:crd-456',
+  asset: 'USD', // Automatically converts to DUSD/6
+  limit: 50,
+  direction: 'in', // Only incoming transactions
+  after: '2025-01-01T00:00:00Z',
+});
+```
+
+**Parameters**:
+
+```typescript
+interface ListMovementsParams {
+  /**
+   * URN of the card account
+   * @example "did:bloque:account:card:usr-123:crd-456"
+   */
+  urn: string;
+
+  /**
+   * Asset to filter transactions by
+   * Defaults to "DUSD/6" if not provided
+   * "USD" is automatically converted to "DUSD/6"
+   * @example "DUSD/6"
+   */
+  asset?: string;
+
+  /**
+   * Maximum number of transactions to return
+   * @example 50
+   */
+  limit?: number;
+
+  /**
+   * Filter transactions before this date (ISO 8601)
+   * @example "2025-01-01T00:00:00Z"
+   */
+  before?: string;
+
+  /**
+   * Filter transactions after this date (ISO 8601)
+   * @example "2025-01-01T00:00:00Z"
+   */
+  after?: string;
+
+  /**
+   * Filter by transaction reference
+   * @example "0xbff43fa587e0efa275f8b643d95881713c0f0ee13682d049cc452f607241b752"
+   */
+  reference?: string;
+
+  /**
+   * Filter by transaction direction
+   * 'in' for incoming funds (deposits, transfers received)
+   * 'out' for outgoing funds (withdrawals, transfers sent)
+   */
+  direction?: 'in' | 'out';
+}
+```
+
+**Response**: `Promise<CardMovement[]>` - Array of card transactions
+
+Each movement includes:
+
+```typescript
+interface CardMovement {
+  amount: string;          // Transaction amount
+  asset: string;           // Asset identifier (e.g., "DUSD/6")
+  from_account_id: string; // Source account ID
+  to_account_id: string;   // Destination account ID
+  direction: 'in' | 'out'; // Transaction direction
+  reference: string;       // Blockchain transaction reference
+  rail_name: string;       // Payment rail used
+  created_at: string;      // Transaction timestamp (ISO 8601)
+
+  details: {
+    type: string;          // Transaction type (e.g., "CREDIT_ADJUSTMENT")
+    metadata: {
+      // Transaction details
+      merchant_name?: string;
+      merchant_city?: string;
+      merchant_country?: string;
+      transaction_type?: string;
+      local_amount?: string;
+      local_currency?: string;
+      usd_amount?: string;
+      card_last_four?: string;
+      // ... and more
+    };
+  };
+}
+```
+
 ### Identity
 
 The identity resource allows you to register identities, retrieve user aliases, and manage authentication origins.
@@ -1002,6 +1150,185 @@ try {
 }
 ```
 
+### Getting Card Balance
+
+```typescript
+import { SDK } from '@bloque/sdk';
+
+const bloque = new SDK({
+  origin: 'your-origin',
+  auth: {
+    type: 'apiKey',
+    apiKey: process.env.BLOQUE_API_KEY!,
+  },
+  mode: 'production',
+});
+
+// Get balance for a specific card
+try {
+  const balances = await bloque.accounts.card.balance({
+    urn: 'did:bloque:account:card:usr-123:crd-456',
+  });
+
+  console.log('Card Balances:\n');
+
+  Object.entries(balances).forEach(([token, balance]) => {
+    console.log(`${token}:`);
+    console.log(`  Current: ${balance.current}`);
+    console.log(`  Pending: ${balance.pending}`);
+    console.log(`  Total In: ${balance.in}`);
+    console.log(`  Total Out: ${balance.out}`);
+
+    const net = BigInt(balance.in) - BigInt(balance.out);
+    console.log(`  Net: ${net.toString()}`);
+    console.log('');
+  });
+
+  // Calculate total current balance across all assets
+  const totalCurrent = Object.entries(balances).reduce(
+    (acc, [token, balance]) => {
+      acc[token] = BigInt(balance.current);
+      return acc;
+    },
+    {} as Record<string, bigint>,
+  );
+
+  console.log('Total Current Balances:');
+  Object.entries(totalCurrent).forEach(([token, amount]) => {
+    console.log(`  ${token}: ${amount.toString()}`);
+  });
+} catch (error) {
+  console.error('Failed to get balance:', error);
+}
+```
+
+### Listing Card Movements
+
+```typescript
+import { SDK } from '@bloque/sdk';
+
+const bloque = new SDK({
+  origin: 'your-origin',
+  auth: {
+    type: 'apiKey',
+    apiKey: process.env.BLOQUE_API_KEY!,
+  },
+  mode: 'production',
+});
+
+// List recent transactions with pagination
+try {
+  const movements = await bloque.accounts.card.movements({
+    urn: 'did:bloque:account:card:usr-123:crd-456',
+    asset: 'USD', // Automatically converts to DUSD/6
+    limit: 50,
+    direction: 'in', // Only incoming transactions
+    after: '2025-01-01T00:00:00Z',
+  });
+
+  console.log(`Found ${movements.length} incoming transactions\n`);
+
+  movements.forEach((transaction) => {
+    console.log('---');
+    console.log(`Amount: ${transaction.amount} ${transaction.asset}`);
+    console.log(`Direction: ${transaction.direction.toUpperCase()}`);
+    console.log(`Date: ${transaction.created_at}`);
+    console.log(`Reference: ${transaction.reference}`);
+
+    // Show merchant details if available
+    if (transaction.details?.metadata) {
+      const meta = transaction.details.metadata;
+      if (meta.merchant_name) {
+        console.log(`Merchant: ${meta.merchant_name}`);
+      }
+      if (meta.merchant_city && meta.merchant_country) {
+        console.log(`Location: ${meta.merchant_city}, ${meta.merchant_country}`);
+      }
+      if (meta.transaction_type) {
+        console.log(`Type: ${meta.transaction_type}`);
+      }
+      if (meta.usd_amount) {
+        console.log(`USD Amount: $${meta.usd_amount}`);
+      }
+    }
+    console.log('');
+  });
+
+  // Calculate total
+  const total = movements.reduce(
+    (sum, t) => sum + BigInt(t.amount),
+    BigInt(0),
+  );
+
+  console.log(`Total received: ${total.toString()}`);
+} catch (error) {
+  console.error('Failed to list movements:', error);
+}
+```
+
+### Paginating Through Card Movements
+
+```typescript
+import { SDK } from '@bloque/sdk';
+
+const bloque = new SDK({
+  origin: 'your-origin',
+  auth: {
+    type: 'apiKey',
+    apiKey: process.env.BLOQUE_API_KEY!,
+  },
+  mode: 'production',
+});
+
+// Paginate through all transactions
+async function getAllTransactions() {
+  const cardUrn = 'did:bloque:account:card:usr-123:crd-456';
+  const pageSize = 100;
+  let allMovements = [];
+  let hasMore = true;
+  let lastDate: string | undefined;
+
+  try {
+    while (hasMore) {
+      const movements = await bloque.accounts.card.movements({
+        urn: cardUrn,
+        asset: 'DUSD/6',
+        limit: pageSize,
+        before: lastDate, // Get transactions before the last one we saw
+      });
+
+      allMovements.push(...movements);
+      console.log(`Fetched ${movements.length} transactions`);
+
+      if (movements.length < pageSize) {
+        hasMore = false; // Last page
+      } else {
+        lastDate = movements[movements.length - 1].created_at;
+      }
+    }
+
+    console.log(`\nTotal transactions: ${allMovements.length}`);
+
+    // Analyze all transactions
+    const totalIn = allMovements
+      .filter((t) => t.direction === 'in')
+      .reduce((sum, t) => sum + BigInt(t.amount), BigInt(0));
+
+    const totalOut = allMovements
+      .filter((t) => t.direction === 'out')
+      .reduce((sum, t) => sum + BigInt(t.amount), BigInt(0));
+
+    console.log(`Total incoming: ${totalIn.toString()}`);
+    console.log(`Total outgoing: ${totalOut.toString()}`);
+    console.log(`Net balance: ${(totalIn - totalOut).toString()}`);
+  } catch (error) {
+    console.error('Error:', error);
+  }
+}
+
+getAllTransactions();
+```
+
 ### Retrieving User Alias Information
 
 ```typescript
@@ -1324,8 +1651,11 @@ import type {
 // Accounts types
 import type {
   CardAccount,
+  CardMovement,
   CreateCardParams,
+  GetBalanceParams,
   ListCardParams,
+  ListMovementsParams,
   TokenBalance,
 } from '@bloque/sdk/accounts';
 

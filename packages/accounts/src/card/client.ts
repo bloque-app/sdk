@@ -5,14 +5,20 @@ import type {
   CreateAccountRequest,
   CreateAccountResponse,
   CreateCardAccountInput,
+  GetBalanceResponse,
   ListAccountsResponse,
+  ListMovementsResponse,
+  TokenBalance,
   UpdateAccountRequest,
   UpdateAccountResponse,
 } from '../api-types';
 import type {
   CardAccount,
+  CardMovement,
   CreateCardParams,
+  GetBalanceParams,
   ListCardParams,
+  ListMovementsParams,
   UpdateCardMetadataParams,
 } from './types';
 
@@ -102,6 +108,91 @@ export class CardClient extends BaseClient {
       updatedAt: account.updated_at,
       balance: account.balance,
     }));
+  }
+
+  /**
+   * List card account movements/transactions
+   *
+   * @param params - Movement list parameters
+   * @returns Promise resolving to array of card movements
+   *
+   * @example
+   * ```typescript
+   * // Basic usage
+   * const movements = await bloque.accounts.card.movements({
+   *   urn: 'did:bloque:account:card:usr-123:crd-456',
+   *   asset: 'DUSD/6',
+   * });
+   *
+   * // With pagination and filters
+   * const recentMovements = await bloque.accounts.card.movements({
+   *   urn: 'did:bloque:account:card:usr-123:crd-456',
+   *   asset: 'USD', // Automatically converts to DUSD/6
+   *   limit: 50,
+   *   direction: 'in',
+   *   after: '2025-01-01T00:00:00Z',
+   * });
+   * ```
+   */
+  async movements(params: ListMovementsParams): Promise<CardMovement[]> {
+    const queryParams = new URLSearchParams();
+
+    const asset = params.asset || 'DUSD/6';
+    queryParams.set('asset', asset === 'USD' ? 'DUSD/6' : asset);
+
+    if (params.limit !== undefined) {
+      queryParams.set('limit', params.limit.toString());
+    }
+
+    if (params.before) {
+      queryParams.set('before', params.before);
+    }
+
+    if (params.after) {
+      queryParams.set('after', params.after);
+    }
+
+    if (params.reference) {
+      queryParams.set('reference', params.reference);
+    }
+
+    if (params.direction) {
+      queryParams.set('direction', params.direction);
+    }
+
+    const queryString = queryParams.toString();
+    const path = `/api/accounts/${params.urn}/movements${queryString ? `?${queryString}` : ''}`;
+
+    const response = await this.httpClient.request<ListMovementsResponse>({
+      method: 'GET',
+      path,
+    });
+
+    return response.transactions;
+  }
+
+  /**
+   * Get card account balance
+   *
+   * @param params - Balance query parameters
+   * @returns Promise resolving to token balances
+   *
+   * @example
+   * ```typescript
+   * const balances = await bloque.accounts.card.balance({
+   *   urn: 'did:bloque:account:card:usr-123:crd-456',
+   * });
+   * ```
+   */
+  async balance(
+    params: GetBalanceParams,
+  ): Promise<Record<string, TokenBalance>> {
+    const response = await this.httpClient.request<GetBalanceResponse>({
+      method: 'GET',
+      path: `/api/accounts/${params.urn}/balance`,
+    });
+
+    return response.balance;
   }
 
   /**

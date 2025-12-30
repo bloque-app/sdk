@@ -93,3 +93,58 @@ export interface AccountWithBalance<TDetails = unknown>
 export interface ListAccountsResponse<TDetails = unknown> {
   accounts: AccountWithBalance<TDetails>[];
 }
+
+export interface TransactionMetadata {
+  amount?: string;
+  asset_type?: string;
+  card_id?: string;
+  card_last_four?: string;
+  card_product_type?: string;
+  card_provider?: string;
+  currency?: string;
+  installments?: string;
+  local_amount?: string;
+  local_currency?: string;
+  local_to_usd_rate?: string;
+  merchant_address?: string;
+  merchant_city?: string;
+  merchant_country?: string;
+  merchant_id?: string;
+  merchant_mcc?: string;
+  merchant_name?: string;
+  merchant_terminal_id?: string;
+  operation_type?: string;
+  original_transaction_id?: string;
+  selected_asset?: string;
+  transaction_id?: string;
+  transaction_type?: string;
+  type?: string;
+  usd_amount?: string;
+  user_id?: string;
+  [key: string]: unknown;
+}
+
+export interface TransactionDetails {
+  metadata: TransactionMetadata;
+  type: string;
+}
+
+export interface Transaction {
+  amount: string;
+  asset: string;
+  from_account_id: string;
+  to_account_id: string;
+  direction: 'in' | 'out';
+  reference: string;
+  rail_name: string;
+  details: TransactionDetails;
+  created_at: string;
+}
+
+export interface ListMovementsResponse {
+  transactions: Transaction[];
+}
+
+export interface GetBalanceResponse {
+  balance: Record<string, TokenBalance>;
+}
