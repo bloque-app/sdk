@@ -30,6 +30,7 @@ This SDK is compatible with multiple JavaScript runtimes:
 
 - **TypeScript First**: Built with TypeScript for complete type safety
 - **Simple API**: Intuitive interface for managing organizations, compliance, accounts, and identity
+- **Virtual Cards**: Create and manage virtual cards with real-time balance tracking
 - **Identity Registration**: Register individual users (KYC) and businesses (KYB) with multi-method authentication
 - **User Sessions**: Secure user session management with `connect()` for authenticated operations
 - **Fully Async**: Promise-based API for modern JavaScript workflows
@@ -458,8 +459,48 @@ interface CardAccount {
   metadata?: Record<string, unknown>; // Custom metadata
   createdAt: string;              // Creation timestamp (ISO 8601)
   updatedAt: string;              // Last update timestamp (ISO 8601)
+  balance?: Record<string, TokenBalance>; // Token balances (only in list responses)
+}
+
+interface TokenBalance {
+  current: string;  // Current balance
+  pending: string;  // Pending balance
+  in: string;       // Total incoming
+  out: string;      // Total outgoing
 }
 ```
+
+#### List Card Accounts
+
+List all card accounts for a holder with their current balances:
+
+```typescript
+// Using connected user session (recommended)
+const userSession = await bloque.connect('did:bloque:your-origin:user-alias');
+const cards = await userSession.accounts.card.list();
+
+// Or with explicit holder URN
+const cards = await bloque.accounts.card.list({
+  holderUrn: 'did:bloque:bloque-whatsapp:573023348486',
+});
+```
+
+**Parameters**:
+
+```typescript
+interface ListCardParams {
+  /**
+   * URN of the account holder to filter by
+   * Optional when using a connected session - defaults to session URN
+   * @example "did:bloque:bloque-whatsapp:573023348486"
+   */
+  holderUrn?: string;
+}
+```
+
+**Response**: `Promise<CardAccount[]>` - Array of card accounts with balances
+
+Each card in the response includes all standard fields plus a `balance` object containing token balances with current, pending, in, and out amounts for each token.
 
 ### Identity
 
@@ -891,6 +932,76 @@ try {
 }
 ```
 
+### Listing Card Accounts
+
+```typescript
+import { SDK } from '@bloque/sdk';
+
+const bloque = new SDK({
+  origin: 'your-origin',
+  auth: {
+    type: 'apiKey',
+    apiKey: process.env.BLOQUE_API_KEY!,
+  },
+  mode: 'production',
+});
+
+// Connect to user session
+const userSession = await bloque.connect('did:bloque:bloque-whatsapp:573023348486');
+
+// List all cards for the connected user
+try {
+  const cards = await userSession.accounts.card.list();
+
+  console.log(`Found ${cards.length} card accounts`);
+
+  cards.forEach((card) => {
+    console.log('\n---');
+    console.log('Card URN:', card.urn);
+    console.log('Last Four:', card.lastFour);
+    console.log('Status:', card.status);
+    console.log('Card Name:', card.metadata?.name);
+
+    // Display balances
+    if (card.balance) {
+      console.log('Balances:');
+      Object.entries(card.balance).forEach(([token, balance]) => {
+        console.log(`  ${token}:`);
+        console.log(`    Current: ${balance.current}`);
+        console.log(`    Pending: ${balance.pending}`);
+        console.log(`    In: ${balance.in}`);
+        console.log(`    Out: ${balance.out}`);
+      });
+    }
+  });
+
+  // Find active cards only
+  const activeCards = cards.filter(card => card.status === 'active');
+  console.log(`\n${activeCards.length} cards are active`);
+
+  // Calculate total balance across all cards
+  const totalBalances: Record<string, bigint> = {};
+
+  activeCards.forEach(card => {
+    if (card.balance) {
+      Object.entries(card.balance).forEach(([token, balance]) => {
+        if (!totalBalances[token]) {
+          totalBalances[token] = BigInt(0);
+        }
+        totalBalances[token] += BigInt(balance.current);
+      });
+    }
+  });
+
+  console.log('\nTotal balances across all active cards:');
+  Object.entries(totalBalances).forEach(([token, total]) => {
+    console.log(`  ${token}: ${total.toString()}`);
+  });
+} catch (error) {
+  console.error('Failed to list cards:', error);
+}
+```
+
 ### Retrieving User Alias Information
 
 ```typescript
@@ -1214,6 +1325,8 @@ import type {
 import type {
   CardAccount,
   CreateCardParams,
+  ListCardParams,
+  TokenBalance,
 } from '@bloque/sdk/accounts';
 
 // Identity types

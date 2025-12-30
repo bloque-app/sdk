@@ -181,6 +181,13 @@ export interface BloqueConfig {
    * Mainly intended for internal use or advanced scenarios.
    */
   accessToken?: string;
+
+  /**
+   * Optional user URN to scope the SDK instance to a specific user.
+   *
+   * Mainly intended for internal use or advanced scenarios.
+   */
+  urn?: string;
 }
 
 export interface RequestOptions<U = unknown> {

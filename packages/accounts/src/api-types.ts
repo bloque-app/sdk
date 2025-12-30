@@ -77,3 +77,19 @@ export interface UpdateAccountResponse<TDetails = unknown> {
   };
   req_id: string;
 }
+
+export interface TokenBalance {
+  current: string;
+  pending: string;
+  in: string;
+  out: string;
+}
+
+export interface AccountWithBalance<TDetails = unknown>
+  extends Account<TDetails> {
+  balance: Record<string, TokenBalance>;
+}
+
+export interface ListAccountsResponse<TDetails = unknown> {
+  accounts: AccountWithBalance<TDetails>[];
+}

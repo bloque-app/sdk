@@ -23,6 +23,7 @@ export class SDK {
 
   async connect(urn: string) {
     const config = this.httpClient.config;
+    config.urn = urn;
     const response = await this.httpClient.request({
       path: `/api/origins/${config.origin}/connect`,
       method: 'POST',
@@ -37,7 +38,7 @@ export class SDK {
         extra_context: {},
       },
     });
-    this.httpClient.config.accessToken = (response as any).result.access_token;
+    config.accessToken = (response as any).result.access_token;
 
     return {
       accounts: new AccountsClient(this.httpClient),

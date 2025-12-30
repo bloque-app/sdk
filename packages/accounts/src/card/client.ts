@@ -5,12 +5,14 @@ import type {
   CreateAccountRequest,
   CreateAccountResponse,
   CreateCardAccountInput,
+  ListAccountsResponse,
   UpdateAccountRequest,
   UpdateAccountResponse,
 } from '../api-types';
 import type {
   CardAccount,
   CreateCardParams,
+  ListCardParams,
   UpdateCardMetadataParams,
 } from './types';
 
@@ -56,6 +58,50 @@ export class CardClient extends BaseClient {
     });
 
     return this._mapAccountResponse(response.result.account);
+  }
+
+  /**
+   * List card accounts for a holder
+   *
+   * @param params - List parameters
+   * @returns Promise resolving to array of card accounts with balances
+   *
+   * @example
+   * ```typescript
+   * const cards = await bloque.accounts.card.list({
+   *   holderUrn: 'did:bloque:bloque-whatsapp:573023348486',
+   * });
+   * ```
+   */
+  async list(params?: ListCardParams): Promise<CardAccount[]> {
+    const queryParams = new URLSearchParams({
+      holder_urn: params?.holderUrn || this.httpClient.config.urn || '',
+      medium: 'card',
+    });
+
+    const response = await this.httpClient.request<
+      ListAccountsResponse<CardDetails>
+    >({
+      method: 'GET',
+      path: `/api/accounts?${queryParams.toString()}`,
+    });
+
+    return response.accounts.map((account) => ({
+      urn: account.urn,
+      id: account.id,
+      lastFour: account.details.card_last_four,
+      productType: account.details.card_product_type,
+      status: account.status,
+      cardType: account.details.card_type,
+      detailsUrl: account.details.card_url_details,
+      ownerUrn: account.owner_urn,
+      ledgerId: account.ledger_account_id,
+      webhookUrl: account.webhook_url,
+      metadata: account.metadata,
+      createdAt: account.created_at,
+      updatedAt: account.updated_at,
+      balance: account.balance,
+    }));
   }
 
   /**

@@ -1,4 +1,13 @@
-import type { CardType } from '../api-types';
+import type { CardType, TokenBalance } from '../api-types';
+
+export interface ListCardParams {
+  /**
+   * URN of the account holder to filter by
+   *
+   * @example "did:bloque:bloque-whatsapp:573023348486"
+   */
+  holderUrn: string;
+}
 
 export interface CreateCardParams {
   /**
@@ -101,4 +110,8 @@ export interface CardAccount {
    * Last update timestamp
    */
   updatedAt: string;
+  /**
+   * Token balances (only included in list responses)
+   */
+  balance?: Record<string, TokenBalance>;
 }
