@@ -1,4 +1,4 @@
-import type { HttpClient } from '@bloque/sdk-core';
+import { BaseClient } from '@bloque/sdk-core';
 import type {
   AccountStatus,
   BancolombiaDetails,
@@ -13,13 +13,7 @@ import type {
   UpdateBancolombiaMetadataParams,
 } from './types';
 
-export class BancolombiaClient {
-  private readonly httpClient: HttpClient;
-
-  constructor(httpClient: HttpClient) {
-    this.httpClient = httpClient;
-  }
-
+export class BancolombiaClient extends BaseClient {
   /**
    * Create a new Bancolombia account
    *

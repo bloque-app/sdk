@@ -1,4 +1,4 @@
-import type { HttpClient } from '@bloque/sdk-core';
+import { BaseClient } from '@bloque/sdk-core';
 import type {
   GetKycVerificationResponse,
   StartKycVerificationRequest,
@@ -10,13 +10,7 @@ import type {
   KycVerificationResponse,
 } from './types';
 
-export class KycClient {
-  private readonly httpClient: HttpClient;
-
-  constructor(httpClient: HttpClient) {
-    this.httpClient = httpClient;
-  }
-
+export class KycClient extends BaseClient {
   async startVerification(
     params: KycVerificationParams,
   ): Promise<KycVerificationResponse> {

@@ -25,7 +25,7 @@ const createLocalStorageAdapter = (): TokenStorage => ({
 });
 
 export class HttpClient {
-  private readonly config: BloqueConfig;
+  readonly config: BloqueConfig;
   private readonly baseUrl: string;
 
   private readonly publicRoutes = [
@@ -92,6 +92,11 @@ export class HttpClient {
     }
 
     if (this.config.auth.type === 'apiKey') {
+      if (this.config.accessToken) {
+        return {
+          Authorization: `Bearer ${this.config.accessToken}`,
+        };
+      }
       return {
         Authorization: this.config.auth.apiKey,
       };

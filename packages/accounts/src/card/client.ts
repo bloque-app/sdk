@@ -1,4 +1,4 @@
-import type { HttpClient } from '@bloque/sdk-core';
+import { BaseClient } from '@bloque/sdk-core';
 import type {
   AccountStatus,
   CardDetails,
@@ -14,13 +14,7 @@ import type {
   UpdateCardMetadataParams,
 } from './types';
 
-export class CardClient {
-  private readonly httpClient: HttpClient;
-
-  constructor(httpClient: HttpClient) {
-    this.httpClient = httpClient;
-  }
-
+export class CardClient extends BaseClient {
   /**
    * Create a new card account
    *

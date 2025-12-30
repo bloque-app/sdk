@@ -49,24 +49,26 @@ bun add @bloque/sdk
 import { SDK } from '@bloque/sdk';
 
 const bloque = new SDK({
-  apiKey: process.env.BLOQUE_API_KEY!,
+  origin: 'your-origin', // Required: your origin identifier
+  auth: {
+    type: 'apiKey',
+    apiKey: process.env.BLOQUE_API_KEY!,
+  },
   mode: 'production', // or 'sandbox'
+  platform: 'node', // optional: 'node' | 'bun' | 'deno'
 });
 
-// Create an organization
-const organization = await bloque.orgs.create({
-  org_type: 'business',
-  profile: {
-    legal_name: 'Acme Corporation',
-    tax_id: '123456789',
-    incorporation_date: '2020-01-01',
-    business_type: 'llc',
-    incorporation_country_code: 'US',
-    address_line1: '123 Main St',
-    postal_code: '12345',
-    city: 'San Francisco',
-  },
+// Connect to a user session
+const userSession = await bloque.connect('did:bloque:your-origin:user-alias');
+
+// Create a virtual card
+const card = await userSession.accounts.card.create({
+  urn: 'did:bloque:your-origin:user-alias',
+  name: 'My Virtual Card',
 });
+
+console.log('Card created:', card.urn);
+console.log('Last four digits:', card.lastFour);
 ```
 
 For detailed documentation, see the [@bloque/sdk package README](./packages/sdk/README.md).

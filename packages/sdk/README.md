@@ -31,9 +31,12 @@ This SDK is compatible with multiple JavaScript runtimes:
 - **TypeScript First**: Built with TypeScript for complete type safety
 - **Simple API**: Intuitive interface for managing organizations, compliance, accounts, and identity
 - **Identity Registration**: Register individual users (KYC) and businesses (KYB) with multi-method authentication
+- **User Sessions**: Secure user session management with `connect()` for authenticated operations
 - **Fully Async**: Promise-based API for modern JavaScript workflows
 - **Lightweight**: Minimal dependencies for optimal bundle size
 - **Modular**: Import only what you need with tree-shakeable exports
+
+> **📌 Important:** Most operations require connecting to a user session first using `bloque.connect(urn)`. This ensures proper authentication and authorization. See the [User Sessions](#user-sessions-with-connect) section for details.
 
 ## Installation
 
@@ -51,6 +54,7 @@ import type { CreateOrgParams } from '@bloque/sdk/orgs';
 
 // Initialize the SDK with API key (backend only)
 const bloque = new SDK({
+  origin: 'your-origin-name', // Required: your origin identifier
   auth: {
     type: 'apiKey',
     apiKey: process.env.BLOQUE_API_KEY!,
@@ -59,7 +63,22 @@ const bloque = new SDK({
   platform: 'node', // optional: 'node' | 'bun' | 'deno'
 });
 
-// Create an organization
+// Connect to user session for account operations
+async function createCard() {
+  // First, connect to the user's session
+  const userSession = await bloque.connect('did:bloque:your-origin:user-alias');
+
+  // Now create a virtual card through the session
+  const card = await userSession.accounts.card.create({
+    urn: 'did:bloque:your-origin:user-alias',
+    name: 'My Virtual Card',
+  });
+
+  console.log('Card created:', card.urn);
+  console.log('Last four digits:', card.lastFour);
+}
+
+// Create an organization (direct SDK access, no connect needed)
 async function createOrganization() {
   const params: CreateOrgParams = {
     org_type: 'business',
@@ -79,19 +98,9 @@ async function createOrganization() {
     },
   };
 
-  const organization = await bloque.orgs.create(params);
+  const userSession = await bloque.connect('did:bloque:your-origin:user-alias');
+  const organization = await userSession.orgs.create(params);
   console.log('Organization created:', organization);
-}
-
-// Create a virtual card
-async function createCard() {
-  const card = await bloque.accounts.card.create({
-    urn: 'did:bloque:user:123e4567',
-    name: 'My Virtual Card',
-  });
-
-  console.log('Card created:', card.urn);
-  console.log('Last four digits:', card.lastFour);
 }
 ```
 
@@ -175,6 +184,10 @@ const bloque = new SDK({
 
 ### Configuration Options
 
+- **`origin`** (string, required): Your origin identifier/namespace
+  - This identifies your application or organization in the Bloque platform
+  - Example: `'my-app'`, `'bloque-root'`, `'ethereum-mainnet'`
+
 - **`auth`** (object, required): Authentication configuration
   - `type: 'apiKey'`: For backend platforms
     - `apiKey` (string, required): Your Bloque API key
@@ -195,6 +208,42 @@ const bloque = new SDK({
   - Browser automatically uses `localStorage` if not provided
   - Must implement: `get()`, `set(token)`, `clear()`
 
+### User Sessions with `connect()`
+
+Most operations in the SDK require connecting to a user session first. This ensures proper authentication and authorization for user-specific operations.
+
+```typescript
+// Initialize SDK
+const bloque = new SDK({
+  origin: 'your-origin',
+  auth: {
+    type: 'apiKey',
+    apiKey: process.env.BLOQUE_API_KEY!,
+  },
+  mode: 'production',
+});
+
+// Connect to user session
+const userSession = await bloque.connect('did:bloque:your-origin:user-alias');
+
+// Now perform operations through the session
+const card = await userSession.accounts.card.create({
+  urn: 'did:bloque:your-origin:user-alias',
+  name: 'My Card',
+});
+```
+
+**What `connect()` does:**
+- Authenticates the user with the specified URN
+- Obtains an access token for the user session
+- Returns a session object with access to: `accounts`, `compliance`, `identity`, `orgs`
+
+**URN Format:**
+- Pattern: `did:bloque:{origin}:{user-alias}`
+- Example: `did:bloque:my-app:john-doe`
+- The `{origin}` must match the origin specified in SDK configuration
+- The `{user-alias}` is the user's unique identifier in your origin
+
 ### Platform and Authentication Compatibility
 
 | Platform | API Key Auth | JWT Auth | Token Storage |
@@ -214,7 +263,11 @@ The organizations resource allows you to create and manage organizations in the 
 #### Create an Organization
 
 ```typescript
-const organization = await bloque.orgs.create(params);
+// Connect to user session first
+const userSession = await bloque.connect('did:bloque:your-origin:user-alias');
+
+// Create organization through the session
+const organization = await userSession.orgs.create(params);
 ```
 
 **Parameters**:
@@ -278,8 +331,12 @@ The compliance resource provides KYC (Know Your Customer) verification functiona
 Start a KYC verification process for a user:
 
 ```typescript
-const verification = await bloque.compliance.kyc.startVerification({
-  urn: 'did:bloque:origin:user-id',
+// Connect to user session
+const userSession = await bloque.connect('did:bloque:your-origin:user-alias');
+
+// Start KYC verification
+const verification = await userSession.compliance.kyc.startVerification({
+  urn: 'did:bloque:your-origin:user-alias',
 });
 ```
 
@@ -358,8 +415,12 @@ The accounts resource allows you to create virtual cards for users.
 Create a virtual card for a user:
 
 ```typescript
-const card = await bloque.accounts.card.create({
-  urn: 'did:bloque:user:123e4567',
+// Connect to user session
+const userSession = await bloque.connect('did:bloque:your-origin:user-alias');
+
+// Create virtual card
+const card = await userSession.accounts.card.create({
+  urn: 'did:bloque:your-origin:user-alias',
   name: 'My Virtual Card', // Optional
 });
 ```

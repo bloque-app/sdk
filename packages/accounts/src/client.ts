@@ -1,4 +1,5 @@
 import type { HttpClient } from '@bloque/sdk-core';
+import { BaseClient } from '@bloque/sdk-core';
 import { BancolombiaClient } from './bancolombia/client';
 import { CardClient } from './card/client';
 
@@ -12,13 +13,12 @@ import { CardClient } from './card/client';
  * - us: US bank accounts
  * - polygon: Polygon wallets
  */
-export class AccountsClient {
-  private readonly httpClient: HttpClient;
+export class AccountsClient extends BaseClient {
   readonly bancolombia: BancolombiaClient;
   readonly card: CardClient;
 
   constructor(httpClient: HttpClient) {
-    this.httpClient = httpClient;
+    super(httpClient);
     this.bancolombia = new BancolombiaClient(this.httpClient);
     this.card = new CardClient(this.httpClient);
   }

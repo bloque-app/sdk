@@ -119,6 +119,13 @@ export type AuthStrategy = { type: 'apiKey'; apiKey: string } | { type: 'jwt' };
  */
 export interface BloqueConfig {
   /**
+   * Origin identifier for the SDK.
+   *
+   * Used to scope requests and operations
+   * to a specific origin within the Bloque platform.
+   */
+  origin: string;
+  /**
    * Platform where the SDK is executed.
    *
    * Determines the runtime environment and its capabilities.
@@ -167,6 +174,13 @@ export interface BloqueConfig {
    * use alternative storage mechanisms.
    */
   tokenStorage?: TokenStorage;
+
+  /**
+   * Optional access token to be used for authentication.
+   *
+   * Mainly intended for internal use or advanced scenarios.
+   */
+  accessToken?: string;
 }
 
 export interface RequestOptions<U = unknown> {

@@ -11,6 +11,8 @@ Financial accounts and payment methods client for the [Bloque](https://www.bloqu
 - **Fully Async**: Promise-based API for modern JavaScript workflows
 - **Secure**: PCI-compliant card details URL
 
+> **📌 Important:** All account operations require connecting to a user session first using `bloque.connect(urn)`. This ensures proper authentication and authorization for user-specific operations. See the [Usage](#usage) section for details.
+
 ## Installation
 
 This package is included in the main `@bloque/sdk` package. You typically don't need to install it separately.
@@ -33,13 +35,20 @@ bun add @bloque/sdk-accounts @bloque/sdk-core
 import { SDK } from '@bloque/sdk';
 
 const bloque = new SDK({
-  apiKey: process.env.BLOQUE_API_KEY!,
+  origin: 'your-origin', // Required: your origin identifier
+  auth: {
+    type: 'apiKey',
+    apiKey: process.env.BLOQUE_API_KEY!,
+  },
   mode: 'production',
 });
 
-// Create a virtual card
-const card = await bloque.accounts.card.create({
-  urn: 'did:bloque:user:123',
+// Connect to user session first
+const userSession = await bloque.connect('did:bloque:your-origin:user-alias');
+
+// Create a virtual card through the session
+const card = await userSession.accounts.card.create({
+  urn: 'did:bloque:your-origin:user-alias',
   name: 'My Virtual Card', // Optional
   ledgerId: 'ledger_123', // Optional - associate with ledger account
 });
@@ -50,9 +59,9 @@ console.log('Card details URL:', card.detailsUrl);
 console.log('Ledger ID:', card.ledgerId);
 console.log('Status:', card.status);
 
-// Create a Bancolombia account
-const bancolombiaAccount = await bloque.accounts.bancolombia.create({
-  urn: 'did:bloque:user:123',
+// Create a Bancolombia account through the session
+const bancolombiaAccount = await userSession.accounts.bancolombia.create({
+  urn: 'did:bloque:your-origin:user-alias',
   name: 'Main Account', // Optional
   ledgerId: 'ledger_123', // Optional - associate with ledger account
 });
@@ -392,13 +401,20 @@ const account = await bloque.accounts.bancolombia.disable(
 import { SDK } from '@bloque/sdk';
 
 const bloque = new SDK({
-  apiKey: process.env.BLOQUE_API_KEY!,
+  origin: 'your-origin',
+  auth: {
+    type: 'apiKey',
+    apiKey: process.env.BLOQUE_API_KEY!,
+  },
   mode: 'production',
 });
 
+// Connect to user session
+const userSession = await bloque.connect('did:bloque:your-origin:user-alias');
+
 // Create a virtual card with just URN
-const card = await bloque.accounts.card.create({
-  urn: 'did:bloque:user:123e4567',
+const card = await userSession.accounts.card.create({
+  urn: 'did:bloque:your-origin:user-alias',
 });
 
 console.log('Card created:', card.urn);

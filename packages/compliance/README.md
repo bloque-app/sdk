@@ -9,6 +9,8 @@ Compliance and KYC verification client for the [Bloque](https://www.bloque.app) 
 - **Fully Async**: Promise-based API for modern JavaScript workflows
 - **Lightweight**: Minimal dependencies for optimal bundle size
 
+> **📌 Important:** All compliance operations require connecting to a user session first using `bloque.connect(urn)`. This ensures proper authentication and authorization for user-specific operations. See the [Usage](#usage) section for details.
+
 ## Installation
 
 This package is included in the main `@bloque/sdk` package. You typically don't need to install it separately.
@@ -31,13 +33,20 @@ bun add @bloque/sdk-compliance @bloque/sdk-core
 import { SDK } from '@bloque/sdk';
 
 const bloque = new SDK({
-  apiKey: process.env.BLOQUE_API_KEY!,
+  origin: 'your-origin', // Required: your origin identifier
+  auth: {
+    type: 'apiKey',
+    apiKey: process.env.BLOQUE_API_KEY!,
+  },
   mode: 'production',
 });
 
-// Start KYC verification
-const verification = await bloque.compliance.kyc.startVerification({
-  urn: 'did:bloque:origin:user-123',
+// Connect to user session first
+const userSession = await bloque.connect('did:bloque:your-origin:user-alias');
+
+// Start KYC verification through the session
+const verification = await userSession.compliance.kyc.startVerification({
+  urn: 'did:bloque:your-origin:user-alias',
 });
 
 console.log('Verification URL:', verification.url);
@@ -191,7 +200,11 @@ import { SDK } from '@bloque/sdk';
 import type { KycVerificationParams } from '@bloque/sdk-compliance';
 
 const bloque = new SDK({
-  apiKey: process.env.BLOQUE_API_KEY!,
+  origin: 'your-origin',
+  auth: {
+    type: 'apiKey',
+    apiKey: process.env.BLOQUE_API_KEY!,
+  },
   mode: 'production',
 });
 
@@ -200,12 +213,15 @@ async function startUserVerification(
   webhookUrl?: string,
 ) {
   try {
+    // Connect to user session
+    const userSession = await bloque.connect(userUrn);
+
     const params: KycVerificationParams = {
       urn: userUrn,
       webhookUrl,
     };
 
-    const verification = await bloque.compliance.kyc.startVerification(params);
+    const verification = await userSession.compliance.kyc.startVerification(params);
 
     console.log('✓ Verification started');
     console.log('  URL:', verification.url);
@@ -220,7 +236,7 @@ async function startUserVerification(
 
 // Usage
 await startUserVerification(
-  'did:bloque:origin:user-123',
+  'did:bloque:your-origin:user-alias',
   'https://api.example.com/webhooks/kyc',
 );
 ```

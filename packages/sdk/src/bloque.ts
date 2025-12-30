@@ -6,16 +6,44 @@ import { OrgsClient } from '@bloque/sdk-orgs';
 
 export class SDK {
   private readonly httpClient: HttpClient;
-  public readonly accounts: AccountsClient;
-  public readonly compliance: ComplianceClient;
-  public readonly identity: IdentityClient;
-  public readonly orgs: OrgsClient;
 
   constructor(config: BloqueConfig) {
     this.httpClient = new HttpClient(config);
-    this.accounts = new AccountsClient(this.httpClient);
-    this.compliance = new ComplianceClient(this.httpClient);
-    this.identity = new IdentityClient(this.httpClient);
-    this.orgs = new OrgsClient(this.httpClient);
+  }
+
+  private extractUserAlias(urn: string): string {
+    const match = urn.match(/^did:bloque:[^:]+:([^:]+)$/);
+
+    if (!match) {
+      throw new Error(`Invalid user alias URN: ${urn}`);
+    }
+
+    return match[1];
+  }
+
+  async connect(urn: string) {
+    const config = this.httpClient.config;
+    const response = await this.httpClient.request({
+      path: `/api/origins/${config.origin}/connect`,
+      method: 'POST',
+      body: {
+        assertion_result: {
+          challengeType: 'API_KEY',
+          value: {
+            api_key: config.auth.type === 'apiKey' ? config.auth.apiKey : '',
+            alias: this.extractUserAlias(urn),
+          },
+        },
+        extra_context: {},
+      },
+    });
+    this.httpClient.config.accessToken = (response as any).result.access_token;
+
+    return {
+      accounts: new AccountsClient(this.httpClient),
+      compliance: new ComplianceClient(this.httpClient),
+      identity: new IdentityClient(this.httpClient),
+      orgs: new OrgsClient(this.httpClient),
+    };
   }
 }

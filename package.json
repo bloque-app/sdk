@@ -15,6 +15,7 @@
     "build:all": "bun run build:prerequisites && bun run build:sdk",
     "build": "bun run build:all",
     "clean": "bun run -r --parallel --filter='./packages/*' clean",
+    "dev": "bun run -r --parallel --filter='./packages/*' dev",
     "changeset": "changeset",
     "version": "changeset version",
     "release": "bun run -r --parallel --filter='./packages/*' release"
