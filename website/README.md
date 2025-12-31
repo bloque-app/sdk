@@ -1,13 +1,18 @@
-# Bloque Payments Documentation
+# Bloque SDK Documentation
 
-Official documentation for Bloque Payments SDK and React components.
+Official documentation for the Bloque SDK.
 
 ## Overview
 
-This documentation covers:
+This documentation covers the **@bloque/sdk** - a TypeScript/JavaScript SDK for integrating Bloque services into your applications.
 
-- **@bloque/payments-sdk**: Node.js SDK for payment processing
-- **@bloque/payments-react**: React components for payment forms
+The SDK provides modules for:
+
+- **Organizations** (`@bloque/sdk-orgs`): Organization management
+- **Compliance** (`@bloque/sdk-compliance`): KYC/KYB compliance services
+- **Accounts** (`@bloque/sdk-accounts`): Account and virtual card management
+- **Identity** (`@bloque/sdk-identity`): User identity and authentication
+- **Core** (`@bloque/sdk-core`): Base client and shared utilities
 
 ## Languages
 
@@ -21,7 +26,7 @@ The documentation is available in:
 Install the dependencies:
 
 ```bash
-npm install
+bun install
 ```
 
 ## Get started
@@ -29,21 +34,21 @@ npm install
 Start the dev server:
 
 ```bash
-npm run dev
+bun run dev
 ```
 
-The documentation will be available at `http://localhost:3001`
+The documentation will be available at `http://localhost:5173`
 
 Build the website for production:
 
 ```bash
-npm run build
+bun run build
 ```
 
 Preview the production build locally:
 
 ```bash
-npm run preview
+bun run preview
 ```
 
 ## Documentation Structure
@@ -52,14 +57,18 @@ npm run preview
 docs/
 ├── en/                     # English documentation
 │   ├── guide/             # Getting started guide
-│   ├── sdk/               # Node.js SDK documentation
-│   ├── react/             # React components documentation
-│   └── examples/          # Code examples
+│   │   ├── start/         # Quick start
+│   │   ├── features/      # SDK features
+│   │   ├── accounts/      # Account management
+│   │   └── examples/      # Code examples
+│   └── index.md           # Home page
 └── es/                     # Spanish documentation
     ├── guide/             # Guía de inicio
-    ├── sdk/               # Documentación del SDK de Node.js
-    ├── react/             # Documentación de componentes React
-    └── examples/          # Ejemplos de código
+    │   ├── start/         # Inicio rápido
+    │   ├── features/      # Características del SDK
+    │   ├── accounts/      # Gestión de cuentas
+    │   └── examples/      # Ejemplos de código
+    └── index.md           # Página de inicio
 ```
 
 ## Content
@@ -67,28 +76,28 @@ docs/
 ### Getting Started
 - Installation guide
 - Quick start examples
-- Payment flow overview
-- Supported payment methods
+- Platform support (Node.js, Bun, Deno, Browser)
+- User sessions and authentication
 
-### SDK (Node.js)
-- Overview and installation
-- Checkout resource (create, retrieve, cancel)
-- Payment resource (card, PSE, cash)
-- Error handling
-- Complete API reference
-
-### React
-- Overview and installation
-- BloqueCheckout component
-- Customization and theming
-- Integration examples
+### Features
+- Organizations management
+- Compliance (KYC/KYB)
+- Account management
+- Virtual cards
+- Identity registration
+- User sessions
 
 ### Examples
-- Express.js integration
-- Next.js integration
-- E-commerce checkout flow
-- Testing examples
+- Backend integration examples
+- Virtual card creation
+- User registration flows
+- Session management
 
 ## Technology
 
-Built with [Rspress](https://rspress.dev/) - Fast documentation generator
+Built with [Rspress](https://rspress.dev/) - Fast Rspack-based documentation framework
+
+## Repository
+
+GitHub: [bloque-app/sdk](https://github.com/bloque-app/sdk)
+NPM: [@bloque/sdk](https://www.npmjs.com/package/@bloque/sdk)
