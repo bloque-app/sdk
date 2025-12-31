@@ -1,5 +1,17 @@
 # @bloque/sdk
 
+## 0.0.23
+
+### Patch Changes
+
+- docs
+- Updated dependencies
+  - @bloque/sdk-accounts@0.0.23
+  - @bloque/sdk-compliance@0.0.23
+  - @bloque/sdk-core@0.0.23
+  - @bloque/sdk-identity@0.0.23
+  - @bloque/sdk-orgs@0.0.23
+
 ## 0.0.20
 
 ### Patch Changes

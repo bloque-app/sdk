@@ -1,5 +1,11 @@
 # @bloque/sdk-core
 
+## 0.0.23
+
+### Patch Changes
+
+- docs
+
 ## 0.0.20
 
 ### Patch Changes
