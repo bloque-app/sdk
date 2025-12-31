@@ -1,0 +1,248 @@
+# Compliance & KYC
+
+Learn how to implement KYC (Know Your Customer) verification using the Bloque SDK.
+
+## Overview
+
+The compliance module provides tools for KYC verification, allowing you to verify user identities and maintain regulatory compliance.
+
+## Starting KYC Verification
+
+Initialize a KYC verification process for a user:
+
+```typescript
+import { SDK } from '@bloque/sdk';
+import type { KycVerificationParams } from '@bloque/sdk/compliance';
+
+const bloque = new SDK({
+  origin: 'your-origin',
+  auth: {
+    type: 'apiKey',
+    apiKey: process.env.BLOQUE_API_KEY!,
+  },
+  mode: 'production',
+});
+
+const params: KycVerificationParams = {
+  urn: 'did:bloque:user:123e4567',
+  webhookUrl: 'https://api.example.com/webhooks/kyc', // Optional
+};
+
+const verification = await bloque.compliance.kyc.startVerification(params);
+
+console.log('Verification URL:', verification.url);
+console.log('Status:', verification.status);
+```
+
+## Parameters
+
+### KycVerificationParams
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `urn` | `string` | Yes | URN of the user to verify |
+| `webhookUrl` | `string` | No | URL for status change notifications |
+
+## Response
+
+### KycVerificationResponse
+
+```typescript
+interface KycVerificationResponse {
+  url: string;           // URL for user to complete verification
+  status: string;        // Current verification status
+  completedAt: string | null;  // Completion timestamp
+}
+```
+
+### Verification Status
+
+| Status | Description |
+|--------|-------------|
+| `awaiting_compliance_verification` | Verification pending |
+| `approved` | Verification approved |
+| `rejected` | Verification rejected |
+
+## Getting Verification Status
+
+Check the status of an existing verification:
+
+```typescript
+import type { GetKycVerificationParams } from '@bloque/sdk/compliance';
+
+const params: GetKycVerificationParams = {
+  urn: 'did:bloque:user:123e4567',
+};
+
+const status = await bloque.compliance.kyc.getVerification(params);
+
+console.log('Status:', status.status);
+console.log('Completed At:', status.completedAt);
+
+if (status.status === 'approved') {
+  console.log('User is verified!');
+} else if (status.status === 'rejected') {
+  console.log('Verification was rejected');
+} else {
+  console.log('Verification still pending');
+}
+```
+
+## Webhook Integration
+
+Set up webhooks to receive real-time updates on verification status changes:
+
+### Setting Up Webhooks
+
+```typescript
+const verification = await bloque.compliance.kyc.startVerification({
+  urn: 'did:bloque:user:123e4567',
+  webhookUrl: 'https://api.example.com/webhooks/kyc',
+});
+```
+
+### Webhook Payload
+
+Your webhook endpoint will receive POST requests with the following payload:
+
+```typescript
+{
+  "type": "kyc.status_changed",
+  "data": {
+    "urn": "did:bloque:user:123e4567",
+    "status": "approved",
+    "completedAt": "2024-01-15T10:30:00Z"
+  }
+}
+```
+
+### Webhook Handler Example
+
+```typescript
+import express from 'express';
+
+const app = express();
+
+app.post('/webhooks/kyc', express.json(), (req, res) => {
+  const { type, data } = req.body;
+
+  if (type === 'kyc.status_changed') {
+    console.log('KYC status changed for:', data.urn);
+    console.log('New status:', data.status);
+
+    // Update your database, send notifications, etc.
+    if (data.status === 'approved') {
+      // Enable features for verified user
+    }
+  }
+
+  res.status(200).send('OK');
+});
+```
+
+## Complete Workflow
+
+Here's a complete KYC verification workflow:
+
+```typescript
+import { SDK } from '@bloque/sdk';
+
+const bloque = new SDK({
+  origin: 'your-origin',
+  auth: {
+    type: 'apiKey',
+    apiKey: process.env.BLOQUE_API_KEY!,
+  },
+  mode: 'production',
+});
+
+async function handleKYCVerification(userUrn: string) {
+  try {
+    // 1. Start verification
+    const verification = await bloque.compliance.kyc.startVerification({
+      urn: userUrn,
+      webhookUrl: 'https://api.example.com/webhooks/kyc',
+    });
+
+    console.log('✓ Verification started');
+    console.log('  Send user to:', verification.url);
+
+    // 2. Store verification info in your database
+    await saveVerification({
+      userUrn,
+      verificationUrl: verification.url,
+      status: verification.status,
+    });
+
+    // 3. Redirect user to verification URL
+    return verification.url;
+
+  } catch (error) {
+    console.error('Failed to start verification:', error);
+    throw error;
+  }
+}
+
+async function checkVerificationStatus(userUrn: string) {
+  try {
+    const status = await bloque.compliance.kyc.getVerification({
+      urn: userUrn,
+    });
+
+    console.log('Current status:', status.status);
+
+    if (status.status === 'approved') {
+      // Update user permissions
+      await updateUserPermissions(userUrn, { verified: true });
+    }
+
+    return status;
+
+  } catch (error) {
+    console.error('Failed to get status:', error);
+    throw error;
+  }
+}
+```
+
+## User Experience Flow
+
+1. **User initiates verification** in your application
+2. **Your app calls** `startVerification()`
+3. **Redirect user** to the returned verification URL
+4. **User completes** KYC process on the provider's page
+5. **Webhook notification** sent to your endpoint
+6. **Update user status** in your system
+
+## Security Best Practices
+
+1. **Validate Webhooks**: Implement webhook signature validation
+2. **HTTPS Only**: Use HTTPS for webhook URLs
+3. **Idempotency**: Handle duplicate webhook deliveries
+4. **Timeout Handling**: Set appropriate timeouts for API calls
+5. **Error Logging**: Log all verification attempts and errors
+
+## Testing
+
+Use sandbox mode to test without real verifications:
+
+```typescript
+const bloque = new SDK({
+  origin: 'your-origin',
+  auth: {
+    type: 'apiKey',
+    apiKey: process.env.BLOQUE_API_KEY!,
+  },
+  mode: 'sandbox', // Test mode
+});
+
+// Test verification will return immediately
+const verification = await bloque.compliance.kyc.startVerification({
+  urn: 'did:bloque:user:test-123',
+});
+```
+
+## Next Steps
+
+- [Accounts Guide](/guide/accounts/overview) - Create virtual cards for verified users
+- [Organizations Guide](/guide/features/organizations) - Manage business accounts

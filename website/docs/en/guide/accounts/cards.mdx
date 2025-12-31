@@ -1,0 +1,396 @@
+# Virtual Cards
+
+Create and manage virtual cards for online payments using the Bloque SDK.
+
+## Overview
+
+Virtual cards provide a secure way to make online payments without exposing sensitive financial information. Features include:
+
+- **Instant Creation**: Cards are created immediately
+- **PCI Compliant**: Secure handling of card data
+- **Multiple Cards**: Users can have multiple cards
+- **Real-time Balances**: Check balances across multiple assets
+- **Transaction History**: Full transaction tracking
+
+## Creating a Virtual Card
+
+### Basic Creation
+
+Create a virtual card for a user:
+
+```typescript title="create-card.ts"
+import { SDK } from '@bloque/sdk';
+
+const bloque = new SDK({
+  origin: 'your-origin',
+  auth: {
+    type: 'apiKey',
+    apiKey: process.env.BLOQUE_API_KEY!,
+  },
+  mode: 'production',
+});
+
+// Connect to user session
+const userSession = await bloque.connect('did:bloque:your-origin:user-alias');
+
+// Create a virtual card
+const card = await userSession.accounts.card.create({
+  urn: 'did:bloque:your-origin:user-alias',
+  name: 'My Virtual Card',
+});
+
+console.log('Card created:', card.lastFour);
+console.log('Status:', card.status);
+console.log('Details URL:', card.detailsUrl);
+```
+
+### Parameters
+
+```typescript title="types.ts"
+interface CreateCardParams {
+  urn: string;          // User URN
+  name?: string;        // Optional card name
+  webhookUrl?: string;  // Optional webhook for events
+  ledgerId?: string;    // Optional ledger account ID
+  metadata?: Record<string, unknown>; // Custom metadata
+}
+```
+
+### Response
+
+```typescript title="types.ts"
+interface CardAccount {
+  urn: string;                    // Unique resource name
+  id: string;                     // Card account ID
+  lastFour: string;               // Last four digits
+  productType: 'CREDIT' | 'DEBIT';
+  status: CardStatus;
+  cardType: 'VIRTUAL' | 'PHYSICAL';
+  detailsUrl: string;             // PCI-compliant details URL
+  ownerUrn: string;
+  ledgerId: string;
+  webhookUrl: string | null;
+  metadata?: Record<string, unknown>;
+  createdAt: string;
+  updatedAt: string;
+  balance?: Record<string, TokenBalance>; // Only in list responses
+}
+```
+
+## Listing Cards
+
+List all card accounts for a user with their balances:
+
+```typescript title="list-cards.ts"
+// Using connected session (recommended)
+const userSession = await bloque.connect('did:bloque:your-origin:user-alias');
+const cards = await userSession.accounts.card.list();
+
+console.log(`Found ${cards.length} card accounts`);
+
+cards.forEach((card) => {
+  console.log('\nCard:', card.metadata?.name);
+  console.log('Last Four:', card.lastFour);
+  console.log('Status:', card.status);
+
+  if (card.balance) {
+    Object.entries(card.balance).forEach(([token, balance]) => {
+      console.log(`${token}: ${balance.current}`);
+    });
+  }
+});
+
+// Calculate total balance
+const totalBalances: Record<string, bigint> = {};
+cards.forEach(card => {
+  if (card.balance) {
+    Object.entries(card.balance).forEach(([token, balance]) => {
+      if (!totalBalances[token]) {
+        totalBalances[token] = BigInt(0);
+      }
+      totalBalances[token] += BigInt(balance.current);
+    });
+  }
+});
+```
+
+## Checking Balance
+
+Get the current balance for a specific card:
+
+```typescript title="check-balance.ts"
+const balances = await bloque.accounts.card.balance({
+  urn: 'did:bloque:account:card:usr-123:crd-456',
+});
+
+Object.entries(balances).forEach(([token, balance]) => {
+  console.log(`${token}:`);
+  console.log(`  Current: ${balance.current}`);
+  console.log(`  Pending: ${balance.pending}`);
+  console.log(`  Total In: ${balance.in}`);
+  console.log(`  Total Out: ${balance.out}`);
+
+  const net = BigInt(balance.in) - BigInt(balance.out);
+  console.log(`  Net: ${net.toString()}`);
+});
+```
+
+## Transaction History
+
+### Basic Listing
+
+List transactions for a card:
+
+```typescript title="list-transactions.ts"
+const movements = await bloque.accounts.card.movements({
+  urn: 'did:bloque:account:card:usr-123:crd-456',
+  asset: 'DUSD/6',
+});
+
+movements.forEach((transaction) => {
+  console.log(`${transaction.direction.toUpperCase()}: ${transaction.amount}`);
+  console.log(`Date: ${transaction.created_at}`);
+
+  if (transaction.details?.metadata?.merchant_name) {
+    console.log(`Merchant: ${transaction.details.metadata.merchant_name}`);
+  }
+});
+```
+
+### With Filters and Pagination
+
+```typescript title="filter-transactions.ts"
+// Get recent incoming transactions
+const recentIncoming = await bloque.accounts.card.movements({
+  urn: 'did:bloque:account:card:usr-123:crd-456',
+  asset: 'DUSD/6',
+  limit: 50,
+  direction: 'in', // Only incoming
+  after: '2025-01-01T00:00:00Z',
+});
+
+// Get transactions from a specific date range
+const dateRange = await bloque.accounts.card.movements({
+  urn: 'did:bloque:account:card:usr-123:crd-456',
+  asset: 'KSM/12',
+  after: '2025-01-01T00:00:00Z',
+  before: '2025-12-31T23:59:59Z',
+  limit: 100,
+});
+
+// Search by reference
+const byReference = await bloque.accounts.card.movements({
+  urn: 'did:bloque:account:card:usr-123:crd-456',
+  asset: 'DUSD/6',
+  reference: '0xbff43fa587...',
+});
+```
+
+### Pagination Example
+
+```typescript title="paginate-transactions.ts"
+async function getAllTransactions(cardUrn: string, asset: string) {
+  const pageSize = 100;
+  let allMovements = [];
+  let hasMore = true;
+  let lastDate: string | undefined;
+
+  while (hasMore) {
+    const movements = await bloque.accounts.card.movements({
+      urn: cardUrn,
+      asset,
+      limit: pageSize,
+      before: lastDate,
+    });
+
+    allMovements.push(...movements);
+    console.log(`Fetched ${movements.length} transactions`);
+
+    if (movements.length < pageSize) {
+      hasMore = false;
+    } else {
+      lastDate = movements[movements.length - 1].created_at;
+    }
+  }
+
+  return allMovements;
+}
+```
+
+## Card Management
+
+### Update Card Name
+
+```typescript title="update-card.ts"
+const updatedCard = await bloque.accounts.card.updateMetadata({
+  urn: 'did:bloque:account:card:usr-123:crd-456',
+  metadata: {
+    name: 'My Business Card'
+  }
+});
+
+console.log('Card name updated:', updatedCard.metadata?.name);
+```
+
+### Card States
+
+Cards can be in different states:
+
+| Status | Description |
+|--------|-------------|
+| `creation_in_progress` | Card is being created |
+| `creation_failed` | Card creation failed |
+| `active` | Card is active and ready to use |
+| `disabled` | Card has been disabled |
+| `frozen` | Card is temporarily frozen |
+| `deleted` | Card has been deleted |
+
+## Viewing Card Details
+
+The `detailsUrl` field provides a secure, PCI-compliant URL where users can view their full card number, CVV, and expiration date:
+
+```typescript title="view-card-details.ts"
+const card = await bloque.accounts.card.create({
+  urn: userUrn,
+  name: 'My Card',
+});
+
+// Redirect user to view card details
+console.log('View card details:', card.detailsUrl);
+```
+
+:::warning Security
+Never store or log full card numbers, CVVs, or other sensitive card data. Always use the provided `detailsUrl` for displaying card details to users.
+:::
+
+## Multiple Cards
+
+Users can have multiple cards for different purposes:
+
+```typescript title="multiple-cards.ts"
+const userUrn = 'did:bloque:your-origin:user-alias';
+const userSession = await bloque.connect(userUrn);
+
+// Personal card
+const personalCard = await userSession.accounts.card.create({
+  urn: userUrn,
+  name: 'Personal Card',
+});
+
+// Business card
+const businessCard = await userSession.accounts.card.create({
+  urn: userUrn,
+  name: 'Business Card',
+});
+
+// Travel card
+const travelCard = await userSession.accounts.card.create({
+  urn: userUrn,
+  name: 'Travel Expenses',
+});
+
+console.log('Created 3 cards:');
+console.log('- Personal:', personalCard.lastFour);
+console.log('- Business:', businessCard.lastFour);
+console.log('- Travel:', travelCard.lastFour);
+```
+
+## Error Handling
+
+Always handle errors appropriately:
+
+```typescript title="error-handling.ts"
+try {
+  const card = await bloque.accounts.card.create({
+    urn: userUrn,
+    name: cardName,
+  });
+
+  console.log('Card created:', card.urn);
+
+} catch (error) {
+  if (error instanceof Error) {
+    console.error('Card creation failed:', error.message);
+
+    // Handle specific errors
+    if (error.message.includes('not found')) {
+      // User doesn't exist
+    } else if (error.message.includes('unauthorized')) {
+      // API key issues
+    }
+  }
+
+  throw error;
+}
+```
+
+## Complete Example
+
+```typescript title="setup-user-card.ts"
+import { SDK } from '@bloque/sdk';
+
+const bloque = new SDK({
+  origin: 'your-origin',
+  auth: {
+    type: 'apiKey',
+    apiKey: process.env.BLOQUE_API_KEY!,
+  },
+  mode: 'production',
+});
+
+async function setupUserCard(userUrn: string) {
+  try {
+    // Connect to user session
+    const userSession = await bloque.connect(userUrn);
+
+    // Create a virtual card
+    const card = await userSession.accounts.card.create({
+      urn: userUrn,
+      name: 'Main Card',
+    });
+
+    console.log('✓ Card created:', card.lastFour);
+
+    // Check balance
+    const balances = await bloque.accounts.card.balance({
+      urn: card.urn,
+    });
+
+    console.log('✓ Current balances:');
+    Object.entries(balances).forEach(([token, balance]) => {
+      console.log(`  ${token}: ${balance.current}`);
+    });
+
+    // Get recent transactions
+    const movements = await bloque.accounts.card.movements({
+      urn: card.urn,
+      asset: 'DUSD/6',
+      limit: 10,
+    });
+
+    console.log(`✓ Found ${movements.length} recent transactions`);
+
+    return { success: true, card };
+
+  } catch (error) {
+    console.error('✗ Setup failed:', error);
+    throw error;
+  }
+}
+```
+
+## Best Practices
+
+1. **User Sessions**: Always connect to a user session
+2. **KYC First**: Ensure users complete KYC verification
+3. **Meaningful Names**: Help users identify their cards
+4. **Check Status**: Verify card status before use
+5. **Security**: Never store full card numbers
+6. **Error Handling**: Use try-catch blocks
+7. **Test in Sandbox**: Test thoroughly before production
+
+## Next Steps
+
+- [Transfers](/guide/accounts/transfers) - Transfer funds between accounts
+- [Bancolombia](/guide/accounts/bancolombia) - Bancolombia integration
+- [Compliance](/guide/features/compliance) - KYC verification

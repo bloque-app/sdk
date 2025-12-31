@@ -1,0 +1,141 @@
+# Accounts Overview
+
+The Bloque SDK provides comprehensive functionality for managing various types of financial accounts.
+
+## Account Types
+
+The SDK supports multiple account types, each designed for specific use cases:
+
+### Virtual Cards
+
+Create instant virtual cards for online payments. Cards are:
+- **PCI-compliant**: Secure storage and display of sensitive card data
+- **Instant**: Cards are created immediately and ready to use
+- **Multiple**: Users can have multiple cards for different purposes
+
+[Learn more about Virtual Cards](/guide/accounts/cards)
+
+### Bancolombia Accounts
+
+Create payment accounts that integrate with Bancolombia's banking system:
+- **Reference codes**: Unique codes for receiving payments
+- **Bank integration**: Direct integration with Bancolombia
+- **Payment tracking**: Full visibility into payment status
+
+[Learn more about Bancolombia Accounts](/guide/accounts/bancolombia)
+
+## Common Operations
+
+All account types support common operations:
+
+### Listing Accounts
+
+List all accounts for a user with their current balances:
+
+```typescript title="list-accounts.ts"
+import { SDK } from '@bloque/sdk';
+
+const bloque = new SDK({
+  origin: 'your-origin',
+  auth: {
+    type: 'apiKey',
+    apiKey: process.env.BLOQUE_API_KEY!,
+  },
+  mode: 'production',
+});
+
+// Connect to user session
+const userSession = await bloque.connect('did:bloque:your-origin:user-alias');
+
+// List all card accounts
+const cards = await userSession.accounts.card.list();
+
+console.log(`Found ${cards.length} card accounts`);
+
+cards.forEach((card) => {
+  console.log('Card:', card.metadata?.name);
+  console.log('Balance:', card.balance);
+});
+```
+
+### Checking Balance
+
+Get the current balance for any account:
+
+```typescript title="check-balance.ts"
+const balances = await bloque.accounts.card.balance({
+  urn: 'did:bloque:account:card:usr-123:crd-456',
+});
+
+Object.entries(balances).forEach(([token, balance]) => {
+  console.log(`${token}: ${balance.current}`);
+});
+```
+
+### Viewing Transactions
+
+List transaction history with pagination:
+
+```typescript title="types.ts"
+const movements = await bloque.accounts.card.movements({
+  urn: 'did:bloque:account:card:usr-123:crd-456',
+  asset: 'DUSD/6',
+  limit: 50,
+  direction: 'in', // incoming transactions only
+});
+
+console.log(`Found ${movements.length} transactions`);
+```
+
+## Transfers
+
+Transfer funds between any accounts:
+
+```typescript title="transfer.ts"
+const transfer = await bloque.accounts.transfer({
+  sourceUrn: 'did:bloque:account:card:usr-123:crd-456',
+  destinationUrn: 'did:bloque:account:virtual:acc-67890',
+  amount: '1000000000000',
+  asset: 'KSM/12',
+});
+
+console.log('Transfer queued:', transfer.queueId);
+```
+
+[Learn more about Transfers](/guide/accounts/transfers)
+
+## Supported Assets
+
+| Asset | Description | Decimals |
+|-------|-------------|----------|
+| `DUSD/6` | Digital USD | 6 |
+| `KSM/12` | Kusama | 12 |
+
+## User Sessions
+
+:::tip Important
+Most account operations require connecting to a user session first:
+
+```typescript title="types.ts"
+const userSession = await bloque.connect('did:bloque:your-origin:user-alias');
+const cards = await userSession.accounts.card.list();
+```
+
+This ensures proper authentication and authorization for user-specific operations.
+:::
+
+## Best Practices
+
+1. **Use User Sessions**: Connect to user sessions for account operations
+2. **Verify Users**: Ensure users complete KYC before creating accounts
+3. **Handle States**: Check account status before operations
+4. **Pagination**: Use pagination for large transaction lists
+5. **Error Handling**: Always use try-catch blocks
+6. **Test First**: Test in sandbox mode before production
+
+## Next Steps
+
+- [Virtual Cards](/guide/accounts/cards) - Create and manage virtual cards
+- [Bancolombia](/guide/accounts/bancolombia) - Bancolombia account integration
+- [Transfers](/guide/accounts/transfers) - Transfer funds between accounts
+- [Compliance](/guide/features/compliance) - KYC verification

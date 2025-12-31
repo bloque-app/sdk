@@ -1,0 +1,42 @@
+{
+  "frontend": {
+    "en": "Frontend",
+    "es": "Frontend - Copilot App"
+  },
+  "backend": {
+    "en": "Backend",
+    "es": "Backend - Payment Rails"
+  },
+  "overview": {
+    "en": "Overview",
+    "es": "Overview del Frontend"
+  },
+  "projectStructure": {
+    "en": "Project Structure",
+    "es": "Estructura del Proyecto"
+  },
+  "configuration": {
+    "en": "Configuration",
+    "es": "Configuración"
+  },
+  "components": {
+    "en": "Components",
+    "es": "Componentes"
+  },
+  "stateManagement": {
+    "en": "State Management",
+    "es": "Gestión de Estado"
+  },
+  "routing": {
+    "en": "Routing",
+    "es": "Enrutamiento"
+  },
+  "styling": {
+    "en": "Styling",
+    "es": "Estilos y Temas"
+  },
+  "integrations": {
+    "en": "Integrations",
+    "es": "Integraciones"
+  }
+}

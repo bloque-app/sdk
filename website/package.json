@@ -1,0 +1,22 @@
+{
+  "name": "sdk-website",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "build": "rspress build",
+    "dev": "rspress dev",
+    "preview": "rspress preview",
+    "deploy": "wrangler pages deploy --branch=main"
+  },
+  "dependencies": {
+    "@rspress/core": "2.0.0-rc.3",
+    "@rspress/plugin-preview": "2.0.0-rc.3",
+    "@rspress/plugin-sitemap": "2.0.0-rc.3",
+    "react": "19.2.3",
+    "react-dom": "19.2.3"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:",
+    "wrangler": "4.54.0"
+  }
+}

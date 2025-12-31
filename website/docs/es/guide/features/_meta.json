@@ -1,0 +1,12 @@
+[
+  {
+    "type": "file",
+    "name": "compliance",
+    "label": "Compliance"
+  },
+  {
+    "type": "file",
+    "name": "organizations",
+    "label": "Organizations"
+  }
+]

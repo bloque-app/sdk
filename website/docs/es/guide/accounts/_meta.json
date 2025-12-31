@@ -1,0 +1,22 @@
+[
+  {
+    "type": "file",
+    "name": "overview",
+    "label": "Overview"
+  },
+  {
+    "type": "file",
+    "name": "cards",
+    "label": "Virtual Cards"
+  },
+  {
+    "type": "file",
+    "name": "bancolombia",
+    "label": "Bancolombia"
+  },
+  {
+    "type": "file",
+    "name": "transfers",
+    "label": "Transfers"
+  }
+]

@@ -1,0 +1,109 @@
+# Introducción
+
+Bienvenido a la documentación del SDK de Bloque. Bloque proporciona una plataforma integral de infraestructura financiera que permite a los desarrolladores crear organizaciones, verificar identidades de usuarios y emitir tarjetas virtuales programáticamente.
+
+## ¿Qué es el SDK de Bloque?
+
+El SDK de Bloque es una biblioteca TypeScript-first que simplifica la integración con la plataforma de servicios financieros de Bloque. Proporciona una interfaz unificada para:
+
+- **Gestión de Organizaciones**: Crear y gestionar organizaciones empresariales e individuales
+- **Verificación KYC**: Implementar flujos de trabajo de cumplimiento Know Your Customer (KYC)
+- **Tarjetas Virtuales**: Emitir tarjetas virtuales instantáneamente para tus usuarios
+- **Cumplimiento**: Cumplir con requisitos regulatorios con herramientas de cumplimiento integradas
+
+## Características Clave
+
+### 🏢 Gestión de Organizaciones
+
+Crea y gestiona organizaciones con información completa de perfil, soportando tanto empresas como individuos.
+
+```typescript
+const organization = await bloque.orgs.create({
+  org_type: 'business',
+  profile: {
+    legal_name: 'Acme Corporation',
+    tax_id: '123456789',
+    // ... más campos
+  },
+});
+```
+
+### ✅ Verificación KYC
+
+Verifica identidades de usuarios con una API simple y recibe actualizaciones en tiempo real vía webhooks.
+
+```typescript
+const verification = await bloque.compliance.kyc.startVerification({
+  urn: 'did:bloque:user:123',
+  webhookUrl: 'https://api.example.com/webhooks/kyc',
+});
+```
+
+### 💳 Tarjetas Virtuales
+
+Emite tarjetas virtuales instantáneamente con gestión de detalles de tarjeta compatible con PCI.
+
+```typescript
+const card = await bloque.accounts.card.create({
+  urn: 'did:bloque:user:123',
+  name: 'Mi Tarjeta de Negocios',
+});
+```
+
+## ¿Por qué el SDK de Bloque?
+
+### TypeScript First
+
+Construido con TypeScript desde cero, proporcionando excelente soporte de IntelliSense y seguridad de tipos en toda tu aplicación.
+
+### Listo para Producción
+
+Probado en batalla en producción con manejo integral de errores, reintentos automáticos y registro detallado.
+
+### Experiencia del Desarrollador
+
+Diseñado para desarrolladores, con documentación clara, ejemplos prácticos y un diseño de API intuitivo.
+
+### Seguro por Defecto
+
+Infraestructura compatible con PCI con gestión segura de claves API y comunicaciones encriptadas.
+
+## Casos de Uso
+
+### Aplicaciones Fintech
+
+Construye neobancos, plataformas de pago o herramientas de gestión financiera con capacidades bancarias integradas.
+
+### Plataformas de Marketplace
+
+Permite a vendedores y compradores realizar transacciones de forma segura con emisión instantánea de tarjetas y verificación de cumplimiento.
+
+### Gestión de Gastos Corporativos
+
+Emite tarjetas virtuales para empleados y rastrea gastos con datos detallados de transacciones.
+
+### Plataformas SaaS
+
+Agrega características financieras a tu producto SaaS sin construir infraestructura desde cero.
+
+## Arquitectura
+
+El SDK de Bloque está organizado en tres módulos principales:
+
+```
+@bloque/sdk
+├── orgs        # Gestión de organizaciones
+├── compliance  # KYC y cumplimiento
+└── accounts    # Tarjetas virtuales y cuentas
+```
+
+Cada módulo es independientemente accesible pero funciona perfectamente en conjunto para proporcionar una solución completa de infraestructura financiera.
+
+## Próximos Pasos
+
+¿Listo para comenzar? Sigue nuestra guía de Inicio Rápido para hacer tu primera llamada a la API en minutos.
+
+- [Inicio Rápido](/guide/start/getting-started) - Comienza rápidamente
+- [Guía de Organizaciones](/guide/features/organizations) - Aprende sobre gestión de organizaciones
+- [Guía de Cumplimiento](/guide/features/compliance) - Implementa verificación KYC
+- [Guía de Cuentas](/guide/accounts/overview) - Crea tarjetas virtuales

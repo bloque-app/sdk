@@ -1,0 +1,109 @@
+# Introduction
+
+Welcome to the Bloque SDK documentation. Bloque provides a comprehensive financial infrastructure platform that enables developers to create organizations, verify user identities, and issue virtual cards programmatically.
+
+## What is Bloque SDK?
+
+The Bloque SDK is a TypeScript-first library that simplifies integration with Bloque's financial services platform. It provides a unified interface for:
+
+- **Organization Management**: Create and manage business and individual organizations
+- **KYC Verification**: Implement Know Your Customer (KYC) compliance workflows
+- **Virtual Cards**: Issue virtual cards instantly for your users
+- **Compliance**: Meet regulatory requirements with built-in compliance tools
+
+## Key Features
+
+### 🏢 Organization Management
+
+Create and manage organizations with complete profile information, supporting both businesses and individuals.
+
+```typescript
+const organization = await bloque.orgs.create({
+  org_type: 'business',
+  profile: {
+    legal_name: 'Acme Corporation',
+    tax_id: '123456789',
+    // ... more fields
+  },
+});
+```
+
+### ✅ KYC Verification
+
+Verify user identities with a simple API and receive real-time updates via webhooks.
+
+```typescript
+const verification = await bloque.compliance.kyc.startVerification({
+  urn: 'did:bloque:user:123',
+  webhookUrl: 'https://api.example.com/webhooks/kyc',
+});
+```
+
+### 💳 Virtual Cards
+
+Issue virtual cards instantly with PCI-compliant card detail management.
+
+```typescript
+const card = await bloque.accounts.card.create({
+  urn: 'did:bloque:user:123',
+  name: 'My Business Card',
+});
+```
+
+## Why Bloque SDK?
+
+### TypeScript First
+
+Built with TypeScript from the ground up, providing excellent IntelliSense support and type safety throughout your application.
+
+### Production Ready
+
+Battle-tested in production with comprehensive error handling, automatic retries, and detailed logging.
+
+### Developer Experience
+
+Designed for developers, with clear documentation, practical examples, and an intuitive API design.
+
+### Secure by Default
+
+PCI-compliant infrastructure with secure API key management and encrypted communications.
+
+## Use Cases
+
+### Fintech Applications
+
+Build neobanks, payment platforms, or financial management tools with embedded banking capabilities.
+
+### Marketplace Platforms
+
+Enable sellers and buyers to transact securely with instant card issuance and compliance verification.
+
+### Corporate Expense Management
+
+Issue virtual cards for employees and track spending with detailed transaction data.
+
+### SaaS Platforms
+
+Add financial features to your SaaS product without building infrastructure from scratch.
+
+## Architecture
+
+The Bloque SDK is organized into three main modules:
+
+```
+@bloque/sdk
+├── orgs        # Organization management
+├── compliance  # KYC and compliance
+└── accounts    # Virtual cards and accounts
+```
+
+Each module is independently accessible but works seamlessly together to provide a complete financial infrastructure solution.
+
+## Next Steps
+
+Ready to get started? Follow our Quick Start guide to make your first API call in minutes.
+
+- [Quick Start](/guide/start/getting-started) - Get up and running quickly
+- [Organizations Guide](/guide/features/organizations) - Learn about organization management
+- [Compliance Guide](/guide/features/compliance) - Implement KYC verification
+- [Accounts Guide](/guide/accounts/overview) - Create virtual cards

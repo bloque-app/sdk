@@ -1,0 +1,148 @@
+# Primeros Pasos
+
+import { PackageManagerTabs } from '@theme';
+
+Comienza a trabajar con Bloque SDK en minutos.
+
+## Instalación
+
+Instala el SDK usando tu gestor de paquetes preferido:
+
+<PackageManagerTabs command="add @bloque/sdk" />
+
+## Clave API
+
+Para usar Bloque SDK, necesitarás una clave API. Puedes obtener una desde el [Panel de Control de Bloque](https://app.bloque.app/settings/api).
+
+:::warning Seguridad
+Nunca expongas tu clave API en código del lado del cliente. Siempre utiliza variables de entorno y mantén tus claves seguras.
+:::
+
+## Inicializar el SDK
+
+Crea una instancia del SDK con tu clave API y modo:
+
+```typescript
+import { SDK } from '@bloque/sdk';
+
+const bloque = new SDK({
+  origin: 'your-origin',
+  auth: {
+    type: 'apiKey',
+    apiKey: process.env.BLOQUE_API_KEY!,
+  },
+  mode: 'production', // or 'sandbox' for testing
+});
+```
+
+### Opciones de Configuración
+
+| Opción | Tipo | Requerido | Descripción |
+|--------|------|----------|-------------|
+| `apiKey` | `string` | Sí | Tu clave API de Bloque |
+| `mode` | `'production' \| 'sandbox'` | Sí | Modo de entorno |
+
+#### Modos
+
+- **`sandbox`**: Para pruebas y desarrollo. Sin transacciones reales.
+- **`production`**: Para operaciones en vivo con datos reales.
+
+## Tu Primera Solicitud
+
+Vamos a crear una tarjeta virtual:
+
+```typescript
+import { SDK } from '@bloque/sdk';
+
+const bloque = new SDK({
+  apiKey: process.env.BLOQUE_API_KEY!,
+  mode: 'production',
+});
+
+async function createCard() {
+  try {
+    const card = await bloque.accounts.card.create({
+      urn: 'did:bloque:user:123e4567',
+      name: 'My First Card',
+    });
+
+    console.log('Card created successfully!');
+    console.log('URN:', card.urn);
+    console.log('Last four:', card.lastFour);
+    console.log('Status:', card.status);
+    console.log('Details URL:', card.detailsUrl);
+  } catch (error) {
+    console.error('Error creating card:', error);
+  }
+}
+
+createCard();
+```
+
+## Manejo de Errores
+
+Siempre envuelve las llamadas del SDK en bloques try-catch para manejar errores adecuadamente:
+
+```typescript
+try {
+  const card = await bloque.accounts.card.create({
+    urn: 'did:bloque:user:123',
+    name: 'My Card',
+  });
+  // Success
+} catch (error) {
+  if (error instanceof Error) {
+    console.error('Failed:', error.message);
+  }
+  // Handle error
+}
+```
+
+## Soporte de TypeScript
+
+El SDK está construido con TypeScript y proporciona seguridad de tipos completa:
+
+```typescript
+import type { CardAccount, CreateCardParams } from '@bloque/sdk/accounts';
+
+// Type-safe parameters
+const params: CreateCardParams = {
+  urn: 'did:bloque:user:123',
+  name: 'My Card',
+};
+
+// Type-safe response
+const card: CardAccount = await bloque.accounts.card.create(params);
+```
+
+## Variables de Entorno
+
+Utiliza variables de entorno para almacenar tu clave API de forma segura:
+
+```bash
+# .env
+BLOQUE_API_KEY=your_api_key_here
+BLOQUE_MODE=sandbox
+```
+
+Luego cárgalas en tu aplicación:
+
+```typescript
+import { SDK } from '@bloque/sdk';
+import 'dotenv/config'; // or your preferred env loader
+
+const bloque = new SDK({
+  origin: 'your-origin',
+  auth: {
+    type: 'apiKey',
+    apiKey: process.env.BLOQUE_API_KEY!,
+  },
+  mode: process.env.BLOQUE_MODE as 'production' | 'sandbox',
+});
+```
+
+## Próximos Pasos
+
+- [Guía de Organizaciones](/guide/features/organizations) - Aprende cómo crear y administrar organizaciones
+- [Guía de Cumplimiento](/guide/features/compliance) - Configura la verificación KYC
+- [Guía de Cuentas](/guide/accounts/overview) - Crea tarjetas virtuales

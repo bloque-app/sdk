@@ -36,7 +36,8 @@
   },
   "workspaces": {
     "packages": [
-      "packages/*"
+      "packages/*",
+      "website"
     ],
     "catalog": {
       "@biomejs/biome": "^2.3.9",

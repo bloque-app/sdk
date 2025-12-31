@@ -1,0 +1,17 @@
+[
+  {
+    "type": "dir-section-header",
+    "name": "start",
+    "label": "Getting Started"
+  },
+  {
+    "type": "dir-section-header",
+    "name": "accounts",
+    "label": "Accounts & Payments"
+  },
+  {
+    "type": "dir-section-header",
+    "name": "features",
+    "label": "SDK Features"
+  }
+]

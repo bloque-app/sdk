@@ -1,0 +1,141 @@
+# Descripción de Cuentas
+
+El SDK de Bloque proporciona funcionalidad completa para gestionar varios tipos de cuentas financieras.
+
+## Tipos de Cuentas
+
+El SDK soporta múltiples tipos de cuentas, cada una diseñada para casos de uso específicos:
+
+### Tarjetas Virtuales
+
+Crea tarjetas virtuales instantáneas para pagos en línea. Las tarjetas son:
+- **Compatibles con PCI**: Almacenamiento y visualización segura de datos sensibles de tarjetas
+- **Instantáneas**: Las tarjetas se crean inmediatamente y están listas para usar
+- **Múltiples**: Los usuarios pueden tener múltiples tarjetas para diferentes propósitos
+
+[Aprende más sobre Tarjetas Virtuales](/guide/accounts/cards)
+
+### Cuentas Bancolombia
+
+Crea cuentas de pago que se integran con el sistema bancario de Bancolombia:
+- **Códigos de referencia**: Códigos únicos para recibir pagos
+- **Integración bancaria**: Integración directa con Bancolombia
+- **Seguimiento de pagos**: Visibilidad completa del estado de los pagos
+
+[Aprende más sobre Cuentas Bancolombia](/guide/accounts/bancolombia)
+
+## Operaciones Comunes
+
+Todos los tipos de cuentas soportan operaciones comunes:
+
+### Listar Cuentas
+
+Lista todas las cuentas de un usuario con sus balances actuales:
+
+```typescript title="list-accounts.ts"
+import { SDK } from '@bloque/sdk';
+
+const bloque = new SDK({
+  origin: 'your-origin',
+  auth: {
+    type: 'apiKey',
+    apiKey: process.env.BLOQUE_API_KEY!,
+  },
+  mode: 'production',
+});
+
+// Connect to user session
+const userSession = await bloque.connect('did:bloque:your-origin:user-alias');
+
+// List all card accounts
+const cards = await userSession.accounts.card.list();
+
+console.log(`Found ${cards.length} card accounts`);
+
+cards.forEach((card) => {
+  console.log('Card:', card.metadata?.name);
+  console.log('Balance:', card.balance);
+});
+```
+
+### Verificar Balance
+
+Obtén el balance actual de cualquier cuenta:
+
+```typescript title="check-balance.ts"
+const balances = await bloque.accounts.card.balance({
+  urn: 'did:bloque:account:card:usr-123:crd-456',
+});
+
+Object.entries(balances).forEach(([token, balance]) => {
+  console.log(`${token}: ${balance.current}`);
+});
+```
+
+### Ver Transacciones
+
+Lista el historial de transacciones con paginación:
+
+```typescript title="types.ts"
+const movements = await bloque.accounts.card.movements({
+  urn: 'did:bloque:account:card:usr-123:crd-456',
+  asset: 'DUSD/6',
+  limit: 50,
+  direction: 'in', // incoming transactions only
+});
+
+console.log(`Found ${movements.length} transactions`);
+```
+
+## Transferencias
+
+Transfiere fondos entre cualquier cuenta:
+
+```typescript title="transfer.ts"
+const transfer = await bloque.accounts.transfer({
+  sourceUrn: 'did:bloque:account:card:usr-123:crd-456',
+  destinationUrn: 'did:bloque:account:virtual:acc-67890',
+  amount: '1000000000000',
+  asset: 'KSM/12',
+});
+
+console.log('Transfer queued:', transfer.queueId);
+```
+
+[Aprende más sobre Transferencias](/guide/accounts/transfers)
+
+## Activos Soportados
+
+| Activo | Descripción | Decimales |
+|-------|-------------|----------|
+| `DUSD/6` | USD Digital | 6 |
+| `KSM/12` | Kusama | 12 |
+
+## Sesiones de Usuario
+
+:::tip Importante
+La mayoría de las operaciones de cuentas requieren conectarse primero a una sesión de usuario:
+
+```typescript title="types.ts"
+const userSession = await bloque.connect('did:bloque:your-origin:user-alias');
+const cards = await userSession.accounts.card.list();
+```
+
+Esto asegura la autenticación y autorización adecuada para operaciones específicas del usuario.
+:::
+
+## Mejores Prácticas
+
+1. **Usa Sesiones de Usuario**: Conéctate a sesiones de usuario para operaciones de cuentas
+2. **Verifica Usuarios**: Asegúrate de que los usuarios completen KYC antes de crear cuentas
+3. **Maneja Estados**: Verifica el estado de la cuenta antes de las operaciones
+4. **Paginación**: Usa paginación para listas grandes de transacciones
+5. **Manejo de Errores**: Siempre usa bloques try-catch
+6. **Prueba Primero**: Prueba en modo sandbox antes de producción
+
+## Próximos Pasos
+
+- [Tarjetas Virtuales](/guide/accounts/cards) - Crea y gestiona tarjetas virtuales
+- [Bancolombia](/guide/accounts/bancolombia) - Integración de cuentas Bancolombia
+- [Transferencias](/guide/accounts/transfers) - Transfiere fondos entre cuentas
+- [Cumplimiento](/guide/features/compliance) - Verificación KYC
