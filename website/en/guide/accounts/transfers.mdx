@@ -1,0 +1,380 @@
+# Transfers
+
+Transfer funds between any accounts using the Bloque SDK.
+
+## Overview
+
+The transfer API allows you to move funds between different account types:
+- Card to Virtual account
+- Card to Bancolombia account
+- Virtual to Virtual account
+- Bancolombia to Card account
+- And any other combination
+
+All transfers are queued for processing and can be tracked using the returned queue ID.
+
+## Basic Transfer
+
+Transfer funds between two accounts:
+
+```typescript title="basic-transfer.ts"
+import { SDK } from '@bloque/sdk';
+
+const bloque = new SDK({
+  origin: 'your-origin',
+  auth: {
+    type: 'apiKey',
+    apiKey: process.env.BLOQUE_API_KEY!,
+  },
+  mode: 'production',
+});
+
+const transfer = await bloque.accounts.transfer({
+  sourceUrn: 'did:bloque:account:card:usr-123:crd-456',
+  destinationUrn: 'did:bloque:account:virtual:acc-67890',
+  amount: '1000000000000',
+  asset: 'KSM/12',
+  metadata: {
+    reference: 'payment-123',
+    note: 'Monthly subscription'
+  }
+});
+
+console.log('Transfer queued:', transfer.queueId);
+console.log('Status:', transfer.status);
+console.log('Message:', transfer.message);
+```
+
+## Parameters
+
+```typescript title="basic-transfer.ts"
+interface TransferParams {
+  /**
+   * URN of the source account
+   * @example "did:bloque:account:card:usr-123:crd-456"
+   */
+  sourceUrn: string;
+
+  /**
+   * URN of the destination account
+   * @example "did:bloque:account:virtual:acc-67890"
+   */
+  destinationUrn: string;
+
+  /**
+   * Amount to transfer
+   * @example "1000000000000"
+   */
+  amount: string;
+
+  /**
+   * Asset to transfer
+   * Supported: 'DUSD/6' | 'KSM/12'
+   * @example "KSM/12"
+   */
+  asset: 'DUSD/6' | 'KSM/12';
+
+  /**
+   * Optional metadata
+   * @example { reference: "payment-123", note: "Payment description" }
+   */
+  metadata?: Record<string, unknown>;
+}
+```
+
+## Response
+
+```typescript title="types.ts"
+interface TransferResult {
+  queueId: string;    // Queue ID for tracking
+  status: 'queued' | 'processing' | 'completed' | 'failed';
+  message: string;    // Status message
+}
+```
+
+The transfer is queued for processing. Use the `queueId` to track the transfer status.
+
+## Transfer Examples
+
+### Card to Bancolombia
+
+Transfer from a virtual card to a Bancolombia account:
+
+```typescript title="card-to-bancolombia.ts"
+const transfer = await bloque.accounts.transfer({
+  sourceUrn: 'did:bloque:account:card:usr-123:crd-456',
+  destinationUrn: 'did:bloque:account:bancolombia:acc-12345',
+  amount: '5000000', // 5 DUSD (6 decimals)
+  asset: 'DUSD/6',
+  metadata: {
+    reference: 'withdrawal-001',
+    type: 'savings'
+  }
+});
+
+console.log(`Transfer queued: ${transfer.queueId}`);
+```
+
+### Between Virtual Accounts
+
+Transfer KSM between virtual accounts:
+
+```typescript title="types.ts"
+const transfer = await bloque.accounts.transfer({
+  sourceUrn: 'did:bloque:account:virtual:acc-11111',
+  destinationUrn: 'did:bloque:account:virtual:acc-22222',
+  amount: '2000000000000', // 2 KSM (12 decimals)
+  asset: 'KSM/12',
+  metadata: {
+    reference: 'internal-transfer-42',
+    department: 'operations'
+  }
+});
+
+console.log(`KSM transfer queued: ${transfer.queueId}`);
+```
+
+### Card to Card
+
+Transfer between two cards:
+
+```typescript title="types.ts"
+const transfer = await bloque.accounts.transfer({
+  sourceUrn: 'did:bloque:account:card:usr-123:crd-111',
+  destinationUrn: 'did:bloque:account:card:usr-456:crd-222',
+  amount: '1000000', // 1 DUSD
+  asset: 'DUSD/6',
+  metadata: {
+    reference: 'user-payment-001',
+    note: 'Payment for services'
+  }
+});
+```
+
+## Supported Assets
+
+| Asset | Description | Decimals | Example Amount |
+|-------|-------------|----------|----------------|
+| `DUSD/6` | Digital USD | 6 | `1000000` = 1 DUSD |
+| `KSM/12` | Kusama | 12 | `1000000000000` = 1 KSM |
+
+:::tip Decimal Conversion
+Always account for decimals when specifying amounts:
+- DUSD/6: Multiply by 10^6 (1 DUSD = 1,000,000)
+- KSM/12: Multiply by 10^12 (1 KSM = 1,000,000,000,000)
+:::
+
+## Transfer Metadata
+
+Add custom metadata to track transfers:
+
+```typescript title="types.ts"
+const transfer = await bloque.accounts.transfer({
+  sourceUrn: sourceAccount,
+  destinationUrn: destinationAccount,
+  amount: '1000000',
+  asset: 'DUSD/6',
+  metadata: {
+    // Payment tracking
+    reference: 'INV-2025-001',
+    invoiceId: 'inv_abc123',
+
+    // Customer info
+    customerId: 'cust_xyz789',
+    customerName: 'John Doe',
+
+    // Business context
+    department: 'Sales',
+    project: 'Q1-2025',
+    category: 'commission',
+
+    // Notes
+    note: 'Sales commission for January 2025',
+    approvedBy: 'manager@company.com'
+  }
+});
+```
+
+## Error Handling
+
+Always handle errors appropriately:
+
+```typescript title="types.ts"
+try {
+  const transfer = await bloque.accounts.transfer({
+    sourceUrn: sourceAccount,
+    destinationUrn: destinationAccount,
+    amount: '1000000',
+    asset: 'DUSD/6',
+  });
+
+  console.log('✓ Transfer queued:', transfer.queueId);
+
+  // Store transfer info in your database
+  await saveTransfer({
+    queueId: transfer.queueId,
+    status: transfer.status,
+    sourceUrn: sourceAccount,
+    destinationUrn: destinationAccount,
+    amount: '1000000',
+    asset: 'DUSD/6',
+  });
+
+} catch (error) {
+  if (error instanceof Error) {
+    console.error('Transfer failed:', error.message);
+
+    // Handle specific errors
+    if (error.message.includes('insufficient funds')) {
+      // Not enough balance
+    } else if (error.message.includes('not found')) {
+      // Account doesn't exist
+    } else if (error.message.includes('Invalid asset')) {
+      // Unsupported asset
+    }
+  }
+
+  throw error;
+}
+```
+
+## Complete Example
+
+```typescript title="complete-transfer.ts"
+import { SDK } from '@bloque/sdk';
+
+const bloque = new SDK({
+  origin: 'your-origin',
+  auth: {
+    type: 'apiKey',
+    apiKey: process.env.BLOQUE_API_KEY!,
+  },
+  mode: 'production',
+});
+
+async function transferFunds(
+  fromUrn: string,
+  toUrn: string,
+  amount: string,
+  asset: 'DUSD/6' | 'KSM/12'
+) {
+  try {
+    // Check source account balance first
+    const balances = await bloque.accounts.card.balance({
+      urn: fromUrn,
+    });
+
+    const available = BigInt(balances[asset]?.current || '0');
+    const transferAmount = BigInt(amount);
+
+    if (available < transferAmount) {
+      throw new Error('Insufficient funds');
+    }
+
+    console.log('✓ Balance check passed');
+
+    // Execute transfer
+    const transfer = await bloque.accounts.transfer({
+      sourceUrn: fromUrn,
+      destinationUrn: toUrn,
+      amount,
+      asset,
+      metadata: {
+        timestamp: new Date().toISOString(),
+        initiatedBy: 'api-user'
+      }
+    });
+
+    console.log('✓ Transfer queued');
+    console.log('  Queue ID:', transfer.queueId);
+    console.log('  Status:', transfer.status);
+
+    return transfer;
+
+  } catch (error) {
+    console.error('✗ Transfer failed:', error);
+    throw error;
+  }
+}
+
+// Example usage
+await transferFunds(
+  'did:bloque:account:card:usr-123:crd-456',
+  'did:bloque:account:virtual:acc-67890',
+  '1000000', // 1 DUSD
+  'DUSD/6'
+);
+```
+
+## Batch Transfers
+
+Transfer funds to multiple destinations:
+
+```typescript title="batch-transfer.ts"
+async function batchTransfer(
+  sourceUrn: string,
+  destinations: Array<{ urn: string; amount: string }>,
+  asset: 'DUSD/6' | 'KSM/12'
+) {
+  const results = [];
+
+  for (const dest of destinations) {
+    try {
+      const transfer = await bloque.accounts.transfer({
+        sourceUrn,
+        destinationUrn: dest.urn,
+        amount: dest.amount,
+        asset,
+      });
+
+      results.push({
+        success: true,
+        queueId: transfer.queueId,
+        destination: dest.urn,
+      });
+
+      console.log(`✓ Transfer to ${dest.urn}: ${transfer.queueId}`);
+
+    } catch (error) {
+      results.push({
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error',
+        destination: dest.urn,
+      });
+
+      console.error(`✗ Transfer to ${dest.urn} failed:`, error);
+    }
+  }
+
+  return results;
+}
+
+// Usage
+const results = await batchTransfer(
+  'did:bloque:account:card:usr-123:crd-456',
+  [
+    { urn: 'did:bloque:account:virtual:acc-111', amount: '1000000' },
+    { urn: 'did:bloque:account:virtual:acc-222', amount: '2000000' },
+    { urn: 'did:bloque:account:bancolombia:acc-333', amount: '3000000' },
+  ],
+  'DUSD/6'
+);
+
+console.log(`Completed: ${results.filter(r => r.success).length}/${results.length}`);
+```
+
+## Best Practices
+
+1. **Check Balances**: Verify sufficient funds before transfers
+2. **Validate URNs**: Ensure account URNs are valid
+3. **Asset Decimals**: Account for proper decimal places
+4. **Error Handling**: Use try-catch blocks
+5. **Metadata**: Add tracking information
+6. **Test First**: Test in sandbox mode
+7. **Store Queue IDs**: Save queue IDs for tracking
+
+## Next Steps
+
+- [Virtual Cards](/sdk/guide/accounts/cards) - Manage card accounts
+- [Bancolombia](/sdk/guide/accounts/bancolombia) - Bancolombia integration
+- [Overview](/sdk/guide/accounts/overview) - Accounts overview

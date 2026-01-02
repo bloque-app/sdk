@@ -1,0 +1,243 @@
+# Bancolombia Accounts
+
+Create and manage payment accounts that integrate with Bancolombia's banking system.
+
+## Overview
+
+Bancolombia accounts allow users to receive payments through Bancolombia's banking infrastructure. Each account has a unique reference code that can be used for receiving payments.
+
+## Creating a Bancolombia Account
+
+```typescript title="create-bancolombia-account.ts"
+import { SDK } from '@bloque/sdk';
+
+const bloque = new SDK({
+  origin: 'your-origin',
+  auth: {
+    type: 'apiKey',
+    apiKey: process.env.BLOQUE_API_KEY!,
+  },
+  mode: 'production',
+});
+
+// Connect to user session
+const userSession = await bloque.connect('did:bloque:your-origin:user-alias');
+
+// Create Bancolombia account
+const account = await userSession.accounts.bancolombia.create({
+  urn: 'did:bloque:your-origin:user-alias',
+  name: 'Main Account',
+});
+
+console.log('Reference code:', account.referenceCode);
+console.log('Status:', account.status);
+console.log('URN:', account.urn);
+```
+
+## Parameters
+
+```typescript title="types.ts"
+interface CreateBancolombiaAccountParams {
+  urn: string;          // User URN
+  name?: string;        // Optional account name
+  webhookUrl?: string;  // Optional webhook for events
+  ledgerId?: string;    // Optional ledger account ID
+  metadata?: Record<string, unknown>; // Custom metadata
+}
+```
+
+## Response
+
+```typescript title="types.ts"
+interface BancolombiaAccount {
+  urn: string;                      // Unique resource name
+  id: string;                       // Account ID
+  referenceCode: string;            // Payment reference code
+  status: AccountStatus;
+  ownerUrn: string;
+  ledgerId: string;
+  webhookUrl: string | null;
+  metadata?: Record<string, unknown>;
+  createdAt: string;
+  updatedAt: string;
+}
+```
+
+## Account Status
+
+| Status | Description |
+|--------|-------------|
+| `creation_in_progress` | Account is being created |
+| `creation_failed` | Account creation failed |
+| `active` | Account is active |
+| `disabled` | Account has been disabled |
+| `deleted` | Account has been deleted |
+
+## Using Reference Codes
+
+The reference code can be shared with payers to receive funds:
+
+```typescript title="list-bancolombia-accounts.ts"
+const account = await bloque.accounts.bancolombia.create({
+  urn: userUrn,
+  name: 'Savings Account',
+});
+
+// Share this reference code with payers
+console.log('Payment reference:', account.referenceCode);
+console.log('Share this code to receive payments');
+```
+
+## Listing Bancolombia Accounts
+
+List all Bancolombia accounts for a user:
+
+```typescript title="list-bancolombia-accounts.ts"
+const userSession = await bloque.connect(userUrn);
+const accounts = await userSession.accounts.bancolombia.list();
+
+console.log(`Found ${accounts.length} Bancolombia accounts`);
+
+accounts.forEach((account) => {
+  console.log('\nAccount:', account.metadata?.name);
+  console.log('Reference:', account.referenceCode);
+  console.log('Status:', account.status);
+});
+```
+
+## Checking Balance
+
+Check the balance of a Bancolombia account:
+
+```typescript title="types.ts"
+const balances = await bloque.accounts.bancolombia.balance({
+  urn: 'did:bloque:account:bancolombia:acc-12345',
+});
+
+Object.entries(balances).forEach(([token, balance]) => {
+  console.log(`${token}:`);
+  console.log(`  Current: ${balance.current}`);
+  console.log(`  Pending: ${balance.pending}`);
+});
+```
+
+## Transaction History
+
+View transactions for a Bancolombia account:
+
+```typescript title="types.ts"
+const movements = await bloque.accounts.bancolombia.movements({
+  urn: 'did:bloque:account:bancolombia:acc-12345',
+  asset: 'DUSD/6',
+  limit: 50,
+});
+
+movements.forEach((transaction) => {
+  console.log(`${transaction.direction}: ${transaction.amount}`);
+  console.log(`Date: ${transaction.created_at}`);
+});
+```
+
+## Updating Account Metadata
+
+Update account information:
+
+```typescript title="types.ts"
+const updatedAccount = await bloque.accounts.bancolombia.updateMetadata({
+  urn: 'did:bloque:account:bancolombia:acc-12345',
+  metadata: {
+    name: 'Business Account',
+    department: 'Finance'
+  }
+});
+
+console.log('Account updated:', updatedAccount.metadata?.name);
+```
+
+## Complete Example
+
+```typescript title="setup-bancolombia.ts"
+import { SDK } from '@bloque/sdk';
+
+const bloque = new SDK({
+  origin: 'your-origin',
+  auth: {
+    type: 'apiKey',
+    apiKey: process.env.BLOQUE_API_KEY!,
+  },
+  mode: 'production',
+});
+
+async function setupBancolombiaAccount(userUrn: string) {
+  try {
+    // Connect to user session
+    const userSession = await bloque.connect(userUrn);
+
+    // Create account
+    const account = await userSession.accounts.bancolombia.create({
+      urn: userUrn,
+      name: 'Receiving Account',
+    });
+
+    console.log('✓ Account created');
+    console.log('  Reference code:', account.referenceCode);
+    console.log('  Status:', account.status);
+
+    // Check balance
+    const balances = await bloque.accounts.bancolombia.balance({
+      urn: account.urn,
+    });
+
+    console.log('✓ Current balances:');
+    Object.entries(balances).forEach(([token, balance]) => {
+      console.log(`  ${token}: ${balance.current}`);
+    });
+
+    return { success: true, account };
+
+  } catch (error) {
+    console.error('✗ Setup failed:', error);
+    throw error;
+  }
+}
+```
+
+## Error Handling
+
+```typescript title="types.ts"
+try {
+  const account = await bloque.accounts.bancolombia.create({
+    urn: userUrn,
+    name: accountName,
+  });
+
+  console.log('Account created:', account.referenceCode);
+
+} catch (error) {
+  if (error instanceof Error) {
+    console.error('Failed to create account:', error.message);
+
+    if (error.message.includes('not found')) {
+      // User doesn't exist
+    } else if (error.message.includes('unauthorized')) {
+      // API key issues
+    }
+  }
+
+  throw error;
+}
+```
+
+## Best Practices
+
+1. **KYC Verification**: Ensure users complete KYC first
+2. **Reference Codes**: Store reference codes securely
+3. **Status Checks**: Verify account status before use
+4. **Error Handling**: Use try-catch blocks
+5. **Test in Sandbox**: Test thoroughly before production
+
+## Next Steps
+
+- [Transfers](/sdk/guide/accounts/transfers) - Transfer funds to/from Bancolombia accounts
+- [Virtual Cards](/sdk/guide/accounts/cards) - Create virtual cards
+- [Compliance](/sdk/guide/features/compliance) - KYC verification

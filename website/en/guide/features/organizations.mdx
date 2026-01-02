@@ -1,0 +1,187 @@
+# Organizations
+
+Learn how to create and manage organizations using the Bloque SDK.
+
+## Overview
+
+Organizations are the foundation of the Bloque platform. They can be either businesses or individuals and contain all the necessary profile and compliance information.
+
+## Creating an Organization
+
+### Business Organization
+
+```typescript
+import { SDK } from '@bloque/sdk';
+import type { CreateOrgParams } from '@bloque/sdk/orgs';
+
+const bloque = new SDK({
+  origin: 'your-origin',
+  auth: {
+    type: 'apiKey',
+    apiKey: process.env.BLOQUE_API_KEY!,
+  },
+  mode: 'production',
+});
+
+const params: CreateOrgParams = {
+  org_type: 'business',
+  profile: {
+    legal_name: 'Acme Corporation',
+    tax_id: '123456789',
+    incorporation_date: '2020-01-01',
+    business_type: 'llc',
+    incorporation_country_code: 'US',
+    incorporation_state: 'CA',
+    address_line1: '123 Main St',
+    postal_code: '94103',
+    city: 'San Francisco',
+  },
+  metadata: {
+    source: 'web_app',
+    campaign: 'q1_2024',
+  },
+};
+
+const organization = await bloque.orgs.create(params);
+```
+
+### Individual Organization
+
+```typescript
+const params: CreateOrgParams = {
+  org_type: 'individual',
+  profile: {
+    legal_name: 'John Doe',
+    tax_id: '123-45-6789',
+    incorporation_date: '1990-05-20',
+    business_type: 'sole_proprietorship',
+    incorporation_country_code: 'US',
+    address_line1: '456 Oak Ave',
+    postal_code: '10001',
+    city: 'New York',
+  },
+};
+
+const organization = await bloque.orgs.create(params);
+```
+
+## Parameters
+
+### CreateOrgParams
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `org_type` | `'business' \| 'individual'` | Yes | Type of organization |
+| `profile` | `OrgProfile` | Yes | Organization profile details |
+| `metadata` | `Record<string, unknown>` | No | Custom metadata |
+
+### OrgProfile
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `legal_name` | `string` | Yes | Legal name of the organization |
+| `tax_id` | `string` | Yes | Tax ID number |
+| `incorporation_date` | `string` | Yes | Date of incorporation (YYYY-MM-DD) |
+| `business_type` | `string` | Yes | Type of business (e.g., 'llc', 'corporation') |
+| `incorporation_country_code` | `string` | Yes | Country code (ISO 3166-1 alpha-2) |
+| `incorporation_state` | `string` | No | State/province |
+| `address_line1` | `string` | Yes | Primary address line |
+| `address_line2` | `string` | No | Secondary address line |
+| `postal_code` | `string` | Yes | Postal/ZIP code |
+| `city` | `string` | Yes | City |
+| `logo_url` | `string` | No | Logo URL |
+| `places` | `Place[]` | No | Additional locations |
+
+## Response
+
+### Organization
+
+```typescript
+interface Organization {
+  urn: string;                           // Unique resource name
+  org_type: 'business' | 'individual';   // Organization type
+  profile: OrgProfile;                   // Organization profile
+  metadata?: Record<string, unknown>;    // Custom metadata
+  status: OrgStatus;                     // Organization status
+}
+```
+
+### Organization Status
+
+| Status | Description |
+|--------|-------------|
+| `awaiting_compliance_verification` | Pending compliance verification |
+| `active` | Organization is active |
+| `suspended` | Organization is suspended |
+| `closed` | Organization is closed |
+
+## Multi-location Organizations
+
+For organizations with multiple locations, use the `places` field:
+
+```typescript
+const params: CreateOrgParams = {
+  org_type: 'business',
+  profile: {
+    legal_name: 'Global Tech Inc',
+    tax_id: '98-7654321',
+    incorporation_date: '2018-03-10',
+    business_type: 'corporation',
+    incorporation_country_code: 'US',
+    incorporation_state: 'DE',
+    address_line1: '789 Corporate Blvd',
+    postal_code: '19801',
+    city: 'Wilmington',
+    places: [
+      {
+        country_code: 'US',
+        state: 'CA',
+        address_line1: '100 Silicon Valley Dr',
+        postal_code: '94025',
+        city: 'Menlo Park',
+        is_primary: true,
+      },
+      {
+        country_code: 'US',
+        state: 'NY',
+        address_line1: '250 Broadway',
+        postal_code: '10007',
+        city: 'New York',
+        is_primary: false,
+      },
+    ],
+  },
+};
+```
+
+## Custom Metadata
+
+Add custom fields to track additional information:
+
+```typescript
+const params: CreateOrgParams = {
+  org_type: 'business',
+  profile: {
+    // ... profile fields
+  },
+  metadata: {
+    source: 'api',
+    customer_id: 'cust_123',
+    plan: 'enterprise',
+    referral_code: 'REF2024',
+  },
+};
+```
+
+## Best Practices
+
+1. **Validate Data**: Ensure all required fields are present before calling the API
+2. **Handle Errors**: Always use try-catch blocks
+3. **Store URNs**: Save the organization URN for future operations
+4. **Use Metadata**: Track additional context using metadata
+5. **Test in Sandbox**: Always test with `mode: 'sandbox'` first
+
+## Next Steps
+
+- [Compliance Guide](/sdk/guide/features/compliance) - Add KYC verification
+- [Accounts Guide](/sdk/guide/accounts/overview) - Create virtual cards and accounts
