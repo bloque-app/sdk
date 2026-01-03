@@ -1,50 +1,91 @@
 import { AccountsClient } from '@bloque/sdk-accounts';
 import { ComplianceClient } from '@bloque/sdk-compliance';
-import { type BloqueConfig, HttpClient } from '@bloque/sdk-core';
-import { IdentityClient } from '@bloque/sdk-identity';
+import { type BloqueSDKConfig, HttpClient } from '@bloque/sdk-core';
+import {
+  type CreateIdentityParams,
+  IdentityClient,
+} from '@bloque/sdk-identity';
 import { OrgsClient } from '@bloque/sdk-orgs';
 
 export class SDK {
   private readonly httpClient: HttpClient;
+  private readonly identity: IdentityClient;
 
-  constructor(config: BloqueConfig) {
+  constructor(config: BloqueSDKConfig) {
     this.httpClient = new HttpClient(config);
+    this.identity = new IdentityClient(this.httpClient);
   }
 
-  private extractUserAlias(urn: string): string {
-    const match = urn.match(/^did:bloque:[^:]+:([^:]+)$/);
+  private buildClients() {
+    return {
+      accounts: new AccountsClient(this.httpClient),
+      compliance: new ComplianceClient(this.httpClient),
+      identity: this.identity,
+      orgs: new OrgsClient(this.httpClient),
+    };
+  }
 
-    if (!match) {
-      throw new Error(`Invalid user alias URN: ${urn}`);
+  private getApiKey(): string {
+    const { auth } = this.httpClient;
+    return auth.type === 'apiKey' ? auth.apiKey : '';
+  }
+
+  private buildUrn(alias: string): string {
+    const origin = this.httpClient.origin;
+    if (!origin) {
+      throw new Error('Origin is required to build a urn');
     }
 
-    return match[1];
+    return `did:bloque:${origin}:${alias}`;
   }
 
-  async connect(urn: string) {
-    const config = this.httpClient.config;
-    config.urn = urn;
-    const response = await this.httpClient.request({
-      path: `/api/origins/${config.origin}/connect`,
+  async register(alias: string, params: CreateIdentityParams) {
+    if (!params.extraContext) params.extraContext = {};
+
+    const urn = this.buildUrn(alias);
+    const origin = this.httpClient.origin;
+
+    const response = await this.identity.origins.register(urn, origin, {
+      assertionResult: {
+        alias: urn,
+        challengeType: 'API_KEY',
+        value: {
+          apiKey: this.getApiKey(),
+          alias: urn,
+        },
+      },
+      ...params,
+    });
+    this.httpClient.setAccessToken(response.accessToken);
+    this.httpClient.setUrn(urn);
+
+    return this.buildClients();
+  }
+
+  async connect(alias: string) {
+    const urn = this.buildUrn(alias);
+    const origin = this.httpClient.origin;
+
+    const response = await this.httpClient.request<{
+      result: { access_token: string };
+    }>({
+      path: `/api/origins/${origin}/connect`,
       method: 'POST',
       body: {
         assertion_result: {
           challengeType: 'API_KEY',
           value: {
-            api_key: config.auth.type === 'apiKey' ? config.auth.apiKey : '',
-            alias: this.extractUserAlias(urn),
+            api_key: this.getApiKey(),
+            alias: urn,
           },
         },
         extra_context: {},
       },
     });
-    config.accessToken = (response as any).result.access_token;
 
-    return {
-      accounts: new AccountsClient(this.httpClient),
-      compliance: new ComplianceClient(this.httpClient),
-      identity: new IdentityClient(this.httpClient),
-      orgs: new OrgsClient(this.httpClient),
-    };
+    this.httpClient.setAccessToken(response.result.access_token);
+    this.httpClient.setUrn(urn);
+
+    return this.buildClients();
   }
 }

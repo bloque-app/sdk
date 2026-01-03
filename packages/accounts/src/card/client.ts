@@ -81,7 +81,7 @@ export class CardClient extends BaseClient {
    */
   async list(params?: ListCardParams): Promise<CardAccount[]> {
     const queryParams = new URLSearchParams({
-      holder_urn: params?.holderUrn || this.httpClient.config.urn || '',
+      holder_urn: params?.holderUrn || this.httpClient.urn || '',
       medium: 'card',
     });
 

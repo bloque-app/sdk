@@ -1724,8 +1724,8 @@ This SDK is written in TypeScript and includes complete type definitions. You'll
 
 ```typescript
 import { SDK } from '@bloque/sdk';
+import type { BloqueSDKConfig } from '@bloque/sdk';
 import type {
-  BloqueConfig,
   CreateOrgParams,
   Organization,
   OrgProfile,
@@ -1735,9 +1735,14 @@ import type {
 } from '@bloque/sdk/orgs';
 
 // Type-safe configuration
-const config: BloqueConfig = {
-  apiKey: 'your-api-key',
+const config: BloqueSDKConfig = {
+  origin: 'your-origin',
+  auth: {
+    type: 'apiKey',
+    apiKey: 'your-api-key',
+  },
   mode: 'sandbox',
+  platform: 'node',
 };
 
 const bloque = new SDK(config);
@@ -1775,7 +1780,7 @@ The SDK exports all necessary types for type-safe development:
 
 ```typescript
 // Main SDK types
-import type { SDK, BloqueConfig } from '@bloque/sdk';
+import type { SDK, BloqueSDKConfig } from '@bloque/sdk';
 
 // Organization types
 import type {

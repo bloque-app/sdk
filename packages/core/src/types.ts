@@ -87,6 +87,52 @@ export type Platform =
  *
  * This allows consumers to customize the storage mechanism
  * (localStorage, sessionStorage, cookies, in-memory, etc.).
+ *
+ * ⚠️ SECURITY CONSIDERATIONS:
+ *
+ * **localStorage / sessionStorage (INSECURE)**:
+ * - Vulnerable to XSS attacks - any malicious script can read the token
+ * - Should ONLY be used for development/testing or non-sensitive apps
+ * - NOT recommended for production applications handling sensitive data
+ *
+ * **httpOnly Cookies (RECOMMENDED)**:
+ * - Best security practice - not accessible to JavaScript
+ * - Protects against XSS attacks
+ * - Requires server-side cooperation to set cookies
+ *
+ * **Secure Storage (RECOMMENDED for mobile)**:
+ * - Use platform-specific secure storage (e.g., Keychain on iOS, Keystore on Android)
+ * - Libraries: @react-native-async-storage/async-storage, expo-secure-store
+ *
+ * **In-Memory Storage**:
+ * - Most secure against XSS
+ * - Token lost on page refresh/app restart
+ * - Good for short-lived sessions
+ *
+ * Example implementation using httpOnly cookies:
+ * ```typescript
+ * const cookieStorage: TokenStorage = {
+ *   get: () => {
+ *     // Token is automatically sent in httpOnly cookie
+ *     // You may need to fetch from server or return null
+ *     return null;
+ *   },
+ *   set: (token) => {
+ *     // Send to server to set httpOnly cookie
+ *     fetch('/api/auth/set-token', {
+ *       method: 'POST',
+ *       body: JSON.stringify({ token })
+ *     });
+ *   },
+ *   clear: () => {
+ *     // Call server to clear cookie
+ *     fetch('/api/auth/logout', { method: 'POST' });
+ *   }
+ * };
+ * ```
+ *
+ * @see https://owasp.org/www-community/attacks/xss/
+ * @see https://cheatsheetseries.owasp.org/cheatsheets/HTML5_Security_Cheat_Sheet.html#local-storage
  */
 export interface TokenStorage {
   /**
@@ -98,6 +144,9 @@ export interface TokenStorage {
 
   /**
    * Persists a JWT token.
+   *
+   * ⚠️ WARNING: If using localStorage/sessionStorage, this token will be
+   * accessible to any JavaScript code on the page, including malicious scripts.
    *
    * @param token The JWT token to store.
    */
@@ -112,12 +161,14 @@ export interface TokenStorage {
 export type AuthStrategy = { type: 'apiKey'; apiKey: string } | { type: 'jwt' };
 
 /**
- * Main configuration object for the Bloque SDK.
+ * Public configuration object for the Bloque SDK.
  *
- * This configuration is resolved once when initializing
- * the SDK (via `new SDK()` or `init()` in the modular API).
+ * This is the configuration interface that users should use when
+ * initializing the SDK (via `new SDK()` or `init()` in the modular API).
+ *
+ * @public
  */
-export interface BloqueConfig {
+export interface BloqueSDKConfig {
   /**
    * Origin identifier for the SDK.
    *
@@ -125,6 +176,7 @@ export interface BloqueConfig {
    * to a specific origin within the Bloque platform.
    */
   origin: string;
+
   /**
    * Platform where the SDK is executed.
    *
@@ -155,6 +207,7 @@ export interface BloqueConfig {
    * platform and the authentication strategy at runtime.
    */
   auth: AuthStrategy;
+
   /**
    * SDK operation mode.
    *
@@ -164,28 +217,108 @@ export interface BloqueConfig {
    * If not specified, the SDK defaults to `production`.
    */
   mode?: Mode;
+
   /**
    * JWT token storage strategy.
    *
-   * Only applies when `runtime` is set to `client`.
+   * Only applies when `platform` is set to `browser` or `react-native`.
    *
-   * By default, the SDK uses `localStorage` to persist
-   * the JWT token. This behavior can be overridden to
-   * use alternative storage mechanisms.
+   * **Default behavior (browser only)**:
+   * - The SDK uses `localStorage` by default for browser platform
+   * - ⚠️ localStorage is INSECURE and vulnerable to XSS attacks
+   * - A security warning will be logged to the console
+   *
+   * **For production applications**, provide a custom `tokenStorage` using:
+   * - httpOnly cookies (recommended - immune to XSS)
+   * - Secure storage libraries (for React Native)
+   * - sessionStorage (slightly better than localStorage, but still vulnerable)
+   * - In-memory storage (most secure, but lost on refresh)
+   *
+   * @see TokenStorage for security considerations and examples
    */
   tokenStorage?: TokenStorage;
 
   /**
-   * Optional access token to be used for authentication.
+   * Default timeout for HTTP requests in milliseconds.
    *
-   * Mainly intended for internal use or advanced scenarios.
+   * If a request takes longer than this timeout, it will be aborted
+   * and throw a BloqueAPIError with code 'TIMEOUT_ERROR'.
+   *
+   * Can be overridden per-request using the `timeout` option in RequestOptions.
+   *
+   * Set to 0 to disable timeouts globally (not recommended for production).
+   *
+   * @default 30000 (30 seconds)
+   */
+  timeout?: number;
+
+  /**
+   * Retry configuration for failed requests.
+   *
+   * When enabled, the SDK will automatically retry failed requests with
+   * exponential backoff for the following scenarios:
+   * - 429 (Too Many Requests)
+   * - 503 (Service Unavailable)
+   * - Network errors (timeouts, connection failures)
+   *
+   * The SDK respects the `Retry-After` header when present.
+   *
+   * @default { enabled: true, maxRetries: 3, initialDelay: 1000 }
+   */
+  retry?: {
+    /**
+     * Whether to enable automatic retries.
+     * @default true
+     */
+    enabled?: boolean;
+
+    /**
+     * Maximum number of retry attempts.
+     * @default 3
+     */
+    maxRetries?: number;
+
+    /**
+     * Initial delay in milliseconds before the first retry.
+     * Subsequent retries use exponential backoff: delay * (2 ^ attempt).
+     * @default 1000 (1 second)
+     */
+    initialDelay?: number;
+
+    /**
+     * Maximum delay in milliseconds between retries.
+     * Prevents exponential backoff from growing too large.
+     * @default 30000 (30 seconds)
+     */
+    maxDelay?: number;
+  };
+}
+
+/**
+ * Internal configuration object with runtime state.
+ *
+ * Extends the public configuration with internal fields that are
+ * managed by the SDK at runtime (access tokens, session state, etc.).
+ *
+ * @internal - This interface is not part of the public API.
+ * Users should not depend on these fields as they may change without notice.
+ */
+export interface BloqueInternalConfig extends BloqueSDKConfig {
+  /**
+   * Access token for authenticated requests.
+   *
+   * @internal
+   * Set internally after successful authentication (register/connect).
+   * Should not be accessed or modified by SDK users.
    */
   accessToken?: string;
 
   /**
-   * Optional user URN to scope the SDK instance to a specific user.
+   * URN of the currently connected identity.
    *
-   * Mainly intended for internal use or advanced scenarios.
+   * @internal
+   * Set internally when connecting to a user session.
+   * Should not be accessed or modified by SDK users.
    */
   urn?: string;
 }
@@ -195,6 +328,18 @@ export interface RequestOptions<U = unknown> {
   path: string;
   body?: U;
   headers?: Record<string, string>;
+  /**
+   * Request timeout in milliseconds.
+   *
+   * If not specified, uses the default timeout from SDK config.
+   * Set to 0 to disable timeout for this specific request.
+   *
+   * When a request exceeds the timeout, it will be aborted and
+   * throw a BloqueAPIError with code 'TIMEOUT_ERROR'.
+   *
+   * @default 30000 (30 seconds)
+   */
+  timeout?: number;
 }
 
 export interface BloqueResponse<T> {
