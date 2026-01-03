@@ -6,8 +6,8 @@ import type {
   TransferResponse,
   TransferResult,
 } from './api-types';
-import { BancolombiaClient } from './bancolombia/client';
-import { CardClient } from './card/client';
+import { BancolombiaClient } from './bancolombia/bancolombia-client';
+import { CardClient } from './card/card-client';
 
 /**
  * Accounts client for managing financial accounts and payment methods

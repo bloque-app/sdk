@@ -1,6 +1,6 @@
 import type { HttpClient } from '@bloque/sdk-core';
-import { AliasesClient } from './aliases/client';
-import { OriginsClient } from './origins/client';
+import { AliasesClient } from './aliases/aliases-client';
+import { OriginsClient } from './origins/origins-client';
 
 export class IdentityClient {
   private readonly httpClient: HttpClient;

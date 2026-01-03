@@ -10,7 +10,7 @@ import type {
   RegisterResponse,
   UserProfile,
 } from '../api-types';
-import { OriginClient } from './origin';
+import { OriginClient } from './origin-client';
 import type {
   BusinessRegisterParams,
   IndividualRegisterParams,
