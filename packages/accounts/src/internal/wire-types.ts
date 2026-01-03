@@ -24,7 +24,7 @@ export type AccountStatus =
 export interface Account<TDetails = unknown> {
   id: string;
   urn: string;
-  medium: 'bancolombia' | 'card' | 'virtual';
+  medium: 'bancolombia' | 'card' | 'virtual' | 'polygon';
   details: TDetails;
   ledger_account_id: string;
   status: AccountStatus;
@@ -121,6 +121,22 @@ export type VirtualDetails = {
   id: string;
   first_name: string;
   last_name: string;
+};
+
+/**
+ * @internal
+ * Polygon account input for creation
+ */
+export type CreatePolygonAccountInput = Record<string, never>;
+
+/**
+ * @internal
+ * Polygon account details from API
+ */
+export type PolygonDetails = {
+  id: string;
+  address: string;
+  network: string;
 };
 
 /**

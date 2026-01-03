@@ -47,11 +47,11 @@ export class SDK {
 
     const response = await this.identity.origins.register(urn, origin, {
       assertionResult: {
-        alias: urn,
+        alias: alias,
         challengeType: 'API_KEY',
         value: {
           apiKey: this.getApiKey(),
-          alias: urn,
+          alias: alias,
         },
       },
       ...params,
@@ -76,7 +76,7 @@ export class SDK {
           challengeType: 'API_KEY',
           value: {
             api_key: this.getApiKey(),
-            alias: urn,
+            alias: alias,
           },
         },
         extra_context: {},

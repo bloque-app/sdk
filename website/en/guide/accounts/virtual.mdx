@@ -53,7 +53,6 @@ console.log('Ledger ID:', account.ledgerId);
 interface CreateVirtualAccountParams {
   firstName: string;       // Required: Account holder's first name
   lastName: string;        // Required: Account holder's last name
-  holderUrn?: string;      // Optional: URN of the account holder
   ledgerId?: string;       // Optional: Ledger account ID (auto-created if not provided)
   webhookUrl?: string;     // Optional: Webhook for account events
   metadata?: Record<string, string>; // Optional: Custom metadata (must be strings)

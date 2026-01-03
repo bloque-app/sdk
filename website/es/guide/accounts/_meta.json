@@ -2,12 +2,22 @@
   {
     "type": "file",
     "name": "overview",
-    "label": "Overview"
+    "label": "Descripción general"
+  },
+  {
+    "type": "file",
+    "name": "virtual",
+    "label": "Cuentas Virtuales"
+  },
+  {
+    "type": "file",
+    "name": "polygon",
+    "label": "Polygon"
   },
   {
     "type": "file",
     "name": "cards",
-    "label": "Virtual Cards"
+    "label": "Tarjetas Virtuales"
   },
   {
     "type": "file",
@@ -17,6 +27,6 @@
   {
     "type": "file",
     "name": "transfers",
-    "label": "Transfers"
+    "label": "Transferencias"
   }
 ]

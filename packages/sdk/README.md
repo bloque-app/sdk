@@ -32,7 +32,7 @@ This SDK is compatible with multiple JavaScript runtimes:
 - **TypeScript First**: Built with TypeScript for complete type safety
 - **Modular Architecture**: Import only what you need - accounts, identity, compliance, or organizations
 - **Multi-Runtime**: Works seamlessly across Node.js, Bun, Deno, browsers, and React Native
-- **Account Management**: Create and manage virtual cards, virtual accounts, and Bancolombia accounts
+- **Account Management**: Create and manage virtual cards, virtual accounts, Polygon wallets, and Bancolombia accounts
 - **Identity System**: Register individual users (KYC) and businesses (KYB) with multi-method authentication
 - **Compliance Ready**: Built-in KYC/KYB verification workflows
 - **Transfer System**: Transfer funds between accounts with multiple asset support
@@ -259,6 +259,34 @@ await session.accounts.virtual.updateMetadata({
 await session.accounts.virtual.activate(account.urn);
 await session.accounts.virtual.freeze(account.urn);
 await session.accounts.virtual.disable(account.urn);
+```
+
+### Polygon Wallets
+
+Cryptocurrency wallets on the Polygon network for Web3 transactions:
+
+```typescript
+// Create a Polygon wallet (no additional input required)
+const wallet = await session.accounts.polygon.create({
+  metadata: {
+    purpose: 'web3-transactions',
+    project: 'my-dapp',
+  },
+});
+
+console.log('Wallet address:', wallet.address);
+console.log('Network:', wallet.network); // "polygon"
+
+// Update metadata
+await session.accounts.polygon.updateMetadata({
+  urn: wallet.urn,
+  metadata: { environment: 'production' },
+});
+
+// Manage account state
+await session.accounts.polygon.activate(wallet.urn);
+await session.accounts.polygon.freeze(wallet.urn);
+await session.accounts.polygon.disable(wallet.urn);
 ```
 
 ### Bancolombia Accounts
@@ -567,6 +595,8 @@ import type {
   CreateCardParams,
   VirtualAccount,
   CreateVirtualAccountParams,
+  PolygonAccount,
+  CreatePolygonAccountParams,
   TransferParams,
   TransferResult,
 } from '@bloque/sdk';
@@ -609,6 +639,7 @@ import type {
   BloqueSDKConfig,
   CardAccount,
   VirtualAccount,
+  PolygonAccount,
   BancolombiaAccount,
 } from '@bloque/sdk';
 ```

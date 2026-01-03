@@ -3,6 +3,7 @@ import { BaseClient } from '@bloque/sdk-core';
 import { BancolombiaClient } from './bancolombia/bancolombia-client';
 import { CardClient } from './card/card-client';
 import type { TransferRequest, TransferResponse } from './internal/wire-types';
+import { PolygonClient } from './polygon/polygon-client';
 import type { TransferParams, TransferResult } from './types';
 import { VirtualClient } from './virtual/virtual-client';
 
@@ -19,12 +20,14 @@ import { VirtualClient } from './virtual/virtual-client';
 export class AccountsClient extends BaseClient {
   readonly bancolombia: BancolombiaClient;
   readonly card: CardClient;
+  readonly polygon: PolygonClient;
   readonly virtual: VirtualClient;
 
   constructor(httpClient: HttpClient) {
     super(httpClient);
     this.bancolombia = new BancolombiaClient(this.httpClient);
     this.card = new CardClient(this.httpClient);
+    this.polygon = new PolygonClient(this.httpClient);
     this.virtual = new VirtualClient(this.httpClient);
   }
 

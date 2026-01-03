@@ -6,6 +6,16 @@
   },
   {
     "type": "file",
+    "name": "virtual",
+    "label": "Virtual Accounts"
+  },
+  {
+    "type": "file",
+    "name": "polygon",
+    "label": "Polygon"
+  },
+  {
+    "type": "file",
     "name": "cards",
     "label": "Virtual Cards"
   },

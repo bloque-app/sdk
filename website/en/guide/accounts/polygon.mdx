@@ -1,0 +1,304 @@
+# Polygon
+
+Create and manage cryptocurrency wallets on the Polygon network using the Bloque SDK.
+
+## Overview
+
+Polygon accounts are cryptocurrency wallets on the Polygon (MATIC) network. They're ideal for:
+
+- **Web3 Transactions**: Interaction with smart contracts and dApps
+- **Low Friction**: Minimal transaction fees compared to Ethereum
+- **Automatic Creation**: Instant wallet generation without additional input
+- **Scalability**: High transaction speed and low cost
+
+## Creating a Polygon Account
+
+### Basic Creation
+
+Create a Polygon wallet without providing additional data:
+
+```typescript title="create-polygon-account.ts"
+import { SDK } from '@bloque/sdk';
+
+const bloque = new SDK({
+  origin: 'your-origin',
+  auth: {
+    type: 'apiKey',
+    apiKey: process.env.BLOQUE_API_KEY!,
+  },
+  mode: 'production',
+});
+
+// Connect to user session
+const session = await bloque.connect('did:bloque:your-origin:user-alias');
+
+// Create a Polygon account
+const account = await session.accounts.polygon.create({
+  metadata: {
+    purpose: 'web3-transactions',
+    project: 'my-dapp',
+  },
+});
+
+console.log('Account created:', account.urn);
+console.log('Address:', account.address);
+console.log('Network:', account.network); // "polygon"
+console.log('Status:', account.status);
+```
+
+### Parameters
+
+```typescript title="types.ts"
+interface CreatePolygonAccountParams {
+  ledgerId?: string;       // Optional: Ledger account ID (auto-created if not provided)
+  webhookUrl?: string;     // Optional: Webhook for account events
+  metadata?: Record<string, string>; // Optional: Custom metadata (must be strings)
+}
+```
+
+:::info Automatic Creation
+Polygon accounts don't require any input data. The wallet address and keys are automatically generated securely.
+:::
+
+### Response
+
+```typescript title="types.ts"
+interface PolygonAccount {
+  urn: string;              // Unique resource name
+  id: string;               // Account ID
+  address: string;          // Polygon wallet address (0x...)
+  network: string;          // Blockchain network ("polygon")
+  status: AccountStatus;    // Account status
+  ownerUrn: string;         // Owner URN
+  ledgerId: string;         // Ledger account ID
+  webhookUrl: string | null;
+  metadata?: Record<string, string>;
+  createdAt: string;        // ISO 8601 timestamp
+  updatedAt: string;        // ISO 8601 timestamp
+}
+
+type AccountStatus =
+  | 'creation_in_progress'  // Creation in progress
+  | 'active'               // Active
+  | 'disabled'             // Disabled
+  | 'frozen'               // Frozen
+  | 'deleted'              // Deleted
+  | 'creation_failed';     // Creation failed
+```
+
+## Managing Polygon Accounts
+
+### Update Metadata
+
+Update custom metadata on a Polygon account:
+
+```typescript title="update-metadata.ts"
+const updated = await session.accounts.polygon.updateMetadata({
+  urn: 'did:bloque:account:polygon:0x05B10c9B6241b73fc8c906fB7979eFc7764AB731',
+  metadata: {
+    updated_by: 'admin',
+    project: 'dapp-v2',
+    environment: 'production',
+  },
+});
+
+console.log('Updated metadata:', updated.metadata);
+```
+
+:::warning Metadata Restrictions
+The `source` field is reserved and cannot be modified through metadata updates.
+All metadata values must be strings.
+:::
+
+### Account States
+
+Manage Polygon account states:
+
+```typescript title="manage-state.ts"
+const accountUrn = 'did:bloque:account:polygon:0x05B10c9B6241b73fc8c906fB7979eFc7764AB731';
+
+// Activate account
+const activated = await session.accounts.polygon.activate(accountUrn);
+console.log('Status:', activated.status); // 'active'
+
+// Freeze account (temporarily suspend)
+const frozen = await session.accounts.polygon.freeze(accountUrn);
+console.log('Status:', frozen.status); // 'frozen'
+
+// Disable account (permanently)
+const disabled = await session.accounts.polygon.disable(accountUrn);
+console.log('Status:', disabled.status); // 'disabled'
+```
+
+#### Available States
+
+| State | Description | Can Transition To |
+|-------|-------------|-------------------|
+| `creation_in_progress` | Account is being created | `active`, `creation_failed` |
+| `active` | Account is active and usable | `frozen`, `disabled`, `deleted` |
+| `frozen` | Account temporarily suspended | `active`, `disabled` |
+| `disabled` | Account permanently disabled | - |
+| `deleted` | Account deleted | - |
+| `creation_failed` | Account creation failed | - |
+
+## Use Cases
+
+### dApp Integration
+
+```typescript title="dapp-integration.ts"
+import { SDK } from '@bloque/sdk';
+
+const bloque = new SDK({
+  origin: 'my-dapp',
+  auth: { type: 'apiKey', apiKey: process.env.BLOQUE_API_KEY! },
+  mode: 'production',
+});
+
+async function createUserWallet(userAlias: string) {
+  const session = await bloque.connect(`did:bloque:my-dapp:${userAlias}`);
+
+  // Create Polygon wallet for the user
+  const wallet = await session.accounts.polygon.create({
+    metadata: {
+      user_id: userAlias,
+      created_via: 'dapp-onboarding',
+      purpose: 'nft-marketplace',
+    },
+  });
+
+  console.log('Wallet created for user:', userAlias);
+  console.log('Address:', wallet.address);
+  console.log('URN:', wallet.urn);
+
+  return wallet;
+}
+
+// Use in your application
+const userWallet = await createUserWallet('user123');
+```
+
+### Managing Multiple Wallets
+
+```typescript title="multiple-wallets.ts"
+import { SDK } from '@bloque/sdk';
+
+const bloque = new SDK({
+  origin: 'my-app',
+  auth: { type: 'apiKey', apiKey: process.env.BLOQUE_API_KEY! },
+  mode: 'production',
+});
+
+async function setupProjectWallets() {
+  const session = await bloque.connect('did:bloque:my-app:admin');
+
+  // Create treasury wallet
+  const treasury = await session.accounts.polygon.create({
+    metadata: {
+      type: 'treasury',
+      purpose: 'project-funds',
+    },
+  });
+
+  // Create rewards wallet
+  const rewards = await session.accounts.polygon.create({
+    metadata: {
+      type: 'rewards',
+      purpose: 'user-incentives',
+    },
+  });
+
+  // Create staking wallet
+  const staking = await session.accounts.polygon.create({
+    metadata: {
+      type: 'staking',
+      purpose: 'token-staking',
+    },
+  });
+
+  return { treasury, rewards, staking };
+}
+
+const wallets = await setupProjectWallets();
+console.log('Project wallets configured:', {
+  treasury: wallets.treasury.address,
+  rewards: wallets.rewards.address,
+  staking: wallets.staking.address,
+});
+```
+
+## Error Handling
+
+Handle errors appropriately when working with Polygon accounts:
+
+```typescript title="error-handling.ts"
+import {
+  BloqueValidationError,
+  BloqueNotFoundError,
+  BloqueAuthenticationError,
+} from '@bloque/sdk';
+
+try {
+  const account = await session.accounts.polygon.create({
+    metadata: {
+      project: 'my-dapp',
+    },
+  });
+
+  console.log('Account created:', account.urn);
+} catch (error) {
+  if (error instanceof BloqueValidationError) {
+    console.error('Validation failed:', error.validationErrors);
+    // Handle invalid input
+  } else if (error instanceof BloqueNotFoundError) {
+    console.error('Resource not found:', error.resourceId);
+    // Handle missing user/session
+  } else if (error instanceof BloqueAuthenticationError) {
+    console.error('Authentication failed');
+    // Handle authentication issues
+  } else {
+    console.error('Unexpected error:', error);
+  }
+}
+```
+
+## Best Practices
+
+1. **Descriptive Metadata**: Add metadata to identify the purpose of each wallet
+2. **Security Management**: Use account states (frozen, disabled) to control access
+3. **Webhooks**: Configure webhooks to receive blockchain event notifications
+4. **Error Handling**: Always wrap operations in try-catch blocks
+5. **Purpose Isolation**: Create separate wallets for different functions (treasury, rewards, etc.)
+6. **Monitoring**: Log wallet URNs and addresses for audit and tracking
+7. **State Verification**: Check account state before performing critical operations
+
+## Differences from Other Account Types
+
+| Feature | Polygon | Virtual Accounts | Virtual Cards |
+|---------|---------|------------------|---------------|
+| **Type** | Crypto Wallet | Test Account | Payment Card |
+| **Required Information** | None | First Name, Last Name | User URN |
+| **Creation Time** | Instant | Instant | Instant |
+| **Use Case** | Web3/Blockchain | Testing/Development | Payments |
+| **Blockchain Address** | Yes (0x...) | No | No |
+| **Network** | Polygon (MATIC) | N/A | N/A |
+| **Fees** | Very low | N/A | N/A |
+
+## Security Considerations
+
+:::warning Private Key Management
+The private keys of Polygon wallets are securely managed by the Bloque platform. Never share the account URN or API credentials with unauthorized third parties.
+:::
+
+### Recommendations
+
+- **Access Control**: Limit who can create and manage Polygon accounts
+- **Audit**: Log all account creation and modification operations
+- **Monitoring**: Set up alerts for unusual activities
+- **Preventive Freezing**: Freeze suspicious accounts immediately
+- **API Key Rotation**: Regularly rotate API keys
+
+## Next Steps
+
+- [Transfers](/sdk/guide/accounts/transfers) - Transfer funds between accounts
+- [Virtual Accounts](/sdk/guide/accounts/virtual) - Create test accounts
+- [Virtual Cards](/sdk/guide/accounts/cards) - Create payment cards
