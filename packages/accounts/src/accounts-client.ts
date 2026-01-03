@@ -1,13 +1,9 @@
 import type { HttpClient } from '@bloque/sdk-core';
 import { BaseClient } from '@bloque/sdk-core';
-import type {
-  TransferParams,
-  TransferRequest,
-  TransferResponse,
-  TransferResult,
-} from './api-types';
-import { BancolombiaClient } from './bancolombia/client';
-import { CardClient } from './card/client';
+import { BancolombiaClient } from './bancolombia/bancolombia-client';
+import { CardClient } from './card/card-client';
+import type { TransferRequest, TransferResponse } from './internal/wire-types';
+import type { TransferParams, TransferResult } from './types';
 
 /**
  * Accounts client for managing financial accounts and payment methods

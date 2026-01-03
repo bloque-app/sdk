@@ -1,9 +1,9 @@
-import type { BloqueConfig, HttpClient } from '@bloque/sdk-core';
+import type { BloqueSDKConfig, HttpClient } from '@bloque/sdk-core';
 
 const BLOQUE_SDK_STATE = Symbol.for('@bloque/sdk:state');
 
 interface BloqueSDKState {
-  config: BloqueConfig | null;
+  config: BloqueSDKConfig | null;
   httpClient: HttpClient | null;
 }
 
@@ -22,11 +22,11 @@ function getState(): BloqueSDKState {
   return globalThis_[BLOQUE_SDK_STATE];
 }
 
-export function setConfig(next: BloqueConfig) {
+export function setConfig(next: BloqueSDKConfig) {
   getState().config = next;
 }
 
-export function getConfig(): BloqueConfig {
+export function getConfig(): BloqueSDKConfig {
   const { config } = getState();
   if (!config) {
     throw new Error(

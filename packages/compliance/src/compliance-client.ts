@@ -1,6 +1,6 @@
 import type { HttpClient } from '@bloque/sdk-core';
 import { BaseClient } from '@bloque/sdk-core';
-import { KycClient } from './kyc/client';
+import { KycClient } from './kyc/kyc-client';
 
 export class ComplianceClient extends BaseClient {
   readonly kyc: KycClient;

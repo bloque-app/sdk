@@ -1,31 +1,80 @@
 import { API_BASE_URLS, DEFAULT_HEADERS } from './constants';
-import { BloqueAPIError, BloqueConfigError } from './errors';
-import type { BloqueConfig, RequestOptions, TokenStorage } from './types';
+import {
+  type BloqueAPIError,
+  BloqueConfigError,
+  BloqueNetworkError,
+  BloqueRateLimitError,
+  BloqueTimeoutError,
+  createBloqueError,
+} from './errors';
+import type {
+  BloqueInternalConfig,
+  BloqueSDKConfig,
+  RequestOptions,
+  TokenStorage,
+} from './types';
 
 const isFrontendPlatform = (platform?: string) =>
   platform === 'browser' || platform === 'react-native';
 
-const createLocalStorageAdapter = (): TokenStorage => ({
-  get: () => {
-    if (typeof localStorage === 'undefined') {
-      return null;
-    }
-    return localStorage.getItem('access_token');
-  },
-  set: (token: string) => {
-    if (typeof localStorage !== 'undefined') {
-      localStorage.setItem('access_token', token);
-    }
-  },
-  clear: () => {
-    if (typeof localStorage !== 'undefined') {
-      localStorage.removeItem('access_token');
-    }
-  },
-});
+/**
+ * Creates a localStorage-based token storage adapter.
+ *
+ * ⚠️ SECURITY WARNING: localStorage is vulnerable to XSS attacks.
+ * Tokens stored in localStorage can be accessed by any JavaScript code
+ * running in the same origin, including malicious scripts injected via XSS.
+ *
+ * For production applications, consider using:
+ * - httpOnly cookies (best option, not accessible to JavaScript)
+ * - secure storage libraries (e.g., @react-native-async-storage/async-storage for React Native)
+ * - sessionStorage (slightly better, cleared when tab closes, but still vulnerable to XSS)
+ * - encrypted storage solutions
+ *
+ * Only use localStorage for:
+ * - Development and testing
+ * - Non-sensitive applications
+ * - When you fully trust all scripts on your page
+ *
+ * @internal
+ */
+const createLocalStorageAdapter = (): TokenStorage => {
+  // Emit warning once when adapter is created
+  if (typeof console !== 'undefined' && console.warn) {
+    console.warn(
+      '[Bloque SDK Security Warning] Using localStorage for token storage. ' +
+        'localStorage is vulnerable to XSS attacks. ' +
+        'For production use, provide a custom tokenStorage with httpOnly cookies or secure storage. ' +
+        'See: https://owasp.org/www-community/attacks/xss/',
+    );
+  }
+
+  return {
+    get: () => {
+      if (typeof localStorage === 'undefined') {
+        return null;
+      }
+      return localStorage.getItem('access_token');
+    },
+    set: (token: string) => {
+      if (typeof localStorage !== 'undefined') {
+        localStorage.setItem('access_token', token);
+      }
+    },
+    clear: () => {
+      if (typeof localStorage !== 'undefined') {
+        localStorage.removeItem('access_token');
+      }
+    },
+  };
+};
 
 export class HttpClient {
-  readonly config: BloqueConfig;
+  /**
+   * Internal configuration with runtime state.
+   * @internal - Do not access directly. Use public getters instead.
+   * This field is private to prevent external access and mutations.
+   */
+  private readonly _config: BloqueInternalConfig;
   private readonly baseUrl: string;
 
   private readonly publicRoutes = [
@@ -34,20 +83,90 @@ export class HttpClient {
     '/api/origins',
   ];
 
-  constructor(config: BloqueConfig) {
-    this.validateConfig(config);
-    this.config = config;
+  constructor(config: BloqueSDKConfig) {
+    // Clone config to prevent external mutations
+    const internalConfig: BloqueInternalConfig = { ...config };
+    this.validateConfig(internalConfig);
+    this._config = internalConfig;
     this.baseUrl = API_BASE_URLS[config.mode ?? 'production'];
   }
 
-  private validateConfig(config: BloqueConfig): void {
+  /**
+   * Get the origin identifier.
+   * @public
+   */
+  get origin(): string {
+    return this._config.origin;
+  }
+
+  /**
+   * Get the authentication strategy.
+   * @public
+   */
+  get auth() {
+    return this._config.auth;
+  }
+
+  /**
+   * Get the URN of the currently connected identity.
+   * @public
+   * @returns The URN if a session is active, undefined otherwise.
+   */
+  get urn(): string | undefined {
+    return this._config.urn;
+  }
+
+  /**
+   * Set the access token for authenticated requests.
+   * @internal - Called internally after successful authentication.
+   */
+  setAccessToken(token: string): void {
+    this._config.accessToken = token;
+  }
+
+  /**
+   * Set the URN of the connected identity.
+   * @internal - Called internally when connecting to a user session.
+   */
+  setUrn(urn: string): void {
+    this._config.urn = urn;
+  }
+
+  private validateConfig(config: BloqueInternalConfig): void {
     config.mode ??= 'production';
     config.platform ??= 'node';
+    config.timeout ??= 30000; // 30 seconds default
+
+    // Set default retry configuration
+    config.retry ??= {};
+    config.retry.enabled ??= true;
+    config.retry.maxRetries ??= 3;
+    config.retry.initialDelay ??= 1000; // 1 second
+    config.retry.maxDelay ??= 30000; // 30 seconds
 
     if (!['sandbox', 'production'].includes(config.mode)) {
       throw new BloqueConfigError(
         'Mode must be either "sandbox" or "production"',
       );
+    }
+
+    if (config.timeout !== undefined && config.timeout < 0) {
+      throw new BloqueConfigError('Timeout must be a non-negative number');
+    }
+
+    if (config.retry.maxRetries !== undefined && config.retry.maxRetries < 0) {
+      throw new BloqueConfigError('maxRetries must be a non-negative number');
+    }
+
+    if (
+      config.retry.initialDelay !== undefined &&
+      config.retry.initialDelay < 0
+    ) {
+      throw new BloqueConfigError('initialDelay must be a non-negative number');
+    }
+
+    if (config.retry.maxDelay !== undefined && config.retry.maxDelay < 0) {
+      throw new BloqueConfigError('maxDelay must be a non-negative number');
     }
 
     if (config.auth.type === 'apiKey') {
@@ -91,19 +210,19 @@ export class HttpClient {
       return {};
     }
 
-    if (this.config.auth.type === 'apiKey') {
-      if (this.config.accessToken) {
+    if (this._config.auth.type === 'apiKey') {
+      if (this._config.accessToken) {
         return {
-          Authorization: `Bearer ${this.config.accessToken}`,
+          Authorization: `Bearer ${this._config.accessToken}`,
         };
       }
       return {
-        Authorization: this.config.auth.apiKey,
+        Authorization: this._config.auth.apiKey,
       };
     }
 
-    if (this.config.auth.type === 'jwt') {
-      const token = this.config.tokenStorage?.get();
+    if (this._config.auth.type === 'jwt') {
+      const token = this._config.tokenStorage?.get();
       if (!token) {
         throw new BloqueConfigError('Authentication token is missing');
       }
@@ -116,9 +235,70 @@ export class HttpClient {
     return {};
   }
 
-  async request<T, U = unknown>(options: RequestOptions<U>): Promise<T> {
-    const { method, path, body, headers = {} } = options;
+  /**
+   * Determines if an error is retryable.
+   */
+  private isRetryableError(error: unknown): boolean {
+    // Retry on rate limit, service unavailable, network errors, and timeouts
+    if (
+      error instanceof BloqueRateLimitError ||
+      error instanceof BloqueNetworkError ||
+      error instanceof BloqueTimeoutError
+    ) {
+      return true;
+    }
 
+    // Retry on 503 Service Unavailable
+    if (error instanceof Error && 'status' in error && error.status === 503) {
+      return true;
+    }
+
+    return false;
+  }
+
+  /**
+   * Calculates the delay before the next retry attempt.
+   * Respects the Retry-After header if present, otherwise uses exponential backoff.
+   */
+  private calculateRetryDelay(
+    attempt: number,
+    retryAfterHeader?: string,
+  ): number {
+    const { initialDelay = 1000, maxDelay = 30000 } = this._config.retry ?? {};
+
+    // Respect Retry-After header if present
+    if (retryAfterHeader) {
+      const retryAfterSeconds = Number.parseInt(retryAfterHeader, 10);
+      if (!Number.isNaN(retryAfterSeconds)) {
+        return Math.min(retryAfterSeconds * 1000, maxDelay);
+      }
+
+      // Retry-After might be an HTTP date
+      const retryAfterDate = new Date(retryAfterHeader);
+      if (!Number.isNaN(retryAfterDate.getTime())) {
+        const delay = retryAfterDate.getTime() - Date.now();
+        return Math.min(Math.max(delay, 0), maxDelay);
+      }
+    }
+
+    // Exponential backoff: initialDelay * (2 ^ attempt)
+    const exponentialDelay = initialDelay * 2 ** attempt;
+
+    // Add jitter (±25%) to prevent thundering herd
+    const jitter = exponentialDelay * 0.25 * (Math.random() * 2 - 1);
+
+    return Math.min(exponentialDelay + jitter, maxDelay);
+  }
+
+  /**
+   * Sleeps for the specified duration in milliseconds.
+   */
+  private sleep(ms: number): Promise<void> {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+  }
+
+  async request<T, U = unknown>(options: RequestOptions<U>): Promise<T> {
+    const { method, path, body, headers = {}, timeout } = options;
     const url = `${this.baseUrl}${path}`;
 
     const requestHeaders: Record<string, string> = {
@@ -127,44 +307,171 @@ export class HttpClient {
       ...headers,
     };
 
-    try {
-      const response = await fetch(url, {
-        method,
-        headers: requestHeaders,
-        body: body ? JSON.stringify(body) : undefined,
-      });
+    // Determine the timeout to use (per-request timeout or default config timeout)
+    const effectiveTimeout =
+      timeout !== undefined ? timeout : (this._config.timeout ?? 30000);
 
-      const responseData = await response.json().catch(() => ({}));
+    const { enabled: retryEnabled = true, maxRetries = 3 } =
+      this._config.retry ?? {};
 
-      if (!response.ok) {
-        const errorData = responseData as { message?: string; code?: string };
-        throw new BloqueAPIError(
-          errorData.message ||
-            `HTTP ${response.status}: ${response.statusText}`,
-          response.status,
-          errorData.code,
-        );
+    let lastError: Error | undefined;
+    let attempt = 0;
+
+    // Retry loop
+    while (attempt <= (retryEnabled ? maxRetries : 0)) {
+      // Create AbortController for timeout handling
+      const controller = new AbortController();
+      let timeoutId: ReturnType<typeof setTimeout> | undefined;
+
+      // Set up timeout only if effectiveTimeout > 0
+      if (effectiveTimeout > 0) {
+        timeoutId = setTimeout(() => {
+          controller.abort();
+        }, effectiveTimeout);
       }
 
-      return responseData as T;
-    } catch (error) {
-      if (error instanceof BloqueAPIError) {
-        throw error;
-      }
+      try {
+        const response = await fetch(url, {
+          method,
+          headers: requestHeaders,
+          body: body ? JSON.stringify(body) : undefined,
+          signal: controller.signal,
+        });
 
-      if (error instanceof Error) {
-        throw new BloqueAPIError(
-          `Request failed: ${error.message}`,
-          undefined,
-          'NETWORK_ERROR',
-        );
-      }
+        // Clear timeout on successful response
+        if (timeoutId !== undefined) {
+          clearTimeout(timeoutId);
+        }
 
-      throw new BloqueAPIError(
-        'Unknown error occurred',
-        undefined,
-        'UNKNOWN_ERROR',
-      );
+        const responseData = await response.json().catch(() => ({}));
+
+        if (!response.ok) {
+          const errorData = responseData as {
+            message?: string;
+            code?: string;
+          };
+
+          // Extract metadata for error
+          const requestId =
+            response.headers.get('X-Request-ID') ??
+            response.headers.get('Request-ID') ??
+            undefined;
+
+          const retryAfterHeader = response.headers.get('Retry-After');
+
+          // Create appropriate error type
+          const apiError =
+            response.status === 429
+              ? new BloqueRateLimitError(
+                  errorData.message || 'Rate limit exceeded',
+                  {
+                    status: response.status,
+                    code: errorData.code,
+                    requestId,
+                    response: responseData,
+                    retryAfter: retryAfterHeader
+                      ? Number.parseInt(retryAfterHeader, 10)
+                      : undefined,
+                  },
+                )
+              : createBloqueError(
+                  errorData.message ||
+                    `HTTP ${response.status}: ${response.statusText}`,
+                  {
+                    status: response.status,
+                    code: errorData.code,
+                    requestId,
+                    response: responseData,
+                  },
+                );
+
+          // Check if this error is retryable
+          if (
+            retryEnabled &&
+            attempt < maxRetries &&
+            this.isRetryableError(apiError)
+          ) {
+            lastError = apiError;
+            const delay = this.calculateRetryDelay(
+              attempt,
+              retryAfterHeader ?? undefined,
+            );
+            await this.sleep(delay);
+            attempt++;
+            continue;
+          }
+
+          throw apiError;
+        }
+
+        // Success!
+        return responseData as T;
+      } catch (error) {
+        // Clear timeout on error
+        if (timeoutId !== undefined) {
+          clearTimeout(timeoutId);
+        }
+
+        // Re-throw if it's already a BloqueAPIError (from the !response.ok block above)
+        // and it's not retryable
+        if (
+          error &&
+          typeof error === 'object' &&
+          'name' in error &&
+          typeof error.name === 'string' &&
+          error.name.startsWith('Bloque') &&
+          !this.isRetryableError(error)
+        ) {
+          throw error;
+        }
+
+        let processedError: BloqueAPIError;
+
+        // Handle AbortError (timeout)
+        if (error instanceof Error && error.name === 'AbortError') {
+          processedError = new BloqueTimeoutError(
+            `Request timeout after ${effectiveTimeout}ms`,
+            {
+              timeoutMs: effectiveTimeout,
+              cause: error,
+            },
+          );
+        } else if (error instanceof Error) {
+          processedError = new BloqueNetworkError(
+            `Request failed: ${error.message}`,
+            {
+              cause: error,
+            },
+          );
+        } else {
+          processedError = createBloqueError('Unknown error occurred', {
+            code: 'UNKNOWN_ERROR',
+          });
+        }
+
+        // Check if we should retry
+        if (
+          retryEnabled &&
+          attempt < maxRetries &&
+          this.isRetryableError(processedError)
+        ) {
+          lastError = processedError;
+          const delay = this.calculateRetryDelay(attempt);
+          await this.sleep(delay);
+          attempt++;
+          continue;
+        }
+
+        throw processedError;
+      }
     }
+
+    // If we've exhausted all retries, throw the last error
+    throw (
+      lastError ||
+      createBloqueError('Request failed after retries', {
+        code: 'MAX_RETRIES_EXCEEDED',
+      })
+    );
   }
 }

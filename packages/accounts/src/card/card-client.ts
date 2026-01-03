@@ -11,7 +11,7 @@ import type {
   TokenBalance,
   UpdateAccountRequest,
   UpdateAccountResponse,
-} from '../api-types';
+} from '../internal/wire-types';
 import type {
   CardAccount,
   CardMovement,
@@ -32,14 +32,13 @@ export class CardClient extends BaseClient {
    * @example
    * ```typescript
    * const card = await bloque.accounts.card.create({
-   *   urn: 'did:bloque:user:123',
    *   name: 'My Card',
    * });
    * ```
    */
-  async create(params: CreateCardParams): Promise<CardAccount> {
+  async create(params: CreateCardParams = {}): Promise<CardAccount> {
     const request: CreateAccountRequest<CreateCardAccountInput> = {
-      holder_urn: params.urn,
+      holder_urn: params?.holderUrn || this.httpClient.urn || '',
       webhook_url: params.webhookUrl,
       ledger_account_id: params.ledgerId,
       input: {
@@ -74,14 +73,12 @@ export class CardClient extends BaseClient {
    *
    * @example
    * ```typescript
-   * const cards = await bloque.accounts.card.list({
-   *   holderUrn: 'did:bloque:bloque-whatsapp:573023348486',
-   * });
+   * const cards = await bloque.accounts.card.list();
    * ```
    */
   async list(params?: ListCardParams): Promise<CardAccount[]> {
     const queryParams = new URLSearchParams({
-      holder_urn: params?.holderUrn || this.httpClient.config.urn || '',
+      holder_urn: params?.holderUrn || this.httpClient.urn || '',
       medium: 'card',
     });
 

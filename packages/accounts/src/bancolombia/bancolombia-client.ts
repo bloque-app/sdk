@@ -6,7 +6,7 @@ import type {
   CreateAccountResponse,
   UpdateAccountRequest,
   UpdateAccountResponse,
-} from '../api-types';
+} from '../internal/wire-types';
 import type {
   BancolombiaAccount,
   CreateBancolombiaAccountParams,
@@ -23,16 +23,15 @@ export class BancolombiaClient extends BaseClient {
    * @example
    * ```typescript
    * const account = await bloque.accounts.bancolombia.create({
-   *   urn: 'did:bloque:user:123',
    *   name: 'Main Account'
    * });
    * ```
    */
   async create(
-    params: CreateBancolombiaAccountParams,
+    params: CreateBancolombiaAccountParams = {},
   ): Promise<BancolombiaAccount> {
     const request: CreateAccountRequest = {
-      holder_urn: params.urn,
+      holder_urn: params?.holderUrn || this.httpClient.urn || '',
       webhook_url: params.webhookUrl,
       ledger_account_id: params.ledgerId,
       input: {},

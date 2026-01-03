@@ -4,7 +4,7 @@ export interface CreateBancolombiaAccountParams {
    *
    * @example "did:bloque:user:123e4567"
    */
-  urn: string;
+  holderUrn?: string;
   /**
    * Display name for the card
    */

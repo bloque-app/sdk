@@ -1,3 +1,3 @@
-import type { AliasResponse } from '../api-types';
+import type { AliasResponse } from '../internal/wire-types';
 
 export type Alias = AliasResponse;

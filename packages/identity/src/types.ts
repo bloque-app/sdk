@@ -3,9 +3,6 @@ import type {
   IndividualRegisterParams,
 } from './origins/types';
 
-export type CreateIdentityParams = (
+export type CreateIdentityParams =
   | Pick<IndividualRegisterParams, 'extraContext' | 'type' | 'profile'>
-  | Pick<BusinessRegisterParams, 'extraContext' | 'type' | 'profile'>
-) & {
-  alias: string;
-};
+  | Pick<BusinessRegisterParams, 'extraContext' | 'type' | 'profile'>;

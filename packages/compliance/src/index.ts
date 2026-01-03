@@ -1,3 +1,3 @@
-export * from './client';
-export * from './kyc/client';
+export * from './compliance-client';
+export * from './kyc/kyc-client';
 export * from './kyc/types';

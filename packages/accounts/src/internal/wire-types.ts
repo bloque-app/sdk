@@ -1,3 +1,14 @@
+/**
+ * @internal
+ * Wire types for API communication (snake_case format)
+ * These types represent the raw API request/response format
+ * and should not be used directly by SDK consumers.
+ */
+
+/**
+ * @internal
+ * Account status from API
+ */
 export type AccountStatus =
   | 'active'
   | 'disabled'
@@ -6,7 +17,11 @@ export type AccountStatus =
   | 'creation_in_progress'
   | 'creation_failed';
 
-interface Account<TDetails = unknown> {
+/**
+ * @internal
+ * Raw account from API
+ */
+export interface Account<TDetails = unknown> {
   id: string;
   urn: string;
   medium: 'bancolombia' | 'card';
@@ -20,8 +35,16 @@ interface Account<TDetails = unknown> {
   metadata?: Record<string, unknown>;
 }
 
+/**
+ * @internal
+ * Card type enum
+ */
 export type CardType = 'VIRTUAL' | 'PHYSICAL';
 
+/**
+ * @internal
+ * Create account request body
+ */
 export interface CreateAccountRequest<TInput = unknown> {
   holder_urn: string;
   ledger_account_id?: string;
@@ -30,12 +53,20 @@ export interface CreateAccountRequest<TInput = unknown> {
   webhook_url?: string;
 }
 
+/**
+ * @internal
+ * Card account input for creation
+ */
 export type CreateCardAccountInput = {
   create: {
     card_type: CardType;
   };
 };
 
+/**
+ * @internal
+ * Create account response
+ */
 export interface CreateAccountResponse<TDetails = unknown> {
   result: {
     account: Account<TDetails>;
@@ -43,6 +74,10 @@ export interface CreateAccountResponse<TDetails = unknown> {
   req_id: string;
 }
 
+/**
+ * @internal
+ * Card details from API
+ */
 export type CardDetails = {
   id: string;
   email: string;
@@ -58,6 +93,10 @@ export type CardDetails = {
   user_id: string;
 };
 
+/**
+ * @internal
+ * Bancolombia details from API
+ */
 export type BancolombiaDetails = {
   id: string;
   reference_code: string;
@@ -65,12 +104,20 @@ export type BancolombiaDetails = {
   network: string[];
 };
 
+/**
+ * @internal
+ * Update account request body
+ */
 export interface UpdateAccountRequest<TInput = unknown> {
   input?: TInput;
   metadata?: Record<string, unknown>;
   status?: AccountStatus;
 }
 
+/**
+ * @internal
+ * Update account response
+ */
 export interface UpdateAccountResponse<TDetails = unknown> {
   result: {
     account: Account<TDetails>;
@@ -78,6 +125,10 @@ export interface UpdateAccountResponse<TDetails = unknown> {
   req_id: string;
 }
 
+/**
+ * @internal
+ * Token balance from API
+ */
 export interface TokenBalance {
   current: string;
   pending: string;
@@ -85,15 +136,27 @@ export interface TokenBalance {
   out: string;
 }
 
+/**
+ * @internal
+ * Account with balance from API
+ */
 export interface AccountWithBalance<TDetails = unknown>
   extends Account<TDetails> {
   balance: Record<string, TokenBalance>;
 }
 
+/**
+ * @internal
+ * List accounts response
+ */
 export interface ListAccountsResponse<TDetails = unknown> {
   accounts: AccountWithBalance<TDetails>[];
 }
 
+/**
+ * @internal
+ * Transaction metadata from API
+ */
 export interface TransactionMetadata {
   amount?: string;
   asset_type?: string;
@@ -124,11 +187,19 @@ export interface TransactionMetadata {
   [key: string]: unknown;
 }
 
+/**
+ * @internal
+ * Transaction details from API
+ */
 export interface TransactionDetails {
   metadata: TransactionMetadata;
   type: string;
 }
 
+/**
+ * @internal
+ * Transaction from API
+ */
 export interface Transaction {
   amount: string;
   asset: string;
@@ -141,44 +212,26 @@ export interface Transaction {
   created_at: string;
 }
 
+/**
+ * @internal
+ * List movements response
+ */
 export interface ListMovementsResponse {
   transactions: Transaction[];
 }
 
+/**
+ * @internal
+ * Get balance response
+ */
 export interface GetBalanceResponse {
   balance: Record<string, TokenBalance>;
 }
 
-export type SupportedAsset = 'DUSD/6' | 'KSM/12';
-
-export interface TransferParams {
-  /**
-   * URN of the source account
-   * @example "did:bloque:account:card:usr-123:crd-456"
-   */
-  sourceUrn: string;
-  /**
-   * URN of the destination account
-   * @example "did:bloque:account:virtual:acc-67890"
-   */
-  destinationUrn: string;
-  /**
-   * Amount to transfer
-   * @example "1000000000000"
-   */
-  amount: string;
-  /**
-   * Asset to transfer
-   * @example "USD"
-   */
-  asset: SupportedAsset;
-  /**
-   * Optional metadata for the transfer
-   * @example { reference: "payment-123", note: "Monthly subscription" }
-   */
-  metadata?: Record<string, unknown>;
-}
-
+/**
+ * @internal
+ * Transfer request body
+ */
 export interface TransferRequest {
   destination_account_urn: string;
   amount: string;
@@ -186,12 +239,10 @@ export interface TransferRequest {
   metadata?: Record<string, unknown>;
 }
 
-export interface TransferResult {
-  queueId: string;
-  status: 'queued' | 'processing' | 'completed' | 'failed';
-  message: string;
-}
-
+/**
+ * @internal
+ * Transfer response from API
+ */
 export interface TransferResponse {
   result: {
     queue_id: string;

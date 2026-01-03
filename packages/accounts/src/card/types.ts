@@ -1,17 +1,17 @@
 import type {
   CardType,
-  SupportedAsset,
   TokenBalance,
   Transaction,
-} from '../api-types';
+} from '../internal/wire-types';
+import type { SupportedAsset } from '../types';
 
 export interface ListCardParams {
   /**
-   * URN of the account holder to filter by
+   * URN of the account holder (user or organization)
    *
-   * @example "did:bloque:bloque-whatsapp:573023348486"
+   * @example "did:bloque:user:123e4567"
    */
-  holderUrn: string;
+  holderUrn?: string;
 }
 
 export interface ListMovementsParams {
@@ -78,7 +78,7 @@ export interface CreateCardParams {
    *
    * @example "did:bloque:user:123e4567"
    */
-  urn: string;
+  holderUrn?: string;
   /**
    * Display name for the card
    */

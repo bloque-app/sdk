@@ -9,8 +9,8 @@ import type {
   RegisterRequest,
   RegisterResponse,
   UserProfile,
-} from '../api-types';
-import { OriginClient } from './origin';
+} from '../internal/wire-types';
+import { OriginClient } from './origin-client';
 import type {
   BusinessRegisterParams,
   IndividualRegisterParams,
@@ -148,6 +148,7 @@ export class OriginsClient extends BaseClient {
    * ```
    */
   async register(
+    alias: string,
     origin: string,
     params: RegisterParams,
   ): Promise<RegisterResult> {
@@ -160,12 +161,12 @@ export class OriginsClient extends BaseClient {
             challengeType: 'API_KEY' as const,
             value: {
               api_key: assertionResult.value.apiKey,
-              alias: assertionResult.value.alias,
+              alias: alias,
             },
             originalChallengeParams: assertionResult.originalChallengeParams,
           }
         : {
-            alias: assertionResult.alias,
+            alias: alias,
             challengeType: assertionResult.challengeType,
             value: assertionResult.value,
             originalChallengeParams: assertionResult.originalChallengeParams,

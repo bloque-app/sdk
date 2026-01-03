@@ -3,7 +3,7 @@ import type {
   GetKycVerificationResponse,
   StartKycVerificationRequest,
   StartKycVerificationResponse,
-} from '../api-types';
+} from '../internal/wire-types';
 import type {
   GetKycVerificationParams,
   KycVerificationParams,
