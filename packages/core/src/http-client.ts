@@ -1,5 +1,12 @@
 import { API_BASE_URLS, DEFAULT_HEADERS } from './constants';
-import { BloqueAPIError, BloqueConfigError } from './errors';
+import {
+  type BloqueAPIError,
+  BloqueConfigError,
+  BloqueNetworkError,
+  BloqueRateLimitError,
+  BloqueTimeoutError,
+  createBloqueError,
+} from './errors';
 import type {
   BloqueInternalConfig,
   BloqueSDKConfig,
@@ -232,18 +239,18 @@ export class HttpClient {
    * Determines if an error is retryable.
    */
   private isRetryableError(error: unknown): boolean {
-    if (error instanceof BloqueAPIError) {
-      // Retry on 429 (Too Many Requests) and 503 (Service Unavailable)
-      return error.status === 429 || error.status === 503;
+    // Retry on rate limit, service unavailable, network errors, and timeouts
+    if (
+      error instanceof BloqueRateLimitError ||
+      error instanceof BloqueNetworkError ||
+      error instanceof BloqueTimeoutError
+    ) {
+      return true;
     }
 
-    // Retry on network errors and timeouts
-    if (error instanceof Error) {
-      return (
-        error.name === 'AbortError' ||
-        error.message.includes('NETWORK_ERROR') ||
-        error.message.includes('TIMEOUT_ERROR')
-      );
+    // Retry on 503 Service Unavailable
+    if (error instanceof Error && 'status' in error && error.status === 503) {
+      return true;
     }
 
     return false;
@@ -343,12 +350,40 @@ export class HttpClient {
             message?: string;
             code?: string;
           };
-          const apiError = new BloqueAPIError(
-            errorData.message ||
-              `HTTP ${response.status}: ${response.statusText}`,
-            response.status,
-            errorData.code,
-          );
+
+          // Extract metadata for error
+          const requestId =
+            response.headers.get('X-Request-ID') ??
+            response.headers.get('Request-ID') ??
+            undefined;
+
+          const retryAfterHeader = response.headers.get('Retry-After');
+
+          // Create appropriate error type
+          const apiError =
+            response.status === 429
+              ? new BloqueRateLimitError(
+                  errorData.message || 'Rate limit exceeded',
+                  {
+                    status: response.status,
+                    code: errorData.code,
+                    requestId,
+                    response: responseData,
+                    retryAfter: retryAfterHeader
+                      ? Number.parseInt(retryAfterHeader, 10)
+                      : undefined,
+                  },
+                )
+              : createBloqueError(
+                  errorData.message ||
+                    `HTTP ${response.status}: ${response.statusText}`,
+                  {
+                    status: response.status,
+                    code: errorData.code,
+                    requestId,
+                    response: responseData,
+                  },
+                );
 
           // Check if this error is retryable
           if (
@@ -357,8 +392,10 @@ export class HttpClient {
             this.isRetryableError(apiError)
           ) {
             lastError = apiError;
-            const retryAfter = response.headers.get('Retry-After') ?? undefined;
-            const delay = this.calculateRetryDelay(attempt, retryAfter);
+            const delay = this.calculateRetryDelay(
+              attempt,
+              retryAfterHeader ?? undefined,
+            );
             await this.sleep(delay);
             attempt++;
             continue;
@@ -376,31 +413,40 @@ export class HttpClient {
         }
 
         // Re-throw if it's already a BloqueAPIError (from the !response.ok block above)
-        if (error instanceof BloqueAPIError && !this.isRetryableError(error)) {
+        // and it's not retryable
+        if (
+          error &&
+          typeof error === 'object' &&
+          'name' in error &&
+          typeof error.name === 'string' &&
+          error.name.startsWith('Bloque') &&
+          !this.isRetryableError(error)
+        ) {
           throw error;
         }
 
-        let processedError: Error;
+        let processedError: BloqueAPIError;
 
         // Handle AbortError (timeout)
         if (error instanceof Error && error.name === 'AbortError') {
-          processedError = new BloqueAPIError(
+          processedError = new BloqueTimeoutError(
             `Request timeout after ${effectiveTimeout}ms`,
-            undefined,
-            'TIMEOUT_ERROR',
+            {
+              timeoutMs: effectiveTimeout,
+              cause: error,
+            },
           );
         } else if (error instanceof Error) {
-          processedError = new BloqueAPIError(
+          processedError = new BloqueNetworkError(
             `Request failed: ${error.message}`,
-            undefined,
-            'NETWORK_ERROR',
+            {
+              cause: error,
+            },
           );
         } else {
-          processedError = new BloqueAPIError(
-            'Unknown error occurred',
-            undefined,
-            'UNKNOWN_ERROR',
-          );
+          processedError = createBloqueError('Unknown error occurred', {
+            code: 'UNKNOWN_ERROR',
+          });
         }
 
         // Check if we should retry
@@ -423,11 +469,9 @@ export class HttpClient {
     // If we've exhausted all retries, throw the last error
     throw (
       lastError ||
-      new BloqueAPIError(
-        'Request failed after retries',
-        undefined,
-        'MAX_RETRIES_EXCEEDED',
-      )
+      createBloqueError('Request failed after retries', {
+        code: 'MAX_RETRIES_EXCEEDED',
+      })
     );
   }
 }
