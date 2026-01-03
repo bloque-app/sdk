@@ -4,3 +4,5 @@ export * from './bancolombia/types';
 export * from './card/card-client';
 export * from './card/types';
 export * from './types';
+export * from './virtual/types';
+export * from './virtual/virtual-client';

@@ -24,7 +24,7 @@ export type AccountStatus =
 export interface Account<TDetails = unknown> {
   id: string;
   urn: string;
-  medium: 'bancolombia' | 'card';
+  medium: 'bancolombia' | 'card' | 'virtual';
   details: TDetails;
   ledger_account_id: string;
   status: AccountStatus;
@@ -102,6 +102,25 @@ export type BancolombiaDetails = {
   reference_code: string;
   payment_agreement_code: string;
   network: string[];
+};
+
+/**
+ * @internal
+ * Virtual account input for creation
+ */
+export type CreateVirtualAccountInput = {
+  first_name: string;
+  last_name: string;
+};
+
+/**
+ * @internal
+ * Virtual account details from API
+ */
+export type VirtualDetails = {
+  id: string;
+  first_name: string;
+  last_name: string;
 };
 
 /**
