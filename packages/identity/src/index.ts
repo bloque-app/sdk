@@ -1,6 +1,5 @@
 export * from './aliases/aliases-client';
 export * from './aliases/types';
-export * from './api-types';
 export * from './identity-client';
 export * from './origins/origin-client';
 export * from './origins/origins-client';

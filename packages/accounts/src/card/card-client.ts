@@ -11,7 +11,7 @@ import type {
   TokenBalance,
   UpdateAccountRequest,
   UpdateAccountResponse,
-} from '../api-types';
+} from '../internal/wire-types';
 import type {
   CardAccount,
   CardMovement,

@@ -9,7 +9,7 @@ import type {
   RegisterRequest,
   RegisterResponse,
   UserProfile,
-} from '../api-types';
+} from '../internal/wire-types';
 import { OriginClient } from './origin-client';
 import type {
   BusinessRegisterParams,

@@ -6,7 +6,7 @@ import type {
   CreateAccountResponse,
   UpdateAccountRequest,
   UpdateAccountResponse,
-} from '../api-types';
+} from '../internal/wire-types';
 import type {
   BancolombiaAccount,
   CreateBancolombiaAccountParams,

@@ -1,9 +1,9 @@
 import type {
   CardType,
-  SupportedAsset,
   TokenBalance,
   Transaction,
-} from '../api-types';
+} from '../internal/wire-types';
+import type { SupportedAsset } from '../types';
 
 export interface ListCardParams {
   /**
