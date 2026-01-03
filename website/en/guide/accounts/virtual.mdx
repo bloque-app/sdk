@@ -1,0 +1,344 @@
+# Virtual Accounts
+
+Create and manage virtual testing accounts using the Bloque SDK.
+
+## Overview
+
+Virtual accounts are simple testing accounts requiring only basic personal information. They're perfect for:
+
+- **Development & Testing**: Quick account creation for integration tests
+- **Sandbox Environment**: Safe testing without real financial data
+- **Simple KYC**: Minimal information required (first name, last name)
+- **Fast Setup**: Instant account creation
+
+## Creating a Virtual Account
+
+### Basic Creation
+
+Create a virtual account with minimal information:
+
+```typescript title="create-virtual-account.ts"
+import { SDK } from '@bloque/sdk';
+
+const bloque = new SDK({
+  origin: 'your-origin',
+  auth: {
+    type: 'apiKey',
+    apiKey: process.env.BLOQUE_API_KEY!,
+  },
+  mode: 'sandbox', // Use sandbox for testing
+});
+
+// Connect to user session
+const session = await bloque.connect('did:bloque:your-origin:user-alias');
+
+// Create a virtual account
+const account = await session.accounts.virtual.create({
+  firstName: 'John',
+  lastName: 'Doe',
+  metadata: {
+    environment: 'testing',
+    purpose: 'integration-test',
+  },
+});
+
+console.log('Account created:', account.urn);
+console.log('Status:', account.status);
+console.log('Ledger ID:', account.ledgerId);
+```
+
+### Parameters
+
+```typescript title="types.ts"
+interface CreateVirtualAccountParams {
+  firstName: string;       // Required: Account holder's first name
+  lastName: string;        // Required: Account holder's last name
+  holderUrn?: string;      // Optional: URN of the account holder
+  ledgerId?: string;       // Optional: Ledger account ID (auto-created if not provided)
+  webhookUrl?: string;     // Optional: Webhook for account events
+  metadata?: Record<string, string>; // Optional: Custom metadata (must be strings)
+}
+```
+
+### Response
+
+```typescript title="types.ts"
+interface VirtualAccount {
+  urn: string;              // Unique resource name
+  id: string;               // Account ID
+  firstName: string;        // Account holder's first name
+  lastName: string;         // Account holder's last name
+  status: AccountStatus;    // Account status
+  ownerUrn: string;         // Owner URN
+  ledgerId: string;         // Ledger account ID
+  webhookUrl: string | null;
+  metadata?: Record<string, string>;
+  createdAt: string;        // ISO 8601 timestamp
+  updatedAt: string;        // ISO 8601 timestamp
+}
+
+type AccountStatus =
+  | 'creation_in_progress'
+  | 'active'
+  | 'disabled'
+  | 'frozen'
+  | 'deleted'
+  | 'creation_failed';
+```
+
+## Managing Virtual Accounts
+
+### Update Metadata
+
+Update custom metadata on a virtual account:
+
+```typescript title="update-metadata.ts"
+const updated = await session.accounts.virtual.updateMetadata({
+  urn: 'did:bloque:mediums:virtual:account:123e4567',
+  metadata: {
+    updated_by: 'admin',
+    update_reason: 'testing_update',
+    environment: 'staging',
+  },
+});
+
+console.log('Metadata updated:', updated.metadata);
+```
+
+:::warning Metadata Restrictions
+The `source` field is reserved and cannot be modified through metadata updates.
+All metadata values must be strings.
+:::
+
+### Account States
+
+Manage the state of virtual accounts:
+
+```typescript title="manage-state.ts"
+const accountUrn = 'did:bloque:mediums:virtual:account:123e4567';
+
+// Activate account
+const activated = await session.accounts.virtual.activate(accountUrn);
+console.log('Status:', activated.status); // 'active'
+
+// Freeze account (temporarily suspend)
+const frozen = await session.accounts.virtual.freeze(accountUrn);
+console.log('Status:', frozen.status); // 'frozen'
+
+// Disable account (permanently)
+const disabled = await session.accounts.virtual.disable(accountUrn);
+console.log('Status:', disabled.status); // 'disabled'
+```
+
+#### Available States
+
+| Status | Description | Can Transition To |
+|--------|-------------|-------------------|
+| `creation_in_progress` | Account is being created | `active`, `creation_failed` |
+| `active` | Account is active and usable | `frozen`, `disabled`, `deleted` |
+| `frozen` | Account is temporarily suspended | `active`, `disabled` |
+| `disabled` | Account is permanently disabled | - |
+| `deleted` | Account has been deleted | - |
+| `creation_failed` | Account creation failed | - |
+
+## Use Cases
+
+### Integration Testing
+
+```typescript title="integration-test.ts"
+import { SDK } from '@bloque/sdk';
+import { describe, test, expect } from 'bun:test';
+
+describe('Virtual Account Integration', () => {
+  const bloque = new SDK({
+    origin: 'your-origin',
+    auth: { type: 'apiKey', apiKey: process.env.BLOQUE_API_KEY! },
+    mode: 'sandbox',
+  });
+
+  test('should create and manage virtual account', async () => {
+    const session = await bloque.connect('did:bloque:your-origin:test-user');
+
+    // Create account
+    const account = await session.accounts.virtual.create({
+      firstName: 'Test',
+      lastName: 'User',
+      metadata: {
+        test_id: 'integration-001',
+      },
+    });
+
+    expect(account.status).toBe('active');
+    expect(account.firstName).toBe('Test');
+
+    // Update metadata
+    const updated = await session.accounts.virtual.updateMetadata({
+      urn: account.urn,
+      metadata: {
+        test_id: 'integration-001',
+        updated: 'true',
+      },
+    });
+
+    expect(updated.metadata?.updated).toBe('true');
+
+    // Freeze account
+    const frozen = await session.accounts.virtual.freeze(account.urn);
+    expect(frozen.status).toBe('frozen');
+  });
+});
+```
+
+### Automated Testing
+
+```typescript title="test-factory.ts"
+class VirtualAccountFactory {
+  constructor(private sdk: SDK) {}
+
+  async createTestAccount(testId: string) {
+    const session = await this.sdk.connect('did:bloque:your-origin:test-user');
+
+    return await session.accounts.virtual.create({
+      firstName: 'Test',
+      lastName: `User-${testId}`,
+      metadata: {
+        test_id: testId,
+        created_at: new Date().toISOString(),
+        environment: 'test',
+      },
+    });
+  }
+
+  async cleanupTestAccount(urn: string) {
+    const session = await this.sdk.connect('did:bloque:your-origin:test-user');
+    await session.accounts.virtual.disable(urn);
+  }
+}
+
+// Usage
+const factory = new VirtualAccountFactory(bloque);
+const account = await factory.createTestAccount('test-001');
+// ... run tests ...
+await factory.cleanupTestAccount(account.urn);
+```
+
+## Error Handling
+
+Handle errors appropriately when working with virtual accounts:
+
+```typescript title="error-handling.ts"
+import {
+  BloqueValidationError,
+  BloqueNotFoundError,
+  BloqueAuthenticationError,
+} from '@bloque/sdk';
+
+try {
+  const account = await session.accounts.virtual.create({
+    firstName: 'John',
+    lastName: 'Doe',
+  });
+
+  console.log('Account created:', account.urn);
+} catch (error) {
+  if (error instanceof BloqueValidationError) {
+    console.error('Validation failed:', error.validationErrors);
+    // Handle invalid input (missing required fields, etc.)
+  } else if (error instanceof BloqueNotFoundError) {
+    console.error('Resource not found:', error.resourceId);
+    // Handle missing user/session
+  } else if (error instanceof BloqueAuthenticationError) {
+    console.error('Authentication failed');
+    // Handle auth issues
+  } else {
+    console.error('Unexpected error:', error);
+  }
+}
+```
+
+## Complete Example
+
+```typescript title="complete-example.ts"
+import { SDK } from '@bloque/sdk';
+
+const bloque = new SDK({
+  origin: 'your-origin',
+  auth: {
+    type: 'apiKey',
+    apiKey: process.env.BLOQUE_API_KEY!,
+  },
+  mode: 'sandbox',
+  timeout: 30000,
+  retry: {
+    enabled: true,
+    maxRetries: 3,
+  },
+});
+
+async function setupVirtualAccount(userId: string) {
+  try {
+    // Connect to user session
+    const session = await bloque.connect(`did:bloque:your-origin:${userId}`);
+
+    // Create virtual account
+    const account = await session.accounts.virtual.create({
+      firstName: 'John',
+      lastName: 'Doe',
+      webhookUrl: 'https://your-app.com/webhooks/virtual-account',
+      metadata: {
+        user_id: userId,
+        account_type: 'testing',
+        created_via: 'sdk',
+      },
+    });
+
+    console.log('✓ Account created:', account.urn);
+    console.log('✓ Account holder:', `${account.firstName} ${account.lastName}`);
+    console.log('✓ Ledger ID:', account.ledgerId);
+    console.log('✓ Status:', account.status);
+
+    // Verify account is active
+    if (account.status !== 'active') {
+      await session.accounts.virtual.activate(account.urn);
+      console.log('✓ Account activated');
+    }
+
+    return { success: true, account };
+  } catch (error) {
+    console.error('✗ Setup failed:', error);
+    throw error;
+  }
+}
+
+// Run
+setupVirtualAccount('test-user-123')
+  .then((result) => console.log('Setup complete:', result))
+  .catch((error) => console.error('Setup failed:', error));
+```
+
+## Best Practices
+
+1. **Use Sandbox Mode**: Always use `sandbox` mode for virtual accounts
+2. **Meaningful Metadata**: Add metadata to track test scenarios and purposes
+3. **Cleanup**: Disable or delete test accounts after use
+4. **Error Handling**: Always wrap operations in try-catch blocks
+5. **Test Isolation**: Use unique identifiers to isolate test accounts
+6. **Webhooks**: Configure webhooks for event notifications during testing
+7. **Status Checks**: Verify account status before performing operations
+
+## Differences from Other Account Types
+
+| Feature | Virtual Accounts | Virtual Cards | Bancolombia |
+|---------|-----------------|---------------|-------------|
+| **KYC Required** | No | Yes | Yes |
+| **Creation Time** | Instant | Instant | Instant |
+| **Use Case** | Testing/Development | Payments | Colombian banking |
+| **Required Info** | First name, Last name | User URN | Name (optional) |
+| **Reference Code** | No | No | Yes |
+| **Card Number** | No | Yes | No |
+
+## Next Steps
+
+- [Virtual Cards](/sdk/guide/accounts/cards) - Create payment cards
+- [Transfers](/sdk/guide/accounts/transfers) - Transfer funds between accounts
+- [Bancolombia](/sdk/guide/accounts/bancolombia) - Bancolombia integration

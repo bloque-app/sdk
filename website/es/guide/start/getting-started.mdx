@@ -1,8 +1,8 @@
-# Primeros Pasos
+# Comenzando
 
 import { PackageManagerTabs } from '@theme';
 
-Comienza a trabajar con Bloque SDK en minutos.
+Comienza a usar Bloque SDK en minutos.
 
 ## Instalación
 
@@ -12,42 +12,104 @@ Instala el SDK usando tu gestor de paquetes preferido:
 
 ## Clave API
 
-Para usar Bloque SDK, necesitarás una clave API. Puedes obtener una desde el [Panel de Control de Bloque](https://app.bloque.app/settings/api).
+Para usar el SDK de Bloque, necesitarás una clave API. Puedes obtener una desde el [Panel de Bloque](https://app.bloque.app/settings/api).
 
 :::warning Seguridad
-Nunca expongas tu clave API en código del lado del cliente. Siempre utiliza variables de entorno y mantén tus claves seguras.
+Nunca expongas tu clave API en código del lado del cliente. Siempre usa variables de entorno y mantén tus claves seguras.
 :::
 
 ## Inicializar el SDK
 
-Crea una instancia del SDK con tu clave API y modo:
+Crea una instancia del SDK con tu configuración:
+
+### Backend (Node.js, Bun, Deno)
 
 ```typescript
 import { SDK } from '@bloque/sdk';
 
 const bloque = new SDK({
-  origin: 'your-origin',
+  origin: 'tu-origen',
   auth: {
     type: 'apiKey',
     apiKey: process.env.BLOQUE_API_KEY!,
   },
-  mode: 'production', // or 'sandbox' for testing
+  mode: 'production', // o 'sandbox' para pruebas
+  platform: 'node', // opcional: 'node' | 'bun' | 'deno'
+  timeout: 30000, // opcional: 30 segundos (por defecto)
+  retry: { // opcional: configuración de reintentos automáticos
+    enabled: true, // por defecto: true
+    maxRetries: 3, // por defecto: 3
+    initialDelay: 1000, // por defecto: 1000ms
+    maxDelay: 30000, // por defecto: 30000ms
+  },
+});
+```
+
+### Frontend (Browser, React Native)
+
+```typescript
+import { SDK } from '@bloque/sdk';
+
+const bloque = new SDK({
+  origin: 'tu-origen',
+  auth: { type: 'jwt' },
+  mode: 'production',
+  platform: 'browser', // o 'react-native'
+  // Para browser: usa localStorage por defecto (con advertencia de seguridad)
+  // Para react-native: proporciona tokenStorage personalizado
+  tokenStorage: {
+    get: () => AsyncStorage.getItem('bloque_token'),
+    set: (token) => AsyncStorage.setItem('bloque_token', token),
+    clear: () => AsyncStorage.removeItem('bloque_token'),
+  },
 });
 ```
 
 ### Opciones de Configuración
 
-| Opción | Tipo | Requerido | Descripción |
-|--------|------|----------|-------------|
-| `apiKey` | `string` | Sí | Tu clave API de Bloque |
-| `mode` | `'production' \| 'sandbox'` | Sí | Modo de entorno |
+| Opción | Tipo | Requerido | Por Defecto | Descripción |
+|--------|------|-----------|-------------|-------------|
+| `origin` | `string` | Sí | - | Tu identificador de origen |
+| `auth` | `AuthStrategy` | Sí | - | Estrategia de autenticación |
+| `mode` | `'production' \| 'sandbox'` | No | `'production'` | Modo de entorno |
+| `platform` | `Platform` | No | `'node'` | Plataforma de ejecución |
+| `timeout` | `number` | No | `30000` | Timeout de request en milisegundos |
+| `retry` | `RetryConfig` | No | Ver abajo | Configuración de reintentos |
+| `tokenStorage` | `TokenStorage` | No* | `localStorage` | Almacenamiento JWT (*requerido para react-native) |
+
+#### Configuración de Reintentos
+
+El SDK reintenta automáticamente requests fallidos con exponential backoff:
+
+```typescript
+interface RetryConfig {
+  enabled?: boolean; // Habilitar/deshabilitar reintentos (por defecto: true)
+  maxRetries?: number; // Número máximo de reintentos (por defecto: 3)
+  initialDelay?: number; // Delay inicial en ms (por defecto: 1000)
+  maxDelay?: number; // Delay máximo en ms (por defecto: 30000)
+}
+```
+
+**Escenarios que se reintentan:**
+- 429 (Rate Limit) - Respeta el header `Retry-After`
+- 503 (Service Unavailable)
+- Errores de red
+- Errores de timeout
 
 #### Modos
 
 - **`sandbox`**: Para pruebas y desarrollo. Sin transacciones reales.
 - **`production`**: Para operaciones en vivo con datos reales.
 
-## Tu Primera Solicitud
+#### Plataformas
+
+- **`node`**: Backend Node.js
+- **`bun`**: Runtime Bun
+- **`deno`**: Runtime Deno
+- **`browser`**: Navegadores web
+- **`react-native`**: Apps React Native
+
+## Tu Primer Request
 
 Vamos a crear una tarjeta virtual:
 
@@ -55,94 +117,236 @@ Vamos a crear una tarjeta virtual:
 import { SDK } from '@bloque/sdk';
 
 const bloque = new SDK({
-  apiKey: process.env.BLOQUE_API_KEY!,
+  origin: 'tu-origen',
+  auth: {
+    type: 'apiKey',
+    apiKey: process.env.BLOQUE_API_KEY!,
+  },
   mode: 'production',
 });
 
-async function createCard() {
+async function crearTarjeta() {
   try {
-    const card = await bloque.accounts.card.create({
-      urn: 'did:bloque:user:123e4567',
-      name: 'My First Card',
+    // Conectar a sesión de usuario
+    const session = await bloque.connect('did:bloque:tu-origen:alias-usuario');
+
+    // Crear una tarjeta virtual
+    const card = await session.accounts.card.create({
+      name: 'Mi Primera Tarjeta',
     });
 
-    console.log('Card created successfully!');
+    console.log('¡Tarjeta creada exitosamente!');
     console.log('URN:', card.urn);
-    console.log('Last four:', card.lastFour);
-    console.log('Status:', card.status);
-    console.log('Details URL:', card.detailsUrl);
+    console.log('Últimos cuatro:', card.lastFour);
+    console.log('Estado:', card.status);
+    console.log('URL de detalles:', card.detailsUrl);
   } catch (error) {
-    console.error('Error creating card:', error);
+    console.error('Error al crear tarjeta:', error);
   }
 }
 
-createCard();
+crearTarjeta();
 ```
 
 ## Manejo de Errores
 
-Siempre envuelve las llamadas del SDK en bloques try-catch para manejar errores adecuadamente:
+El SDK proporciona tipos de error específicos para mejor manejo de errores:
 
 ```typescript
+import {
+  BloqueRateLimitError,
+  BloqueValidationError,
+  BloqueAuthenticationError,
+  BloqueTimeoutError,
+  BloqueNetworkError,
+} from '@bloque/sdk';
+
 try {
-  const card = await bloque.accounts.card.create({
-    urn: 'did:bloque:user:123',
-    name: 'My Card',
+  const card = await session.accounts.card.create({
+    name: 'Mi Tarjeta',
   });
-  // Success
+  // Éxito
 } catch (error) {
-  if (error instanceof Error) {
-    console.error('Failed:', error.message);
+  if (error instanceof BloqueRateLimitError) {
+    console.error('Rate limit. Reintentar después de:', error.retryAfter);
+  } else if (error instanceof BloqueValidationError) {
+    console.error('Errores de validación:', error.validationErrors);
+  } else if (error instanceof BloqueAuthenticationError) {
+    console.error('Autenticación fallida. Verifica tu API key.');
+  } else if (error instanceof BloqueTimeoutError) {
+    console.error('Request timeout después de', error.timeoutMs, 'ms');
+  } else if (error instanceof BloqueNetworkError) {
+    console.error('Error de red:', error.message);
+  } else {
+    console.error('Error:', error);
   }
-  // Handle error
+
+  // Todos los errores incluyen metadata rica
+  console.log('Request ID:', error.requestId);
+  console.log('Timestamp:', error.timestamp);
 }
 ```
 
-## Soporte de TypeScript
+### Metadata de Errores
 
-El SDK está construido con TypeScript y proporciona seguridad de tipos completa:
+Todos los errores incluyen metadata rica para debugging:
+
+- `message`: Mensaje de error legible
+- `status`: Código de estado HTTP (si aplica)
+- `code`: Código de error de la API
+- `requestId`: ID único de request para rastreo
+- `timestamp`: Cuándo ocurrió el error
+- `response`: Body de respuesta original (para debugging)
+- `toJSON()`: Serializar error para logging
+
+## Soporte TypeScript
+
+El SDK está construido con TypeScript y proporciona type safety completo:
 
 ```typescript
-import type { CardAccount, CreateCardParams } from '@bloque/sdk/accounts';
+import type {
+  BloqueSDKConfig,
+  CardAccount,
+  CreateCardParams,
+  VirtualAccount,
+  CreateVirtualAccountParams,
+} from '@bloque/sdk';
 
-// Type-safe parameters
-const params: CreateCardParams = {
-  urn: 'did:bloque:user:123',
-  name: 'My Card',
+// Configuración con tipos seguros
+const config: BloqueSDKConfig = {
+  origin: 'tu-origen',
+  auth: { type: 'apiKey', apiKey: process.env.BLOQUE_API_KEY! },
+  mode: 'production',
 };
 
-// Type-safe response
-const card: CardAccount = await bloque.accounts.card.create(params);
+// Parámetros con tipos seguros
+const params: CreateCardParams = {
+  name: 'Mi Tarjeta',
+};
+
+// Respuesta con tipos seguros
+const card: CardAccount = await session.accounts.card.create(params);
 ```
 
 ## Variables de Entorno
 
-Utiliza variables de entorno para almacenar tu clave API de forma segura:
+Usa variables de entorno para almacenar tu configuración de forma segura:
 
 ```bash
 # .env
-BLOQUE_API_KEY=your_api_key_here
+BLOQUE_ORIGIN=tu-origen
+BLOQUE_API_KEY=tu_api_key_aqui
 BLOQUE_MODE=sandbox
+BLOQUE_TIMEOUT=30000
 ```
 
 Luego cárgalas en tu aplicación:
 
 ```typescript
 import { SDK } from '@bloque/sdk';
-import 'dotenv/config'; // or your preferred env loader
+import 'dotenv/config'; // o tu cargador de env preferido
 
 const bloque = new SDK({
-  origin: 'your-origin',
+  origin: process.env.BLOQUE_ORIGIN!,
   auth: {
     type: 'apiKey',
     apiKey: process.env.BLOQUE_API_KEY!,
   },
   mode: process.env.BLOQUE_MODE as 'production' | 'sandbox',
+  timeout: Number.parseInt(process.env.BLOQUE_TIMEOUT || '30000', 10),
 });
 ```
 
+## Estructura del SDK
+
+Después de conectarte a una sesión de usuario, tienes acceso a estos clientes:
+
+```typescript
+const session = await bloque.connect('did:bloque:tu-origen:alias-usuario');
+
+// Clientes disponibles
+session.accounts    // Gestión de cuentas (cards, virtual, bancolombia)
+session.identity    // Identidad y aliases
+session.compliance  // Verificación KYC/KYB
+session.orgs        // Gestión de organizaciones
+```
+
+### Tipos de Cuentas
+
+El cliente de cuentas proporciona acceso a múltiples tipos de cuenta:
+
+```typescript
+// Tarjetas Virtuales - Tarjetas de pago
+await session.accounts.card.create({ name: 'Mi Tarjeta' });
+
+// Cuentas Virtuales - Cuentas de prueba
+await session.accounts.virtual.create({
+  firstName: 'Juan',
+  lastName: 'Pérez',
+});
+
+// Bancolombia - Cuentas virtuales colombianas
+await session.accounts.bancolombia.create({ name: 'Cuenta Principal' });
+
+// Transferencias - Mover fondos entre cuentas
+await session.accounts.transfer({
+  sourceUrn: 'did:bloque:account:card:...',
+  destinationUrn: 'did:bloque:account:virtual:...',
+  amount: '1000000',
+  asset: 'DUSD/6',
+});
+```
+
+## Mejores Prácticas de Seguridad
+
+### Claves API (Backend)
+
+- ✅ Almacena claves API en variables de entorno
+- ✅ Usa claves diferentes para desarrollo y producción
+- ✅ Nunca hagas commit de claves API en el control de versiones
+- ✅ Rota las claves API regularmente
+- ❌ Nunca expongas claves API en código del lado del cliente
+
+### Almacenamiento de Tokens (Frontend)
+
+```typescript
+// ⚠️ localStorage (por defecto para browser) - Vulnerable a XSS
+const bloque = new SDK({
+  auth: { type: 'jwt' },
+  platform: 'browser',
+  // Usa localStorage por defecto (SDK muestra advertencia de seguridad)
+});
+
+// ✅ Recomendado: httpOnly cookies (inmune a XSS)
+const cookieStorage = {
+  get: () => null, // Token enviado automáticamente en cookie
+  set: async (token) => {
+    await fetch('/api/auth/set-token', {
+      method: 'POST',
+      body: JSON.stringify({ token }),
+    });
+  },
+  clear: async () => {
+    await fetch('/api/auth/logout', { method: 'POST' });
+  },
+};
+
+const bloque = new SDK({
+  auth: { type: 'jwt' },
+  platform: 'browser',
+  tokenStorage: cookieStorage,
+});
+```
+
+:::warning Seguridad de localStorage
+El SDK emite una advertencia en consola al usar localStorage porque es vulnerable a ataques XSS.
+Para aplicaciones de producción, usa httpOnly cookies o almacenamiento seguro en su lugar.
+:::
+
 ## Próximos Pasos
 
-- [Guía de Organizaciones](/sdk/guide/features/organizations) - Aprende cómo crear y administrar organizaciones
-- [Guía de Cumplimiento](/sdk/guide/features/compliance) - Configura la verificación KYC
-- [Guía de Cuentas](/sdk/guide/accounts/overview) - Crea tarjetas virtuales
+- [Tarjetas Virtuales](/sdk/guide/accounts/cards) - Crear y gestionar tarjetas de pago
+- [Cuentas Virtuales](/sdk/guide/accounts/virtual) - Crear cuentas de prueba
+- [Transferencias](/sdk/guide/accounts/transfers) - Transferir fondos entre cuentas
+- [Organizaciones](/sdk/guide/features/organizations) - Crear organizaciones
+- [Cumplimiento](/sdk/guide/features/compliance) - Verificación KYC

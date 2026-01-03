@@ -1,0 +1,251 @@
+# Cuentas Virtuales
+
+Crea y gestiona cuentas virtuales de prueba usando el SDK de Bloque.
+
+## Descripción General
+
+Las cuentas virtuales son cuentas de prueba simples que solo requieren información personal básica. Son perfectas para:
+
+- **Desarrollo y Pruebas**: Creación rápida de cuentas para pruebas de integración
+- **Entorno Sandbox**: Pruebas seguras sin datos financieros reales
+- **KYC Simple**: Información mínima requerida (nombre y apellido)
+- **Configuración Rápida**: Creación instantánea de cuentas
+
+## Crear una Cuenta Virtual
+
+### Creación Básica
+
+Crea una cuenta virtual con información mínima:
+
+```typescript title="crear-cuenta-virtual.ts"
+import { SDK } from '@bloque/sdk';
+
+const bloque = new SDK({
+  origin: 'tu-origen',
+  auth: {
+    type: 'apiKey',
+    apiKey: process.env.BLOQUE_API_KEY!,
+  },
+  mode: 'sandbox', // Usa sandbox para pruebas
+});
+
+// Conectar a sesión de usuario
+const session = await bloque.connect('did:bloque:tu-origen:alias-usuario');
+
+// Crear una cuenta virtual
+const account = await session.accounts.virtual.create({
+  firstName: 'Juan',
+  lastName: 'Pérez',
+  metadata: {
+    ambiente: 'pruebas',
+    proposito: 'prueba-integracion',
+  },
+});
+
+console.log('Cuenta creada:', account.urn);
+console.log('Estado:', account.status);
+console.log('ID del Ledger:', account.ledgerId);
+```
+
+### Parámetros
+
+```typescript title="tipos.ts"
+interface CreateVirtualAccountParams {
+  firstName: string;       // Requerido: Nombre del titular de la cuenta
+  lastName: string;        // Requerido: Apellido del titular de la cuenta
+  holderUrn?: string;      // Opcional: URN del titular de la cuenta
+  ledgerId?: string;       // Opcional: ID de cuenta ledger (se crea automáticamente si no se proporciona)
+  webhookUrl?: string;     // Opcional: Webhook para eventos de la cuenta
+  metadata?: Record<string, string>; // Opcional: Metadata personalizada (debe ser strings)
+}
+```
+
+### Respuesta
+
+```typescript title="tipos.ts"
+interface VirtualAccount {
+  urn: string;              // Nombre de recurso único
+  id: string;               // ID de la cuenta
+  firstName: string;        // Nombre del titular
+  lastName: string;         // Apellido del titular
+  status: AccountStatus;    // Estado de la cuenta
+  ownerUrn: string;         // URN del propietario
+  ledgerId: string;         // ID de cuenta ledger
+  webhookUrl: string | null;
+  metadata?: Record<string, string>;
+  createdAt: string;        // Timestamp ISO 8601
+  updatedAt: string;        // Timestamp ISO 8601
+}
+
+type AccountStatus =
+  | 'creation_in_progress'  // Creación en progreso
+  | 'active'               // Activa
+  | 'disabled'             // Deshabilitada
+  | 'frozen'               // Congelada
+  | 'deleted'              // Eliminada
+  | 'creation_failed';     // Creación fallida
+```
+
+## Gestionar Cuentas Virtuales
+
+### Actualizar Metadata
+
+Actualiza metadata personalizada en una cuenta virtual:
+
+```typescript title="actualizar-metadata.ts"
+const actualizada = await session.accounts.virtual.updateMetadata({
+  urn: 'did:bloque:mediums:virtual:account:123e4567',
+  metadata: {
+    actualizado_por: 'admin',
+    razon_actualizacion: 'actualizacion_prueba',
+    ambiente: 'staging',
+  },
+});
+
+console.log('Metadata actualizada:', actualizada.metadata);
+```
+
+:::warning Restricciones de Metadata
+El campo `source` está reservado y no puede modificarse a través de actualizaciones de metadata.
+Todos los valores de metadata deben ser strings.
+:::
+
+### Estados de Cuenta
+
+Gestiona el estado de las cuentas virtuales:
+
+```typescript title="gestionar-estado.ts"
+const accountUrn = 'did:bloque:mediums:virtual:account:123e4567';
+
+// Activar cuenta
+const activada = await session.accounts.virtual.activate(accountUrn);
+console.log('Estado:', activada.status); // 'active'
+
+// Congelar cuenta (suspender temporalmente)
+const congelada = await session.accounts.virtual.freeze(accountUrn);
+console.log('Estado:', congelada.status); // 'frozen'
+
+// Deshabilitar cuenta (permanentemente)
+const deshabilitada = await session.accounts.virtual.disable(accountUrn);
+console.log('Estado:', deshabilitada.status); // 'disabled'
+```
+
+#### Estados Disponibles
+
+| Estado | Descripción | Puede Transicionar A |
+|--------|-------------|---------------------|
+| `creation_in_progress` | La cuenta se está creando | `active`, `creation_failed` |
+| `active` | Cuenta activa y usable | `frozen`, `disabled`, `deleted` |
+| `frozen` | Cuenta temporalmente suspendida | `active`, `disabled` |
+| `disabled` | Cuenta permanentemente deshabilitada | - |
+| `deleted` | Cuenta eliminada | - |
+| `creation_failed` | Creación de cuenta fallida | - |
+
+## Casos de Uso
+
+### Pruebas de Integración
+
+```typescript title="prueba-integracion.ts"
+import { SDK } from '@bloque/sdk';
+import { describe, test, expect } from 'bun:test';
+
+describe('Integración de Cuenta Virtual', () => {
+  const bloque = new SDK({
+    origin: 'tu-origen',
+    auth: { type: 'apiKey', apiKey: process.env.BLOQUE_API_KEY! },
+    mode: 'sandbox',
+  });
+
+  test('debería crear y gestionar cuenta virtual', async () => {
+    const session = await bloque.connect('did:bloque:tu-origen:usuario-prueba');
+
+    // Crear cuenta
+    const account = await session.accounts.virtual.create({
+      firstName: 'Prueba',
+      lastName: 'Usuario',
+      metadata: {
+        test_id: 'integracion-001',
+      },
+    });
+
+    expect(account.status).toBe('active');
+    expect(account.firstName).toBe('Prueba');
+
+    // Actualizar metadata
+    const actualizada = await session.accounts.virtual.updateMetadata({
+      urn: account.urn,
+      metadata: {
+        test_id: 'integracion-001',
+        actualizado: 'true',
+      },
+    });
+
+    expect(actualizada.metadata?.actualizado).toBe('true');
+
+    // Congelar cuenta
+    const congelada = await session.accounts.virtual.freeze(account.urn);
+    expect(congelada.status).toBe('frozen');
+  });
+});
+```
+
+## Manejo de Errores
+
+Maneja los errores apropiadamente al trabajar con cuentas virtuales:
+
+```typescript title="manejo-errores.ts"
+import {
+  BloqueValidationError,
+  BloqueNotFoundError,
+  BloqueAuthenticationError,
+} from '@bloque/sdk';
+
+try {
+  const account = await session.accounts.virtual.create({
+    firstName: 'Juan',
+    lastName: 'Pérez',
+  });
+
+  console.log('Cuenta creada:', account.urn);
+} catch (error) {
+  if (error instanceof BloqueValidationError) {
+    console.error('Validación fallida:', error.validationErrors);
+    // Manejar entrada inválida (campos requeridos faltantes, etc.)
+  } else if (error instanceof BloqueNotFoundError) {
+    console.error('Recurso no encontrado:', error.resourceId);
+    // Manejar usuario/sesión faltante
+  } else if (error instanceof BloqueAuthenticationError) {
+    console.error('Autenticación fallida');
+    // Manejar problemas de autenticación
+  } else {
+    console.error('Error inesperado:', error);
+  }
+}
+```
+
+## Mejores Prácticas
+
+1. **Usar Modo Sandbox**: Siempre usa modo `sandbox` para cuentas virtuales
+2. **Metadata Significativa**: Agrega metadata para rastrear escenarios y propósitos de prueba
+3. **Limpieza**: Deshabilita o elimina cuentas de prueba después de usarlas
+4. **Manejo de Errores**: Siempre envuelve las operaciones en bloques try-catch
+5. **Aislamiento de Pruebas**: Usa identificadores únicos para aislar cuentas de prueba
+6. **Webhooks**: Configura webhooks para notificaciones de eventos durante las pruebas
+7. **Verificación de Estado**: Verifica el estado de la cuenta antes de realizar operaciones
+
+## Diferencias con Otros Tipos de Cuenta
+
+| Característica | Cuentas Virtuales | Tarjetas Virtuales | Bancolombia |
+|----------------|-------------------|-------------------|-------------|
+| **KYC Requerido** | No | Sí | Sí |
+| **Tiempo de Creación** | Instantáneo | Instantáneo | Instantáneo |
+| **Caso de Uso** | Pruebas/Desarrollo | Pagos | Banca colombiana |
+| **Información Requerida** | Nombre, Apellido | URN del usuario | Nombre (opcional) |
+| **Código de Referencia** | No | No | Sí |
+| **Número de Tarjeta** | No | Sí | No |
+
+## Próximos Pasos
+
+- [Tarjetas Virtuales](/sdk/guide/accounts/cards) - Crear tarjetas de pago
+- [Transferencias](/sdk/guide/accounts/transfers) - Transferir fondos entre cuentas
+- [Bancolombia](/sdk/guide/accounts/bancolombia) - Integración con Bancolombia

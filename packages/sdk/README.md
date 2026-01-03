@@ -15,7 +15,7 @@ The official TypeScript/JavaScript SDK for integrating [Bloque](https://www.bloq
 > }
 > ```
 >
-> Replace `x.x.x` with the latest version from [npm](https://www.npmjs.com/package/@bloque/sdk).
+> Replace with the latest version from [npm](https://www.npmjs.com/package/@bloque/sdk).
 
 ## Platform Support
 
@@ -25,24 +25,40 @@ This SDK is compatible with multiple JavaScript runtimes:
 - **Bun** 1.x or higher
 - **Deno** Latest version
 - **Web/Browsers** Modern browsers with ES2020+ support
+- **React Native** Latest version
 
 ## Features
 
 - **TypeScript First**: Built with TypeScript for complete type safety
-- **Simple API**: Intuitive interface for managing organizations, compliance, accounts, and identity
-- **Virtual Cards**: Create and manage virtual cards with real-time balance tracking
-- **Identity Registration**: Register individual users (KYC) and businesses (KYB) with multi-method authentication
-- **User Sessions**: Secure user session management with `connect()` for authenticated operations
-- **Fully Async**: Promise-based API for modern JavaScript workflows
+- **Modular Architecture**: Import only what you need - accounts, identity, compliance, or organizations
+- **Multi-Runtime**: Works seamlessly across Node.js, Bun, Deno, browsers, and React Native
+- **Account Management**: Create and manage virtual cards, virtual accounts, and Bancolombia accounts
+- **Identity System**: Register individual users (KYC) and businesses (KYB) with multi-method authentication
+- **Compliance Ready**: Built-in KYC/KYB verification workflows
+- **Transfer System**: Transfer funds between accounts with multiple asset support
+- **Production Ready**:
+  - ✅ Automatic retry with exponential backoff
+  - ✅ Configurable timeouts (default: 30s)
+  - ✅ Specific error types for better error handling
+  - ✅ Request ID tracking for debugging
+  - ✅ Security warnings for insecure practices
 - **Lightweight**: Minimal dependencies for optimal bundle size
-- **Modular**: Import only what you need with tree-shakeable exports
-
-> **📌 Important:** Most operations require connecting to a user session first using `bloque.connect(urn)`. This ensures proper authentication and authorization. See the [User Sessions](#user-sessions-with-connect) section for details.
+- **Fully Async**: Promise-based API for modern JavaScript workflows
 
 ## Installation
 
 ```bash
+# npm
+npm install @bloque/sdk
+
+# bun
 bun add @bloque/sdk
+
+# pnpm
+pnpm add @bloque/sdk
+
+# yarn
+yarn add @bloque/sdk
 ```
 
 ## Quick Start
@@ -51,58 +67,34 @@ bun add @bloque/sdk
 
 ```typescript
 import { SDK } from '@bloque/sdk';
-import type { CreateOrgParams } from '@bloque/sdk/orgs';
 
 // Initialize the SDK with API key (backend only)
 const bloque = new SDK({
-  origin: 'your-origin-name', // Required: your origin identifier
+  origin: 'your-origin-name',
   auth: {
     type: 'apiKey',
     apiKey: process.env.BLOQUE_API_KEY!,
   },
   mode: 'production', // or 'sandbox' for testing
   platform: 'node', // optional: 'node' | 'bun' | 'deno'
+  timeout: 30000, // optional: request timeout in ms
+  retry: { // optional: retry configuration
+    enabled: true,
+    maxRetries: 3,
+    initialDelay: 1000,
+  },
 });
 
-// Connect to user session for account operations
-async function createCard() {
-  // First, connect to the user's session
-  const userSession = await bloque.connect('did:bloque:your-origin:user-alias');
+// Connect to user session
+const session = await bloque.connect('did:bloque:your-origin:user-alias');
 
-  // Now create a virtual card through the session
-  const card = await userSession.accounts.card.create({
-    urn: 'did:bloque:your-origin:user-alias',
-    name: 'My Virtual Card',
-  });
+// Create a virtual card
+const card = await session.accounts.card.create({
+  name: 'My Virtual Card',
+});
 
-  console.log('Card created:', card.urn);
-  console.log('Last four digits:', card.lastFour);
-}
-
-// Create an organization (direct SDK access, no connect needed)
-async function createOrganization() {
-  const params: CreateOrgParams = {
-    org_type: 'business',
-    profile: {
-      legal_name: 'Acme Corporation',
-      tax_id: '123456789',
-      incorporation_date: '2020-01-01',
-      business_type: 'llc',
-      incorporation_country_code: 'US',
-      incorporation_state: 'CA',
-      address_line1: '123 Main St',
-      postal_code: '12345',
-      city: 'San Francisco',
-    },
-    metadata: {
-      source: 'api',
-    },
-  };
-
-  const userSession = await bloque.connect('did:bloque:your-origin:user-alias');
-  const organization = await userSession.orgs.create(params);
-  console.log('Organization created:', organization);
-}
+console.log('Card created:', card.urn);
+console.log('Last four digits:', card.lastFour);
 ```
 
 ### Frontend (Browser, React Native)
@@ -112,1771 +104,579 @@ import { SDK } from '@bloque/sdk';
 
 // Initialize the SDK with JWT authentication
 const bloque = new SDK({
+  origin: 'your-origin-name',
   auth: { type: 'jwt' },
   mode: 'production',
   platform: 'browser', // or 'react-native'
-  // tokenStorage is optional for browser (uses localStorage by default)
-  // for react-native, provide a custom storage implementation
+  // For browser: uses localStorage by default (with security warning)
+  // For react-native: provide custom tokenStorage
+  tokenStorage: {
+    get: () => {
+      // Your secure storage implementation
+      return AsyncStorage.getItem('bloque_token');
+    },
+    set: (token) => {
+      AsyncStorage.setItem('bloque_token', token);
+    },
+    clear: () => {
+      AsyncStorage.removeItem('bloque_token');
+    },
+  },
 });
 
-// After user registration, the SDK automatically stores the JWT
-const result = await bloque.identity.origins.register('ethereum-mainnet', {
-  assertionResult: { /* ... */ },
-  type: 'individual',
-  profile: { /* ... */ }
-});
+// Register a new user
+const result = await bloque.identity.origins.register(
+  'did:bloque:your-origin:ethereum-mainnet',
+  {
+    assertionResult: { /* signing challenge result */ },
+    type: 'individual',
+    profile: {
+      firstName: 'John',
+      lastName: 'Doe',
+      email: 'john@example.com',
+    },
+  }
+);
 
-// The token is now stored and used for subsequent requests
-const alias = await bloque.identity.aliases.get('user@example.com');
+// The JWT is automatically stored and used for subsequent requests
 ```
 
 ## Configuration
 
-### Initialize the SDK
-
-The SDK supports different authentication methods depending on where it's running:
-
-#### Backend Configuration (API Key)
-
-For server-side applications (Node.js, Bun, Deno):
+### Full Configuration Options
 
 ```typescript
-import { SDK } from '@bloque/sdk';
+interface BloqueSDKConfig {
+  // Required
+  origin: string; // Your origin identifier
+  auth: AuthStrategy; // Authentication strategy
 
-const bloque = new SDK({
-  auth: {
-    type: 'apiKey',
-    apiKey: process.env.BLOQUE_API_KEY!, // Your Bloque API key
-  },
-  mode: 'production', // 'sandbox' or 'production'
-  platform: 'node', // optional: 'node' | 'bun' | 'deno' (defaults to 'node')
-});
+  // Optional
+  platform?: Platform; // Runtime platform (default: 'node')
+  mode?: Mode; // Environment mode (default: 'production')
+  timeout?: number; // Request timeout in ms (default: 30000)
+  tokenStorage?: TokenStorage; // JWT storage (required for react-native)
+  retry?: RetryConfig; // Retry configuration
+}
+
+// Authentication strategies
+type AuthStrategy =
+  | { type: 'apiKey'; apiKey: string } // Backend only
+  | { type: 'jwt' }; // Frontend (browser/react-native)
+
+// Platforms
+type Platform = 'node' | 'bun' | 'deno' | 'browser' | 'react-native';
+
+// Modes
+type Mode = 'production' | 'sandbox';
+
+// Retry configuration
+interface RetryConfig {
+  enabled?: boolean; // default: true
+  maxRetries?: number; // default: 3
+  initialDelay?: number; // default: 1000ms
+  maxDelay?: number; // default: 30000ms
+}
 ```
 
-#### Frontend Configuration (JWT)
+## SDK Structure
 
-For client-side applications (Browser, React Native):
+After connecting to a user session, you have access to these clients:
 
 ```typescript
-import { SDK } from '@bloque/sdk';
+const session = await bloque.connect('did:bloque:your-origin:user-alias');
 
-// Browser
-const bloque = new SDK({
-  auth: { type: 'jwt' },
-  mode: 'production',
-  platform: 'browser',
-  // tokenStorage is optional - uses localStorage by default
-});
-
-// React Native (with custom storage)
-import AsyncStorage from '@react-native-async-storage/async-storage';
-
-const bloque = new SDK({
-  auth: { type: 'jwt' },
-  mode: 'production',
-  platform: 'react-native',
-  tokenStorage: {
-    get: async () => await AsyncStorage.getItem('access_token'),
-    set: async (token: string) => await AsyncStorage.setItem('access_token', token),
-    clear: async () => await AsyncStorage.removeItem('access_token'),
-  },
-});
+// Available clients
+session.accounts    // Account management
+session.identity    // Identity and aliases
+session.compliance  // KYC/KYB verification
+session.orgs        // Organization management
 ```
 
-### Configuration Options
+## Accounts Client
 
-- **`origin`** (string, required): Your origin identifier/namespace
-  - This identifies your application or organization in the Bloque platform
-  - Example: `'my-app'`, `'bloque-root'`, `'ethereum-mainnet'`
+The accounts client provides access to multiple account types:
 
-- **`auth`** (object, required): Authentication configuration
-  - `type: 'apiKey'`: For backend platforms
-    - `apiKey` (string, required): Your Bloque API key
-  - `type: 'jwt'`: For frontend platforms
-    - Requires storing and managing JWT tokens via `tokenStorage`
-
-- **`mode`** ('sandbox' | 'production', optional): Environment mode
-  - `sandbox`: For testing and development
-  - `production`: For live operations (default)
-
-- **`platform`** (string, optional): Execution platform
-  - Backend: `'node'` (default) | `'bun'` | `'deno'`
-  - Frontend: `'browser'` | `'react-native'`
-  - Determines available authentication methods
-
-- **`tokenStorage`** (object, optional): JWT token storage mechanism
-  - Required for JWT authentication on non-browser platforms
-  - Browser automatically uses `localStorage` if not provided
-  - Must implement: `get()`, `set(token)`, `clear()`
-
-### User Sessions with `connect()`
-
-Most operations in the SDK require connecting to a user session first. This ensures proper authentication and authorization for user-specific operations.
+### Virtual Cards
 
 ```typescript
-// Initialize SDK
-const bloque = new SDK({
-  origin: 'your-origin',
-  auth: {
-    type: 'apiKey',
-    apiKey: process.env.BLOQUE_API_KEY!,
-  },
-  mode: 'production',
-});
-
-// Connect to user session
-const userSession = await bloque.connect('did:bloque:your-origin:user-alias');
-
-// Now perform operations through the session
-const card = await userSession.accounts.card.create({
-  urn: 'did:bloque:your-origin:user-alias',
+// Create a virtual card
+const card = await session.accounts.card.create({
   name: 'My Card',
-});
-```
-
-**What `connect()` does:**
-- Authenticates the user with the specified URN
-- Obtains an access token for the user session
-- Returns a session object with access to: `accounts`, `compliance`, `identity`, `orgs`
-
-**URN Format:**
-- Pattern: `did:bloque:{origin}:{user-alias}`
-- Example: `did:bloque:my-app:john-doe`
-- The `{origin}` must match the origin specified in SDK configuration
-- The `{user-alias}` is the user's unique identifier in your origin
-
-### Platform and Authentication Compatibility
-
-| Platform | API Key Auth | JWT Auth | Token Storage |
-|----------|--------------|----------|---------------|
-| `node` | ✅ | ✅ | Required for JWT |
-| `bun` | ✅ | ✅ | Required for JWT |
-| `deno` | ✅ | ✅ | Required for JWT |
-| `browser` | ❌ | ✅ | Optional (uses localStorage) |
-| `react-native` | ❌ | ✅ | Required |
-
-## API Reference
-
-### Organizations
-
-The organizations resource allows you to create and manage organizations in the Bloque platform.
-
-#### Create an Organization
-
-```typescript
-// Connect to user session first
-const userSession = await bloque.connect('did:bloque:your-origin:user-alias');
-
-// Create organization through the session
-const organization = await userSession.orgs.create(params);
-```
-
-**Parameters**:
-
-```typescript
-interface CreateOrgParams {
-  org_type: 'business' | 'individual';  // Organization type
-  profile: OrgProfile;                   // Organization profile details
-  metadata?: Record<string, unknown>;    // Optional custom metadata
-}
-
-interface OrgProfile {
-  legal_name: string;                    // Legal name of the organization
-  tax_id: string;                        // Tax ID number
-  incorporation_date: string;            // Date of incorporation (YYYY-MM-DD)
-  business_type: string;                 // Type of business (e.g., 'llc', 'corporation')
-  incorporation_country_code: string;    // Country code (ISO 3166-1 alpha-2)
-  incorporation_state?: string;          // State/province (optional)
-  address_line1: string;                 // Primary address line
-  address_line2?: string;                // Secondary address line (optional)
-  postal_code: string;                   // Postal/ZIP code
-  city: string;                          // City
-  logo_url?: string;                     // Logo URL (optional)
-  places?: Place[];                      // Additional places/locations (optional)
-}
-
-interface Place {
-  country_code: string;                  // Country code
-  state: string;                         // State/province
-  address_line1: string;                 // Address line 1
-  postal_code: string;                   // Postal code
-  city: string;                          // City
-  is_primary: boolean;                   // Whether this is the primary place
-}
-```
-
-**Response**:
-
-```typescript
-interface Organization {
-  urn: string;                           // Unique resource name
-  org_type: 'business' | 'individual';   // Organization type
-  profile: OrgProfile;                   // Organization profile
-  metadata?: Record<string, unknown>;    // Custom metadata
-  status: OrgStatus;                     // Organization status
-}
-
-type OrgStatus =
-  | 'awaiting_compliance_verification'
-  | 'active'
-  | 'suspended'
-  | 'closed';
-```
-
-### Compliance
-
-The compliance resource provides KYC (Know Your Customer) verification functionality.
-
-#### Start KYC Verification
-
-Start a KYC verification process for a user:
-
-```typescript
-// Connect to user session
-const userSession = await bloque.connect('did:bloque:your-origin:user-alias');
-
-// Start KYC verification
-const verification = await userSession.compliance.kyc.startVerification({
-  urn: 'did:bloque:your-origin:user-alias',
-});
-```
-
-**Parameters**:
-
-```typescript
-interface KycVerificationParams {
-  /**
-   * URN (Uniform Resource Name) that uniquely identifies the user
-   * within the system. This value is used to associate the KYC
-   * verification process with a specific user.
-   *
-   * @example "did:bloque:origin:..."
-   */
-  urn: string;
-
-  /**
-   * URL where webhook notifications will be sent when the verification
-   * status changes (optional).
-   *
-   * @example "https://api.example.com/webhooks/kyc"
-   */
-  webhookUrl?: string;
-}
-```
-
-**Response**:
-
-```typescript
-interface KycVerificationResponse {
-  url: string;  // URL where the user should complete the verification
-  status: 'awaiting_compliance_verification' | 'approved' | 'rejected';
-}
-```
-
-#### Get KYC Verification Status
-
-Get the current status of a KYC verification:
-
-```typescript
-const status = await bloque.compliance.kyc.getVerification({
-  urn: 'did:bloque:user:123e4567',
-});
-```
-
-**Parameters**:
-
-```typescript
-interface GetKycVerificationParams {
-  /**
-   * URN (Uniform Resource Name) that uniquely identifies the user
-   * within the system.
-   *
-   * @example "did:bloque:user:123e4567"
-   */
-  urn: string;
-}
-```
-
-**Response**:
-
-```typescript
-interface KycVerificationStatus {
-  status: 'awaiting_compliance_verification' | 'approved' | 'rejected';
-  url: string;                                  // URL for verification
-  completedAt: string | null;                               // Completion date (ISO 8601)
-}
-```
-
-### Accounts
-
-The accounts resource allows you to create virtual cards for users.
-
-#### Create a Virtual Card
-
-Create a virtual card for a user:
-
-```typescript
-// Connect to user session
-const userSession = await bloque.connect('did:bloque:your-origin:user-alias');
-
-// Create virtual card
-const card = await userSession.accounts.card.create({
-  urn: 'did:bloque:your-origin:user-alias',
-  name: 'My Virtual Card', // Optional
-});
-```
-
-**Parameters**:
-
-```typescript
-interface CreateCardParams {
-  /**
-   * URN of the account holder (user or organization)
-   * @example "did:bloque:user:123e4567"
-   */
-  urn: string;
-
-  /**
-   * Display name for the card (optional)
-   */
-  name?: string;
-}
-```
-
-**Response**:
-
-```typescript
-interface CardAccount {
-  urn: string;                    // Unique resource name
-  id: string;                     // Card account ID
-  lastFour: string;               // Last four digits
-  productType: 'CREDIT' | 'DEBIT'; // Card product type
-  status: 'active' | 'disabled' | 'frozen' | 'deleted' | 'creation_in_progress' | 'creation_failed';
-  cardType: 'VIRTUAL' | 'PHYSICAL'; // Card type
-  detailsUrl: string;             // PCI-compliant URL to view card details
-  ownerUrn: string;               // Owner URN
-  webhookUrl: string | null;      // Webhook URL (if configured)
-  metadata?: Record<string, unknown>; // Custom metadata
-  createdAt: string;              // Creation timestamp (ISO 8601)
-  updatedAt: string;              // Last update timestamp (ISO 8601)
-  balance?: Record<string, TokenBalance>; // Token balances (only in list responses)
-}
-
-interface TokenBalance {
-  current: string;  // Current balance
-  pending: string;  // Pending balance
-  in: string;       // Total incoming
-  out: string;      // Total outgoing
-}
-```
-
-#### List Card Accounts
-
-List all card accounts for a holder with their current balances:
-
-```typescript
-// Using connected user session (recommended)
-const userSession = await bloque.connect('did:bloque:your-origin:user-alias');
-const cards = await userSession.accounts.card.list();
-
-// Or with explicit holder URN
-const cards = await bloque.accounts.card.list({
-  holderUrn: 'did:bloque:bloque-whatsapp:573023348486',
-});
-```
-
-**Parameters**:
-
-```typescript
-interface ListCardParams {
-  /**
-   * URN of the account holder to filter by
-   * Optional when using a connected session - defaults to session URN
-   * @example "did:bloque:bloque-whatsapp:573023348486"
-   */
-  holderUrn?: string;
-}
-```
-
-**Response**: `Promise<CardAccount[]>` - Array of card accounts with balances
-
-Each card in the response includes all standard fields plus a `balance` object containing token balances with current, pending, in, and out amounts for each token.
-
-#### Get Card Balance
-
-Get the current balance for a specific card account:
-
-```typescript
-const balances = await bloque.accounts.card.balance({
-  urn: 'did:bloque:account:card:usr-123:crd-456',
-});
-```
-
-**Parameters**:
-
-```typescript
-interface GetBalanceParams {
-  /**
-   * URN of the card account
-   * @example "did:bloque:account:card:usr-123:crd-456"
-   */
-  urn: string;
-}
-```
-
-**Response**: `Promise<Record<string, TokenBalance>>` - Token balances by asset
-
-Returns an object with token balances for each asset:
-
-```typescript
-{
-  'DUSD/6': {
-    current: '1262500',  // Current balance
-    pending: '0',        // Pending balance
-    in: '5072000',       // Total incoming
-    out: '3809500'       // Total outgoing
-  },
-  'KSM/12': {
-    current: '1989000011',
-    pending: '0',
-    in: '2000000000',
-    out: '10999989'
-  }
-}
-```
-
-#### List Card Movements
-
-List transactions/movements for a card account with pagination and filtering:
-
-```typescript
-// Basic usage
-const movements = await bloque.accounts.card.movements({
-  urn: 'did:bloque:account:card:usr-123:crd-456',
-  asset: 'DUSD/6',
+  webhookUrl: 'https://your-app.com/webhooks/card',
 });
 
-// With pagination and filters
-const recentIncoming = await bloque.accounts.card.movements({
-  urn: 'did:bloque:account:card:usr-123:crd-456',
+// List cards
+const cards = await session.accounts.card.list();
+
+// Check balance
+const balance = await session.accounts.card.balance({
+  urn: card.urn,
+});
+
+// Get movements/transactions
+const movements = await session.accounts.card.movements({
+  urn: card.urn,
   asset: 'DUSD/6',
   limit: 50,
-  direction: 'in', // Only incoming transactions
-  after: '2025-01-01T00:00:00Z',
+  direction: 'in', // 'in' | 'out'
 });
+
+// Update card
+const updated = await session.accounts.card.updateMetadata({
+  urn: card.urn,
+  metadata: { name: 'Updated Name' },
+});
+
+// Manage card state
+await session.accounts.card.activate(card.urn);
+await session.accounts.card.freeze(card.urn);
+await session.accounts.card.disable(card.urn);
 ```
 
-**Parameters**:
+### Virtual Accounts
+
+Virtual accounts are simple testing accounts requiring only basic personal information:
 
 ```typescript
-interface ListMovementsParams {
-  /**
-   * URN of the card account
-   * @example "did:bloque:account:card:usr-123:crd-456"
-   */
-  urn: string;
+// Create a virtual account
+const account = await session.accounts.virtual.create({
+  firstName: 'John',
+  lastName: 'Doe',
+  metadata: {
+    environment: 'testing',
+    purpose: 'integration-test',
+  },
+});
 
-  /**
-   * Asset to filter transactions by
-   * Supported assets: 'DUSD/6' | 'KSM/12'
-   * Defaults to "DUSD/6" if not provided
-   * @example "DUSD/6" or "KSM/12"
-   */
-  asset?: 'DUSD/6' | 'KSM/12';
+// Update metadata
+await session.accounts.virtual.updateMetadata({
+  urn: account.urn,
+  metadata: { updated_by: 'admin' },
+});
 
-  /**
-   * Maximum number of transactions to return
-   * @example 50
-   */
-  limit?: number;
-
-  /**
-   * Filter transactions before this date (ISO 8601)
-   * @example "2025-01-01T00:00:00Z"
-   */
-  before?: string;
-
-  /**
-   * Filter transactions after this date (ISO 8601)
-   * @example "2025-01-01T00:00:00Z"
-   */
-  after?: string;
-
-  /**
-   * Filter by transaction reference
-   * @example "0xbff43fa587e0efa275f8b643d95881713c0f0ee13682d049cc452f607241b752"
-   */
-  reference?: string;
-
-  /**
-   * Filter by transaction direction
-   * 'in' for incoming funds (deposits, transfers received)
-   * 'out' for outgoing funds (withdrawals, transfers sent)
-   */
-  direction?: 'in' | 'out';
-}
+// Manage account state
+await session.accounts.virtual.activate(account.urn);
+await session.accounts.virtual.freeze(account.urn);
+await session.accounts.virtual.disable(account.urn);
 ```
 
-**Response**: `Promise<CardMovement[]>` - Array of card transactions
+### Bancolombia Accounts
 
-Each movement includes:
+Colombian virtual accounts with unique reference code system:
 
 ```typescript
-interface CardMovement {
-  amount: string;          // Transaction amount
-  asset: string;           // Asset identifier (e.g., "DUSD/6")
-  from_account_id: string; // Source account ID
-  to_account_id: string;   // Destination account ID
-  direction: 'in' | 'out'; // Transaction direction
-  reference: string;       // Blockchain transaction reference
-  rail_name: string;       // Payment rail used
-  created_at: string;      // Transaction timestamp (ISO 8601)
+// Create a Bancolombia account
+const account = await session.accounts.bancolombia.create({
+  name: 'Main Account',
+  webhookUrl: 'https://your-app.com/webhooks/bancolombia',
+});
 
-  details: {
-    type: string;          // Transaction type (e.g., "CREDIT_ADJUSTMENT")
-    metadata: {
-      // Transaction details
-      merchant_name?: string;
-      merchant_city?: string;
-      merchant_country?: string;
-      transaction_type?: string;
-      local_amount?: string;
-      local_currency?: string;
-      usd_amount?: string;
-      card_last_four?: string;
-      // ... and more
-    };
-  };
-}
+console.log('Reference code:', account.referenceCode);
+
+// Update metadata or name
+await session.accounts.bancolombia.updateMetadata({
+  urn: account.urn,
+  metadata: { category: 'savings' },
+});
+
+await session.accounts.bancolombia.updateName(account.urn, 'Savings Account');
+
+// Manage account state
+await session.accounts.bancolombia.activate(account.urn);
+await session.accounts.bancolombia.freeze(account.urn);
+await session.accounts.bancolombia.disable(account.urn);
 ```
 
-#### Transfer Between Accounts
+### Transfers
 
-Transfer funds between any accounts (card, virtual, bancolombia, etc.):
+Transfer funds between any account types:
 
 ```typescript
-const transfer = await bloque.accounts.transfer({
+const result = await session.accounts.transfer({
   sourceUrn: 'did:bloque:account:card:usr-123:crd-456',
-  destinationUrn: 'did:bloque:account:virtual:acc-67890',
-  amount: '1000000000000',
-  asset: 'KSM/12',
+  destinationUrn: 'did:bloque:account:virtual:acc-789',
+  amount: '1000000', // Amount in smallest unit
+  asset: 'DUSD/6', // 'DUSD/6' | 'KSM/12'
   metadata: {
-    reference: 'payment-123',
-    note: 'Monthly subscription'
-  }
-});
-```
-
-**Parameters**:
-
-```typescript
-interface TransferParams {
-  /**
-   * URN of the source account
-   * @example "did:bloque:account:card:usr-123:crd-456"
-   */
-  sourceUrn: string;
-
-  /**
-   * URN of the destination account
-   * @example "did:bloque:account:virtual:acc-67890"
-   */
-  destinationUrn: string;
-
-  /**
-   * Amount to transfer
-   * @example "1000000000000"
-   */
-  amount: string;
-
-  /**
-   * Asset to transfer
-   * Supported assets: 'DUSD/6' | 'KSM/12'
-   * @example "KSM/12"
-   */
-  asset: 'DUSD/6' | 'KSM/12';
-
-  /**
-   * Optional metadata for the transfer
-   * @example { reference: "payment-123", note: "Monthly subscription" }
-   */
-  metadata?: Record<string, unknown>;
-}
-```
-
-**Response**: `Promise<TransferResult>` - Transfer result
-
-```typescript
-interface TransferResult {
-  queueId: string;    // Queue ID for tracking the transfer
-  status: 'queued' | 'processing' | 'completed' | 'failed';
-  message: string;    // Status message
-}
-```
-
-The transfer is queued for signing and submission. You can track its progress using the returned `queueId`.
-
-### Identity
-
-The identity resource allows you to register identities, retrieve user aliases, and manage authentication origins.
-
-#### Register Identity
-
-Register a new user or business identity to an authentication origin. Supports individual users (KYC) and businesses (KYB):
-
-```typescript
-// Register individual user
-const individual = await bloque.identity.origins.register('ethereum-mainnet', {
-  assertionResult: {
-    alias: '0x742d35Cc6634C0532925a3b8D4C9db96C4b4d8b6',
-    challengeType: 'SIGNING_CHALLENGE',
-    value: {
-      signature: '0x1234567890abcdef...',
-      alias: '0x742d35Cc6634C0532925a3b8D4C9db96C4b4d8b6'
-    }
+    description: 'Payment for services',
   },
-  type: 'individual',
-  profile: {
-    firstName: 'John',
-    lastName: 'Doe',
-    email: 'john@example.com'
+});
+
+console.log('Transfer queued:', result.queueId);
+console.log('Status:', result.status); // 'queued' | 'processing' | 'completed' | 'failed'
+```
+
+## Identity Client
+
+Manage user identities and authentication:
+
+```typescript
+// Get alias information
+const alias = await session.identity.aliases.get('user@example.com');
+
+// List available origins
+const origins = await session.identity.origins.list();
+
+// Register a new identity (individual)
+const result = await bloque.identity.origins.register(
+  'did:bloque:your-origin:ethereum-mainnet',
+  {
+    assertionResult: {
+      alias: '0x742d35Cc...',
+      challengeType: 'SIGNING_CHALLENGE',
+      value: {
+        signature: '0x...',
+        alias: '0x742d35Cc...',
+      },
+    },
+    type: 'individual',
+    profile: {
+      firstName: 'John',
+      lastName: 'Doe',
+      email: 'john@example.com',
+      birthdate: '1990-01-15',
+      countryOfResidenceCode: 'US',
+    },
   }
-});
+);
 
-// Register business
-const business = await bloque.identity.origins.register('bloque-api', {
-  assertionResult: {
-    alias: 'business-123',
-    challengeType: 'API_KEY',
-    value: {
-      apiKey: 'sk_live_abc123',
-      alias: 'business-123'
-    }
-  },
-  type: 'business',
-  profile: {
-    legalName: 'Acme Corporation',
-    name: 'Acme Corp',
-    taxId: '12-3456789',
-    type: 'LLC',
-    incorporationDate: '2020-01-15',
-    addressLine1: '123 Business St',
-    city: 'New York',
-    state: 'NY',
-    postalCode: '10001',
-    country: 'United States'
+// Register a business
+const businessResult = await bloque.identity.origins.register(
+  'did:bloque:your-origin:ethereum-mainnet',
+  {
+    assertionResult: { /* ... */ },
+    type: 'business',
+    profile: {
+      legalName: 'Acme Corporation',
+      taxId: '123456789',
+      incorporationDate: '2020-01-01',
+      type: 'llc',
+      addressLine1: '123 Main St',
+      city: 'San Francisco',
+      state: 'CA',
+      country: 'US',
+      postalCode: '12345',
+      // ... other required fields
+    },
   }
-});
+);
+
+// OTP-based authentication
+const otpEmail = await bloque.identity.origins.email.assert('user@example.com');
+const otpWhatsApp = await bloque.identity.origins.whatsapp.assert('+1234567890');
+const otpCustom = await bloque.identity.origins.custom('my-origin').assert('user-id');
 ```
 
-**Parameters**:
+## Compliance Client
+
+KYC/KYB verification workflows:
 
 ```typescript
-// Registration parameters (discriminated union by type)
-type RegisterParams = IndividualRegisterParams | BusinessRegisterParams;
-
-interface IndividualRegisterParams {
-  assertionResult: AssertionResult;
-  extraContext?: Record<string, unknown>;
-  type: 'individual';
-  profile: UserProfile;
-}
-
-interface BusinessRegisterParams {
-  assertionResult: AssertionResult;
-  extraContext?: Record<string, unknown>;
-  type: 'business';
-  profile: BusinessProfile;
-}
-
-// Assertion result for challenge verification
-interface AssertionResult {
-  alias: string;                                  // Identity identifier
-  challengeType: 'SIGNING_CHALLENGE' | 'API_KEY' | 'OAUTH_REDIRECT' | 'WEBAUTHN' | 'OTP' | 'PASSWORD';
-  value: {
-    signature?: string;                           // For SIGNING_CHALLENGE
-    apiKey?: string;                              // For API_KEY
-    alias: string;
-  };
-  originalChallengeParams?: {
-    challenge: string;
-    timestamp: number;
-  };
-}
-
-// Individual user profile (KYC)
-interface UserProfile {
-  firstName?: string;
-  lastName?: string;
-  birthdate?: string;                             // ISO 8601 (YYYY-MM-DD)
-  email?: string;
-  phone?: string;
-  gender?: string;
-  addressLine1?: string;
-  addressLine2?: string;
-  city?: string;
-  state?: string;
-  postalCode?: string;
-  neighborhood?: string;
-  countryOfBirthCode?: string;
-  countryOfResidenceCode?: string;
-  personalIdType?: string;
-  personalIdNumber?: string;
-}
-
-// Business profile (KYB)
-interface BusinessProfile {
-  // Required fields
-  addressLine1: string;
-  city: string;
-  country: string;
-  incorporationDate: string;
-  legalName: string;
-  name: string;
-  postalCode: string;
-  state: string;
-  taxId: string;
-  type: string;
-
-  // Optional fields
-  addressLine2?: string;
-  countryCode?: string;
-  email?: string;
-  logo?: string;
-  phone?: string;
-
-  // Beneficial owner information
-  ownerName?: string;
-  ownerIdType?: string;
-  ownerIdNumber?: string;
-  ownerAddressLine1?: string;
-  ownerCity?: string;
-  ownerState?: string;
-  ownerPostalCode?: string;
-  ownerCountryCode?: string;
-}
-```
-
-**Response**:
-
-```typescript
-interface RegisterResult {
-  accessToken: string;  // JWT access token for authenticated sessions
-}
-```
-
-#### Get Alias
-
-Retrieve alias information by the alias value:
-
-```typescript
-const alias = await bloque.identity.aliases.get('user@example.com');
-```
-
-**Parameters**:
-
-```typescript
-// Pass the alias string directly
-const alias: string = 'user@example.com' | '+1234567890';
-```
-
-**Response**:
-
-```typescript
-interface Alias {
-  id: string;                                  // Unique alias ID
-  alias: string;                               // Alias value
-  type: 'phone' | 'email' | string;           // Alias type
-  urn: string;                                 // Associated user URN
-  origin: string;                              // Origin identifier
-  details: {
-    phone?: string;                            // Phone details (if applicable)
-  };
-  metadata: {
-    alias: string;                             // Alias in metadata
-    [key: string]: unknown;                    // Additional metadata
-  };
-  status: 'active' | 'inactive' | 'revoked';  // Alias status
-  is_public: boolean;                          // Whether alias is public
-  is_primary: boolean;                         // Whether this is the primary alias
-  created_at: string;                          // Creation timestamp (ISO 8601)
-  updated_at: string;                          // Last update timestamp (ISO 8601)
-}
-```
-
-## Examples
-
-### Creating a Business Organization
-
-```typescript
-import { SDK } from '@bloque/sdk';
-import type { CreateOrgParams } from '@bloque/sdk/orgs';
-
-// Initialize SDK with your API key
-const bloque = new SDK({
-  auth: {
-    type: 'apiKey',
-    apiKey: process.env.BLOQUE_API_KEY!,
-  },
-  mode: 'production',
+// Start KYC verification
+const verification = await session.compliance.kyc.startVerification({
+  urn: 'did:bloque:user:123e4567',
+  webhookUrl: 'https://your-app.com/webhooks/kyc',
 });
 
-// Create a business organization
-const params: CreateOrgParams = {
+console.log('Verification URL:', verification.url);
+console.log('Status:', verification.status);
+
+// Get verification status
+const status = await session.compliance.kyc.getVerification({
+  urn: 'did:bloque:user:123e4567',
+});
+
+console.log('Status:', status.status);
+console.log('Completed at:', status.completedAt);
+```
+
+## Organizations Client
+
+Create and manage organizations:
+
+```typescript
+const org = await session.orgs.create({
   org_type: 'business',
   profile: {
     legal_name: 'Acme Corporation',
-    tax_id: '12-3456789',
-    incorporation_date: '2020-01-15',
+    tax_id: '123456789',
+    incorporation_date: '2020-01-01',
     business_type: 'llc',
     incorporation_country_code: 'US',
     incorporation_state: 'CA',
-    address_line1: '123 Market Street',
-    address_line2: 'Suite 400',
-    postal_code: '94103',
+    address_line1: '123 Main St',
+    address_line2: 'Suite 100',
+    postal_code: '12345',
     city: 'San Francisco',
-    logo_url: 'https://example.com/logo.png',
   },
   metadata: {
-    source: 'web_app',
-    campaign: 'q1_2024',
+    industry: 'technology',
   },
-};
+});
+
+console.log('Organization created:', org.urn);
+console.log('Status:', org.status);
+```
+
+## Error Handling
+
+The SDK provides specific error types for better error handling:
+
+```typescript
+import {
+  BloqueRateLimitError,
+  BloqueAuthenticationError,
+  BloqueValidationError,
+  BloqueNotFoundError,
+  BloqueInsufficientFundsError,
+  BloqueNetworkError,
+  BloqueTimeoutError,
+} from '@bloque/sdk';
 
 try {
-  const organization = await bloque.orgs.create(params);
-  console.log('Organization created:', organization.urn);
-  console.log('Status:', organization.status);
+  const card = await session.accounts.card.create({ name: 'My Card' });
 } catch (error) {
-  console.error('Failed to create organization:', error);
-}
-```
-
-### Creating an Individual Organization
-
-```typescript
-import { SDK } from '@bloque/sdk';
-import type { CreateOrgParams } from '@bloque/sdk/orgs';
-
-const bloque = new SDK({
-  auth: {
-    type: 'apiKey',
-    apiKey: process.env.BLOQUE_API_KEY!,
-  },
-  mode: 'sandbox',
-});
-
-const params: CreateOrgParams = {
-  org_type: 'individual',
-  profile: {
-    legal_name: 'John Doe',
-    tax_id: '123-45-6789',
-    incorporation_date: '1990-05-20',
-    business_type: 'sole_proprietorship',
-    incorporation_country_code: 'US',
-    address_line1: '456 Oak Avenue',
-    postal_code: '10001',
-    city: 'New York',
-  },
-};
-
-const organization = await bloque.orgs.create(params);
-console.log('Individual organization created:', organization);
-```
-
-### Organization with Multiple Locations
-
-```typescript
-import { SDK } from '@bloque/sdk';
-import type { CreateOrgParams } from '@bloque/sdk/orgs';
-
-const bloque = new SDK({
-  auth: {
-    type: 'apiKey',
-    apiKey: process.env.BLOQUE_API_KEY!,
-  },
-  mode: 'production',
-});
-
-const params: CreateOrgParams = {
-  org_type: 'business',
-  profile: {
-    legal_name: 'Global Tech Solutions Inc.',
-    tax_id: '98-7654321',
-    incorporation_date: '2018-03-10',
-    business_type: 'corporation',
-    incorporation_country_code: 'US',
-    incorporation_state: 'DE',
-    address_line1: '789 Corporate Blvd',
-    postal_code: '19801',
-    city: 'Wilmington',
-    places: [
-      {
-        country_code: 'US',
-        state: 'CA',
-        address_line1: '100 Silicon Valley Drive',
-        postal_code: '94025',
-        city: 'Menlo Park',
-        is_primary: true,
-      },
-      {
-        country_code: 'US',
-        state: 'NY',
-        address_line1: '250 Broadway',
-        postal_code: '10007',
-        city: 'New York',
-        is_primary: false,
-      },
-    ],
-  },
-};
-
-const organization = await bloque.orgs.create(params);
-console.log('Multi-location organization created');
-```
-
-### Starting KYC Verification
-
-```typescript
-import { SDK } from '@bloque/sdk';
-import type { KycVerificationParams } from '@bloque/sdk/compliance';
-
-const bloque = new SDK({
-  auth: {
-    type: 'apiKey',
-    apiKey: process.env.BLOQUE_API_KEY!,
-  },
-  mode: 'production',
-});
-
-// Start KYC verification for a user
-const params: KycVerificationParams = {
-  urn: 'did:bloque:origin:user-123',
-  webhookUrl: 'https://api.example.com/webhooks/kyc', // Optional webhook URL
-};
-
-try {
-  const verification = await bloque.compliance.kyc.startVerification(params);
-
-  console.log('Verification URL:', verification.url);
-  console.log('Status:', verification.status);
-
-  // Redirect the user to verification.url to complete KYC
-  // Webhook notifications will be sent to the provided webhookUrl
-} catch (error) {
-  console.error('Failed to start KYC verification:', error);
-}
-```
-
-### Getting KYC Verification Status
-
-```typescript
-import { SDK } from '@bloque/sdk';
-import type { GetKycVerificationParams } from '@bloque/sdk/compliance';
-
-const bloque = new SDK({
-  auth: {
-    type: 'apiKey',
-    apiKey: process.env.BLOQUE_API_KEY!,
-  },
-  mode: 'production',
-});
-
-// Get verification status
-const params: GetKycVerificationParams = {
-  urn: 'did:bloque:user:123e4567',
-};
-
-try {
-  const status = await bloque.compliance.kyc.getVerification(params);
-
-  console.log('Status:', status.status);
-  console.log('Verification URL:', status.url);
-  console.log('Completed At:', status.completedAt);
-
-  if (status.status === 'approved') {
-    console.log('User verification approved!');
-  } else if (status.status === 'rejected') {
-    console.log('User verification rejected');
-  } else {
-    console.log('Verification still pending');
+  if (error instanceof BloqueRateLimitError) {
+    console.log(`Rate limited. Retry after ${error.retryAfter} seconds`);
+    console.log(`Request ID: ${error.requestId}`);
+  } else if (error instanceof BloqueValidationError) {
+    console.log('Validation errors:', error.validationErrors);
+  } else if (error instanceof BloqueAuthenticationError) {
+    console.log('Authentication failed. Check your API key.');
+  } else if (error instanceof BloqueNotFoundError) {
+    console.log(`Resource not found: ${error.resourceType}`);
+  } else if (error instanceof BloqueInsufficientFundsError) {
+    console.log(`Insufficient funds: ${error.requestedAmount} ${error.currency}`);
+    console.log(`Available: ${error.availableBalance} ${error.currency}`);
+  } else if (error instanceof BloqueTimeoutError) {
+    console.log(`Request timed out after ${error.timeoutMs}ms`);
+  } else if (error instanceof BloqueNetworkError) {
+    console.log('Network error:', error.message);
   }
-} catch (error) {
-  console.error('Failed to get verification status:', error);
+
+  // All errors have these fields
+  console.log('Error details:', error.toJSON());
 }
 ```
 
-### Creating a Virtual Card
+### Error Metadata
+
+All errors include rich metadata for debugging:
+
+- `message`: Human-readable error message
+- `status`: HTTP status code (if applicable)
+- `code`: Error code from the API
+- `requestId`: Unique request ID for tracing
+- `timestamp`: When the error occurred
+- `response`: Original response body (for debugging)
+- `cause`: Original error (for error chaining)
+
+## Retry Logic
+
+The SDK automatically retries failed requests with exponential backoff:
+
+- **Retried scenarios**: 429 (Rate Limit), 503 (Service Unavailable), network errors, timeouts
+- **Exponential backoff**: Delay increases exponentially (1s → 2s → 4s)
+- **Jitter**: ±25% random jitter to prevent thundering herd
+- **Respects Retry-After**: Honors the `Retry-After` header when present
 
 ```typescript
-import { SDK } from '@bloque/sdk';
-import type { CreateCardParams } from '@bloque/sdk/accounts';
-
 const bloque = new SDK({
-  auth: {
-    type: 'apiKey',
-    apiKey: process.env.BLOQUE_API_KEY!,
+  origin: 'your-origin',
+  auth: { type: 'apiKey', apiKey: 'key' },
+  retry: {
+    enabled: true, // default: true
+    maxRetries: 3, // default: 3
+    initialDelay: 1000, // default: 1000ms
+    maxDelay: 30000, // default: 30000ms
   },
-  mode: 'production',
+});
+```
+
+## Timeout Configuration
+
+Configure request timeouts globally or per-request:
+
+```typescript
+// Global timeout
+const bloque = new SDK({
+  origin: 'your-origin',
+  auth: { type: 'apiKey', apiKey: 'key' },
+  timeout: 15000, // 15 seconds
 });
 
-// Create a virtual card
+// Per-request timeout (override global)
+const card = await session.accounts.card.create(
+  { name: 'My Card' },
+  { timeout: 5000 } // 5 seconds for this request
+);
+```
+
+## Security Best Practices
+
+### API Keys
+
+- ✅ Store API keys in environment variables
+- ✅ Use different keys for development and production
+- ✅ Never commit API keys to version control
+- ✅ Rotate API keys regularly
+- ❌ Never expose API keys in client-side code
+
+### Token Storage (Frontend)
+
+The SDK warns when using insecure storage:
+
+```typescript
+// Browser: localStorage (⚠️ vulnerable to XSS)
+const bloque = new SDK({
+  auth: { type: 'jwt' },
+  platform: 'browser',
+  // Uses localStorage by default with security warning
+});
+
+// Recommended: httpOnly cookies (immune to XSS)
+const cookieStorage: TokenStorage = {
+  get: () => null, // Token sent automatically in cookie
+  set: async (token) => {
+    await fetch('/api/auth/set-token', {
+      method: 'POST',
+      body: JSON.stringify({ token }),
+    });
+  },
+  clear: async () => {
+    await fetch('/api/auth/logout', { method: 'POST' });
+  },
+};
+
+const bloque = new SDK({
+  auth: { type: 'jwt' },
+  platform: 'browser',
+  tokenStorage: cookieStorage,
+});
+```
+
+## TypeScript Support
+
+The SDK is built with TypeScript and provides full type safety:
+
+```typescript
+import type {
+  BloqueSDKConfig,
+  CardAccount,
+  CreateCardParams,
+  VirtualAccount,
+  CreateVirtualAccountParams,
+  TransferParams,
+  TransferResult,
+} from '@bloque/sdk';
+
+// Type-safe configuration
+const config: BloqueSDKConfig = {
+  origin: 'your-origin',
+  auth: { type: 'apiKey', apiKey: 'key' },
+  mode: 'production',
+};
+
+// Type-safe parameters
 const params: CreateCardParams = {
-  urn: 'did:bloque:user:123e4567',
-  name: 'My Business Card', // Optional
+  name: 'My Card',
 };
 
-try {
-  const card = await bloque.accounts.card.create(params);
-
-  console.log('Card created:', card.urn);
-  console.log('Last four digits:', card.lastFour);
-  console.log('Card type:', card.cardType);
-  console.log('Status:', card.status);
-  console.log('Details URL:', card.detailsUrl);
-
-  // Check if card is ready to use
-  if (card.status === 'active') {
-    console.log('Card is active and ready to use!');
-  } else if (card.status === 'creation_in_progress') {
-    console.log('Card is being created...');
-  }
-} catch (error) {
-  console.error('Failed to create card:', error);
-}
+// Type-safe responses
+const card: CardAccount = await session.accounts.card.create(params);
 ```
 
-### Listing Card Accounts
+## Package Exports
+
+The SDK supports modular imports:
 
 ```typescript
+// Main SDK
 import { SDK } from '@bloque/sdk';
 
-const bloque = new SDK({
-  origin: 'your-origin',
-  auth: {
-    type: 'apiKey',
-    apiKey: process.env.BLOQUE_API_KEY!,
-  },
-  mode: 'production',
-});
+// Initialization helper
+import { init } from '@bloque/sdk/init';
 
-// Connect to user session
-const userSession = await bloque.connect('did:bloque:bloque-whatsapp:573023348486');
+// Modular clients (tree-shakeable)
+import { AccountsClient } from '@bloque/sdk/accounts';
+import { IdentityClient } from '@bloque/sdk/identity';
+import { ComplianceClient } from '@bloque/sdk/compliance';
+import { OrgsClient } from '@bloque/sdk/orgs';
 
-// List all cards for the connected user
-try {
-  const cards = await userSession.accounts.card.list();
-
-  console.log(`Found ${cards.length} card accounts`);
-
-  cards.forEach((card) => {
-    console.log('\n---');
-    console.log('Card URN:', card.urn);
-    console.log('Last Four:', card.lastFour);
-    console.log('Status:', card.status);
-    console.log('Card Name:', card.metadata?.name);
-
-    // Display balances
-    if (card.balance) {
-      console.log('Balances:');
-      Object.entries(card.balance).forEach(([token, balance]) => {
-        console.log(`  ${token}:`);
-        console.log(`    Current: ${balance.current}`);
-        console.log(`    Pending: ${balance.pending}`);
-        console.log(`    In: ${balance.in}`);
-        console.log(`    Out: ${balance.out}`);
-      });
-    }
-  });
-
-  // Find active cards only
-  const activeCards = cards.filter(card => card.status === 'active');
-  console.log(`\n${activeCards.length} cards are active`);
-
-  // Calculate total balance across all cards
-  const totalBalances: Record<string, bigint> = {};
-
-  activeCards.forEach(card => {
-    if (card.balance) {
-      Object.entries(card.balance).forEach(([token, balance]) => {
-        if (!totalBalances[token]) {
-          totalBalances[token] = BigInt(0);
-        }
-        totalBalances[token] += BigInt(balance.current);
-      });
-    }
-  });
-
-  console.log('\nTotal balances across all active cards:');
-  Object.entries(totalBalances).forEach(([token, total]) => {
-    console.log(`  ${token}: ${total.toString()}`);
-  });
-} catch (error) {
-  console.error('Failed to list cards:', error);
-}
+// Types
+import type {
+  BloqueSDKConfig,
+  CardAccount,
+  VirtualAccount,
+  BancolombiaAccount,
+} from '@bloque/sdk';
 ```
 
-### Getting Card Balance
+## Advanced Usage
+
+### Custom HTTP Client
+
+For advanced use cases, access the HTTP client directly:
 
 ```typescript
-import { SDK } from '@bloque/sdk';
+const session = await bloque.connect('did:bloque:your-origin:user-alias');
 
-const bloque = new SDK({
-  origin: 'your-origin',
-  auth: {
-    type: 'apiKey',
-    apiKey: process.env.BLOQUE_API_KEY!,
-  },
-  mode: 'production',
+// Access the HTTP client
+const httpClient = session.accounts.card['httpClient'];
+
+// Make custom requests
+const response = await httpClient.request({
+  method: 'GET',
+  path: '/api/custom-endpoint',
+  timeout: 10000,
 });
-
-// Get balance for a specific card
-try {
-  const balances = await bloque.accounts.card.balance({
-    urn: 'did:bloque:account:card:usr-123:crd-456',
-  });
-
-  console.log('Card Balances:\n');
-
-  Object.entries(balances).forEach(([token, balance]) => {
-    console.log(`${token}:`);
-    console.log(`  Current: ${balance.current}`);
-    console.log(`  Pending: ${balance.pending}`);
-    console.log(`  Total In: ${balance.in}`);
-    console.log(`  Total Out: ${balance.out}`);
-
-    const net = BigInt(balance.in) - BigInt(balance.out);
-    console.log(`  Net: ${net.toString()}`);
-    console.log('');
-  });
-
-  // Calculate total current balance across all assets
-  const totalCurrent = Object.entries(balances).reduce(
-    (acc, [token, balance]) => {
-      acc[token] = BigInt(balance.current);
-      return acc;
-    },
-    {} as Record<string, bigint>,
-  );
-
-  console.log('Total Current Balances:');
-  Object.entries(totalCurrent).forEach(([token, amount]) => {
-    console.log(`  ${token}: ${amount.toString()}`);
-  });
-} catch (error) {
-  console.error('Failed to get balance:', error);
-}
 ```
 
-### Listing Card Movements
+### Environment-Specific Configuration
 
 ```typescript
-import { SDK } from '@bloque/sdk';
-
-const bloque = new SDK({
-  origin: 'your-origin',
-  auth: {
-    type: 'apiKey',
-    apiKey: process.env.BLOQUE_API_KEY!,
-  },
-  mode: 'production',
-});
-
-// List recent transactions with pagination
-try {
-  const movements = await bloque.accounts.card.movements({
-    urn: 'did:bloque:account:card:usr-123:crd-456',
-    asset: 'DUSD/6',
-    limit: 50,
-    direction: 'in', // Only incoming transactions
-    after: '2025-01-01T00:00:00Z',
-  });
-
-  console.log(`Found ${movements.length} incoming transactions\n`);
-
-  movements.forEach((transaction) => {
-    console.log('---');
-    console.log(`Amount: ${transaction.amount} ${transaction.asset}`);
-    console.log(`Direction: ${transaction.direction.toUpperCase()}`);
-    console.log(`Date: ${transaction.created_at}`);
-    console.log(`Reference: ${transaction.reference}`);
-
-    // Show merchant details if available
-    if (transaction.details?.metadata) {
-      const meta = transaction.details.metadata;
-      if (meta.merchant_name) {
-        console.log(`Merchant: ${meta.merchant_name}`);
-      }
-      if (meta.merchant_city && meta.merchant_country) {
-        console.log(`Location: ${meta.merchant_city}, ${meta.merchant_country}`);
-      }
-      if (meta.transaction_type) {
-        console.log(`Type: ${meta.transaction_type}`);
-      }
-      if (meta.usd_amount) {
-        console.log(`USD Amount: $${meta.usd_amount}`);
-      }
-    }
-    console.log('');
-  });
-
-  // Calculate total
-  const total = movements.reduce(
-    (sum, t) => sum + BigInt(t.amount),
-    BigInt(0),
-  );
-
-  console.log(`Total received: ${total.toString()}`);
-} catch (error) {
-  console.error('Failed to list movements:', error);
-}
-```
-
-### Paginating Through Card Movements
-
-```typescript
-import { SDK } from '@bloque/sdk';
-
-const bloque = new SDK({
-  origin: 'your-origin',
-  auth: {
-    type: 'apiKey',
-    apiKey: process.env.BLOQUE_API_KEY!,
-  },
-  mode: 'production',
-});
-
-// Paginate through all transactions
-async function getAllTransactions() {
-  const cardUrn = 'did:bloque:account:card:usr-123:crd-456';
-  const pageSize = 100;
-  let allMovements = [];
-  let hasMore = true;
-  let lastDate: string | undefined;
-
-  try {
-    while (hasMore) {
-      const movements = await bloque.accounts.card.movements({
-        urn: cardUrn,
-        asset: 'DUSD/6',
-        limit: pageSize,
-        before: lastDate, // Get transactions before the last one we saw
-      });
-
-      allMovements.push(...movements);
-      console.log(`Fetched ${movements.length} transactions`);
-
-      if (movements.length < pageSize) {
-        hasMore = false; // Last page
-      } else {
-        lastDate = movements[movements.length - 1].created_at;
-      }
-    }
-
-    console.log(`\nTotal transactions: ${allMovements.length}`);
-
-    // Analyze all transactions
-    const totalIn = allMovements
-      .filter((t) => t.direction === 'in')
-      .reduce((sum, t) => sum + BigInt(t.amount), BigInt(0));
-
-    const totalOut = allMovements
-      .filter((t) => t.direction === 'out')
-      .reduce((sum, t) => sum + BigInt(t.amount), BigInt(0));
-
-    console.log(`Total incoming: ${totalIn.toString()}`);
-    console.log(`Total outgoing: ${totalOut.toString()}`);
-    console.log(`Net balance: ${(totalIn - totalOut).toString()}`);
-  } catch (error) {
-    console.error('Error:', error);
-  }
-}
-
-getAllTransactions();
-```
-
-### Transferring Funds Between Accounts
-
-```typescript
-import { SDK } from '@bloque/sdk';
-
-const bloque = new SDK({
-  origin: 'your-origin',
-  auth: {
-    type: 'apiKey',
-    apiKey: process.env.BLOQUE_API_KEY!,
-  },
-  mode: 'production',
-});
-
-// Transfer from card to virtual account
-try {
-  const transfer = await bloque.accounts.transfer({
-    sourceUrn: 'did:bloque:account:card:usr-123:crd-456',
-    destinationUrn: 'did:bloque:account:virtual:acc-67890',
-    amount: '1000000000000',
-    asset: 'KSM/12',
-    metadata: {
-      reference: 'payment-123',
-      note: 'Monthly subscription payment'
-    }
-  });
-
-  console.log('Transfer initiated:');
-  console.log('  Queue ID:', transfer.queueId);
-  console.log('  Status:', transfer.status);
-  console.log('  Message:', transfer.message);
-
-  // The transfer is now queued for processing
-  // You can track its status using the queueId
-} catch (error) {
-  console.error('Transfer failed:', error);
-}
-```
-
-### Different Transfer Scenarios
-
-```typescript
-import { SDK } from '@bloque/sdk';
-
-const bloque = new SDK({
-  origin: 'your-origin',
-  auth: {
-    type: 'apiKey',
-    apiKey: process.env.BLOQUE_API_KEY!,
-  },
-  mode: 'production',
-});
-
-// Transfer DUSD from card to Bancolombia account
-const dusdTransfer = await bloque.accounts.transfer({
-  sourceUrn: 'did:bloque:account:card:usr-123:crd-456',
-  destinationUrn: 'did:bloque:account:bancolombia:acc-12345',
-  amount: '5000000', // 5 DUSD (6 decimals)
-  asset: 'DUSD/6',
-  metadata: {
-    reference: 'withdrawal-001',
-    type: 'savings'
-  }
-});
-
-console.log(`DUSD transfer queued: ${dusdTransfer.queueId}`);
-
-// Transfer KSM between virtual accounts
-const ksmTransfer = await bloque.accounts.transfer({
-  sourceUrn: 'did:bloque:account:virtual:acc-11111',
-  destinationUrn: 'did:bloque:account:virtual:acc-22222',
-  amount: '2000000000000', // 2 KSM (12 decimals)
-  asset: 'KSM/12',
-  metadata: {
-    reference: 'internal-transfer-42',
-    department: 'operations'
-  }
-});
-
-console.log(`KSM transfer queued: ${ksmTransfer.queueId}`);
-```
-
-### Retrieving User Alias Information
-
-```typescript
-import { SDK } from '@bloque/sdk';
-
-const bloque = new SDK({
-  auth: {
-    type: 'apiKey',
-    apiKey: process.env.BLOQUE_API_KEY!,
-  },
-  mode: 'production',
-});
-
-// Get alias information by email
-try {
-  const alias = await bloque.identity.aliases.get('user@example.com');
-
-  console.log('Alias ID:', alias.id);
-  console.log('Alias type:', alias.type);
-  console.log('Associated URN:', alias.urn);
-  console.log('Status:', alias.status);
-  console.log('Is primary:', alias.is_primary);
-  console.log('Is public:', alias.is_public);
-
-  if (alias.status === 'active') {
-    console.log('Alias is active');
-  }
-} catch (error) {
-  console.error('Failed to retrieve alias:', error);
-}
-
-// Get alias information by phone number
-try {
-  const phoneAlias = await bloque.identity.aliases.get('+1234567890');
-
-  console.log('Phone alias:', phoneAlias.alias);
-  console.log('Phone details:', phoneAlias.details.phone);
-} catch (error) {
-  console.error('Failed to retrieve phone alias:', error);
-}
-```
-
-### Registering Individual User Identity (KYC)
-
-```typescript
-import { SDK } from '@bloque/sdk';
-import type { IndividualRegisterParams } from '@bloque/sdk/identity';
-
-const bloque = new SDK({
-  auth: {
-    type: 'apiKey',
-    apiKey: process.env.BLOQUE_API_KEY!,
-  },
-  mode: 'production',
-});
-
-// Register an individual with blockchain signature
-const params: IndividualRegisterParams = {
-  assertionResult: {
-    alias: '0x742d35Cc6634C0532925a3b8D4C9db96C4b4d8b6',
-    challengeType: 'SIGNING_CHALLENGE',
-    value: {
-      signature: '0x1234567890abcdef...',
-      alias: '0x742d35Cc6634C0532925a3b8D4C9db96C4b4d8b6'
-    },
-    originalChallengeParams: {
-      challenge: 'bloque-challenge-1234567890',
-      timestamp: 1640995200
-    }
-  },
-  type: 'individual',
-  profile: {
-    firstName: 'John',
-    lastName: 'Doe',
-    email: 'john.doe@example.com',
-    phone: '+1234567890',
-    birthdate: '1990-01-15',
-    city: 'New York',
-    state: 'NY',
-    postalCode: '10001',
-    addressLine1: '123 Main St',
-    countryOfBirthCode: 'USA',
-    countryOfResidenceCode: 'USA',
-    personalIdType: 'SSN',
-    personalIdNumber: '123-45-6789'
-  }
-};
-
-try {
-  const result = await bloque.identity.origins.register('ethereum-mainnet', params);
-
-  console.log('User registered successfully!');
-  console.log('Access token:', result.accessToken);
-
-  // Store the access token securely for the user's session
-  // Use it for subsequent authenticated API calls
-} catch (error) {
-  console.error('Registration failed:', error);
-}
-```
-
-### Registering Business Identity (KYB)
-
-```typescript
-import { SDK } from '@bloque/sdk';
-import type { BusinessRegisterParams } from '@bloque/sdk/identity';
-
-const bloque = new SDK({
-  auth: {
-    type: 'apiKey',
-    apiKey: process.env.BLOQUE_API_KEY!,
-  },
-  mode: 'production',
-});
-
-// Register a business with API key authentication
-const params: BusinessRegisterParams = {
-  assertionResult: {
-    alias: 'business-123',
-    challengeType: 'API_KEY',
-    value: {
-      apiKey: 'sk_live_abc123def456',
-      alias: 'business-123'
-    }
-  },
-  type: 'business',
-  profile: {
-    // Required business information
-    legalName: 'Acme Corporation',
-    name: 'Acme Corp',
-    taxId: '12-3456789',
-    type: 'LLC',
-    incorporationDate: '2020-01-15',
-    addressLine1: '123 Business St',
-    city: 'New York',
-    state: 'NY',
-    postalCode: '10001',
-    country: 'United States',
-
-    // Optional business information
-    addressLine2: 'Suite 100',
-    countryCode: 'US',
-    email: 'contact@acme.com',
-    phone: '+1-555-0123',
-    logo: 'https://acme.com/logo.png',
-
-    // Beneficial owner information (for compliance)
-    ownerName: 'Jane Smith',
-    ownerIdType: 'SSN',
-    ownerIdNumber: '123-45-6789',
-    ownerAddressLine1: '456 Owner Ave',
-    ownerCity: 'New York',
-    ownerState: 'NY',
-    ownerPostalCode: '10002',
-    ownerCountryCode: 'US'
-  }
-};
-
-try {
-  const result = await bloque.identity.origins.register('bloque-api', params);
-
-  console.log('Business registered successfully!');
-  console.log('Access token:', result.accessToken);
-
-  // Use the access token for authenticated API calls
-} catch (error) {
-  console.error('Business registration failed:', error);
-}
-```
-
-### Using in an API Endpoint
-
-```typescript
-import { SDK } from '@bloque/sdk';
-import type { CreateOrgParams } from '@bloque/sdk/orgs';
-
-const bloque = new SDK({
+const config: BloqueSDKConfig = {
+  origin: process.env.BLOQUE_ORIGIN!,
   auth: {
     type: 'apiKey',
     apiKey: process.env.BLOQUE_API_KEY!,
   },
   mode: process.env.NODE_ENV === 'production' ? 'production' : 'sandbox',
-});
-
-app.post('/api/organizations', async (req, res) => {
-  try {
-    const params: CreateOrgParams = req.body;
-
-    const organization = await bloque.orgs.create(params);
-
-    res.json({
-      success: true,
-      organization,
-    });
-  } catch (error) {
-    console.error('Organization creation failed:', error);
-    res.status(500).json({
-      success: false,
-      error: error instanceof Error ? error.message : 'Unknown error',
-    });
-  }
-});
-```
-
-
-## Error Handling
-
-The SDK uses standard JavaScript errors. Always wrap API calls in try-catch blocks:
-
-```typescript
-import { SDK } from '@bloque/sdk';
-
-const bloque = new SDK({
-  apiKey: process.env.BLOQUE_API_KEY!,
-  mode: 'production',
-});
-
-try {
-  const organization = await bloque.orgs.create({
-    org_type: 'business',
-    profile: {
-      legal_name: 'Acme Corp',
-      tax_id: '123456789',
-      incorporation_date: '2020-01-01',
-      business_type: 'llc',
-      incorporation_country_code: 'US',
-      address_line1: '123 Main St',
-      postal_code: '12345',
-      city: 'San Francisco',
-    },
-  });
-  console.log('Success:', organization);
-} catch (error) {
-  if (error instanceof Error) {
-    console.error('Failed to create organization:', error.message);
-  } else {
-    console.error('Unknown error:', error);
-  }
-}
-```
-
-## TypeScript Support
-
-This SDK is written in TypeScript and includes complete type definitions. You'll get full autocomplete and type checking when using TypeScript or modern editors like VS Code:
-
-```typescript
-import { SDK } from '@bloque/sdk';
-import type { BloqueSDKConfig } from '@bloque/sdk';
-import type {
-  CreateOrgParams,
-  Organization,
-  OrgProfile,
-  OrgStatus,
-  OrgType,
-  Place,
-} from '@bloque/sdk/orgs';
-
-// Type-safe configuration
-const config: BloqueSDKConfig = {
-  origin: 'your-origin',
-  auth: {
-    type: 'apiKey',
-    apiKey: 'your-api-key',
-  },
-  mode: 'sandbox',
   platform: 'node',
+  timeout: Number.parseInt(process.env.BLOQUE_TIMEOUT || '30000', 10),
+  retry: {
+    enabled: process.env.BLOQUE_RETRY_ENABLED !== 'false',
+    maxRetries: Number.parseInt(process.env.BLOQUE_MAX_RETRIES || '3', 10),
+  },
 };
 
 const bloque = new SDK(config);
-
-// Type-safe organization profile
-const profile: OrgProfile = {
-  legal_name: 'Tech Startup Inc.',
-  tax_id: '12-3456789',
-  incorporation_date: '2023-01-15',
-  business_type: 'llc',
-  incorporation_country_code: 'US',
-  incorporation_state: 'CA',
-  address_line1: '456 Innovation Dr',
-  postal_code: '94025',
-  city: 'Menlo Park',
-};
-
-// Type-safe organization creation
-const params: CreateOrgParams = {
-  org_type: 'business',
-  profile,
-  metadata: {
-    vertical: 'fintech',
-    employees: 50,
-  },
-};
-
-// TypeScript infers the return type as Organization
-const org = await bloque.orgs.create(params);
 ```
 
-**Available Types**:
+## Examples
 
-The SDK exports all necessary types for type-safe development:
+See the [`examples/`](./examples) directory for complete working examples:
 
-```typescript
-// Main SDK types
-import type { SDK, BloqueSDKConfig } from '@bloque/sdk';
+- `basic-usage.ts` - Basic SDK usage
+- `virtual-cards.ts` - Virtual card management
+- `virtual-accounts.ts` - Virtual account management
+- `transfers.ts` - Account transfers
+- `identity-registration.ts` - User registration
+- `kyc-verification.ts` - KYC workflows
+- `error-handling.ts` - Advanced error handling
 
-// Organization types
-import type {
-  Organization,
-  CreateOrgParams,
-  CreateOrgResponse,
-  OrgProfile,
-  OrgType,
-  OrgStatus,
-  Place,
-} from '@bloque/sdk/orgs';
+## API Documentation
 
-// Compliance types
-import type {
-  KycVerificationParams,
-  KycVerificationResponse,
-  GetKycVerificationParams,
-  KycVerificationStatus,
-} from '@bloque/sdk/compliance';
+For detailed API documentation, visit [docs.bloque.app/sdk](https://docs.bloque.app/sdk).
 
-// Accounts types
-import type {
-  CardAccount,
-  CardMovement,
-  CreateCardParams,
-  GetBalanceParams,
-  ListCardParams,
-  ListMovementsParams,
-  TokenBalance,
-  TransferParams,
-  TransferResult,
-} from '@bloque/sdk/accounts';
+## Support
 
-// Identity types
-import type {
-  Alias,
-  RegisterParams,
-  IndividualRegisterParams,
-  BusinessRegisterParams,
-  RegisterResult,
-  UserProfile,
-  BusinessProfile,
-  AssertionResult,
-} from '@bloque/sdk/identity';
-```
-
-## Development
-
-### Building the SDK
-
-```bash
-bun install
-bun run build
-```
-
-### Development Mode (Watch)
-
-```bash
-bun run dev
-```
-
-### Type Checking
-
-```bash
-bun run typecheck
-```
-
-### Code Quality
-
-```bash
-bun run check
-```
-
-## Requirements
-
-- One of the supported runtimes: Node.js 22.x+, Bun 1.x+, Deno, or modern browsers
-- TypeScript 5.x or higher (for TypeScript projects, optional)
-
-## Links
-
-- [Homepage](https://www.bloque.app)
-- [GitHub Repository](https://github.com/bloque-app/sdk)
-- [Issue Tracker](https://github.com/bloque-app/sdk/issues)
-
-## Package Structure
-
-This monorepo contains the following packages:
-
-- **`@bloque/sdk`**: Main SDK package
-- **`@bloque/sdk-core`**: Core utilities and HTTP client
-- **`@bloque/sdk-orgs`**: Organizations API client
-- **`@bloque/sdk-compliance`**: Compliance and KYC verification API client
-- **`@bloque/sdk-accounts`**: Accounts and virtual cards API client
-- **`@bloque/sdk-identity`**: Identity and aliases API client
+- 📧 Email: [support@bloque.app](mailto:support@bloque.app)
+- 💬 Discord: [discord.gg/bloque](https://discord.gg/bloque)
+- 📖 Docs: [docs.bloque.app](https://docs.bloque.app)
+- 🐛 Issues: [GitHub Issues](https://github.com/bloque/sdk/issues)
 
 ## License
 
-[MIT](../../LICENSE)
-
+MIT © [Bloque](https://www.bloque.app)

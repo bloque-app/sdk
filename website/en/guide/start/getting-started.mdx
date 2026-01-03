@@ -20,7 +20,9 @@ Never expose your API key in client-side code. Always use environment variables 
 
 ## Initialize the SDK
 
-Create an instance of the SDK with your API key and mode:
+Create an instance of the SDK with your configuration:
+
+### Backend (Node.js, Bun, Deno)
 
 ```typescript
 import { SDK } from '@bloque/sdk';
@@ -32,20 +34,80 @@ const bloque = new SDK({
     apiKey: process.env.BLOQUE_API_KEY!,
   },
   mode: 'production', // or 'sandbox' for testing
+  platform: 'node', // optional: 'node' | 'bun' | 'deno'
+  timeout: 30000, // optional: 30 seconds (default)
+  retry: { // optional: automatic retry configuration
+    enabled: true, // default: true
+    maxRetries: 3, // default: 3
+    initialDelay: 1000, // default: 1000ms
+    maxDelay: 30000, // default: 30000ms
+  },
+});
+```
+
+### Frontend (Browser, React Native)
+
+```typescript
+import { SDK } from '@bloque/sdk';
+
+const bloque = new SDK({
+  origin: 'your-origin',
+  auth: { type: 'jwt' },
+  mode: 'production',
+  platform: 'browser', // or 'react-native'
+  // For browser: uses localStorage by default (with security warning)
+  // For react-native: provide custom tokenStorage
+  tokenStorage: {
+    get: () => AsyncStorage.getItem('bloque_token'),
+    set: (token) => AsyncStorage.setItem('bloque_token', token),
+    clear: () => AsyncStorage.removeItem('bloque_token'),
+  },
 });
 ```
 
 ### Configuration Options
 
-| Option | Type | Required | Description |
-|--------|------|----------|-------------|
-| `apiKey` | `string` | Yes | Your Bloque API key |
-| `mode` | `'production' \| 'sandbox'` | Yes | Environment mode |
+| Option | Type | Required | Default | Description |
+|--------|------|----------|---------|-------------|
+| `origin` | `string` | Yes | - | Your origin identifier |
+| `auth` | `AuthStrategy` | Yes | - | Authentication strategy |
+| `mode` | `'production' \| 'sandbox'` | No | `'production'` | Environment mode |
+| `platform` | `Platform` | No | `'node'` | Runtime platform |
+| `timeout` | `number` | No | `30000` | Request timeout in milliseconds |
+| `retry` | `RetryConfig` | No | See below | Retry configuration |
+| `tokenStorage` | `TokenStorage` | No* | `localStorage` | JWT storage (*required for react-native) |
+
+#### Retry Configuration
+
+The SDK automatically retries failed requests with exponential backoff:
+
+```typescript
+interface RetryConfig {
+  enabled?: boolean; // Enable/disable retries (default: true)
+  maxRetries?: number; // Maximum retry attempts (default: 3)
+  initialDelay?: number; // Initial delay in ms (default: 1000)
+  maxDelay?: number; // Maximum delay in ms (default: 30000)
+}
+```
+
+**Retried scenarios:**
+- 429 (Rate Limit) - Respects `Retry-After` header
+- 503 (Service Unavailable)
+- Network errors
+- Timeout errors
 
 #### Modes
 
 - **`sandbox`**: For testing and development. No real transactions.
 - **`production`**: For live operations with real data.
+
+#### Platforms
+
+- **`node`**: Node.js backend
+- **`bun`**: Bun runtime
+- **`deno`**: Deno runtime
+- **`browser`**: Web browsers
+- **`react-native`**: React Native apps
 
 ## Your First Request
 
@@ -55,14 +117,21 @@ Let's create a virtual card:
 import { SDK } from '@bloque/sdk';
 
 const bloque = new SDK({
-  apiKey: process.env.BLOQUE_API_KEY!,
+  origin: 'your-origin',
+  auth: {
+    type: 'apiKey',
+    apiKey: process.env.BLOQUE_API_KEY!,
+  },
   mode: 'production',
 });
 
 async function createCard() {
   try {
-    const card = await bloque.accounts.card.create({
-      urn: 'did:bloque:user:123e4567',
+    // Connect to user session
+    const session = await bloque.connect('did:bloque:your-origin:user-alias');
+
+    // Create a virtual card
+    const card = await session.accounts.card.create({
       name: 'My First Card',
     });
 
@@ -81,48 +150,94 @@ createCard();
 
 ## Error Handling
 
-Always wrap SDK calls in try-catch blocks to handle errors gracefully:
+The SDK provides specific error types for better error handling:
 
 ```typescript
+import {
+  BloqueRateLimitError,
+  BloqueValidationError,
+  BloqueAuthenticationError,
+  BloqueTimeoutError,
+  BloqueNetworkError,
+} from '@bloque/sdk';
+
 try {
-  const card = await bloque.accounts.card.create({
-    urn: 'did:bloque:user:123',
+  const card = await session.accounts.card.create({
     name: 'My Card',
   });
   // Success
 } catch (error) {
-  if (error instanceof Error) {
-    console.error('Failed:', error.message);
+  if (error instanceof BloqueRateLimitError) {
+    console.error('Rate limited. Retry after:', error.retryAfter);
+  } else if (error instanceof BloqueValidationError) {
+    console.error('Validation errors:', error.validationErrors);
+  } else if (error instanceof BloqueAuthenticationError) {
+    console.error('Authentication failed. Check your API key.');
+  } else if (error instanceof BloqueTimeoutError) {
+    console.error('Request timed out after', error.timeoutMs, 'ms');
+  } else if (error instanceof BloqueNetworkError) {
+    console.error('Network error:', error.message);
+  } else {
+    console.error('Error:', error);
   }
-  // Handle error
+
+  // All errors include rich metadata
+  console.log('Request ID:', error.requestId);
+  console.log('Timestamp:', error.timestamp);
 }
 ```
+
+### Error Metadata
+
+All errors include rich metadata for debugging:
+
+- `message`: Human-readable error message
+- `status`: HTTP status code (if applicable)
+- `code`: Error code from the API
+- `requestId`: Unique request ID for tracing
+- `timestamp`: When the error occurred
+- `response`: Original response body (for debugging)
+- `toJSON()`: Serialize error for logging
 
 ## TypeScript Support
 
 The SDK is built with TypeScript and provides full type safety:
 
 ```typescript
-import type { CardAccount, CreateCardParams } from '@bloque/sdk/accounts';
+import type {
+  BloqueSDKConfig,
+  CardAccount,
+  CreateCardParams,
+  VirtualAccount,
+  CreateVirtualAccountParams,
+} from '@bloque/sdk';
+
+// Type-safe configuration
+const config: BloqueSDKConfig = {
+  origin: 'your-origin',
+  auth: { type: 'apiKey', apiKey: process.env.BLOQUE_API_KEY! },
+  mode: 'production',
+};
 
 // Type-safe parameters
 const params: CreateCardParams = {
-  urn: 'did:bloque:user:123',
   name: 'My Card',
 };
 
 // Type-safe response
-const card: CardAccount = await bloque.accounts.card.create(params);
+const card: CardAccount = await session.accounts.card.create(params);
 ```
 
 ## Environment Variables
 
-Use environment variables to store your API key securely:
+Use environment variables to store your configuration securely:
 
 ```bash
 # .env
+BLOQUE_ORIGIN=your-origin
 BLOQUE_API_KEY=your_api_key_here
 BLOQUE_MODE=sandbox
+BLOQUE_TIMEOUT=30000
 ```
 
 Then load them in your application:
@@ -132,17 +247,106 @@ import { SDK } from '@bloque/sdk';
 import 'dotenv/config'; // or your preferred env loader
 
 const bloque = new SDK({
-  origin: 'your-origin',
+  origin: process.env.BLOQUE_ORIGIN!,
   auth: {
     type: 'apiKey',
     apiKey: process.env.BLOQUE_API_KEY!,
   },
   mode: process.env.BLOQUE_MODE as 'production' | 'sandbox',
+  timeout: Number.parseInt(process.env.BLOQUE_TIMEOUT || '30000', 10),
 });
 ```
 
+## SDK Structure
+
+After connecting to a user session, you have access to these clients:
+
+```typescript
+const session = await bloque.connect('did:bloque:your-origin:user-alias');
+
+// Available clients
+session.accounts    // Account management (cards, virtual, bancolombia)
+session.identity    // Identity and aliases
+session.compliance  // KYC/KYB verification
+session.orgs        // Organization management
+```
+
+### Account Types
+
+The accounts client provides access to multiple account types:
+
+```typescript
+// Virtual Cards - Payment cards
+await session.accounts.card.create({ name: 'My Card' });
+
+// Virtual Accounts - Testing accounts
+await session.accounts.virtual.create({
+  firstName: 'John',
+  lastName: 'Doe',
+});
+
+// Bancolombia - Colombian virtual accounts
+await session.accounts.bancolombia.create({ name: 'Main Account' });
+
+// Transfers - Move funds between accounts
+await session.accounts.transfer({
+  sourceUrn: 'did:bloque:account:card:...',
+  destinationUrn: 'did:bloque:account:virtual:...',
+  amount: '1000000',
+  asset: 'DUSD/6',
+});
+```
+
+## Security Best Practices
+
+### API Keys (Backend)
+
+- ✅ Store API keys in environment variables
+- ✅ Use different keys for development and production
+- ✅ Never commit API keys to version control
+- ✅ Rotate API keys regularly
+- ❌ Never expose API keys in client-side code
+
+### Token Storage (Frontend)
+
+```typescript
+// ⚠️ localStorage (default for browser) - Vulnerable to XSS
+const bloque = new SDK({
+  auth: { type: 'jwt' },
+  platform: 'browser',
+  // Uses localStorage by default (SDK shows security warning)
+});
+
+// ✅ Recommended: httpOnly cookies (immune to XSS)
+const cookieStorage = {
+  get: () => null, // Token sent automatically in cookie
+  set: async (token) => {
+    await fetch('/api/auth/set-token', {
+      method: 'POST',
+      body: JSON.stringify({ token }),
+    });
+  },
+  clear: async () => {
+    await fetch('/api/auth/logout', { method: 'POST' });
+  },
+};
+
+const bloque = new SDK({
+  auth: { type: 'jwt' },
+  platform: 'browser',
+  tokenStorage: cookieStorage,
+});
+```
+
+:::warning localStorage Security
+The SDK emits a console warning when using localStorage because it's vulnerable to XSS attacks.
+For production applications, use httpOnly cookies or secure storage instead.
+:::
+
 ## Next Steps
 
-- [Organizations Guide](/sdk/guide/features/organizations) - Learn how to create and manage organizations
-- [Compliance Guide](/sdk/guide/features/compliance) - Set up KYC verification
-- [Accounts Guide](/sdk/guide/accounts/overview) - Create virtual cards
+- [Virtual Cards](/sdk/guide/accounts/cards) - Create and manage payment cards
+- [Virtual Accounts](/sdk/guide/accounts/virtual) - Create testing accounts
+- [Transfers](/sdk/guide/accounts/transfers) - Transfer funds between accounts
+- [Organizations](/sdk/guide/features/organizations) - Create organizations
+- [Compliance](/sdk/guide/features/compliance) - KYC verification
