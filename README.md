@@ -69,6 +69,15 @@ const card = await userSession.accounts.card.create({
 
 console.log('Card created:', card.urn);
 console.log('Last four digits:', card.lastFour);
+
+// Create a Polygon wallet
+const wallet = await userSession.accounts.polygon.create({
+  metadata: {
+    purpose: 'web3-transactions',
+  },
+});
+
+console.log('Polygon wallet created:', wallet.address);
 ```
 
 For detailed documentation, see the [@bloque/sdk package README](./packages/sdk/README.md).

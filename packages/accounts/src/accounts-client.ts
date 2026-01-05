@@ -2,9 +2,20 @@ import type { HttpClient } from '@bloque/sdk-core';
 import { BaseClient } from '@bloque/sdk-core';
 import { BancolombiaClient } from './bancolombia/bancolombia-client';
 import { CardClient } from './card/card-client';
-import type { TransferRequest, TransferResponse } from './internal/wire-types';
+import type {
+  ListAccountsResponse,
+  TransferRequest,
+  TransferResponse,
+} from './internal/wire-types';
 import { PolygonClient } from './polygon/polygon-client';
-import type { TransferParams, TransferResult } from './types';
+import type {
+  Account,
+  ListAccountsParams,
+  ListAccountsResult,
+  TokenBalance,
+  TransferParams,
+  TransferResult,
+} from './types';
 import { VirtualClient } from './virtual/virtual-client';
 
 /**
@@ -29,6 +40,48 @@ export class AccountsClient extends BaseClient {
     this.card = new CardClient(this.httpClient);
     this.polygon = new PolygonClient(this.httpClient);
     this.virtual = new VirtualClient(this.httpClient);
+  }
+
+  /**
+   * List accounts
+   *
+   * Retrieves a list of accounts, optionally filtered by holder URN.
+   *
+   * @param params - List parameters (optional)
+   * @returns Promise resolving to list of accounts
+   *
+   * @example
+   * ```typescript
+   * // List all accounts for the authenticated holder
+   * const result = await bloque.accounts.list();
+   *
+   * // List accounts for a specific holder
+   * const result = await bloque.accounts.list({
+   *   medium: 'card'
+   * });
+   * ```
+   */
+  async list(params?: ListAccountsParams): Promise<ListAccountsResult> {
+    const holderUrn = params?.holderUrn || this.httpClient.urn;
+
+    const queryParams = new URLSearchParams();
+    if (holderUrn) {
+      queryParams.append('holder_urn', holderUrn);
+    }
+
+    const queryString = queryParams.toString();
+    const path = queryString ? `/api/accounts?${queryString}` : '/api/accounts';
+
+    const response = await this.httpClient.request<ListAccountsResponse>({
+      method: 'GET',
+      path,
+    });
+
+    return {
+      accounts: response.accounts.map((account) =>
+        this._mapAccountResponse(account),
+      ),
+    };
   }
 
   /**
@@ -74,6 +127,39 @@ export class AccountsClient extends BaseClient {
       queueId: response.result.queue_id,
       status: response.result.status,
       message: response.result.message,
+    };
+  }
+
+  /**
+   * Maps API account response to SDK format
+   * @internal
+   */
+  private _mapAccountResponse<TDetails = unknown>(
+    account: ListAccountsResponse['accounts'][0],
+  ): Account<TDetails> {
+    const balance: Record<string, TokenBalance> = {};
+    for (const [asset, balanceData] of Object.entries(account.balance)) {
+      balance[asset] = {
+        current: balanceData.current,
+        pending: balanceData.pending,
+        in: balanceData.in,
+        out: balanceData.out,
+      };
+    }
+
+    return {
+      id: account.id,
+      urn: account.urn,
+      medium: account.medium,
+      details: account.details as TDetails,
+      ledgerId: account.ledger_account_id,
+      status: account.status,
+      ownerUrn: account.owner_urn,
+      createdAt: account.created_at,
+      updatedAt: account.updated_at,
+      webhookUrl: account.webhook_url,
+      metadata: account.metadata,
+      balance,
     };
   }
 }

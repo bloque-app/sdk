@@ -5,6 +5,32 @@ import type {
 } from '../internal/wire-types';
 import type { SupportedAsset } from '../types';
 
+/**
+ * Parameters for listing card accounts
+ */
+export interface ListCardAccountsParams {
+  /**
+   * URN of the account holder (user or organization) to filter by
+   * @example "did:bloque:bloque-root:nestor"
+   */
+  holderUrn?: string;
+
+  /**
+   * URN of a specific card account to retrieve
+   * @example "did:bloque:account:card:usr-123:crd-456"
+   */
+  urn?: string;
+}
+
+/**
+ * Result of listing card accounts
+ */
+export interface ListCardAccountsResult {
+  /** Array of card accounts with balance information */
+  accounts: CardAccount[];
+}
+
+// Deprecated: Use ListCardAccountsParams instead
 export interface ListCardParams {
   /**
    * URN of the account holder (user or organization)

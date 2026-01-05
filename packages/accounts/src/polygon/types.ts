@@ -1,4 +1,29 @@
 /**
+ * Parameters for listing polygon accounts
+ */
+export interface ListPolygonAccountsParams {
+  /**
+   * URN of the account holder (user or organization) to filter by
+   * @example "did:bloque:bloque-root:nestor"
+   */
+  holderUrn?: string;
+
+  /**
+   * URN of a specific polygon account to retrieve
+   * @example "did:bloque:account:polygon:0x05B10c9B6241b73fc8c906fB7979eFc7764AB731"
+   */
+  urn?: string;
+}
+
+/**
+ * Result of listing polygon accounts
+ */
+export interface ListPolygonAccountsResult {
+  /** Array of polygon accounts with balance information */
+  accounts: PolygonAccount[];
+}
+
+/**
  * Parameters for creating a polygon account
  */
 export interface CreatePolygonAccountParams {
@@ -111,4 +136,17 @@ export interface PolygonAccount {
    * Last update timestamp
    */
   updatedAt: string;
+
+  /**
+   * Token balances (optional, included in list responses and after creation)
+   */
+  balance?: Record<
+    string,
+    {
+      current: string;
+      pending: string;
+      in: string;
+      out: string;
+    }
+  >;
 }

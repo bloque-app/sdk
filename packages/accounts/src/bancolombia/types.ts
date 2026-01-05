@@ -1,3 +1,28 @@
+/**
+ * Parameters for listing Bancolombia accounts
+ */
+export interface ListBancolombiaAccountsParams {
+  /**
+   * URN of the account holder (user or organization) to filter by
+   * @example "did:bloque:bloque-root:nestor"
+   */
+  holderUrn?: string;
+
+  /**
+   * URN of a specific Bancolombia account to retrieve
+   * @example "did:bloque:account:bancolombia:abc-123"
+   */
+  urn?: string;
+}
+
+/**
+ * Result of listing Bancolombia accounts
+ */
+export interface ListBancolombiaAccountsResult {
+  /** Array of Bancolombia accounts with balance information */
+  accounts: BancolombiaAccount[];
+}
+
 export interface CreateBancolombiaAccountParams {
   /**
    * URN of the account holder (user or organization)
@@ -98,4 +123,17 @@ export interface BancolombiaAccount {
    * Last update timestamp
    */
   updatedAt: string;
+
+  /**
+   * Token balances (optional, included in list responses and after creation)
+   */
+  balance?: Record<
+    string,
+    {
+      current: string;
+      pending: string;
+      in: string;
+      out: string;
+    }
+  >;
 }

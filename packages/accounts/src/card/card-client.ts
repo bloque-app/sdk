@@ -12,12 +12,14 @@ import type {
   UpdateAccountRequest,
   UpdateAccountResponse,
 } from '../internal/wire-types';
+import type { CreateAccountOptions } from '../types';
 import type {
   CardAccount,
   CardMovement,
   CreateCardParams,
   GetBalanceParams,
-  ListCardParams,
+  ListCardAccountsParams,
+  ListCardAccountsResult,
   ListMovementsParams,
   UpdateCardMetadataParams,
 } from './types';
@@ -27,16 +29,26 @@ export class CardClient extends BaseClient {
    * Create a new card account
    *
    * @param params - Card creation parameters
+   * @param options - Creation options (optional)
    * @returns Promise resolving to the created card account
    *
    * @example
    * ```typescript
+   * // Create without waiting
    * const card = await bloque.accounts.card.create({
    *   name: 'My Card',
    * });
+   *
+   * // Create and wait for active status
+   * const card = await bloque.accounts.card.create({
+   *   name: 'My Card',
+   * }, { waitLedger: true });
    * ```
    */
-  async create(params: CreateCardParams = {}): Promise<CardAccount> {
+  async create(
+    params: CreateCardParams = {},
+    options?: CreateAccountOptions,
+  ): Promise<CardAccount> {
     const request: CreateAccountRequest<CreateCardAccountInput> = {
       holder_urn: params?.holderUrn || this.httpClient.urn || '',
       webhook_url: params.webhookUrl,
@@ -62,49 +74,116 @@ export class CardClient extends BaseClient {
       body: request,
     });
 
-    return this._mapAccountResponse(response.result.account);
+    const account = this._mapAccountResponse(response.result.account);
+
+    if (options?.waitLedger) {
+      return this._waitForActiveStatus(account.urn, options.timeout || 60000);
+    }
+
+    return account;
   }
 
   /**
-   * List card accounts for a holder
+   * Private method to poll account status until it becomes active
+   */
+  private async _waitForActiveStatus(
+    urn: string,
+    timeout: number,
+  ): Promise<CardAccount> {
+    const startTime = Date.now();
+    const pollingInterval = 2000; // 2 second
+
+    while (true) {
+      if (Date.now() - startTime > timeout) {
+        throw new Error(
+          `Timeout waiting for account to become active. URN: ${urn}`,
+        );
+      }
+
+      const result = await this.list({ urn });
+      const account = result.accounts[0];
+
+      if (!account) {
+        throw new Error(`Account not found. URN: ${urn}`);
+      }
+
+      if (account.status === 'active') {
+        return account;
+      }
+
+      if (account.status === 'creation_failed') {
+        throw new Error(`Account creation failed. URN: ${urn}`);
+      }
+
+      await new Promise((resolve) => setTimeout(resolve, pollingInterval));
+    }
+  }
+
+  /**
+   * List card accounts
    *
-   * @param params - List parameters
-   * @returns Promise resolving to array of card accounts with balances
+   * Retrieves a list of card accounts, optionally filtered by holder URN or specific account URN.
+   *
+   * @param params - List parameters (optional)
+   * @returns Promise resolving to list of card accounts with balances
    *
    * @example
    * ```typescript
-   * const cards = await bloque.accounts.card.list();
+   * // List all card accounts for the authenticated holder
+   * const result = await bloque.accounts.card.list();
+   *
+   * // List card accounts for a specific holder
+   * const result = await bloque.accounts.card.list({
+   *   holderUrn: 'did:bloque:bloque-root:nestor'
+   * });
+   *
+   * // Get a specific card account
+   * const result = await bloque.accounts.card.list({
+   *   urn: 'did:bloque:account:card:usr-123:crd-456'
+   * });
    * ```
    */
-  async list(params?: ListCardParams): Promise<CardAccount[]> {
-    const queryParams = new URLSearchParams({
-      holder_urn: params?.holderUrn || this.httpClient.urn || '',
-      medium: 'card',
-    });
+  async list(params?: ListCardAccountsParams): Promise<ListCardAccountsResult> {
+    const holderUrn = params?.holderUrn || this.httpClient.urn;
+
+    const queryParams = new URLSearchParams();
+    queryParams.append('medium', 'card');
+
+    if (holderUrn) {
+      queryParams.append('holder_urn', holderUrn);
+    }
+
+    if (params?.urn) {
+      queryParams.append('urn', params.urn);
+    }
+
+    const path = `/api/accounts?${queryParams.toString()}`;
 
     const response = await this.httpClient.request<
       ListAccountsResponse<CardDetails>
     >({
       method: 'GET',
-      path: `/api/accounts?${queryParams.toString()}`,
+      path,
     });
 
-    return response.accounts.map((account) => ({
-      urn: account.urn,
-      id: account.id,
-      lastFour: account.details.card_last_four,
-      productType: account.details.card_product_type,
-      status: account.status,
-      cardType: account.details.card_type,
-      detailsUrl: account.details.card_url_details,
-      ownerUrn: account.owner_urn,
-      ledgerId: account.ledger_account_id,
-      webhookUrl: account.webhook_url,
-      metadata: account.metadata,
-      createdAt: account.created_at,
-      updatedAt: account.updated_at,
-      balance: account.balance,
-    }));
+    return {
+      accounts: response.accounts.map((account) => ({
+        urn: account.urn,
+        id: account.id,
+        lastFour: account.details.card_last_four,
+        productType: account.details.card_product_type,
+        status: account.status,
+        cardType: account.details.card_type,
+        detailsUrl: account.details.card_url_details,
+        ownerUrn: account.owner_urn,
+        ledgerId: account.ledger_account_id,
+        webhookUrl: account.webhook_url,
+        metadata: account.metadata,
+        createdAt: account.created_at,
+        updatedAt: account.updated_at,
+        balance: account.balance,
+      })),
+    };
   }
 
   /**
