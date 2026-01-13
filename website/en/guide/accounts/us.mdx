@@ -1,0 +1,420 @@
+# US Accounts (Bridge)
+
+Create and manage United States bank accounts using the Bloque SDK with Bridge.
+
+## Overview
+
+US accounts are real bank accounts in the United States provided by Bridge. They enable:
+
+- **Real Bank Accounts**: FDIC-insured deposit accounts at US banks
+- **Full KYC**: Identity verification and regulatory compliance
+- **ACH and Wire**: Receive and send bank transfers
+- **Individual and Business**: Support for persons and businesses
+- **Terms of Service**: Required TOS acceptance process
+
+## Creation Flow
+
+Creating US accounts requires a two-step process:
+
+1. **Get TOS Link**: Generate a link for the user to accept terms and conditions
+2. **Create Account**: Use the received `signedAgreementId` to create the account
+
+### Step 1: Generate Terms and Conditions Link
+
+```typescript title="get-tos-link.ts"
+import { SDK } from '@bloque/sdk';
+
+const bloque = await SDK.connect({
+  apiKey: process.env.BLOQUE_API_KEY!,
+  platform: 'node',
+});
+
+// Generate TOS link
+const tosLink = await bloque.accounts.us.getTosLink({
+  redirectUri: 'https://yourapp.com/callback',
+});
+
+console.log('TOS URL:', tosLink.url);
+console.log('Request ID:', tosLink.requestId);
+```
+
+**Response:**
+
+```typescript title="types.ts"
+interface TosLinkResponse {
+  url: string;        // URL of the TOS acceptance form
+  requestId: string;  // Unique request ID
+}
+```
+
+:::tip Embed the Link
+You can embed `tosLink.url` in an iframe, open it in a new window, or send it via email. The user will be redirected to `redirectUri` after accepting the terms.
+:::
+
+### Step 2: Capture the Signed Agreement ID
+
+After the user accepts the terms, Bridge will redirect to your `redirectUri` with the `signed_agreement_id` as a query parameter:
+
+```
+https://yourapp.com/callback?signed_agreement_id=0d139f8e-14b0-4540-92ba-4e66c619b533
+```
+
+### Step 3: Create the Account
+
+Once you have the `signedAgreementId`, you can create the account:
+
+```typescript title="create-us-account.ts"
+// Create individual account
+const account = await bloque.accounts.us.create({
+  type: 'individual',
+  firstName: 'Robert',
+  middleName: 'James',
+  lastName: 'Johnson',
+  email: 'robert.johnson@example.com',
+  phone: '+12125551234',
+  address: {
+    streetLine1: '456 Wall Street',
+    streetLine2: 'Suite 789',
+    city: 'New York',
+    state: 'NY',
+    postalCode: '10005',
+    country: 'US',
+  },
+  birthDate: '1985-03-15',
+  taxIdentificationNumber: '123-45-6789',
+  govIdCountry: 'US',
+  govIdImageFront: 'base64_encoded_image_here',
+  signedAgreementId: '0d139f8e-14b0-4540-92ba-4e66c619b533', // From callback
+  webhookUrl: 'https://api.example.com/webhooks/account-events',
+  metadata: {
+    source: 'mobile_app',
+    version: '1.0',
+    kyc_level: 'basic',
+  },
+});
+
+console.log('Account created:', account.urn);
+console.log('Status:', account.status);
+```
+
+## Creation Parameters
+
+### Individual Account
+
+```typescript title="types.ts"
+interface CreateUSAccountParams {
+  type: 'individual';
+  firstName: string;                    // First name
+  middleName?: string;                  // Middle name (optional)
+  lastName: string;                     // Last name
+  email: string;                        // Email
+  phone: string;                        // Phone (E.164 format)
+  address: {
+    streetLine1: string;                // Address line 1
+    streetLine2?: string;               // Address line 2 (optional)
+    city: string;                       // City
+    state: string;                      // State (2-letter code)
+    postalCode: string;                 // Postal code
+    country: string;                    // Country (ISO 2-letter code)
+  };
+  birthDate: string;                    // Birth date (YYYY-MM-DD)
+  taxIdentificationNumber: string;      // SSN or EIN
+  govIdCountry: string;                 // ID issuing country
+  govIdImageFront: string;              // Front ID image (base64)
+  govIdImageBack?: string;              // Back ID image (base64, optional)
+  signedAgreementId: string;            // Signed agreement ID (from TOS)
+  webhookUrl?: string;                  // Webhook URL (optional)
+  metadata?: Record<string, string>;    // Custom metadata (optional)
+}
+```
+
+### Business Account
+
+```typescript title="types.ts"
+interface CreateUSBusinessAccountParams {
+  type: 'business';
+  businessName: string;                 // Business name
+  businessType: string;                 // Entity type (LLC, Corporation, etc.)
+  taxIdentificationNumber: string;      // Business EIN
+  address: {
+    streetLine1: string;
+    streetLine2?: string;
+    city: string;
+    state: string;
+    postalCode: string;
+    country: string;
+  };
+  email: string;
+  phone: string;
+  // Authorized representative
+  representative: {
+    firstName: string;
+    middleName?: string;
+    lastName: string;
+    birthDate: string;
+    taxIdentificationNumber: string;
+    govIdCountry: string;
+    govIdImageFront: string;
+    govIdImageBack?: string;
+  };
+  signedAgreementId: string;
+  webhookUrl?: string;
+  metadata?: Record<string, string>;
+}
+```
+
+## Response
+
+```typescript title="types.ts"
+interface USAccount {
+  urn: string;                          // Unique resource name
+  id: string;                           // Account ID
+  type: 'individual' | 'business';      // Account type
+  status: USAccountStatus;              // Account status
+  ownerUrn: string;                     // Owner URN
+  ledgerId: string;                     // Ledger account ID
+
+  // Account information
+  firstName?: string;                   // For individual accounts
+  middleName?: string;
+  lastName?: string;
+  businessName?: string;                // For business accounts
+  email: string;
+  phone: string;
+
+  // Banking information
+  accountNumber?: string;               // Account number (when available)
+  routingNumber?: string;               // Routing number (when available)
+
+  // Balances
+  balance?: {
+    available: number;                  // Available balance
+    current: number;                    // Current balance
+    currency: string;                   // Currency (USD)
+  };
+
+  webhookUrl: string | null;
+  metadata?: Record<string, string>;
+  createdAt: string;                    // ISO 8601 timestamp
+  updatedAt: string;                    // ISO 8601 timestamp
+}
+
+type USAccountStatus =
+  | 'creation_in_progress'              // Creation in progress
+  | 'active'                           // Active
+  | 'disabled'                         // Disabled
+  | 'frozen'                           // Frozen
+  | 'deleted'                          // Deleted
+  | 'creation_failed';                 // Creation failed
+```
+
+## Managing US Accounts
+
+### List Accounts
+
+Get all US accounts for a user:
+
+```typescript title="list-accounts.ts"
+const accounts = await bloque.accounts.us.list();
+
+console.log(`Total accounts: ${accounts.length}`);
+
+accounts.forEach(account => {
+  console.log(`${account.urn}: ${account.status}`);
+  if (account.balance) {
+    console.log(`  Balance: $${account.balance.available}`);
+  }
+});
+```
+
+### Update Metadata
+
+Update custom metadata on a US account:
+
+```typescript title="update-metadata.ts"
+const updated = await bloque.accounts.us.updateMetadata({
+  urn: 'did:bloque:mediums:us:account:123e4567',
+  metadata: {
+    updated_by: 'admin',
+    update_reason: 'customer_request',
+    kyc_level: 'enhanced',
+  },
+});
+
+console.log('Metadata updated:', updated.metadata);
+```
+
+:::warning Metadata Restrictions
+All metadata values must be strings.
+:::
+
+### Account States
+
+Manage the state of US accounts:
+
+```typescript title="manage-state.ts"
+const accountUrn = 'did:bloque:mediums:us:account:123e4567';
+
+// Activate account
+const activated = await bloque.accounts.us.activate(accountUrn);
+console.log('Status:', activated.status); // 'active'
+
+// Freeze account (temporarily suspend)
+const frozen = await bloque.accounts.us.freeze(accountUrn);
+console.log('Status:', frozen.status); // 'frozen'
+
+// Disable account (permanently)
+const disabled = await bloque.accounts.us.disable(accountUrn);
+console.log('Status:', disabled.status); // 'disabled'
+```
+
+#### Available States
+
+| Status | Description | Can Transition To |
+|--------|-------------|-------------------|
+| `creation_in_progress` | Account is being created | `active`, `creation_failed` |
+| `active` | Account is active and usable | `frozen`, `disabled`, `deleted` |
+| `frozen` | Account is temporarily suspended | `active`, `disabled` |
+| `disabled` | Account is permanently disabled | - |
+| `deleted` | Account has been deleted | - |
+| `creation_failed` | Account creation failed | - |
+
+## Complete Example
+
+```typescript title="complete-example.ts"
+import { SDK } from '@bloque/sdk';
+
+async function createUSAccount() {
+  // Initialize SDK
+  const bloque = await SDK.connect({
+    apiKey: process.env.BLOQUE_API_KEY!,
+    platform: 'node',
+  });
+
+  try {
+    // Step 1: Get TOS link
+    console.log('Generating terms and conditions link...');
+    const tosLink = await bloque.accounts.us.getTosLink({
+      redirectUri: 'https://yourapp.com/callback',
+    });
+
+    console.log('TOS Link:', tosLink.url);
+    console.log('Share this link with your user to accept terms');
+
+    // User visits tosLink.url and accepts terms
+    // Your callback receives: ?signed_agreement_id=xxx
+
+    // Step 2: Create account with the signedAgreementId
+    console.log('\nCreating US account...');
+    const account = await bloque.accounts.us.create({
+      type: 'individual',
+      firstName: 'Robert',
+      middleName: 'James',
+      lastName: 'Johnson',
+      email: 'robert.johnson@example.com',
+      phone: '+12125551234',
+      address: {
+        streetLine1: '456 Wall Street',
+        streetLine2: 'Suite 789',
+        city: 'New York',
+        state: 'NY',
+        postalCode: '10005',
+        country: 'US',
+      },
+      birthDate: '1985-03-15',
+      taxIdentificationNumber: '123-45-6789',
+      govIdCountry: 'US',
+      govIdImageFront: 'base64_encoded_image_here',
+      signedAgreementId: '0d139f8e-14b0-4540-92ba-4e66c619b533',
+      webhookUrl: 'https://api.example.com/webhooks/account-events',
+      metadata: {
+        source: 'web',
+        kyc_level: 'basic',
+      },
+    });
+
+    console.log('✓ Account created:', account.urn);
+    console.log('✓ Status:', account.status);
+    console.log('✓ Ledger ID:', account.ledgerId);
+
+    // List all accounts
+    console.log('\nListing accounts...');
+    const accounts = await bloque.accounts.us.list();
+    console.log(`✓ Total accounts: ${accounts.length}`);
+
+    return { success: true, account };
+  } catch (error) {
+    console.error('✗ Error:', error);
+    throw error;
+  }
+}
+
+createUSAccount().catch(console.error);
+```
+
+## Error Handling
+
+```typescript title="error-handling.ts"
+import {
+  BloqueValidationError,
+  BloqueNotFoundError,
+  BloqueAuthenticationError,
+} from '@bloque/sdk';
+
+try {
+  const tosLink = await bloque.accounts.us.getTosLink({
+    redirectUri: 'https://yourapp.com/callback',
+  });
+
+  const account = await bloque.accounts.us.create({
+    type: 'individual',
+    firstName: 'Robert',
+    lastName: 'Johnson',
+    // ... other parameters
+    signedAgreementId: 'xxx-xxx-xxx',
+  });
+
+  console.log('Account created:', account.urn);
+} catch (error) {
+  if (error instanceof BloqueValidationError) {
+    console.error('Validation failed:', error.validationErrors);
+    // Handle invalid input
+  } else if (error instanceof BloqueNotFoundError) {
+    console.error('Resource not found:', error.resourceId);
+    // Handle invalid signedAgreementId
+  } else if (error instanceof BloqueAuthenticationError) {
+    console.error('Authentication failed');
+    // Handle authentication issues
+  } else {
+    console.error('Unexpected error:', error);
+  }
+}
+```
+
+## Best Practices
+
+1. **TOS Flow**: Always complete the terms acceptance flow before creating the account
+2. **Embed the Link**: You can embed the TOS link in an iframe or modal for better UX
+3. **Data Validation**: Validate user data before submitting
+4. **ID Images**: Ensure images are in base64 format and legible
+5. **Phone Format**: Use E.164 format for phone numbers (+1XXXXXXXXXX)
+6. **Webhooks**: Configure webhooks to receive status updates
+7. **Error Handling**: Implement robust error handling for the KYC flow
+8. **Metadata**: Use metadata to track account origins and purposes
+
+## Differences from Other Account Types
+
+| Feature | US Accounts | Virtual Accounts | Virtual Cards |
+|---------|------------|------------------|---------------|
+| **KYC Required** | Yes (complete) | No | Yes |
+| **TOS Required** | Yes | No | No |
+| **Creation Time** | Minutes-days | Instant | Instant |
+| **Use Case** | Real bank accounts | Testing | Payments |
+| **Regulation** | FDIC, FinCEN | N/A | PCI-DSS |
+| **Required Info** | Complete | Basic | Basic |
+
+## Next Steps
+
+- [Transfers](/sdk/guide/accounts/transfers) - Transfer funds between accounts
+- [Virtual Cards](/sdk/guide/accounts/cards) - Create payment cards
+- [Bancolombia](/sdk/guide/accounts/bancolombia) - Bancolombia integration

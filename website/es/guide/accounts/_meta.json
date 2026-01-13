@@ -11,6 +11,11 @@
   },
   {
     "type": "file",
+    "name": "us",
+    "label": "Cuentas US (Bridge)"
+  },
+  {
+    "type": "file",
     "name": "polygon",
     "label": "Polygon"
   },
