@@ -82,7 +82,12 @@ export type AccountStatus =
 /**
  * Account medium/type
  */
-export type AccountMedium = 'bancolombia' | 'card' | 'virtual' | 'polygon';
+export type AccountMedium =
+  | 'bancolombia'
+  | 'card'
+  | 'virtual'
+  | 'polygon'
+  | 'us-account';
 
 /**
  * Token balance information

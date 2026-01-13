@@ -24,7 +24,7 @@ export type AccountStatus =
 export interface Account<TDetails = unknown> {
   id: string;
   urn: string;
-  medium: 'bancolombia' | 'card' | 'virtual' | 'polygon';
+  medium: 'bancolombia' | 'card' | 'virtual' | 'us-account' | 'polygon';
   details: TDetails;
   ledger_account_id: string;
   status: AccountStatus;
@@ -138,6 +138,73 @@ export type PolygonDetails = {
   address: string;
   network: string;
 };
+
+/**
+ * @internal
+ * US account type
+ */
+export type UsAccountType = 'individual' | 'business';
+
+/**
+ * @internal
+ * US account address for creation
+ */
+export interface UsAccountAddress {
+  street_line_1: string;
+  street_line_2?: string;
+  city: string;
+  state: string;
+  postal_code: string;
+  country: string;
+}
+
+/**
+ * @internal
+ * US account input for creation
+ */
+export interface CreateUsAccountInput {
+  type: UsAccountType;
+  first_name: string;
+  middle_name?: string;
+  last_name: string;
+  email: string;
+  phone: string;
+  address: UsAccountAddress;
+  birth_date: string;
+  tax_identification_number: string;
+  gov_id_country: string;
+  gov_id_image_front: string;
+  signed_agreement_id: string;
+}
+
+/**
+ * @internal
+ * US account details from API
+ */
+export interface UsDetails {
+  id: string;
+  type: UsAccountType;
+  first_name: string;
+  middle_name?: string;
+  last_name: string;
+  email: string;
+  phone: string;
+  address: UsAccountAddress;
+  birth_date: string;
+  account_number?: string;
+  routing_number?: string;
+}
+
+/**
+ * @internal
+ * TOS link response
+ */
+export interface TosLinkResponse {
+  result: {
+    url: string;
+  };
+  req_id: string;
+}
 
 /**
  * @internal

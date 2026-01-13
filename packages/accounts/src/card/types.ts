@@ -30,16 +30,6 @@ export interface ListCardAccountsResult {
   accounts: CardAccount[];
 }
 
-// Deprecated: Use ListCardAccountsParams instead
-export interface ListCardParams {
-  /**
-   * URN of the account holder (user or organization)
-   *
-   * @example "did:bloque:user:123e4567"
-   */
-  holderUrn?: string;
-}
-
 export interface ListMovementsParams {
   /**
    * URN of the card account

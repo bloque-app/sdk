@@ -6,5 +6,7 @@ export * from './card/types';
 export * from './polygon/polygon-client';
 export * from './polygon/types';
 export * from './types';
+export * from './us/types';
+export * from './us/us-client';
 export * from './virtual/types';
 export * from './virtual/virtual-client';

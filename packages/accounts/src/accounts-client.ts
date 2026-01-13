@@ -16,6 +16,7 @@ import type {
   TransferParams,
   TransferResult,
 } from './types';
+import { UsClient } from './us/us-client';
 import { VirtualClient } from './virtual/virtual-client';
 
 /**
@@ -32,6 +33,7 @@ export class AccountsClient extends BaseClient {
   readonly bancolombia: BancolombiaClient;
   readonly card: CardClient;
   readonly polygon: PolygonClient;
+  readonly us: UsClient;
   readonly virtual: VirtualClient;
 
   constructor(httpClient: HttpClient) {
@@ -39,6 +41,7 @@ export class AccountsClient extends BaseClient {
     this.bancolombia = new BancolombiaClient(this.httpClient);
     this.card = new CardClient(this.httpClient);
     this.polygon = new PolygonClient(this.httpClient);
+    this.us = new UsClient(this.httpClient);
     this.virtual = new VirtualClient(this.httpClient);
   }
 
