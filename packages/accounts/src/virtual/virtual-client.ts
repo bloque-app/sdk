@@ -158,7 +158,6 @@ export class VirtualClient extends BaseClient {
 
       const result = await this.list({ urn });
       const account = result.accounts[0];
-      console.log(account);
 
       if (!account) {
         throw new Error(`Account not found. URN: ${urn}`);
