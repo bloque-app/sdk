@@ -45,7 +45,7 @@ export class SDK {
     const urn = this.buildUrn(alias);
     const origin = this.httpClient.origin;
 
-    const response = await this.identity.origins.register(urn, origin, {
+    const response = await this.identity.origins.register(alias, origin, {
       assertionResult: {
         alias: alias,
         challengeType: 'API_KEY',
