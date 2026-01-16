@@ -52,6 +52,11 @@
       "types": "./dist/orgs.d.ts",
       "import": "./dist/orgs.js",
       "require": "./dist/orgs.cjs"
+    },
+    "./swap": {
+      "types": "./dist/swap.d.ts",
+      "import": "./dist/swap.js",
+      "require": "./dist/swap.cjs"
     }
   },
   "main": "./dist/index.cjs",
@@ -76,7 +81,8 @@
     "@bloque/sdk-compliance": "workspace:*",
     "@bloque/sdk-core": "workspace:*",
     "@bloque/sdk-identity": "workspace:*",
-    "@bloque/sdk-orgs": "workspace:*"
+    "@bloque/sdk-orgs": "workspace:*",
+    "@bloque/sdk-swap": "workspace:*"
   },
   "devDependencies": {
     "@rslib/core": "catalog:",
