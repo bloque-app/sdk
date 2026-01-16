@@ -146,5 +146,27 @@ consultarTasas();
 
 ## Próximos Pasos
 
+## Listar Bancos PSE
+
+Puedes obtener la lista de bancos disponibles para pagos PSE (Pagos Seguros en Línea) junto con sus códigos:
+
+```typescript
+const pseBanks = await userSession.swap.pse.banks();
+for (const bank of pseBanks.banks) {
+  console.log(`${bank.code}: ${bank.name}`);
+}
+```
+
+### Tipo Bank
+
+```typescript
+interface Bank {
+  code: string; // Código del banco para PSE
+  name: string; // Nombre del banco
+}
+```
+
+Esto es útil para mostrar la lista de bancos al usuario al iniciar swaps o pagos vía PSE.
+
 - [Guía de Cuentas](/sdk/guide/accounts/overview) - Crea y gestiona cuentas para operar swaps
 - [Guía de Organizaciones](/sdk/guide/features/organizations) - Administra entidades que pueden realizar swaps

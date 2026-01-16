@@ -66,3 +66,12 @@ export interface Rate {
 export interface FindRatesResponse {
   rates: Rate[];
 }
+
+export interface PseBank {
+  financial_institution_code: string;
+  financial_institution_name: string;
+}
+
+export interface ListPseBanksResponse {
+  banks: PseBank[];
+}
