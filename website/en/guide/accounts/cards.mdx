@@ -31,7 +31,7 @@ const bloque = new SDK({
 });
 
 // Connect to user session
-const userSession = await bloque.connect('did:bloque:your-origin:user-alias');
+const userSession = await bloque.connect('user-alias');
 
 // Create a virtual card
 const card = await userSession.accounts.card.create({
@@ -83,7 +83,7 @@ List all card accounts for a user with their balances:
 
 ```typescript title="list-cards.ts"
 // Using connected session (recommended)
-const userSession = await bloque.connect('did:bloque:your-origin:user-alias');
+const userSession = await bloque.connect('user-alias');
 const cards = await userSession.accounts.card.list();
 
 console.log(`Found ${cards.length} card accounts`);

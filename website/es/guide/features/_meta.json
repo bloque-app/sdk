@@ -8,5 +8,10 @@
     "type": "file",
     "name": "organizations",
     "label": "Organizations"
+  },
+  {
+    "type": "file",
+    "name": "swap",
+    "label": "Swap"
   }
 ]

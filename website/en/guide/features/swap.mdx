@@ -1,0 +1,150 @@
+
+# Swap
+
+Learn how to perform asset swaps using the Bloque SDK.
+
+## Overview
+
+The swap module lets you query exchange rates and perform asset swaps between supported mediums and currencies.
+
+## Querying Exchange Rates
+
+```typescript
+import { SDK } from '@bloque/sdk';
+
+const bloque = new SDK({
+  origin: 'your-origin',
+  auth: {
+    type: 'apiKey',
+    apiKey: process.env.BLOQUE_API_KEY!,
+  },
+  mode: 'production',
+});
+
+const userSession = await bloque.connect('user-alias');
+
+const result = await userSession.swap.findRates({
+  fromAsset: 'COP/2',
+  toAsset: 'DUSD/6',
+  fromMediums: ['bancolombia', 'pse'], // required
+  toMediums: ['kusama'], // required
+  amountSrc: '50000000', // 500000.00 COP (scaled by 2 decimals)
+  sort: 'asc', // optional, default: 'asc'
+  sortBy: 'rate', // optional, default: 'rate'
+});
+console.log('Swap rates result:', result);
+```
+
+## Parameters
+
+### FindRatesParams
+
+| Field         | Type           | Required | Description                                                        |
+|-------------- |--------------- |----------|--------------------------------------------------------------------|
+| `fromAsset`   | `string`       | Yes      | Source asset with precision (e.g., "COP/2")                        |
+| `toAsset`     | `string`       | Yes      | Destination asset with precision (e.g., "DUSD/6")                  |
+| `fromMediums` | `string[]`     | Yes      | Source payment mediums (e.g., `["bancolombia"]`)                   |
+| `toMediums`   | `string[]`     | Yes      | Destination payment mediums (e.g., `["kusama"]`)                   |
+| `amountSrc`   | `string`       | Optional | Source amount as bigint string (scaled by asset precision)          |
+| `amountDst`   | `string`       | Optional | Destination amount as bigint string (scaled by asset precision)     |
+| `sort`        | `'asc'|'desc'` | Optional | Result order (default 'asc')                                       |
+| `sortBy`      | `'rate'|'at'`  | Optional | Sort field ('rate' by default)                                     |
+
+## Response
+
+### FindRatesResult
+
+```typescript
+interface FindRatesResult {
+  rates: SwapRate[];
+}
+```
+
+### SwapRate
+
+```typescript
+interface SwapRate {
+  id: string;
+  sig: string;
+  swapSig: string;
+  maker: string;
+  edge: [string, string];
+  fee: Fee;
+  at: string;
+  until: string;
+  fromMediums: string[];
+  toMediums: string[];
+  rate: [number, number];
+  ratio: number;
+  fromLimits: [string, string];
+  toLimits: [string, string];
+  createdAt: string;
+  updatedAt: string;
+}
+```
+
+### Fee
+
+```typescript
+interface Fee {
+  at: number;
+  value: number;
+  formula: string;
+  components: FeeComponent[];
+}
+```
+
+### FeeComponent
+
+```typescript
+interface FeeComponent {
+  at: number;
+  name: string;
+  type: 'percentage' | 'rate' | 'fixed';
+  value: number | string;
+  percentage?: number;
+  pair?: string;
+  amount?: number;
+}
+```
+
+## Complete Example Flow
+
+```typescript
+import { SwapClient } from '@bloque/swap';
+
+const client = new SwapClient({ /* config */ });
+
+async function queryRates() {
+  const result = await client.findRates({
+    fromAsset: 'COP/2',
+    toAsset: 'DUSD/6',
+    fromMediums: ['bancolombia'],
+    toMediums: ['kusama'],
+    amountSrc: '50000000',
+  });
+
+  if (result.rates.length > 0) {
+    const bestRate = result.rates[0];
+    console.log('Ratio:', bestRate.ratio);
+    console.log('Fee:', bestRate.fee.value);
+  } else {
+    console.log('No rates available');
+  }
+}
+
+queryRates();
+```
+
+## Best Practices
+
+1. Validate input parameters before querying rates.
+2. Use the `fromLimits` and `toLimits` fields to check allowed amounts.
+3. Handle possible network or API errors gracefully.
+4. Query rates right before performing a swap to avoid expiration.
+5. Check the `until` field to know how long a rate is valid.
+
+## Next Steps
+
+- [Accounts Guide](/sdk/guide/accounts/overview) - Create and manage accounts for swap operations
+- [Organizations Guide](/sdk/guide/features/organizations) - Manage entities that can perform swaps

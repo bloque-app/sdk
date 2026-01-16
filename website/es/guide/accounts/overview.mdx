@@ -45,7 +45,7 @@ const bloque = new SDK({
 });
 
 // Connect to user session
-const userSession = await bloque.connect('did:bloque:your-origin:user-alias');
+const userSession = await bloque.connect('user-alias');
 
 // List all card accounts
 const cards = await userSession.accounts.card.list();
@@ -117,7 +117,7 @@ console.log('Transfer queued:', transfer.queueId);
 La mayoría de las operaciones de cuentas requieren conectarse primero a una sesión de usuario:
 
 ```typescript title="types.ts"
-const userSession = await bloque.connect('did:bloque:your-origin:user-alias');
+const userSession = await bloque.connect('user-alias');
 const cards = await userSession.accounts.card.list();
 ```
 
