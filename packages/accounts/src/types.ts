@@ -163,3 +163,37 @@ export interface ListAccountsResult {
   /** Array of accounts */
   accounts: Account[];
 }
+
+/**
+ * Transaction details metadata
+ */
+export interface MovementDetails {
+  /** Additional metadata */
+  metadata?: Record<string, unknown>;
+  /** Transaction type */
+  type?: string;
+}
+
+/**
+ * Account movement/transaction
+ */
+export interface Movement {
+  /** Transaction amount */
+  amount: string;
+  /** Asset type */
+  asset: string;
+  /** Source account ID */
+  fromAccountId: string;
+  /** Destination account ID */
+  toAccountId: string;
+  /** Transaction direction */
+  direction: 'in' | 'out';
+  /** Transaction reference */
+  reference: string;
+  /** Rail/network name */
+  railName: string;
+  /** Transaction details */
+  details: MovementDetails;
+  /** Creation timestamp */
+  createdAt: string;
+}

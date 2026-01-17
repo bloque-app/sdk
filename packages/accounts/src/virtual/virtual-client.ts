@@ -105,10 +105,7 @@ export class VirtualClient extends BaseClient {
     params: CreateVirtualAccountParams,
     options?: CreateAccountOptions,
   ): Promise<VirtualAccount> {
-    const input: CreateVirtualAccountInput = {
-      first_name: params.firstName,
-      last_name: params.lastName,
-    };
+    const input: CreateVirtualAccountInput = {};
 
     const request: CreateAccountRequest<CreateVirtualAccountInput> = {
       holder_urn: params.holderUrn || this.httpClient.urn || '',
@@ -158,7 +155,6 @@ export class VirtualClient extends BaseClient {
 
       const result = await this.list({ urn });
       const account = result.accounts[0];
-      console.log(account);
 
       if (!account) {
         throw new Error(`Account not found. URN: ${urn}`);
