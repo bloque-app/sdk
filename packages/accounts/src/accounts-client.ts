@@ -2,8 +2,10 @@ import type { HttpClient } from '@bloque/sdk-core';
 import { BaseClient } from '@bloque/sdk-core';
 import { BancolombiaClient } from './bancolombia/bancolombia-client';
 import { CardClient } from './card/card-client';
+import type { ListMovementsParams } from './card/types';
 import type {
   ListAccountsResponse,
+  ListMovementsResponse,
   TransferRequest,
   TransferResponse,
 } from './internal/wire-types';
@@ -12,6 +14,7 @@ import type {
   Account,
   ListAccountsParams,
   ListAccountsResult,
+  Movement,
   TokenBalance,
   TransferParams,
   TransferResult,
@@ -131,6 +134,89 @@ export class AccountsClient extends BaseClient {
       status: response.result.status,
       message: response.result.message,
     };
+  }
+
+  /**
+   * List account movements/transactions
+   *
+   * Retrieves transaction history for a specific account using its URN.
+   *
+   * @param params - Movement list parameters
+   * @returns Promise resolving to array of movements
+   *
+   * @example
+   * ```typescript
+   * // Basic usage
+   * const movements = await bloque.accounts.movements({
+   *   urn: 'did:bloque:account:card:usr-123:crd-456',
+   * });
+   *
+   * // With filters
+   * const recentMovements = await bloque.accounts.movements({
+   *   urn: 'did:bloque:account:card:usr-123:crd-456',
+   *   asset: 'DUSD/6',
+   *   limit: 50,
+   *   direction: 'in',
+   *   after: '2025-01-01T00:00:00Z',
+   * });
+   * ```
+   */
+  async movements(params: ListMovementsParams): Promise<Movement[]> {
+    if (!params.urn) {
+      throw new Error('Account URN is required');
+    }
+
+    const asset = params.asset || 'DUSD/6';
+    if (asset !== 'DUSD/6' && asset !== 'KSM/12') {
+      throw new Error(
+        'Invalid asset type. Supported assets are DUSD/6 and KSM/12.',
+      );
+    }
+
+    const queryParams = new URLSearchParams();
+    queryParams.set('asset', asset);
+
+    if (params.limit !== undefined) {
+      queryParams.set('limit', params.limit.toString());
+    }
+
+    if (params.before) {
+      queryParams.set('before', params.before);
+    }
+
+    if (params.after) {
+      queryParams.set('after', params.after);
+    }
+
+    if (params.reference) {
+      queryParams.set('reference', params.reference);
+    }
+
+    if (params.direction) {
+      queryParams.set('direction', params.direction);
+    }
+
+    const path = `/api/accounts/${params.urn}/movements?${queryParams.toString()}`;
+
+    const response = await this.httpClient.request<ListMovementsResponse>({
+      method: 'GET',
+      path,
+    });
+
+    return response.transactions.map((tx) => ({
+      amount: tx.amount,
+      asset: tx.asset,
+      fromAccountId: tx.from_account_id,
+      toAccountId: tx.to_account_id,
+      direction: tx.direction,
+      reference: tx.reference,
+      railName: tx.rail_name,
+      details: {
+        metadata: tx.details.metadata,
+        type: tx.details.type,
+      },
+      createdAt: tx.created_at,
+    }));
   }
 
   /**

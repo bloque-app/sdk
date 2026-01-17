@@ -35,20 +35,6 @@ export interface CreateVirtualAccountParams {
   holderUrn?: string;
 
   /**
-   * Account holder's first name
-   *
-   * @example "John"
-   */
-  firstName: string;
-
-  /**
-   * Account holder's last name
-   *
-   * @example "Doe"
-   */
-  lastName: string;
-
-  /**
    * Ledger account ID to associate with the virtual account
    * If not provided, a new ledger account will be created automatically
    */

@@ -108,10 +108,7 @@ export type BancolombiaDetails = {
  * @internal
  * Virtual account input for creation
  */
-export type CreateVirtualAccountInput = {
-  first_name: string;
-  last_name: string;
-};
+export type CreateVirtualAccountInput = {};
 
 /**
  * @internal
