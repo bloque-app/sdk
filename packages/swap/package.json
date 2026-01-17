@@ -1,13 +1,11 @@
 {
-  "name": "@bloque/sdk-accounts",
+  "name": "@bloque/sdk-swap",
   "version": "0.0.27",
   "type": "module",
   "keywords": [
     "bloque",
     "sdk",
-    "api",
-    "accounts",
-    "payments"
+    "api"
   ],
   "license": "MIT",
   "publishConfig": {
@@ -18,7 +16,7 @@
   "repository": {
     "type": "git",
     "url": "git+https://github.com/bloque-app/sdk.git",
-    "directory": "packages/accounts"
+    "directory": "packages/swap"
   },
   "exports": {
     ".": {

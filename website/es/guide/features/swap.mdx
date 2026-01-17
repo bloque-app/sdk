@@ -1,0 +1,150 @@
+
+# Swap
+
+Aprende cómo realizar intercambios de activos usando el SDK de Bloque.
+
+## Descripción General
+
+El módulo swap permite consultar tasas de cambio y realizar intercambios de activos entre diferentes medios y monedas soportadas.
+
+## Realizando una Consulta de Tasas
+
+```typescript
+import { SDK } from '@bloque/sdk';
+
+const bloque = new SDK({
+  origin: 'your-origin',
+  auth: {
+    type: 'apiKey',
+    apiKey: process.env.BLOQUE_API_KEY!,
+  },
+  mode: 'production',
+});
+
+const userSession = await bloque.connect('user-alias');
+
+const result = await userSession.swap.findRates({
+  fromAsset: 'COP/2',
+  toAsset: 'DUSD/6',
+  fromMediums: ['bancolombia', 'pse'], // required
+  toMediums: ['kusama'], // required
+  amountSrc: '50000000', // 500000.00 COP (scaled by 2 decimals)
+  sort: 'asc', // optional, default: 'asc'
+  sortBy: 'rate', // optional, default: 'rate'
+});
+console.log('Swap rates result:', result);
+```
+
+## Parámetros
+
+### FindRatesParams
+
+| Campo         | Tipo         | Requerido | Descripción                                                                 |
+|-------------- |--------------|-----------|-----------------------------------------------------------------------------|
+| `fromAsset`   | `string`     | Sí        | Activo origen con precisión (ej: "COP/2")                                  |
+| `toAsset`     | `string`     | Sí        | Activo destino con precisión (ej: "DUSD/6")                                |
+| `fromMediums` | `string[]`   | Sí        | Medios de pago origen (ej: `["bancolombia"]`)                              |
+| `toMediums`   | `string[]`   | Sí        | Medios de pago destino (ej: `["kusama"]`)                                  |
+| `amountSrc`   | `string`     | Opcional  | Monto origen como string bigint (escalar según precisión)                    |
+| `amountDst`   | `string`     | Opcional  | Monto destino como string bigint (escalar según precisión)                   |
+| `sort`        | `'asc'|'desc'`| Opcional | Orden de resultados (por defecto 'asc')                                     |
+| `sortBy`      | `'rate'|'at'` | Opcional | Campo de ordenamiento ('rate' por defecto)                                  |
+
+## Respuesta
+
+### FindRatesResult
+
+```typescript
+interface FindRatesResult {
+  rates: SwapRate[];
+}
+```
+
+### SwapRate
+
+```typescript
+interface SwapRate {
+  id: string;
+  sig: string;
+  swapSig: string;
+  maker: string;
+  edge: [string, string];
+  fee: Fee;
+  at: string;
+  until: string;
+  fromMediums: string[];
+  toMediums: string[];
+  rate: [number, number];
+  ratio: number;
+  fromLimits: [string, string];
+  toLimits: [string, string];
+  createdAt: string;
+  updatedAt: string;
+}
+```
+
+### Fee
+
+```typescript
+interface Fee {
+  at: number;
+  value: number;
+  formula: string;
+  components: FeeComponent[];
+}
+```
+
+### FeeComponent
+
+```typescript
+interface FeeComponent {
+  at: number;
+  name: string;
+  type: 'percentage' | 'rate' | 'fixed';
+  value: number | string;
+  percentage?: number;
+  pair?: string;
+  amount?: number;
+}
+```
+
+## Ejemplo Completo de Flujo
+
+```typescript
+import { SwapClient } from '@bloque/swap';
+
+const client = new SwapClient({ /* configuración */ });
+
+async function consultarTasas() {
+  const resultado = await client.findRates({
+    fromAsset: 'COP/2',
+    toAsset: 'DUSD/6',
+    fromMediums: ['bancolombia'],
+    toMediums: ['kusama'],
+    amountSrc: '50000000',
+  });
+
+  if (resultado.rates.length > 0) {
+    const mejorTasa = resultado.rates[0];
+    console.log('Ratio:', mejorTasa.ratio);
+    console.log('Fee:', mejorTasa.fee.value);
+  } else {
+    console.log('No se encontraron tasas disponibles');
+  }
+}
+
+consultarTasas();
+```
+
+## Mejores Prácticas
+
+1. Valida los parámetros de entrada antes de consultar tasas.
+2. Usa los campos de límites (`fromLimits`, `toLimits`) para validar montos permitidos.
+3. Maneja correctamente los posibles errores de red o de la API.
+4. Consulta tasas justo antes de realizar una operación para evitar expiraciones.
+5. Revisa el campo `until` para saber hasta cuándo es válida la tasa.
+
+## Próximos Pasos
+
+- [Guía de Cuentas](/sdk/guide/accounts/overview) - Crea y gestiona cuentas para operar swaps
+- [Guía de Organizaciones](/sdk/guide/features/organizations) - Administra entidades que pueden realizar swaps

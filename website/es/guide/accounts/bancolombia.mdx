@@ -21,7 +21,7 @@ const bloque = new SDK({
 });
 
 // Connect to user session
-const userSession = await bloque.connect('did:bloque:your-origin:user-alias');
+const userSession = await bloque.connect('user-alias');
 
 // Create Bancolombia account
 const account = await userSession.accounts.bancolombia.create({

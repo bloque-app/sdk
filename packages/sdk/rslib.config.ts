@@ -9,6 +9,7 @@ export default defineConfig({
       compliance: './src/compliance.ts',
       identity: './src/identity.ts',
       orgs: './src/orgs.ts',
+      swap: './src/swap.ts',
     },
   },
   lib: [

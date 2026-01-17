@@ -6,6 +6,7 @@ import {
   IdentityClient,
 } from '@bloque/sdk-identity';
 import { OrgsClient } from '@bloque/sdk-orgs';
+import { SwapClient } from '@bloque/sdk-swap';
 
 export class SDK {
   private readonly httpClient: HttpClient;
@@ -22,6 +23,7 @@ export class SDK {
       compliance: new ComplianceClient(this.httpClient),
       identity: this.identity,
       orgs: new OrgsClient(this.httpClient),
+      swap: new SwapClient(this.httpClient),
     };
   }
 

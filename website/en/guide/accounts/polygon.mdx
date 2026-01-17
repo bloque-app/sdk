@@ -30,7 +30,7 @@ const bloque = new SDK({
 });
 
 // Connect to user session
-const session = await bloque.connect('did:bloque:your-origin:user-alias');
+const session = await bloque.connect('user-alias');
 
 // Create a Polygon account
 const account = await session.accounts.polygon.create({

@@ -128,7 +128,7 @@ const bloque = new SDK({
 async function createCard() {
   try {
     // Connect to user session
-    const session = await bloque.connect('did:bloque:your-origin:user-alias');
+    const session = await bloque.connect('user-alias');
 
     // Create a virtual card
     const card = await session.accounts.card.create({
@@ -262,7 +262,7 @@ const bloque = new SDK({
 After connecting to a user session, you have access to these clients:
 
 ```typescript
-const session = await bloque.connect('did:bloque:your-origin:user-alias');
+const session = await bloque.connect('user-alias');
 
 // Available clients
 session.accounts    // Account management (cards, virtual, bancolombia)
