@@ -168,5 +168,143 @@ interface Bank {
 
 Esto es útil para mostrar la lista de bancos al usuario al iniciar swaps o pagos vía PSE.
 
+## Pagos PSE
+
+El SDK permite realizar pagos a través de PSE (Pagos Seguros en Línea) en un flujo de dos pasos:
+1. Crear una intención de pago (top-up)
+2. Iniciar el pago PSE con los datos del pagador
+
+### Paso 1: Crear Top-Up
+
+Primero, crea una intención de pago con el monto y la moneda:
+
+```typescript
+const topUp = await userSession.swap.pse.createTopUp({
+  amount: '50000000', // 500,000.00 COP (escalado por 2 decimales)
+  currency: 'DUSD/6',
+  successUrl: 'https://tu-app.com/pago/exitoso',
+  webhookUrl: 'https://tu-app.com/webhooks/pago',
+});
+
+console.log('Payment URN:', topUp.payment.urn);
+console.log('Payment URL:', topUp.payment.url);
+```
+
+#### Parámetros CreateTopUpParams
+
+| Campo        | Tipo       | Requerido | Descripción                                      |
+|--------------|------------|-----------|--------------------------------------------------|
+| `amount`     | `string`   | Sí        | Monto del pago (escalado por precisión)          |
+| `currency`   | `Currency` | Sí        | Moneda con precisión (ej: "DUSD/6")              |
+| `successUrl` | `string`   | No        | URL de redirección en pago exitoso               |
+| `webhookUrl` | `string`   | No        | URL para notificaciones de pago                  |
+
+### Paso 2: Iniciar Pago PSE
+
+Con el URN del pago, inicia el flujo PSE proporcionando los datos del pagador:
+
+```typescript
+const result = await userSession.swap.pse.initiatePayment({
+  paymentUrn: topUp.payment.urn,
+  payee: {
+    name: 'Juan Pérez García',
+    email: 'juan.perez@example.com',
+    idType: 'CC',
+    idNumber: '1055228746',
+  },
+  personType: 'natural',
+  bankCode: '1', // Código del banco obtenido de pse.banks()
+});
+
+// Redirigir al usuario a PSE
+window.location.href = result.checkoutUrl;
+```
+
+#### Parámetros InitiatePsePaymentParams
+
+| Campo        | Tipo         | Requerido | Descripción                                    |
+|--------------|--------------|-----------|------------------------------------------------|
+| `paymentUrn` | `string`     | Sí        | URN del pago obtenido de createTopUp           |
+| `payee`      | `PsePayee`   | Sí        | Información del pagador                        |
+| `personType` | `PersonType` | Sí        | Tipo de persona: "natural" o "juridica"        |
+| `bankCode`   | `string`     | Sí        | Código del banco (de pse.banks())              |
+
+#### Tipo PsePayee
+
+```typescript
+interface PsePayee {
+  name: string;     // Nombre completo
+  email: string;    // Correo electrónico
+  idType: string;   // Tipo de documento (CC, NIT, CE, etc.)
+  idNumber: string; // Número de documento
+}
+```
+
+#### Respuesta InitiatePsePaymentResult
+
+```typescript
+interface InitiatePsePaymentResult {
+  paymentId: string;    // ID del pago
+  status: string;       // Estado del pago
+  message: string;      // Mensaje de estado
+  amount: string;       // Monto del pago
+  currency: Currency;   // Moneda
+  checkoutUrl: string;  // URL de PSE para redirigir al usuario
+  orderId: string;      // ID de la orden
+  orderStatus: string;  // Estado de la orden
+  createdAt: string;    // Fecha de creación
+}
+```
+
+### Ejemplo Completo de Flujo PSE
+
+```typescript
+import { SDK } from '@bloque/sdk';
+
+const bloque = new SDK({
+  origin: 'your-origin',
+  auth: {
+    type: 'apiKey',
+    apiKey: process.env.BLOQUE_API_KEY!,
+  },
+  mode: 'production',
+});
+
+async function realizarPagoPSE() {
+  const userSession = await bloque.connect('user-alias');
+
+  // 1. Obtener lista de bancos
+  const { banks } = await userSession.swap.pse.banks();
+  console.log('Bancos disponibles:', banks);
+
+  // 2. Crear intención de pago
+  const topUp = await userSession.swap.pse.createTopUp({
+    amount: '50000000',
+    currency: 'DUSD/6',
+    successUrl: 'https://tu-app.com/pago/exitoso',
+    webhookUrl: 'https://tu-app.com/webhooks/pago',
+  });
+
+  // 3. Iniciar pago PSE con datos del usuario
+  const result = await userSession.swap.pse.initiatePayment({
+    paymentUrn: topUp.payment.urn,
+    payee: {
+      name: 'Juan Pérez García',
+      email: 'juan.perez@example.com',
+      idType: 'CC',
+      idNumber: '1055228746',
+    },
+    personType: 'natural',
+    bankCode: banks[0].code, // Banco seleccionado por el usuario
+  });
+
+  // 4. Redirigir al usuario a PSE
+  console.log('Redirigiendo a:', result.checkoutUrl);
+  window.location.href = result.checkoutUrl;
+}
+
+realizarPagoPSE();
+```
+
 - [Guía de Cuentas](/sdk/guide/accounts/overview) - Crea y gestiona cuentas para operar swaps
 - [Guía de Organizaciones](/sdk/guide/features/organizations) - Administra entidades que pueden realizar swaps
