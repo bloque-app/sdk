@@ -168,91 +168,124 @@ interface Bank {
 
 Esto es útil para mostrar la lista de bancos al usuario al iniciar swaps o pagos vía PSE.
 
-## Pagos PSE
+## Crear Orden de Swap con PSE
 
-El SDK permite realizar pagos a través de PSE (Pagos Seguros en Línea) en un flujo de dos pasos:
-1. Crear una intención de pago (top-up)
-2. Iniciar el pago PSE con los datos del pagador
+El SDK permite crear órdenes de swap usando PSE (Pagos Seguros en Línea) como medio de pago origen. El método `pse.create` combina la creación de la orden y opcionalmente auto-ejecuta el primer nodo de instrucciones para iniciar el flujo de pago.
 
-### Paso 1: Crear Top-Up
-
-Primero, crea una intención de pago con el monto y la moneda:
+### Uso Básico
 
 ```typescript
-const topUp = await userSession.swap.pse.createTopUp({
-  amount: '50000000', // 500,000.00 COP (escalado por 2 decimales)
-  currency: 'DUSD/6',
-  successUrl: 'https://tu-app.com/pago/exitoso',
-  webhookUrl: 'https://tu-app.com/webhooks/pago',
+// 1. Buscar tasas disponibles
+const rates = await userSession.swap.findRates({
+  fromAsset: 'COP/2',
+  toAsset: 'DUSD/6',
+  fromMediums: ['pse'],
+  toMediums: ['kreivo'],
+  amountSrc: '1000000', // 10,000.00 COP
 });
 
-console.log('Payment URN:', topUp.payment.urn);
-console.log('Payment URL:', topUp.payment.url);
-```
-
-#### Parámetros CreateTopUpParams
-
-| Campo        | Tipo       | Requerido | Descripción                                      |
-|--------------|------------|-----------|--------------------------------------------------|
-| `amount`     | `string`   | Sí        | Monto del pago (escalado por precisión)          |
-| `currency`   | `Currency` | Sí        | Moneda con precisión (ej: "DUSD/6")              |
-| `successUrl` | `string`   | No        | URL de redirección en pago exitoso               |
-| `webhookUrl` | `string`   | No        | URL para notificaciones de pago                  |
-
-### Paso 2: Iniciar Pago PSE
-
-Con el URN del pago, inicia el flujo PSE proporcionando los datos del pagador:
-
-```typescript
-const result = await userSession.swap.pse.initiatePayment({
-  paymentUrn: topUp.payment.urn,
-  payee: {
-    name: 'Juan Pérez García',
-    email: 'juan.perez@example.com',
-    idType: 'CC',
-    idNumber: '1055228746',
-  },
-  personType: 'natural',
-  bankCode: '1', // Código del banco obtenido de pse.banks()
+// 2. Crear orden de swap con PSE
+const result = await userSession.swap.pse.create({
+  rateSig: rates.rates[0].sig,
+  toMedium: 'kreivo',
+  amountSrc: '1000000',
+  depositInformation: { ledgerAccountId: '0x123...' },
+  args: { bankCode: '1007' }, // Auto-ejecuta el pago PSE
 });
 
-// Redirigir al usuario a PSE
-window.location.href = result.checkoutUrl;
-```
-
-#### Parámetros InitiatePsePaymentParams
-
-| Campo        | Tipo         | Requerido | Descripción                                    |
-|--------------|--------------|-----------|------------------------------------------------|
-| `paymentUrn` | `string`     | Sí        | URN del pago obtenido de createTopUp           |
-| `payee`      | `PsePayee`   | Sí        | Información del pagador                        |
-| `personType` | `PersonType` | Sí        | Tipo de persona: "natural" o "juridica"        |
-| `bankCode`   | `string`     | Sí        | Código del banco (de pse.banks())              |
-
-#### Tipo PsePayee
-
-```typescript
-interface PsePayee {
-  name: string;     // Nombre completo
-  email: string;    // Correo electrónico
-  idType: string;   // Tipo de documento (CC, NIT, CE, etc.)
-  idNumber: string; // Número de documento
+// 3. Redirigir al usuario a PSE
+if (result.execution?.result.checkoutUrl) {
+  window.location.href = result.execution.result.checkoutUrl;
 }
 ```
 
-#### Respuesta InitiatePsePaymentResult
+### Parámetros CreatePseOrderParams
+
+| Campo                | Tipo                 | Requerido | Descripción                                                    |
+|----------------------|----------------------|-----------|----------------------------------------------------------------|
+| `rateSig`            | `string`             | Sí        | Firma del rate obtenida de findRates                           |
+| `toMedium`           | `string`             | Sí        | Medio de destino (ej: 'kreivo', 'bloque')                      |
+| `amountSrc`          | `string`             | Condicional| Monto origen como bigint string (requerido si type es 'src')   |
+| `amountDst`          | `string`             | Condicional| Monto destino como bigint string (requerido si type es 'dst')  |
+| `type`               | `'src' \| 'dst'`     | No        | Tipo de orden (por defecto: 'src')                             |
+| `depositInformation` | `DepositInformation` | No        | Información de depósito para entrega de fondos                 |
+| `args`               | `PsePaymentArgs`     | No        | Argumentos PSE para auto-ejecución                             |
+| `nodeId`             | `string`             | No        | ID del nodo específico a ejecutar                              |
+| `metadata`           | `Record<string, unknown>` | No   | Metadata adicional para la orden                               |
+
+### Tipo DepositInformation
+
+Para cash-in (fiat a crypto):
+```typescript
+interface DepositInformationCashIn {
+  ledgerAccountId?: string; // ID de cuenta ledger para recibir fondos
+}
+```
+
+Para cash-out (crypto a fiat):
+```typescript
+interface DepositInformationCashOut {
+  bankCode?: string;      // Código del banco
+  accountNumber?: string; // Número de cuenta
+  accountType?: string;   // Tipo de cuenta (savings, checking)
+}
+```
+
+### Tipo PsePaymentArgs
 
 ```typescript
-interface InitiatePsePaymentResult {
-  paymentId: string;    // ID del pago
-  status: string;       // Estado del pago
-  message: string;      // Mensaje de estado
-  amount: string;       // Monto del pago
-  currency: Currency;   // Moneda
-  checkoutUrl: string;  // URL de PSE para redirigir al usuario
-  orderId: string;      // ID de la orden
-  orderStatus: string;  // Estado de la orden
-  createdAt: string;    // Fecha de creación
+interface PsePaymentArgs {
+  bankCode: string;   // Código del banco (de pse.banks())
+  userType?: string;  // '0' para persona natural, '1' para persona jurídica
+}
+```
+
+### Respuesta CreatePseOrderResult
+
+```typescript
+interface CreatePseOrderResult {
+  order: SwapOrder;           // Detalles de la orden creada
+  execution?: ExecutionResult; // Resultado de auto-ejecución (si se pasaron args)
+  requestId: string;          // ID de la solicitud para tracking
+}
+```
+
+### Tipo SwapOrder
+
+```typescript
+interface SwapOrder {
+  id: string;                        // ID único de la orden
+  orderSig: string;                  // Firma de la orden
+  rateSig: string;                   // Firma del rate usado
+  swapSig: string;                   // Firma del swap
+  taker: string;                     // URN del tomador
+  maker: string;                     // URN del maker
+  fromAsset: string;                 // Activo origen
+  toAsset: string;                   // Activo destino
+  fromMedium: string;                // Medio origen
+  toMedium: string;                  // Medio destino
+  fromAmount: string;                // Monto origen
+  toAmount: string;                  // Monto destino
+  depositInformation: DepositInformation; // Información de depósito
+  at: number;                        // Timestamp de creación
+  graphId: string;                   // ID del grafo de instrucciones
+  status: string;                    // Estado (pending, in_progress, completed, failed)
+  createdAt: string;                 // Fecha de creación
+  updatedAt: string;                 // Fecha de actualización
+}
+```
+
+### Tipo ExecutionResult
+
+```typescript
+interface ExecutionResult {
+  nodeId: string;   // ID del nodo ejecutado
+  result: {
+    status: string;       // Estado de la ejecución
+    args?: unknown[];     // Argumentos adicionales
+    description?: string; // Descripción del resultado
+    checkoutUrl?: string; // URL de PSE para redirigir al usuario
+  };
 }
 ```
 
@@ -270,41 +303,61 @@ const bloque = new SDK({
   mode: 'production',
 });
 
-async function realizarPagoPSE() {
+async function realizarSwapPSE() {
   const userSession = await bloque.connect('user-alias');
 
   // 1. Obtener lista de bancos
   const { banks } = await userSession.swap.pse.banks();
   console.log('Bancos disponibles:', banks);
 
-  // 2. Crear intención de pago
-  const topUp = await userSession.swap.pse.createTopUp({
-    amount: '50000000',
-    currency: 'DUSD/6',
-    successUrl: 'https://tu-app.com/pago/exitoso',
-    webhookUrl: 'https://tu-app.com/webhooks/pago',
+  // 2. Buscar tasas disponibles
+  const rates = await userSession.swap.findRates({
+    fromAsset: 'COP/2',
+    toAsset: 'DUSD/6',
+    fromMediums: ['pse'],
+    toMediums: ['kreivo'],
+    amountSrc: '50000000', // 500,000.00 COP
   });
 
-  // 3. Iniciar pago PSE con datos del usuario
-  const result = await userSession.swap.pse.initiatePayment({
-    paymentUrn: topUp.payment.urn,
-    payee: {
-      name: 'Juan Pérez García',
-      email: 'juan.perez@example.com',
-      idType: 'CC',
-      idNumber: '1055228746',
+  if (rates.rates.length === 0) {
+    console.log('No hay tasas disponibles');
+    return;
+  }
+
+  // 3. Crear orden de swap con PSE y auto-ejecutar
+  const result = await userSession.swap.pse.create({
+    rateSig: rates.rates[0].sig,
+    toMedium: 'kreivo',
+    amountSrc: '50000000',
+    depositInformation: {
+      ledgerAccountId: '0x1a2b3c4d5e6f7890',
     },
-    personType: 'natural',
-    bankCode: banks[0].code, // Banco seleccionado por el usuario
+    args: {
+      bankCode: banks[0].code, // Banco seleccionado por el usuario
+      userType: '0', // Persona natural
+    },
   });
 
-  // 4. Redirigir al usuario a PSE
-  console.log('Redirigiendo a:', result.checkoutUrl);
-  window.location.href = result.checkoutUrl;
+  console.log('Orden creada:', result.order.id);
+  console.log('Estado:', result.order.status);
+  console.log('Graph ID:', result.order.graphId);
+
+  // 4. Redirigir al usuario a PSE si hay URL de checkout
+  if (result.execution?.result.checkoutUrl) {
+    console.log('Redirigiendo a PSE...');
+    window.location.href = result.execution.result.checkoutUrl;
+  }
 }
 
-realizarPagoPSE();
+realizarSwapPSE();
 ```
+
+### Tipos de Orden
+
+- **`src` (por defecto)**: El usuario especifica el monto exacto a pagar. El monto destino se calcula según el rate.
+  - Ejemplo: "Quiero pagar exactamente 10,000 COP, dame lo que corresponda en DUSD"
+- **`dst`**: El usuario especifica el monto exacto a recibir. El monto origen se calcula según el rate.
+  - Ejemplo: "Quiero recibir exactamente 5 DUSD, pagaré lo que sea necesario en COP"
 
 - [Guía de Cuentas](/sdk/guide/accounts/overview) - Crea y gestiona cuentas para operar swaps
 - [Guía de Organizaciones](/sdk/guide/features/organizations) - Administra entidades que pueden realizar swaps
