@@ -12,26 +12,26 @@ const bloque = new SDK({
 
 const user = await bloque.connect('nestor');
 
-// 1. Create PSE top-up
-const topUp = await user.swap.pse.createTopUp({
-  amount: '50000000',
-  currency: 'DUSD/6',
-  successUrl: 'https://example.com/payment/success',
-  webhookUrl: 'https://myapp.com/webhooks/payment',
+const rates = await user.swap.findRates({
+  fromAsset: 'COP/2',
+  toAsset: 'DUSD/6',
+  fromMediums: ['pse'],
+  toMediums: ['kusama'],
+  amountSrc: '1000000',
 });
-console.log('PSE Top-Up created:', topUp);
+console.log('Available swap rates:', rates.rates[0]);
 
-// 2. Initiate PSE payment
-const result = await user.swap.pse.initiatePayment({
-  paymentUrn: topUp.payment.urn,
-  payee: {
-    name: 'Juan Pérez García',
-    email: 'juan.perez@example.com',
-    idType: 'CC',
-    idNumber: '1055228746',
-  },
-  personType: 'natural',
-  bankCode: '1',
+if (rates.rates.length === 0) {
+  throw new Error(
+    'No swap rates available for the specified assets and mediums.',
+  );
+}
+
+const result = await user.swap.pse.create({
+  rateSig: rates.rates[0]?.sig,
+  toMedium: 'kreivo',
+  amountSrc: '1000000',
+  depositInformation: { ledgerAccountId: '0x123...' },
 });
 
-console.log('PSE Payment initiated:', result.checkoutUrl);
+console.log('PSE Top-up order created:', result.order);

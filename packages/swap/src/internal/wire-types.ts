@@ -76,132 +76,106 @@ export interface ListPseBanksResponse {
   banks: PseBank[];
 }
 
-type Currency = 'DUSD/6' | 'COP/2' | 'KSM/12';
-
-// Payment types
+// Order types for PUT /api/order
 
 /**
  * @internal
- * Payment item in request (snake_case)
+ * Order type for swap (source or destination amount specified)
  */
-export interface CreatePaymentItemInput {
-  name: string;
-  amount: string;
-  sku?: string;
-  description?: string;
-  quantity: number;
-  image_url?: string;
+export type OrderType = 'src' | 'dst';
+
+/**
+ * @internal
+ * Deposit information for cash-in (fiat to crypto)
+ */
+export interface DepositInformationCashIn {
+  ledger_account_id?: string;
 }
 
 /**
  * @internal
- * Create payment request body
+ * Deposit information for cash-out (crypto to fiat)
  */
-export interface CreatePaymentInput {
-  name: string;
-  description?: string;
-  currency: Currency;
-  payment_type: string;
-  image_url?: string;
-  items: CreatePaymentItemInput[];
-  success_url?: string;
-  cancel_url?: string;
+export interface DepositInformationCashOut {
+  bank_code?: string;
+  account_number?: string;
+  account_type?: string;
+}
+
+/**
+ * @internal
+ * Deposit information union type
+ */
+export type DepositInformation =
+  | DepositInformationCashIn
+  | DepositInformationCashOut
+  | Record<string, unknown>;
+
+/**
+ * @internal
+ * Create order input for PUT /api/order
+ */
+export interface CreateOrderInput {
+  taker_urn: string;
+  type: OrderType;
+  rate_sig: string;
+  from_medium: string;
+  to_medium: string;
+  amount_src?: string;
+  amount_dst?: string;
+  deposit_information: DepositInformation;
+  args?: Record<string, unknown>;
+  node_id?: string;
   metadata?: Record<string, unknown>;
-  expires_at?: string;
-  webhook_url?: string;
 }
 
 /**
  * @internal
- * Payment item in response
+ * Order from API response
  */
-export interface PaymentItemResponse {
-  name: string;
-  amount: number;
-  sku?: string;
-  description?: string;
-  quantity: number;
-  image_url?: string;
-}
-
-/**
- * @internal
- * Payment summary from API
- */
-export interface PaymentSummaryResponse {
+export interface OrderResponse {
+  id: string;
+  order_sig: string;
+  rate_sig: string;
+  swap_sig: string;
+  taker: string;
+  maker: string;
+  from_asset: string;
+  to_asset: string;
+  from_medium: string;
+  to_medium: string;
+  from_amount: string;
+  to_amount: string;
+  deposit_information: DepositInformation;
+  at: number;
+  graph_id: string;
   status: string;
-}
-
-/**
- * @internal
- * Payment response from API
- */
-export interface PaymentResponse {
-  urn: string;
-  owner_urn: string;
-  name: string;
-  description?: string;
-  currency: Currency;
-  amount: number;
-  url: string;
-  success_url?: string;
-  cancel_url?: string;
-  image_url?: string;
-  metadata?: Record<string, unknown>;
-  tax?: number;
-  discount_code?: string;
-  webhook_url?: string;
-  payout_route: unknown[];
-  summary: PaymentSummaryResponse;
-  expires_at?: string;
   created_at: string;
   updated_at: string;
-  payment_type: string;
-  items: PaymentItemResponse[];
 }
 
 /**
  * @internal
- * Create payment API response wrapper
+ * Execution result from auto-execution
  */
-export interface CreatePaymentResponse {
-  payment: PaymentResponse;
+export interface ExecutionResult {
+  node_id: string;
+  result: {
+    status: string;
+    args?: unknown[];
+    description?: string;
+    checkout_url?: string;
+  };
 }
 
 /**
  * @internal
- * Payee info for PSE payment
+ * Create order response from PUT /api/order
  */
-export interface PsePayeeInput {
-  name: string;
-  email: string;
-  id_type: string;
-  id_number: string;
-}
-
-/**
- * @internal
- * Initiate PSE payment request body
- */
-export interface InitiatePsePaymentInput {
-  payment_urn: string;
-  payee: PsePayeeInput;
-  person_type: string;
-  bank_code: string;
-}
-
-/**
- * @internal
- * Initiate PSE payment response
- */
-export interface InitiatePsePaymentResponse {
-  payment_id: string;
-  status: string;
-  message: string;
-  amount: string;
-  currency: Currency;
-  checkout_url: string;
-  order_id: string;
-  order_status: string;
-  created_at: string;
+export interface CreateOrderResponse {
+  result: {
+    order: OrderResponse;
+    execution?: ExecutionResult;
+  };
+  req_id: string;
 }

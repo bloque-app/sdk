@@ -1,23 +1,21 @@
-import { BaseClient } from '@bloque/sdk-core';
+import { BaseClient, BloqueConfigError } from '@bloque/sdk-core';
 import type {
-  CreatePaymentInput,
-  CreatePaymentResponse,
-  InitiatePsePaymentInput,
-  InitiatePsePaymentResponse,
+  CreateOrderInput,
+  CreateOrderResponse,
   ListPseBanksResponse,
-  PaymentItemResponse,
-  PaymentResponse,
+  OrderResponse,
   PseBank,
+  DepositInformation as WireDepositInformation,
+  ExecutionResult as WireExecutionResult,
 } from '../internal/wire-types';
 import type {
   Bank,
-  CreateTopUpParams,
-  CreateTopUpResult,
-  InitiatePsePaymentParams,
-  InitiatePsePaymentResult,
+  CreatePseOrderParams,
+  CreatePseOrderResult,
+  DepositInformation,
+  ExecutionResult,
   ListBanksResult,
-  Payment,
-  PaymentItemResult,
+  SwapOrder,
 } from './types';
 
 /**
@@ -54,117 +52,94 @@ export class PseClient extends BaseClient {
   }
 
   /**
-   * Create a PSE top-up
+   * Create a PSE swap order
    *
-   * Creates a payment intent for a PSE top-up/recharge.
-   * Use the returned payment URN with initiatePayment() to start the PSE flow.
+   * Creates a swap order using PSE as the source payment medium.
+   * Optionally auto-executes the first instruction node if args are provided.
    *
-   * @param params - Top-up creation parameters
-   * @returns Promise resolving to the created payment
+   * @param params - PSE order parameters
+   * @returns Promise resolving to the created order with optional execution result
    *
    * @example
    * ```typescript
-   * const result = await bloque.swap.pse.createTopUp({
-   *   amount: '50000000',
-   *   currency: 'DUSD/6',
-   *   successUrl: 'https://example.com/payment/success',
-   *   webhookUrl: 'https://myapp.com/webhooks/payment',
+   * // First find available rates
+   * const rates = await bloque.swap.findRates({
+   *   fromAsset: 'COP/2',
+   *   toAsset: 'DUSD/6',
+   *   fromMediums: ['pse'],
+   *   toMediums: ['kreivo'],
+   *   amountSrc: '1000000'
    * });
    *
-   * // Use the URN to initiate PSE payment
-   * console.log(result.payment.urn);
+   * // Create order with auto-execution
+   * const result = await bloque.swap.pse.create({
+   *   rateSig: rates.rates[0].sig,
+   *   toMedium: 'kreivo',
+   *   amountSrc: '1000000',
+   *   depositInformation: { ledgerAccountId: '0x123...' },
+   *   args: { bankCode: '1007' }
+   * });
+   *
+   * // If execution returned a checkout URL, redirect user
+   * if (result.execution?.result.checkoutUrl) {
+   *   window.location.href = result.execution.result.checkoutUrl;
+   * }
    * ```
    */
-  async createTopUp(params: CreateTopUpParams): Promise<CreateTopUpResult> {
-    const input: CreatePaymentInput = {
-      name: 'PSE Top-up',
-      description: 'PSE Top-up',
-      currency: params.currency,
-      payment_type: 'shopping_cart',
-      items: [
-        {
-          name: 'PSE Top-up',
-          amount: params.amount,
-          quantity: 1,
-        },
-      ],
-      success_url: params.successUrl,
-      webhook_url: params.webhookUrl,
+  async create(params: CreatePseOrderParams): Promise<CreatePseOrderResult> {
+    const takerUrn = this.httpClient.urn;
+    if (!takerUrn) {
+      throw new BloqueConfigError(
+        'User URN is not available. Please connect to a session first.',
+      );
+    }
+
+    const orderType = params.type ?? 'src';
+
+    const input: CreateOrderInput = {
+      taker_urn: takerUrn,
+      type: orderType,
+      rate_sig: params.rateSig,
+      from_medium: 'pse',
+      to_medium: params.toMedium,
+      deposit_information: this._mapDepositInformationToWire(
+        params.depositInformation ?? {},
+      ),
     };
 
-    const response = await this.httpClient.request<CreatePaymentResponse>({
-      method: 'POST',
-      path: '/api/payments',
+    if (orderType === 'src' && params.amountSrc) {
+      input.amount_src = params.amountSrc;
+    } else if (orderType === 'dst' && params.amountDst) {
+      input.amount_dst = params.amountDst;
+    }
+
+    if (params.args) {
+      input.args = {
+        bank_code: params.args.bankCode,
+        ...(params.args.userType && { user_type: params.args.userType }),
+      };
+    }
+
+    if (params.nodeId) {
+      input.node_id = params.nodeId;
+    }
+
+    if (params.metadata) {
+      input.metadata = params.metadata;
+    }
+
+    const response = await this.httpClient.request<CreateOrderResponse>({
+      method: 'PUT',
+      path: '/api/order',
       body: input,
     });
 
     return {
-      payment: this._mapPaymentResponse(response.payment),
-    };
-  }
-
-  /**
-   * Initiate a PSE payment
-   *
-   * Initiates the PSE payment flow for a previously created top-up.
-   * Returns a checkout URL where the user should be redirected to complete the payment.
-   *
-   * @param params - PSE payment parameters
-   * @returns Promise resolving to PSE payment result with checkout URL
-   *
-   * @example
-   * ```typescript
-   * // First create a top-up
-   * const topUp = await bloque.swap.pse.createTopUp({...});
-   *
-   * // Then initiate PSE payment with user details
-   * const result = await bloque.swap.pse.initiatePayment({
-   *   paymentUrn: topUp.payment.urn,
-   *   payee: {
-   *     name: 'Juan Pérez García',
-   *     email: 'juan.perez@example.com',
-   *     idType: 'CC',
-   *     idNumber: '1055228746',
-   *   },
-   *   personType: 'natural',
-   *   bankCode: '1',
-   * });
-   *
-   * // Redirect user to PSE
-   * window.location.href = result.checkoutUrl;
-   * ```
-   */
-  async initiatePayment(
-    params: InitiatePsePaymentParams,
-  ): Promise<InitiatePsePaymentResult> {
-    const input: InitiatePsePaymentInput = {
-      payment_urn: params.paymentUrn,
-      payee: {
-        name: params.payee.name,
-        email: params.payee.email,
-        id_type: params.payee.idType,
-        id_number: params.payee.idNumber,
-      },
-      person_type: params.personType,
-      bank_code: params.bankCode,
-    };
-
-    const response = await this.httpClient.request<InitiatePsePaymentResponse>({
-      method: 'POST',
-      path: '/api/payments/pse',
-      body: input,
-    });
-
-    return {
-      paymentId: response.payment_id,
-      status: response.status,
-      message: response.message,
-      amount: response.amount,
-      currency: response.currency,
-      checkoutUrl: response.checkout_url,
-      orderId: response.order_id,
-      orderStatus: response.order_status,
-      createdAt: response.created_at,
+      order: this._mapOrderResponse(response.result.order),
+      execution: response.result.execution
+        ? this._mapExecutionResult(response.result.execution)
+        : undefined,
+      requestId: response.req_id,
     };
   }
 
@@ -180,51 +155,91 @@ export class PseClient extends BaseClient {
   }
 
   /**
-   * Maps API payment response to SDK format
+   * Maps SDK deposit information to wire format
    * @internal
    */
-  private _mapPaymentResponse(payment: PaymentResponse): Payment {
+  private _mapDepositInformationToWire(
+    depositInfo: DepositInformation,
+  ): WireDepositInformation {
+    if ('ledgerAccountId' in depositInfo && depositInfo.ledgerAccountId) {
+      return {
+        ledger_account_id: depositInfo.ledgerAccountId,
+      } as WireDepositInformation;
+    }
+    if ('bankCode' in depositInfo && depositInfo.bankCode) {
+      return {
+        bank_code: depositInfo.bankCode,
+        account_number: depositInfo.accountNumber,
+        account_type: depositInfo.accountType,
+      } as WireDepositInformation;
+    }
+    return depositInfo as WireDepositInformation;
+  }
+
+  /**
+   * Maps wire deposit information to SDK format
+   * @internal
+   */
+  private _mapDepositInformationFromWire(
+    depositInfo: WireDepositInformation,
+  ): DepositInformation {
+    if ('ledger_account_id' in depositInfo && depositInfo.ledger_account_id) {
+      return {
+        ledgerAccountId: depositInfo.ledger_account_id,
+      } as DepositInformation;
+    }
+    if ('bank_code' in depositInfo && depositInfo.bank_code) {
+      return {
+        bankCode: depositInfo.bank_code,
+        accountNumber: depositInfo.account_number,
+        accountType: depositInfo.account_type,
+      } as DepositInformation;
+    }
+    return depositInfo as DepositInformation;
+  }
+
+  /**
+   * Maps API order response to SDK format
+   * @internal
+   */
+  private _mapOrderResponse(order: OrderResponse): SwapOrder {
     return {
-      urn: payment.urn,
-      ownerUrn: payment.owner_urn,
-      name: payment.name,
-      description: payment.description,
-      currency: payment.currency,
-      amount: payment.amount,
-      url: payment.url,
-      successUrl: payment.success_url,
-      cancelUrl: payment.cancel_url,
-      imageUrl: payment.image_url,
-      metadata: payment.metadata,
-      tax: payment.tax,
-      discountCode: payment.discount_code,
-      webhookUrl: payment.webhook_url,
-      payoutRoute: payment.payout_route,
-      summary: {
-        status: payment.summary.status,
-      },
-      expiresAt: payment.expires_at,
-      createdAt: payment.created_at,
-      updatedAt: payment.updated_at,
-      paymentType: payment.payment_type,
-      items: payment.items.map((item) => this._mapPaymentItemResponse(item)),
+      id: order.id,
+      orderSig: order.order_sig,
+      rateSig: order.rate_sig,
+      swapSig: order.swap_sig,
+      taker: order.taker,
+      maker: order.maker,
+      fromAsset: order.from_asset,
+      toAsset: order.to_asset,
+      fromMedium: order.from_medium,
+      toMedium: order.to_medium,
+      fromAmount: order.from_amount,
+      toAmount: order.to_amount,
+      depositInformation: this._mapDepositInformationFromWire(
+        order.deposit_information,
+      ),
+      at: order.at,
+      graphId: order.graph_id,
+      status: order.status,
+      createdAt: order.created_at,
+      updatedAt: order.updated_at,
     };
   }
 
   /**
-   * Maps API payment item response to SDK format
+   * Maps API execution result to SDK format
    * @internal
    */
-  private _mapPaymentItemResponse(
-    item: PaymentItemResponse,
-  ): PaymentItemResult {
+  private _mapExecutionResult(execution: WireExecutionResult): ExecutionResult {
     return {
-      name: item.name,
-      amount: item.amount,
-      sku: item.sku,
-      description: item.description,
-      quantity: item.quantity,
-      imageUrl: item.image_url,
+      nodeId: execution.node_id,
+      result: {
+        status: execution.result.status,
+        args: execution.result.args,
+        description: execution.result.description,
+        checkoutUrl: execution.result.checkout_url,
+      },
     };
   }
 }

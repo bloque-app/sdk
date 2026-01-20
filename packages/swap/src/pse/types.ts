@@ -1,5 +1,3 @@
-type Currency = 'DUSD/6' | 'COP/2' | 'KSM/12';
-
 export interface Bank {
   /**
    * Financial institution code
@@ -15,128 +13,164 @@ export interface ListBanksResult {
   banks: Bank[];
 }
 
-export interface CreateTopUpParams {
-  /**
-   * Top-up amount as string (scaled by currency precision)
-   */
-  amount: string;
-  /**
-   * Currency with precision (e.g., "DUSD/6")
-   */
-  currency: Currency;
-  /**
-   * URL to redirect on successful payment
-   */
-  successUrl?: string;
-  /**
-   * Webhook URL for payment notifications
-   */
-  webhookUrl?: string;
+// Order types for PSE swap
+
+/**
+ * Order type for swap
+ * - 'src': Taker specifies exact source amount to pay
+ * - 'dst': Taker specifies exact destination amount to receive
+ */
+export type OrderType = 'src' | 'dst';
+
+/**
+ * Deposit information for cash-in (fiat to crypto)
+ */
+export interface DepositInformationCashIn {
+  ledgerAccountId?: string;
 }
 
-export interface PaymentItemResult {
-  /**
-   * Item name
-   */
-  name: string;
-  /**
-   * Item amount (as number)
-   */
-  amount: number;
-  /**
-   * Stock keeping unit identifier
-   */
-  sku?: string;
-  /**
-   * Item description
-   */
-  description?: string;
-  /**
-   * Item quantity
-   */
-  quantity: number;
-  /**
-   * URL to item image
-   */
-  imageUrl?: string;
+/**
+ * Deposit information for cash-out (crypto to fiat)
+ */
+export interface DepositInformationCashOut {
+  bankCode?: string;
+  accountNumber?: string;
+  accountType?: string;
 }
 
-export interface PaymentSummary {
+/**
+ * Deposit information union type
+ */
+export type DepositInformation =
+  | DepositInformationCashIn
+  | DepositInformationCashOut
+  | Record<string, unknown>;
+
+/**
+ * PSE payment arguments for auto-execution
+ */
+export interface PsePaymentArgs {
   /**
-   * Payment status
+   * Bank code from PSE banks list
    */
-  status: string;
+  bankCode: string;
+  /**
+   * User type: '0' for natural person, '1' for legal entity
+   */
+  userType?: string;
 }
 
-export interface Payment {
+/**
+ * Parameters for creating a PSE swap order
+ */
+export interface CreatePseOrderParams {
   /**
-   * Payment URN identifier
+   * Rate signature from findRates
    */
-  urn: string;
+  rateSig: string;
   /**
-   * Owner URN
+   * Destination medium (e.g., 'kreivo', 'bloque')
    */
-  ownerUrn: string;
+  toMedium: string;
   /**
-   * Payment name/title
+   * Source amount as bigint string (required if type is 'src')
+   * @example "1000000" represents 10000.00 for COP/2
    */
-  name: string;
+  amountSrc?: string;
   /**
-   * Payment description
+   * Destination amount as bigint string (required if type is 'dst')
    */
-  description?: string;
+  amountDst?: string;
   /**
-   * Currency with precision
+   * Order type (default: 'src')
    */
-  currency: Currency;
+  type?: OrderType;
   /**
-   * Total amount
+   * Deposit information for fund delivery
    */
-  amount: number;
+  depositInformation?: DepositInformation;
   /**
-   * Hosted payment URL
+   * PSE payment arguments for auto-execution
    */
-  url: string;
+  args?: PsePaymentArgs;
   /**
-   * Success redirect URL
+   * Specific node ID to execute (defaults to first node)
    */
-  successUrl?: string;
+  nodeId?: string;
   /**
-   * Cancel redirect URL
-   */
-  cancelUrl?: string;
-  /**
-   * Payment image URL
-   */
-  imageUrl?: string;
-  /**
-   * Additional metadata
+   * Additional metadata for the order
    */
   metadata?: Record<string, unknown>;
+}
+
+/**
+ * Swap order details
+ */
+export interface SwapOrder {
   /**
-   * Tax amount
+   * Unique order identifier
    */
-  tax?: number;
+  id: string;
   /**
-   * Applied discount code
+   * Order signature
    */
-  discountCode?: string;
+  orderSig: string;
   /**
-   * Webhook URL
+   * Rate signature used for this order
    */
-  webhookUrl?: string;
+  rateSig: string;
   /**
-   * Payout route configuration
+   * Swap signature
    */
-  payoutRoute: unknown[];
+  swapSig: string;
   /**
-   * Payment summary
+   * Taker URN
    */
-  summary: PaymentSummary;
+  taker: string;
   /**
-   * Expiration date
+   * Maker URN
    */
-  expiresAt?: string;
+  maker: string;
+  /**
+   * Source asset
+   */
+  fromAsset: string;
+  /**
+   * Destination asset
+   */
+  toAsset: string;
+  /**
+   * Source medium
+   */
+  fromMedium: string;
+  /**
+   * Destination medium
+   */
+  toMedium: string;
+  /**
+   * Source amount
+   */
+  fromAmount: string;
+  /**
+   * Destination amount
+   */
+  toAmount: string;
+  /**
+   * Deposit information
+   */
+  depositInformation: DepositInformation;
+  /**
+   * Timestamp when the order was created
+   */
+  at: number;
+  /**
+   * Instruction graph ID for tracking execution
+   */
+  graphId: string;
+  /**
+   * Order status (pending, in_progress, completed, failed)
+   */
+  status: string;
   /**
    * Creation timestamp
    */
@@ -145,95 +179,53 @@ export interface Payment {
    * Last update timestamp
    */
   updatedAt: string;
-  /**
-   * Payment type
-   */
-  paymentType: string;
-  /**
-   * Payment items
-   */
-  items: PaymentItemResult[];
 }
 
-export interface CreateTopUpResult {
-  payment: Payment;
+/**
+ * Execution result from auto-execution
+ */
+export interface ExecutionResult {
+  /**
+   * Node ID that was executed
+   */
+  nodeId: string;
+  /**
+   * Execution result details
+   */
+  result: {
+    /**
+     * Execution status
+     */
+    status: string;
+    /**
+     * Additional arguments
+     */
+    args?: unknown[];
+    /**
+     * Description of the result
+     */
+    description?: string;
+    /**
+     * PSE checkout URL (if applicable)
+     */
+    checkoutUrl?: string;
+  };
 }
 
-export interface PsePayee {
+/**
+ * Result of creating a PSE swap order
+ */
+export interface CreatePseOrderResult {
   /**
-   * Full name of the payee
+   * The created order
    */
-  name: string;
+  order: SwapOrder;
   /**
-   * Email address
+   * Execution result (if args were provided for auto-execution)
    */
-  email: string;
+  execution?: ExecutionResult;
   /**
-   * ID document type (e.g., "CC" for Cédula de Ciudadanía)
+   * Request ID for tracking
    */
-  idType: string;
-  /**
-   * ID document number
-   */
-  idNumber: string;
-}
-
-export type PersonType = 'natural' | 'juridica';
-
-export interface InitiatePsePaymentParams {
-  /**
-   * Payment URN from createTopUp
-   */
-  paymentUrn: string;
-  /**
-   * Payee information
-   */
-  payee: PsePayee;
-  /**
-   * Person type (natural or juridica)
-   */
-  personType: PersonType;
-  /**
-   * Bank code from banks list
-   */
-  bankCode: string;
-}
-
-export interface InitiatePsePaymentResult {
-  /**
-   * Payment ID
-   */
-  paymentId: string;
-  /**
-   * Payment status
-   */
-  status: string;
-  /**
-   * Status message
-   */
-  message: string;
-  /**
-   * Payment amount
-   */
-  amount: string;
-  /**
-   * Currency
-   */
-  currency: Currency;
-  /**
-   * PSE checkout URL to redirect the user
-   */
-  checkoutUrl: string;
-  /**
-   * Order ID
-   */
-  orderId: string;
-  /**
-   * Order status
-   */
-  orderStatus: string;
-  /**
-   * Creation timestamp
-   */
-  createdAt: string;
+  requestId: string;
 }
