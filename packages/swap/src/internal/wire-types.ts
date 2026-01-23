@@ -86,30 +86,11 @@ export type OrderType = 'src' | 'dst';
 
 /**
  * @internal
- * Deposit information for cash-in (fiat to crypto)
+ * Deposit information for PSE top-up
  */
-export interface DepositInformationCashIn {
-  ledger_account_id?: string;
+export interface DepositInformation {
+  urn: string;
 }
-
-/**
- * @internal
- * Deposit information for cash-out (crypto to fiat)
- */
-export interface DepositInformationCashOut {
-  bank_code?: string;
-  account_number?: string;
-  account_type?: string;
-}
-
-/**
- * @internal
- * Deposit information union type
- */
-export type DepositInformation =
-  | DepositInformationCashIn
-  | DepositInformationCashOut
-  | Record<string, unknown>;
 
 /**
  * @internal
@@ -146,12 +127,21 @@ export interface OrderResponse {
   to_medium: string;
   from_amount: string;
   to_amount: string;
-  deposit_information: DepositInformation;
-  at: number;
+  at: string;
   graph_id: string;
   status: string;
+  metadata?: Record<string, unknown>;
   created_at: string;
   updated_at: string;
+}
+
+/**
+ * @internal
+ * Execution redirect instructions
+ */
+export interface ExecutionHow {
+  type: string;
+  url: string;
 }
 
 /**
@@ -162,9 +152,10 @@ export interface ExecutionResult {
   node_id: string;
   result: {
     status: string;
-    args?: unknown[];
+    name?: string;
     description?: string;
-    checkout_url?: string;
+    how?: ExecutionHow;
+    callback_token?: string;
   };
 }
 

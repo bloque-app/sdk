@@ -67,17 +67,28 @@ export class PseClient extends BaseClient {
    *   fromAsset: 'COP/2',
    *   toAsset: 'DUSD/6',
    *   fromMediums: ['pse'],
-   *   toMediums: ['kreivo'],
-   *   amountSrc: '1000000'
+   *   toMediums: ['kusama'],
+   *   amountSrc: '10000000'
    * });
    *
    * // Create order with auto-execution
    * const result = await bloque.swap.pse.create({
    *   rateSig: rates.rates[0].sig,
-   *   toMedium: 'kreivo',
-   *   amountSrc: '1000000',
-   *   depositInformation: { ledgerAccountId: '0x123...' },
-   *   args: { bankCode: '1007' }
+   *   toMedium: 'kusama',
+   *   amountSrc: '10000000',
+   *   depositInformation: {
+   *     urn: 'did:bloque:account:card:usr-xxx:crd-xxx'
+   *   },
+   *   args: {
+   *     bankCode: '1',
+   *     userType: 'natural',
+   *     customerEmail: 'user@example.com',
+   *     userLegalIdType: 'CC',
+   *     userLegalId: '1234567890',
+   *     customerData: {
+   *       fullName: 'John Doe'
+   *     }
+   *   }
    * });
    *
    * // If execution returned a checkout URL, redirect user
@@ -103,7 +114,7 @@ export class PseClient extends BaseClient {
       from_medium: 'pse',
       to_medium: params.toMedium,
       deposit_information: this._mapDepositInformationToWire(
-        params.depositInformation ?? {},
+        params.depositInformation,
       ),
     };
 
@@ -117,6 +128,20 @@ export class PseClient extends BaseClient {
       input.args = {
         bank_code: params.args.bankCode,
         ...(params.args.userType && { user_type: params.args.userType }),
+        ...(params.args.customerEmail && {
+          customer_email: params.args.customerEmail,
+        }),
+        ...(params.args.userLegalIdType && {
+          user_legal_id_type: params.args.userLegalIdType,
+        }),
+        ...(params.args.userLegalId && {
+          user_legal_id: params.args.userLegalId,
+        }),
+        ...(params.args.customerData && {
+          customer_data: {
+            full_name: params.args.customerData.fullName,
+          },
+        }),
       };
     }
 
@@ -161,41 +186,7 @@ export class PseClient extends BaseClient {
   private _mapDepositInformationToWire(
     depositInfo: DepositInformation,
   ): WireDepositInformation {
-    if ('ledgerAccountId' in depositInfo && depositInfo.ledgerAccountId) {
-      return {
-        ledger_account_id: depositInfo.ledgerAccountId,
-      } as WireDepositInformation;
-    }
-    if ('bankCode' in depositInfo && depositInfo.bankCode) {
-      return {
-        bank_code: depositInfo.bankCode,
-        account_number: depositInfo.accountNumber,
-        account_type: depositInfo.accountType,
-      } as WireDepositInformation;
-    }
-    return depositInfo as WireDepositInformation;
-  }
-
-  /**
-   * Maps wire deposit information to SDK format
-   * @internal
-   */
-  private _mapDepositInformationFromWire(
-    depositInfo: WireDepositInformation,
-  ): DepositInformation {
-    if ('ledger_account_id' in depositInfo && depositInfo.ledger_account_id) {
-      return {
-        ledgerAccountId: depositInfo.ledger_account_id,
-      } as DepositInformation;
-    }
-    if ('bank_code' in depositInfo && depositInfo.bank_code) {
-      return {
-        bankCode: depositInfo.bank_code,
-        accountNumber: depositInfo.account_number,
-        accountType: depositInfo.account_type,
-      } as DepositInformation;
-    }
-    return depositInfo as DepositInformation;
+    return { urn: depositInfo.urn };
   }
 
   /**
@@ -216,12 +207,10 @@ export class PseClient extends BaseClient {
       toMedium: order.to_medium,
       fromAmount: order.from_amount,
       toAmount: order.to_amount,
-      depositInformation: this._mapDepositInformationFromWire(
-        order.deposit_information,
-      ),
       at: order.at,
       graphId: order.graph_id,
       status: order.status,
+      metadata: order.metadata,
       createdAt: order.created_at,
       updatedAt: order.updated_at,
     };
@@ -236,9 +225,10 @@ export class PseClient extends BaseClient {
       nodeId: execution.node_id,
       result: {
         status: execution.result.status,
-        args: execution.result.args,
+        name: execution.result.name,
         description: execution.result.description,
-        checkoutUrl: execution.result.checkout_url,
+        how: execution.result.how,
+        callbackToken: execution.result.callback_token,
       },
     };
   }

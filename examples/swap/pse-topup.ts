@@ -29,9 +29,21 @@ if (rates.rates.length === 0) {
 
 const result = await user.swap.pse.create({
   rateSig: rates.rates[0]?.sig,
-  toMedium: 'kreivo',
+  toMedium: 'kusama',
   amountSrc: '1000000',
-  depositInformation: { ledgerAccountId: '0x123...' },
+  depositInformation: {
+    urn: 'did:bloque:account:card:usr-xxx:crd-xxx',
+  },
+  args: {
+    bankCode: '1',
+    userType: 'natural',
+    customerEmail: 'user@example.com',
+    userLegalIdType: 'CC',
+    userLegalId: '123456789',
+    customerData: {
+      fullName: 'John Doe',
+    },
+  },
 });
 
-console.log('PSE Top-up order created:', result.order);
+console.log('PSE Top-up order created:', result.execution?.result.how?.url);

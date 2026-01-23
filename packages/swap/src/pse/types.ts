@@ -23,28 +23,25 @@ export interface ListBanksResult {
 export type OrderType = 'src' | 'dst';
 
 /**
- * Deposit information for cash-in (fiat to crypto)
+ * Deposit information for PSE top-up
  */
-export interface DepositInformationCashIn {
-  ledgerAccountId?: string;
+export interface DepositInformation {
+  /**
+   * Account URN where funds will be deposited
+   * @example "did:bloque:account:card:usr-xxx:crd-xxx"
+   */
+  urn: string;
 }
 
 /**
- * Deposit information for cash-out (crypto to fiat)
+ * Customer data for PSE payment
  */
-export interface DepositInformationCashOut {
-  bankCode?: string;
-  accountNumber?: string;
-  accountType?: string;
+export interface PseCustomerData {
+  /**
+   * Customer's full name
+   */
+  fullName: string;
 }
-
-/**
- * Deposit information union type
- */
-export type DepositInformation =
-  | DepositInformationCashIn
-  | DepositInformationCashOut
-  | Record<string, unknown>;
 
 /**
  * PSE payment arguments for auto-execution
@@ -55,9 +52,25 @@ export interface PsePaymentArgs {
    */
   bankCode: string;
   /**
-   * User type: '0' for natural person, '1' for legal entity
+   * User type: 'natural' for natural person, 'juridica' for legal entity
    */
-  userType?: string;
+  userType?: 'natural' | 'juridica';
+  /**
+   * Customer email address
+   */
+  customerEmail?: string;
+  /**
+   * User legal ID type (e.g., 'CC', 'NIT', 'CE')
+   */
+  userLegalIdType?: 'CC' | 'NIT' | 'CE';
+  /**
+   * User legal ID number
+   */
+  userLegalId?: string;
+  /**
+   * Additional customer data
+   */
+  customerData?: PseCustomerData;
 }
 
 /**
@@ -86,9 +99,9 @@ export interface CreatePseOrderParams {
    */
   type?: OrderType;
   /**
-   * Deposit information for fund delivery
+   * Deposit information with the account URN where funds will be deposited
    */
-  depositInformation?: DepositInformation;
+  depositInformation: DepositInformation;
   /**
    * PSE payment arguments for auto-execution
    */
@@ -156,13 +169,9 @@ export interface SwapOrder {
    */
   toAmount: string;
   /**
-   * Deposit information
+   * Timestamp when the order was created (as string)
    */
-  depositInformation: DepositInformation;
-  /**
-   * Timestamp when the order was created
-   */
-  at: number;
+  at: string;
   /**
    * Instruction graph ID for tracking execution
    */
@@ -172,6 +181,10 @@ export interface SwapOrder {
    */
   status: string;
   /**
+   * Additional metadata
+   */
+  metadata?: Record<string, unknown>;
+  /**
    * Creation timestamp
    */
   createdAt: string;
@@ -179,6 +192,20 @@ export interface SwapOrder {
    * Last update timestamp
    */
   updatedAt: string;
+}
+
+/**
+ * Redirect instructions for completing the payment
+ */
+export interface ExecutionHow {
+  /**
+   * Type of action required (e.g., "REDIRECT")
+   */
+  type: string;
+  /**
+   * URL to redirect the user to complete the payment
+   */
+  url: string;
 }
 
 /**
@@ -194,21 +221,25 @@ export interface ExecutionResult {
    */
   result: {
     /**
-     * Execution status
+     * Execution status (e.g., "paused")
      */
     status: string;
     /**
-     * Additional arguments
+     * Name of the current step
      */
-    args?: unknown[];
+    name?: string;
     /**
-     * Description of the result
+     * Description of what the user needs to do
      */
     description?: string;
     /**
-     * PSE checkout URL (if applicable)
+     * Instructions for completing this step
      */
-    checkoutUrl?: string;
+    how?: ExecutionHow;
+    /**
+     * Callback token for tracking
+     */
+    callbackToken?: string;
   };
 }
 
