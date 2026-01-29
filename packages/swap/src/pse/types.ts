@@ -40,7 +40,7 @@ export interface PseCustomerData {
   /**
    * Customer's full name
    */
-  full_name: string;
+  fullName: string;
 }
 
 /**
@@ -50,27 +50,27 @@ export interface PsePaymentArgs {
   /**
    * Bank code from PSE banks list
    */
-  bank_code: string;
+  bankCode: string;
   /**
    * User type: 0 for natural person, 1 for legal entity
    */
-  user_type?: 0 | 1;
+  userType?: 0 | 1;
   /**
    * Customer email address
    */
-  customer_email?: string;
+  customerEmail?: string;
   /**
    * User legal ID type (e.g., 'CC', 'NIT', 'CE')
    */
-  user_legal_id_type?: 'CC' | 'NIT' | 'CE';
+  userLegalIdType?: 'CC' | 'NIT' | 'CE';
   /**
    * User legal ID number
    */
-  user_legal_id?: string;
+  userLegalId?: string;
   /**
    * Additional customer data
    */
-  customer_data?: PseCustomerData;
+  customerData?: PseCustomerData;
 }
 
 /**
