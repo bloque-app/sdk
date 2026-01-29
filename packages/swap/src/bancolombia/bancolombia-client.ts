@@ -3,7 +3,7 @@ import type {
   CreateOrderInput,
   CreateOrderResponse,
   OrderResponse,
-  DepositInformation as WireDepositInformation,
+  BancolombiaDepositInformation as WireBancolombiaDepositInformation,
   ExecutionResult as WireExecutionResult,
 } from '../internal/wire-types';
 import type {
@@ -77,11 +77,9 @@ export class BancolombiaClient extends BaseClient {
       rate_sig: params.rateSig,
       from_medium: 'kusama',
       to_medium: 'bancolombia',
-      deposit_information: {
-        bancolombia: this._mapDepositInformationToWire(
-          params.depositInformation,
-        ),
-      },
+      deposit_information: this._mapDepositInformationToWire(
+        params.depositInformation,
+      ),
     };
 
     if (orderType === 'src' && params.amountSrc) {
@@ -125,7 +123,7 @@ export class BancolombiaClient extends BaseClient {
    */
   private _mapDepositInformationToWire(
     depositInfo: BancolombiaDepositInformation,
-  ): WireDepositInformation['bancolombia'] {
+  ): WireBancolombiaDepositInformation {
     return {
       bank_account_type: depositInfo.bankAccountType,
       bank_account_number: depositInfo.bankAccountNumber,

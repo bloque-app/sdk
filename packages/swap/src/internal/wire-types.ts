@@ -119,7 +119,7 @@ export interface CreateOrderInput {
   to_medium: string;
   amount_src?: string;
   amount_dst?: string;
-  deposit_information: DepositInformation;
+  deposit_information: DepositInformation | BancolombiaDepositInformation;
   args?: Record<string, unknown>;
   node_id?: string;
   metadata?: Record<string, unknown>;
