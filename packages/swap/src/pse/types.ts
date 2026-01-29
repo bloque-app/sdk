@@ -105,7 +105,7 @@ export interface CreatePseOrderParams {
   /**
    * PSE payment arguments for auto-execution
    */
-  args?: PsePaymentArgs;
+  args: PsePaymentArgs;
   /**
    * Specific node ID to execute (defaults to first node)
    */

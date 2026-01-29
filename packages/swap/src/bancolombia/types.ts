@@ -99,7 +99,7 @@ export interface CreateBancolombiaOrderParams {
   /**
    * Kusama account arguments for swap execution
    */
-  args?: KusamaAccountArgs;
+  args: KusamaAccountArgs;
 
   /**
    * Specific node ID to execute (defaults to first node)

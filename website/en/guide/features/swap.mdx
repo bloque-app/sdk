@@ -231,13 +231,13 @@ const result = await userSession.swap.pse.create({
     urn: 'did:bloque:account:card:usr-xxx:crd-xxx' 
   },
   args: { 
-    bank_code: '1007',
-    user_type: 0,
-    customer_email: 'user@example.com',
-    user_legal_id_type: 'CC',
-    user_legal_id: '123456789',
-    customer_data: {
-      full_name: 'User Name'
+    bankCode: '1007',
+    userType: 0,
+    customerEmail: 'user@example.com',
+    userLegalIdType: 'CC',
+    userLegalId: '123456789',
+    customerData: {
+      fullName: 'User Name'
     }
   }, // Auto-executes PSE payment
 });
@@ -258,7 +258,7 @@ if (result.execution?.result.how?.url) {
 | `amountDst`          | `string`             | Conditional | Destination amount as bigint string (required if type is 'dst')|
 | `type`               | `'src' \| 'dst'`     | No          | Order type (default: 'src')                                    |
 | `depositInformation` | `DepositInformation` | No          | Deposit information for fund delivery                          |
-| `args`               | `PsePaymentArgs`     | No          | PSE arguments for auto-execution                               |
+| `args`               | `PsePaymentArgs`     | Yes        | PSE arguments for auto-execution                               |
 | `nodeId`             | `string`             | No          | Specific node ID to execute                                    |
 | `metadata`           | `Record<string, unknown>` | No     | Additional metadata for the order                              |
 
@@ -275,13 +275,13 @@ interface DepositInformation {
 
 ```typescript
 interface PsePaymentArgs {
-  bank_code: string;           // Bank code (from pse.banks())
-  user_type?: 0 | 1;          // 0 for natural person, 1 for legal entity
-  customer_email?: string;    // Customer email address
-  user_legal_id_type?: string; // User legal ID type (e.g., 'CC', 'NIT', 'CE')
-  user_legal_id?: string;     // User legal ID number
-  customer_data?: {           // Additional customer data
-    full_name: string;         // Customer's full name
+  bankCode: string;           // Bank code (from pse.banks())
+  userType?: 0 | 1;          // 0 for natural person, 1 for legal entity
+  customerEmail?: string;    // Customer email address
+  userLegalIdType?: 'CC' | 'NIT' | 'CE'; // User legal ID type (e.g., 'CC', 'NIT', 'CE')
+  userLegalId?: string;     // User legal ID number
+  customerData?: {           // Additional customer data
+    fullName: string;         // Customer's full name
   };
 }
 ```
@@ -452,13 +452,13 @@ async function performPSESwap() {
       urn: 'did:bloque:account:card:usr-2p9pn77R6mWHqH96KYKQBylasRD:crd-38uPtyeKTjalMK1jysgoAql3l9n',
     },
     args: {
-      bank_code: banks[0].code, // Bank selected by user
-      user_type: 0, // Natural person
-      customer_email: 'user@example.com',
-      user_legal_id_type: 'CC',
-      user_legal_id: '123456789',
-      customer_data: {
-        full_name: 'John Doe',
+      bankCode: banks[0].code, // Bank selected by user
+      userType: 0, // Natural person
+      customerEmail: 'user@example.com',
+      userLegalIdType: 'CC',
+      userLegalId: '123456789',
+      customerData: {
+        fullName: 'John Doe',
       },
     },
   });
@@ -486,17 +486,17 @@ The SDK allows you to create swap orders using Kusama as the source payment medi
 ```typescript
 // 1. Find available rates
 const rates = await userSession.swap.findRates({
-  fromAsset: 'KSM/12',
+  fromAsset: 'COPM/2',
   toAsset: 'COP/2',
   fromMediums: ['kusama'],
   toMediums: ['bancolombia'],
-  amountSrc: '100000000', // 100.000000000 KSM (12 decimals)
+  amountSrc: '1000000', // 10,000.00 COP (2 decimals)
 });
 
 // 2. Create Bancolombia swap order
 const result = await userSession.swap.bancolombia.create({
   rateSig: rates.rates[0].sig,
-  amountSrc: '100000000',
+  amountSrc: '1000000',
   depositInformation: {
     bankAccountType: 'savings',
     bankAccountNumber: '5740088718',
@@ -566,11 +566,11 @@ async function performBancolombiaSwap() {
 
   // 1. Find available rates for Kusama to Bancolombia
   const rates = await userSession.swap.findRates({
-    fromAsset: 'KSM/12',
+    fromAsset: 'COPM/2',
     toAsset: 'COP/2',
     fromMediums: ['kusama'],
     toMediums: ['bancolombia'],
-    amountSrc: '100000000', // 100.000000000 KSM
+    amountSrc: '1000000', // 10,000.00 COP
   });
 
   if (rates.rates.length === 0) {
@@ -581,7 +581,7 @@ async function performBancolombiaSwap() {
   // 2. Create Bancolombia swap order with bank details
   const result = await userSession.swap.bancolombia.create({
     rateSig: rates.rates[0].sig,
-    amountSrc: '100000000',
+    amountSrc: '1000000',
     type: 'src', // Specify exact KSM amount to pay
     depositInformation: {
       bankAccountType: 'savings',
