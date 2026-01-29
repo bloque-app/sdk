@@ -86,10 +86,25 @@ export type OrderType = 'src' | 'dst';
 
 /**
  * @internal
- * Deposit information for PSE top-up
+ * Deposit information for swap orders
  */
 export interface DepositInformation {
-  urn: string;
+  /** PSE deposit URN */
+  urn?: string;
+  /** Bancolombia deposit information */
+  bancolombia?: BancolombiaDepositInformation;
+}
+
+/**
+ * @internal
+ * Bancolombia deposit information for bank account details
+ */
+export interface BancolombiaDepositInformation {
+  bank_account_type: 'savings' | 'checking';
+  bank_account_number: string;
+  bank_account_holder_name: string;
+  bank_account_holder_identification_type: 'CC' | 'CE' | 'NIT' | 'PP';
+  bank_account_holder_identification_value: string;
 }
 
 /**

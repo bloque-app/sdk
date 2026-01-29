@@ -12,6 +12,11 @@
   {
     "type": "file",
     "name": "swap",
-    "label": "Swap"
+    "label": "Swap (Entrada y Salida de Fondos)"
+  },
+  {
+    "type": "dir",
+    "name": "state-machines",
+    "label": "State Machines"
   }
 ]

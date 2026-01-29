@@ -140,6 +140,21 @@ console.log('Estado:', deshabilitada.status); // 'disabled'
 | `deleted` | Cuenta eliminada | - |
 | `creation_failed` | Creación de cuenta fallida | - |
 
+```mermaid
+stateDiagram-v2
+    [*] --> creation_in_progress
+    creation_in_progress --> active
+    creation_in_progress --> creation_failed
+    active --> frozen
+    active --> disabled
+    active --> deleted
+    frozen --> active
+    frozen --> disabled
+    creation_failed --> [*]
+    disabled --> [*]
+    deleted --> [*]
+```
+
 ## Casos de Uso
 
 ### Pruebas de Integración

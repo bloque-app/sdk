@@ -108,12 +108,25 @@ interface Organization {
 
 ### Estado de la Organización
 
-| Estado | Descripción |
-|--------|-------------|
-| `awaiting_compliance_verification` | Pendiente de verificación de cumplimiento normativo |
-| `active` | La organización está activa |
-| `suspended` | La organización está suspendida |
-| `closed` | La organización está cerrada |
+| Estado | Descripción | Puede Transicionar A |
+|--------|-------------|-------------------|
+| `awaiting_compliance_verification` | Pendiente de verificación de cumplimiento normativo | `active`, `rejected` |
+| `active` | La organización está activa | `suspended`, `closed` |
+| `suspended` | La organización está suspendida | `active`, `closed` |
+| `closed` | La organización está cerrada | - |
+
+```mermaid
+stateDiagram-v2
+    [*] --> awaiting_compliance_verification
+    awaiting_compliance_verification --> active
+    awaiting_compliance_verification --> rejected
+    active --> suspended
+    active --> closed
+    suspended --> active
+    suspended --> closed
+    rejected --> [*]
+    closed --> [*]
+```
 
 ## Organizaciones con Múltiples Ubicaciones
 

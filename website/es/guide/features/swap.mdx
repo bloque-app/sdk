@@ -189,13 +189,24 @@ const result = await userSession.swap.pse.create({
   rateSig: rates.rates[0].sig,
   toMedium: 'kreivo',
   amountSrc: '1000000',
-  depositInformation: { ledgerAccountId: '0x123...' },
-  args: { bankCode: '1007' }, // Auto-ejecuta el pago PSE
+  depositInformation: { 
+    urn: 'did:bloque:account:card:usr-xxx:crd-xxx' 
+  },
+  args: { 
+    bank_code: '1007',
+    user_type: 0,
+    customer_email: 'user@example.com',
+    user_legal_id_type: 'CC',
+    user_legal_id: '123456789',
+    customer_data: {
+      full_name: 'User Name'
+    }
+  }, // Auto-ejecuta el pago PSE
 });
 
 // 3. Redirigir al usuario a PSE
-if (result.execution?.result.checkoutUrl) {
-  window.location.href = result.execution.result.checkoutUrl;
+if (result.execution?.result.how?.url) {
+  window.location.href = result.execution.result.how.url;
 }
 ```
 
@@ -215,19 +226,10 @@ if (result.execution?.result.checkoutUrl) {
 
 ### Tipo DepositInformation
 
-Para cash-in (fiat a crypto):
 ```typescript
-interface DepositInformationCashIn {
-  ledgerAccountId?: string; // ID de cuenta ledger para recibir fondos
-}
-```
-
-Para cash-out (crypto a fiat):
-```typescript
-interface DepositInformationCashOut {
-  bankCode?: string;      // Código del banco
-  accountNumber?: string; // Número de cuenta
-  accountType?: string;   // Tipo de cuenta (savings, checking)
+interface DepositInformation {
+  urn: string; // URN de la cuenta donde se depositarán los fondos
+  // Ejemplo: "did:bloque:account:card:usr-xxx:crd-xxx"
 }
 ```
 
@@ -235,8 +237,14 @@ interface DepositInformationCashOut {
 
 ```typescript
 interface PsePaymentArgs {
-  bankCode: string;   // Código del banco (de pse.banks())
-  userType?: string;  // '0' para persona natural, '1' para persona jurídica
+  bank_code: string;           // Código del banco (de pse.banks())
+  user_type?: 0 | 1;          // 0 para persona natural, 1 para persona jurídica
+  customer_email?: string;      // Correo electrónico del cliente
+  user_legal_id_type?: string;  // Tipo de identificación legal (ej: 'CC', 'NIT', 'CE')
+  user_legal_id?: string;       // Número de identificación legal
+  customer_data?: {             // Datos adicionales del cliente
+    full_name: string;         // Nombre completo del cliente
+  };
 }
 ```
 
@@ -284,7 +292,7 @@ interface ExecutionResult {
     status: string;       // Estado de la ejecución
     args?: unknown[];     // Argumentos adicionales
     description?: string; // Descripción del resultado
-    checkoutUrl?: string; // URL de PSE para redirigir al usuario
+    how?: ExecutionHow;   // Instrucciones para completar este paso
   };
 }
 ```
@@ -330,11 +338,17 @@ async function realizarSwapPSE() {
     toMedium: 'kreivo',
     amountSrc: '50000000',
     depositInformation: {
-      ledgerAccountId: '0x1a2b3c4d5e6f7890',
+      urn: 'did:bloque:account:card:usr-2p9pn77R6mWHqH96KYKQBylasRD:crd-38uPtyeKTjalMK1jysgoAql3l9n',
     },
     args: {
-      bankCode: banks[0].code, // Banco seleccionado por el usuario
-      userType: '0', // Persona natural
+      bank_code: banks[0].code, // Banco seleccionado por el usuario
+      user_type: 0, // Persona natural
+      customer_email: 'user@example.com',
+      user_legal_id_type: 'CC',
+      user_legal_id: '123456789',
+      customer_data: {
+        full_name: 'User Name',
+      },
     },
   });
 
@@ -342,14 +356,147 @@ async function realizarSwapPSE() {
   console.log('Estado:', result.order.status);
   console.log('Graph ID:', result.order.graphId);
 
-  // 4. Redirigir al usuario a PSE si hay URL de checkout
-  if (result.execution?.result.checkoutUrl) {
+  // 4. Redirigir al usuario a PSE si hay URL de redirección
+  if (result.execution?.result.how?.url) {
     console.log('Redirigiendo a PSE...');
-    window.location.href = result.execution.result.checkoutUrl;
+    window.location.href = result.execution.result.how.url;
   }
 }
 
 realizarSwapPSE();
+```
+
+## Crear Orden de Swap con Bancolombia
+
+El SDK permite crear órdenes de swap usando Kusama como medio de pago origen y Bancolombia como destino. El método `bancolombia.create` combina la creación de la orden y opcionalmente auto-ejecuta el primer nodo de instrucciones para iniciar el flujo de swap.
+
+### Uso Básico
+
+```typescript
+// 1. Buscar tasas disponibles
+const rates = await userSession.swap.findRates({
+  fromAsset: 'KSM/12',
+  toAsset: 'COP/2',
+  fromMediums: ['kusama'],
+  toMediums: ['bancolombia'],
+  amountSrc: '100000000', // 100.000000000 KSM (12 decimales)
+});
+
+// 2. Crear orden de swap con Bancolombia
+const result = await userSession.swap.bancolombia.create({
+  rateSig: rates.rates[0].sig,
+  amountSrc: '100000000',
+  depositInformation: {
+    bankAccountType: 'savings',
+    bankAccountNumber: '5740088718',
+    bankAccountHolderName: 'david barinas',
+    bankAccountHolderIdentificationType: 'CC',
+    bankAccountHolderIdentificationValue: '123456789'
+  },
+  args: {
+    accountUrn: 'did:bloque:card:1231231'
+  }
+});
+
+// 3. Verificar estado de la orden
+console.log('Orden creada:', result.order.id);
+console.log('Estado:', result.order.status);
+```
+
+### Parámetros CreateBancolombiaOrderParams
+
+| Campo                     | Tipo                              | Requerido   | Descripción                                                    |
+|---------------------------|-----------------------------------|-------------|----------------------------------------------------------------|
+| `rateSig`                 | `string`                          | Sí          | Firma del rate obtenida de findRates                           |
+| `amountSrc`               | `string`                          | Condicional| Monto origen como bigint string (requerido si type es 'src')   |
+| `amountDst`               | `string`                          | Condicional| Monto destino como bigint string (requerido si type es 'dst')  |
+| `type`                    | `'src' \| 'dst'`                  | No          | Tipo de orden (por defecto: 'src')                             |
+| `depositInformation`      | `BancolombiaDepositInformation`   | Sí          | Información de cuenta bancaria para entrega de fondos           |
+| `args`                    | `KusamaAccountArgs`               | No          | Argumentos de cuenta Kusama para auto-ejecución                 |
+| `nodeId`                  | `string`                          | No          | ID del nodo específico a ejecutar                              |
+| `metadata`                | `Record<string, unknown>`          | No          | Metadata adicional para la orden                               |
+
+### Tipo BancolombiaDepositInformation
+
+```typescript
+interface BancolombiaDepositInformation {
+  bankAccountType: 'savings' | 'checking';                    // Tipo de cuenta
+  bankAccountNumber: string;                                   // Número de cuenta
+  bankAccountHolderName: string;                                // Nombre del titular
+  bankAccountHolderIdentificationType: 'CC' | 'CE' | 'NIT' | 'PP'; // Tipo de ID
+  bankAccountHolderIdentificationValue: string;                // Número de identificación
+}
+```
+
+### Tipo KusamaAccountArgs
+
+```typescript
+interface KusamaAccountArgs {
+  accountUrn: string;  // URN de cuenta Kusama para fondos origen
+}
+```
+
+### Ejemplo Completo de Flujo Bancolombia
+
+```typescript
+import { SDK } from '@bloque/sdk';
+
+const bloque = new SDK({
+  origin: 'your-origin',
+  auth: {
+    type: 'apiKey',
+    apiKey: process.env.BLOQUE_API_KEY!,
+  },
+  mode: 'production',
+});
+
+async function realizarSwapBancolombia() {
+  const userSession = await bloque.connect('user-alias');
+
+  // 1. Buscar tasas disponibles de Kusama a Bancolombia
+  const rates = await userSession.swap.findRates({
+    fromAsset: 'KSM/12',
+    toAsset: 'COP/2',
+    fromMediums: ['kusama'],
+    toMediums: ['bancolombia'],
+    amountSrc: '100000000', // 100.000000000 KSM
+  });
+
+  if (rates.rates.length === 0) {
+    console.log('No hay tasas disponibles');
+    return;
+  }
+
+  // 2. Crear orden de swap con detalles bancarios
+  const result = await userSession.swap.bancolombia.create({
+    rateSig: rates.rates[0].sig,
+    amountSrc: '100000000',
+    type: 'src', // Especificar monto exacto en KSM a pagar
+    depositInformation: {
+      bankAccountType: 'savings',
+      bankAccountNumber: '5740088718',
+      bankAccountHolderName: 'david barinas',
+      bankAccountHolderIdentificationType: 'CC',
+      bankAccountHolderIdentificationValue: '123456789'
+    },
+    args: {
+      accountUrn: 'did:bloque:card:1231231' // Cuenta Kusama origen
+    }
+  });
+
+  console.log('Orden creada:', result.order.id);
+  console.log('Estado:', result.order.status);
+  console.log('Monto Origen:', result.order.fromAmount);
+  console.log('Monto Destino:', result.order.toAmount);
+  console.log('Graph ID:', result.order.graphId);
+
+  // 3. Monitorear ejecución de la orden (si aplica)
+  if (result.execution) {
+    console.log('Ejecución iniciada:', result.execution.nodeId);
+  }
+}
+
+realizarSwapBancolombia();
 ```
 
 ### Tipos de Orden
@@ -361,3 +508,53 @@ realizarSwapPSE();
 
 - [Guía de Cuentas](/sdk/guide/accounts/overview) - Crea y gestiona cuentas para operar swaps
 - [Guía de Organizaciones](/sdk/guide/features/organizations) - Administra entidades que pueden realizar swaps
+
+## Estados y Transiciones
+
+### Estados de Orden
+
+| Estado | Descripción | Puede Transicionar A |
+|--------|-------------|-------------------|
+| `pending` | Orden creada, esperando ejecución | `in_progress`, `cancelled`, `expired` |
+| `in_progress` | Orden en proceso de ejecución | `completed`, `failed` |
+| `completed` | Orden completada exitosamente | - |
+| `failed` | Orden fallida | - |
+| `cancelled` | Orden cancelada manualmente | - |
+| `expired` | Orden expirada por tiempo | - |
+
+```mermaid
+stateDiagram-v2
+    [*] --> pending
+    pending --> in_progress
+    pending --> cancelled
+    pending --> expired
+    in_progress --> completed
+    in_progress --> failed
+    completed --> [*]
+    failed --> [*]
+    cancelled --> [*]
+    expired --> [*]
+```
+
+### Estados de Ejecución de Nodos
+
+| Estado | Descripción | Puede Transicionar A |
+|--------|-------------|-------------------|
+| `pending` | Nodo pendiente de ejecución | `running`, `timeout` |
+| `running` | Nodo ejecutándose activamente | `completed`, `failed`, `timeout` |
+| `completed` | Nodo completado exitosamente | - |
+| `failed` | Nodo falló durante ejecución | - |
+| `timeout` | Nodo expiró por tiempo | - |
+
+```mermaid
+stateDiagram-v2
+    [*] --> pending
+    pending --> running
+    pending --> timeout
+    running --> completed
+    running --> failed
+    running --> timeout
+    completed --> [*]
+    failed --> [*]
+    timeout --> [*]
+```
