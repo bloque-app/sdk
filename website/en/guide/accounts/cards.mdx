@@ -236,14 +236,30 @@ console.log('Card name updated:', updatedCard.metadata?.name);
 
 Cards can be in different states:
 
-| Status | Description |
-|--------|-------------|
-| `creation_in_progress` | Card is being created |
-| `creation_failed` | Card creation failed |
-| `active` | Card is active and ready to use |
-| `disabled` | Card has been disabled |
-| `frozen` | Card is temporarily frozen |
-| `deleted` | Card has been deleted |
+| Status | Description | Can Transition To |
+|--------|-------------|-------------------|
+| `creation_in_progress` | Card is being created | `active`, `creation_failed` |
+| `active` | Card is active and ready to use | `frozen`, `disabled`, `deleted` |
+| `frozen` | Card is temporarily frozen | `active`, `disabled`, `deleted` |
+| `disabled` | Card has been permanently disabled | `deleted` |
+| `deleted` | Card has been deleted | - |
+| `creation_failed` | Card creation failed | - |
+
+```mermaid
+stateDiagram-v2
+    [*] --> creation_in_progress
+    creation_in_progress --> active
+    creation_in_progress --> creation_failed
+    active --> frozen
+    active --> disabled
+    active --> deleted
+    frozen --> active
+    frozen --> disabled
+    frozen --> deleted
+    disabled --> deleted
+    creation_failed --> [*]
+    deleted --> [*]
+```
 
 ## Viewing Card Details
 

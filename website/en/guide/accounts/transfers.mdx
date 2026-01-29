@@ -87,12 +87,40 @@ interface TransferParams {
 ```typescript title="types.ts"
 interface TransferResult {
   queueId: string;    // Queue ID for tracking
-  status: 'queued' | 'processing' | 'completed' | 'failed';
+  status: TransferStatus;    // Transfer status
   message: string;    // Status message
 }
 ```
 
-The transfer is queued for processing. Use the `queueId` to track the transfer status.
+```typescript title="types.ts"
+type TransferStatus = 
+  | 'queued'       // Transfer queued for processing
+  | 'processing'   // Transfer in progress
+  | 'completed'    // Transfer completed successfully
+  | 'failed';      // Transfer failed
+```
+
+The transfer is queued for processing. Use `queueId` to track transfer status.
+
+## Transfer States and Transitions
+
+| State | Description | Can Transition To |
+|--------|-------------|-------------------|
+| `queued` | Transfer queued waiting for processing | `processing`, `failed` |
+| `processing` | Transfer in progress | `completed`, `failed` |
+| `completed` | Transfer completed successfully | - |
+| `failed` | Transfer failed (insufficient funds, invalid account, etc.) | - |
+
+```mermaid
+stateDiagram-v2
+    [*] --> queued
+    queued --> processing
+    queued --> failed
+    processing --> completed
+    processing --> failed
+    completed --> [*]
+    failed --> [*]
+```
 
 ## Transfer Examples
 

@@ -94,6 +94,27 @@ interface TransferResult {
 
 La transferencia se pone en cola para su procesamiento. Usa el `queueId` para rastrear el estado de la transferencia.
 
+## Estados de Transferencia
+
+Las transferencias siguen un ciclo de vida bien definido desde la cola hasta la finalización:
+
+| Estado | Descripción | Puede Transicionar A |
+|--------|-------------|-------------------|
+| `queued` | Transferencia en cola, esperando procesamiento | `processing` |
+| `processing` | Transferencia en proceso de ejecución | `completed`, `failed` |
+| `completed` | Transferencia completada exitosamente | - |
+| `failed` | Transferencia fallida | - |
+
+```mermaid
+stateDiagram-v2
+    [*] --> queued
+    queued --> processing
+    processing --> completed
+    processing --> failed
+    completed --> [*]
+    failed --> [*]
+```
+
 ## Ejemplos de Transferencias
 
 ### Tarjeta a Bancolombia

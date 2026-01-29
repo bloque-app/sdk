@@ -140,6 +140,21 @@ console.log('Status:', disabled.status); // 'disabled'
 | `deleted` | Account has been deleted | - |
 | `creation_failed` | Account creation failed | - |
 
+```mermaid
+stateDiagram-v2
+    [*] --> creation_in_progress
+    creation_in_progress --> active
+    creation_in_progress --> creation_failed
+    active --> frozen
+    active --> disabled
+    active --> deleted
+    frozen --> active
+    frozen --> disabled
+    disabled --> deleted
+    creation_failed --> [*]
+    deleted --> [*]
+```
+
 ## Use Cases
 
 ### Integration Testing

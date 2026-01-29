@@ -57,11 +57,20 @@ interface KycVerificationResponse {
 
 ### Estado de Verificación
 
-| Estado | Descripción |
-|--------|-------------|
-| `awaiting_compliance_verification` | Verificación pendiente |
-| `approved` | Verificación aprobada |
-| `rejected` | Verificación rechazada |
+| Estado | Descripción | Puede Transicionar A |
+|--------|-------------|-------------------|
+| `awaiting_compliance_verification` | Verificación pendiente | `approved`, `rejected` |
+| `approved` | Verificación aprobada | - |
+| `rejected` | Verificación rechazada | - |
+
+```mermaid
+stateDiagram-v2
+    [*] --> awaiting_compliance_verification
+    awaiting_compliance_verification --> approved
+    awaiting_compliance_verification --> rejected
+    approved --> [*]
+    rejected --> [*]
+```
 
 ## Obteniendo el Estado de Verificación
 

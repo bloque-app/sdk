@@ -1,0 +1,242 @@
+# State Machines
+
+Learn about the state machines that manage the lifecycle of entities in the Bloque SDK.
+
+## Overview
+
+The Bloque SDK uses well-defined state machines to manage the lifecycle of all major entities. Understanding these states and their transitions is essential for building robust integrations.
+
+## Main State Machines
+
+### 📋 Accounts
+Accounts manage user funds and follow a well-defined lifecycle from creation to deletion.
+
+** Key states:**
+- `creation_in_progress` → `active` → `disabled`/`frozen`/`deleted`
+- Handles errors: `creation_failed`
+
+**Complete documentation:** [Virtual Accounts](/sdk/guide/accounts/virtual) | [Virtual Cards](/sdk/guide/accounts/cards)
+
+### 💸 Transfers
+Transfers move funds between accounts and are processed asynchronously.
+
+**Key states:**
+- `queued` → `processing` → `completed`/`failed`
+
+**Complete documentation:** [Transfers](/sdk/guide/accounts/transfers)
+
+### 🏢 Organizations
+Organizations represent legal entities (businesses or individuals) with compliance requirements.
+
+**Key states:**
+- `awaiting_compliance_verification` → `active` → `suspended`/`closed`
+
+**Complete documentation:** [Organizations](/sdk/guide/features/organizations)
+
+### 🔍 KYC/Compliance
+Manages the identity verification and compliance process.
+
+**Key states:**
+- `awaiting_compliance_verification` → `approved`/`rejected`
+
+**Complete documentation:** [Compliance & KYC](/sdk/guide/features/compliance)
+
+### 🔄 Swap
+Manages asset swap orders between different mediums and currencies.
+
+**Key states:**
+- Orders: `pending` → `in_progress` → `completed`/`failed`
+- Execution: `pending` → `running` → `completed`/`failed`
+
+**Complete documentation:** [Swap](/sdk/guide/features/swap)
+
+## Common Patterns
+
+### 🔄 Transient vs Final States
+
+**Transient States:**
+- `creation_in_progress`, `processing`, `pending`, `awaiting_*`
+- Require action or time to change
+- Usually have associated timeouts
+
+**Final States:**
+- `completed`, `failed`, `deleted`, `closed`, `approved`, `rejected`
+- Don't change without external intervention
+- Represent the outcome of a process
+
+### ⏱️ Polling Pattern
+
+For states that resolve asynchronously:
+
+```typescript
+async function waitForCompletion(getStatus: () => Promise<{status: string}>) {
+  let attempts = 0;
+  const maxAttempts = 30; // 30 attempts
+  
+  while (attempts < maxAttempts) {
+    const result = await getStatus();
+    
+    if (['completed', 'failed', 'approved', 'rejected'].includes(result.status)) {
+      return result; // Final state reached
+    }
+    
+    // Wait 2 seconds between attempts
+    await new Promise(resolve => setTimeout(resolve, 2000));
+    attempts++;
+  }
+  
+  throw new Error('Timeout waiting for completion');
+}
+```
+
+### 🪝 Webhook Pattern
+
+For real-time notifications of state changes:
+
+```typescript
+// Set webhook URL when creating entities
+const account = await session.accounts.virtual.create({
+  firstName: 'John',
+  lastName: 'Doe',
+  webhookUrl: 'https://api.example.com/webhooks/account-status'
+});
+
+// Handle state changes
+app.post('/webhooks/account-status', (req, res) => {
+  const { type, data } = req.body;
+  
+  if (type === 'account.status_changed') {
+    console.log(`Account ${data.urn} changed to: ${data.status}`);
+    
+    // Update local database
+    updateLocalAccount(data.urn, { status: data.status });
+  }
+  
+  res.status(200).send('OK');
+});
+```
+
+## Error Handling by State
+
+### Common Error States
+
+| Error | Associated States | Solution |
+|-------|-------------------|----------|
+| `creation_failed` | Accounts, Cards | Verify data, retry |
+| `failed` | Transfers, Swap | Check funds, validate parameters |
+| `rejected` | KYC, Organizations | Contact support, review documentation |
+| `suspended` | Organizations, Accounts | Resolve compliance issue |
+
+### Recovery Strategies
+
+```typescript
+async function handleFailedTransfer(queueId: string) {
+  // 1. Get error details
+  const details = await bloque.accounts.getTransferDetails(queueId);
+  
+  if (details.error.includes('insufficient funds')) {
+    // Suggest waiting for more funds
+    throw new Error('Insufficient funds. Check your balance.');
+  } else if (details.error.includes('invalid account')) {
+    // Verify accounts exist
+    const source = await bloque.accounts.get(details.sourceUrn);
+    const dest = await bloque.accounts.get(details.destinationUrn);
+    
+    if (!source || !dest) {
+      throw new Error('Source or destination account does not exist.');
+    }
+  }
+  
+  // For other errors, suggest contacting support
+  throw new Error(`Transfer error: ${details.error}`);
+}
+```
+
+## Best Practices
+
+### 1. **Check States Before Operations**
+
+```typescript
+// ✅ Good: verify state before transfer
+const account = await session.accounts.virtual.get(accountUrn);
+if (account.status !== 'active') {
+  throw new Error('Account must be active to transfer');
+}
+
+await session.accounts.transfer({
+  sourceUrn: accountUrn,
+  destinationUrn: destUrn,
+  amount: '1000000',
+  asset: 'DUSD/6'
+});
+```
+
+### 2. **Handle Transient States with Timeouts**
+
+```typescript
+async function waitForActive(accountUrn: string, timeoutMs = 30000) {
+  const startTime = Date.now();
+  
+  while (Date.now() - startTime < timeoutMs) {
+    const account = await session.accounts.virtual.get(accountUrn);
+    
+    if (account.status === 'active') {
+      return account;
+    }
+    
+    if (account.status === 'creation_failed') {
+      throw new Error('Account creation failed');
+    }
+    
+    await new Promise(resolve => setTimeout(resolve, 1000));
+  }
+  
+  throw new Error('Timeout waiting for account activation');
+}
+```
+
+### 3. **Implement Exponential Backoff Retries**
+
+```typescript
+async function retryOperation<T>(
+  operation: () => Promise<T>,
+  maxRetries = 3,
+  baseDelay = 1000
+): Promise<T> {
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      return await operation();
+    } catch (error) {
+      if (attempt === maxRetries) throw error;
+      
+      const delay = baseDelay * Math.pow(2, attempt - 1);
+      await new Promise(resolve => setTimeout(resolve, delay));
+    }
+  }
+  
+  throw new Error('Max retries exceeded');
+}
+```
+
+## Quick References
+
+### State Summary
+
+| Entity | Key States | Typical Resolution Time |
+|---------|-------------|------------------------|
+| Accounts | 6 states | 1-30 seconds |
+| Transfers | 4 states | 5-60 seconds |
+| Organizations | 4 states | 1-3 days (manual) |
+| KYC | 3 states | 5-30 minutes |
+| Swap | 5 states (orders) | 1-10 minutes |
+
+### Flow Diagrams
+
+For visualizing state transitions, check the specific entity guides where you'll find detailed transition tables and practical examples.
+
+## Next Steps
+
+- [Accounts Guide](/sdk/guide/accounts/overview) - To understand account states
+- [Transfers Guide](/sdk/guide/accounts/transfers) - To manage transfer states
+- [Organizations Guide](/sdk/guide/features/organizations) - For compliance states
+- [Swap Guide](/sdk/guide/features/swap) - For swap states
