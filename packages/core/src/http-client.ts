@@ -88,7 +88,7 @@ export class HttpClient {
     const internalConfig: BloqueInternalConfig = { ...config };
     this.validateConfig(internalConfig);
     this._config = internalConfig;
-    this.baseUrl = API_BASE_URLS[config.mode ?? 'production'];
+    this.baseUrl = config.baseUrl || API_BASE_URLS[config.mode ?? 'production'];
   }
 
   /**
@@ -121,6 +121,7 @@ export class HttpClient {
    * @internal - Called internally after successful authentication.
    */
   setAccessToken(token: string): void {
+    console.warn('setAccessToken', token);
     this._config.accessToken = token;
   }
 

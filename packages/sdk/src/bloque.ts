@@ -24,6 +24,7 @@ export class SDK {
       identity: this.identity,
       orgs: new OrgsClient(this.httpClient),
       swap: new SwapClient(this.httpClient),
+      urn: this.httpClient.urn,
     };
   }
 

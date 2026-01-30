@@ -169,6 +169,7 @@ export type AuthStrategy = { type: 'apiKey'; apiKey: string } | { type: 'jwt' };
  * @public
  */
 export interface BloqueSDKConfig {
+  baseUrl?: string;
   /**
    * Origin identifier for the SDK.
    *
