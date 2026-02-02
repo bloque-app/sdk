@@ -54,23 +54,23 @@ export interface PsePaymentArgs {
   /**
    * User type: 0 for natural person, 1 for legal entity
    */
-  userType?: 0 | 1;
+  userType: 0 | 1;
   /**
    * Customer email address
    */
-  customerEmail?: string;
+  customerEmail: string;
   /**
    * User legal ID type (e.g., 'CC', 'NIT', 'CE')
    */
-  userLegalIdType?: 'CC' | 'NIT' | 'CE';
+  userLegalIdType: 'CC' | 'NIT' | 'CE';
   /**
    * User legal ID number
    */
-  userLegalId?: string;
+  userLegalId: string;
   /**
    * Additional customer data
    */
-  customerData?: PseCustomerData;
+  customerData: PseCustomerData;
 }
 
 /**

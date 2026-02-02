@@ -238,11 +238,11 @@ interface DepositInformation {
 ```typescript
 interface PsePaymentArgs {
   bankCode: string;           // Código del banco (de pse.banks())
-  userType?: 0 | 1;          // 0 para persona natural, 1 para persona jurídica
-  customerEmail?: string;      // Correo electrónico del cliente
-  userLegalIdType?: 'CC' | 'NIT' | 'CE';  // Tipo de identificación legal (ej: 'CC', 'NIT', 'CE')
-  userLegalId?: string;       // Número de identificación legal
-  customerData?: {             // Datos adicionales del cliente
+  userType: 0 | 1;          // 0 para persona natural, 1 para persona jurídica
+  customerEmail: string;      // Correo electrónico del cliente
+  userLegalIdType: 'CC' | 'NIT' | 'CE';  // Tipo de identificación legal (ej: 'CC', 'NIT', 'CE')
+  userLegalId: string;       // Número de identificación legal
+  customerData: {             // Datos adicionales del cliente
     fullName: string;         // Nombre completo del cliente
   };
 }

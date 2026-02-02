@@ -276,11 +276,11 @@ interface DepositInformation {
 ```typescript
 interface PsePaymentArgs {
   bankCode: string;           // Bank code (from pse.banks())
-  userType?: 0 | 1;          // 0 for natural person, 1 for legal entity
-  customerEmail?: string;    // Customer email address
-  userLegalIdType?: 'CC' | 'NIT' | 'CE'; // User legal ID type (e.g., 'CC', 'NIT', 'CE')
-  userLegalId?: string;     // User legal ID number
-  customerData?: {           // Additional customer data
+  userType: 0 | 1;          // 0 for natural person, 1 for legal entity
+  customerEmail: string;    // Customer email address
+  userLegalIdType: 'CC' | 'NIT' | 'CE'; // User legal ID type (e.g., 'CC', 'NIT', 'CE')
+  userLegalId: string;     // User legal ID number
+  customerData: {           // Additional customer data
     fullName: string;         // Customer's full name
   };
 }
