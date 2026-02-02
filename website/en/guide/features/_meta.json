@@ -1,5 +1,9 @@
 [
   "compliance",
   "organizations",
-  "swap"
+  {
+    "type": "file",
+    "name": "swap",
+    "label": "Swap (Payin & Payout)"
+  }
 ]
