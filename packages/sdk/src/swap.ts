@@ -1,9 +1,11 @@
 export type {
+  Bank,
   Fee,
   FeeComponent,
   FeeComponentType,
   FindRatesParams,
   FindRatesResult,
+  ListBanksResult,
   RateLimits,
   RateTuple,
   SwapRate,

@@ -146,5 +146,218 @@ queryRates();
 
 ## Next Steps
 
+## Listing PSE Banks
+
+You can retrieve the list of available PSE (Pagos Seguros en Línea) banks and their codes for PSE payments:
+
+```typescript
+const pseBanks = await userSession.swap.pse.banks();
+for (const bank of pseBanks.banks) {
+  console.log(`${bank.code}: ${bank.name}`);
+}
+```
+
+### Bank Type
+
+```typescript
+interface Bank {
+  code: string; // Bank code for PSE
+  name: string; // Bank name
+}
+```
+
+This is useful for presenting a list of banks to users when initiating PSE-based swaps or payments.
+
+## Create PSE Swap Order
+
+The SDK allows you to create swap orders using PSE (Pagos Seguros en Línea) as the source payment medium. The `pse.create` method combines order creation and optionally auto-executes the first instruction node to initiate the payment flow.
+
+### Basic Usage
+
+```typescript
+// 1. Find available rates
+const rates = await userSession.swap.findRates({
+  fromAsset: 'COP/2',
+  toAsset: 'DUSD/6',
+  fromMediums: ['pse'],
+  toMediums: ['kreivo'],
+  amountSrc: '1000000', // 10,000.00 COP
+});
+
+// 2. Create PSE swap order
+const result = await userSession.swap.pse.create({
+  rateSig: rates.rates[0].sig,
+  toMedium: 'kreivo',
+  amountSrc: '1000000',
+  depositInformation: { ledgerAccountId: '0x123...' },
+  args: { bankCode: '1007' }, // Auto-executes PSE payment
+});
+
+// 3. Redirect user to PSE
+if (result.execution?.result.checkoutUrl) {
+  window.location.href = result.execution.result.checkoutUrl;
+}
+```
+
+### CreatePseOrderParams Parameters
+
+| Field                | Type                 | Required    | Description                                                    |
+|----------------------|----------------------|-------------|----------------------------------------------------------------|
+| `rateSig`            | `string`             | Yes         | Rate signature obtained from findRates                         |
+| `toMedium`           | `string`             | Yes         | Destination medium (e.g., 'kreivo', 'bloque')                  |
+| `amountSrc`          | `string`             | Conditional | Source amount as bigint string (required if type is 'src')     |
+| `amountDst`          | `string`             | Conditional | Destination amount as bigint string (required if type is 'dst')|
+| `type`               | `'src' \| 'dst'`     | No          | Order type (default: 'src')                                    |
+| `depositInformation` | `DepositInformation` | No          | Deposit information for fund delivery                          |
+| `args`               | `PsePaymentArgs`     | No          | PSE arguments for auto-execution                               |
+| `nodeId`             | `string`             | No          | Specific node ID to execute                                    |
+| `metadata`           | `Record<string, unknown>` | No     | Additional metadata for the order                              |
+
+### DepositInformation Type
+
+For cash-in (fiat to crypto):
+```typescript
+interface DepositInformationCashIn {
+  ledgerAccountId?: string; // Ledger account ID to receive funds
+}
+```
+
+For cash-out (crypto to fiat):
+```typescript
+interface DepositInformationCashOut {
+  bankCode?: string;      // Bank code
+  accountNumber?: string; // Account number
+  accountType?: string;   // Account type (savings, checking)
+}
+```
+
+### PsePaymentArgs Type
+
+```typescript
+interface PsePaymentArgs {
+  bankCode: string;   // Bank code (from pse.banks())
+  userType?: string;  // '0' for natural person, '1' for legal entity
+}
+```
+
+### CreatePseOrderResult Response
+
+```typescript
+interface CreatePseOrderResult {
+  order: SwapOrder;           // Created order details
+  execution?: ExecutionResult; // Auto-execution result (if args were provided)
+  requestId: string;          // Request ID for tracking
+}
+```
+
+### SwapOrder Type
+
+```typescript
+interface SwapOrder {
+  id: string;                        // Unique order ID
+  orderSig: string;                  // Order signature
+  rateSig: string;                   // Rate signature used
+  swapSig: string;                   // Swap signature
+  taker: string;                     // Taker URN
+  maker: string;                     // Maker URN
+  fromAsset: string;                 // Source asset
+  toAsset: string;                   // Destination asset
+  fromMedium: string;                // Source medium
+  toMedium: string;                  // Destination medium
+  fromAmount: string;                // Source amount
+  toAmount: string;                  // Destination amount
+  depositInformation: DepositInformation; // Deposit information
+  at: number;                        // Creation timestamp
+  graphId: string;                   // Instruction graph ID
+  status: string;                    // Status (pending, in_progress, completed, failed)
+  createdAt: string;                 // Creation date
+  updatedAt: string;                 // Last update date
+}
+```
+
+### ExecutionResult Type
+
+```typescript
+interface ExecutionResult {
+  nodeId: string;   // Executed node ID
+  result: {
+    status: string;       // Execution status
+    args?: unknown[];     // Additional arguments
+    description?: string; // Result description
+    checkoutUrl?: string; // PSE URL to redirect the user
+  };
+}
+```
+
+### Complete PSE Flow Example
+
+```typescript
+import { SDK } from '@bloque/sdk';
+
+const bloque = new SDK({
+  origin: 'your-origin',
+  auth: {
+    type: 'apiKey',
+    apiKey: process.env.BLOQUE_API_KEY!,
+  },
+  mode: 'production',
+});
+
+async function performPSESwap() {
+  const userSession = await bloque.connect('user-alias');
+
+  // 1. Get list of banks
+  const { banks } = await userSession.swap.pse.banks();
+  console.log('Available banks:', banks);
+
+  // 2. Find available rates
+  const rates = await userSession.swap.findRates({
+    fromAsset: 'COP/2',
+    toAsset: 'DUSD/6',
+    fromMediums: ['pse'],
+    toMediums: ['kreivo'],
+    amountSrc: '50000000', // 500,000.00 COP
+  });
+
+  if (rates.rates.length === 0) {
+    console.log('No rates available');
+    return;
+  }
+
+  // 3. Create PSE swap order with auto-execution
+  const result = await userSession.swap.pse.create({
+    rateSig: rates.rates[0].sig,
+    toMedium: 'kreivo',
+    amountSrc: '50000000',
+    depositInformation: {
+      ledgerAccountId: '0x1a2b3c4d5e6f7890',
+    },
+    args: {
+      bankCode: banks[0].code, // Bank selected by user
+      userType: '0', // Natural person
+    },
+  });
+
+  console.log('Order created:', result.order.id);
+  console.log('Status:', result.order.status);
+  console.log('Graph ID:', result.order.graphId);
+
+  // 4. Redirect user to PSE if checkout URL is available
+  if (result.execution?.result.checkoutUrl) {
+    console.log('Redirecting to PSE...');
+    window.location.href = result.execution.result.checkoutUrl;
+  }
+}
+
+performPSESwap();
+```
+
+### Order Types
+
+- **`src` (default)**: User specifies the exact amount to pay. Destination amount is calculated from the rate.
+  - Example: "I want to pay exactly 10,000 COP, give me whatever DUSD that gets me"
+- **`dst`**: User specifies the exact amount to receive. Source amount is calculated from the rate.
+  - Example: "I want to receive exactly 5 DUSD, I'll pay whatever COP is needed"
+
 - [Accounts Guide](/sdk/guide/accounts/overview) - Create and manage accounts for swap operations
 - [Organizations Guide](/sdk/guide/features/organizations) - Manage entities that can perform swaps

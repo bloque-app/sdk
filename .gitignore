@@ -6,3 +6,5 @@
 # Dist
 node_modules
 dist/
+
+.env

@@ -121,7 +121,6 @@ export class HttpClient {
    * @internal - Called internally after successful authentication.
    */
   setAccessToken(token: string): void {
-    console.warn('setAccessToken', token);
     this._config.accessToken = token;
   }
 

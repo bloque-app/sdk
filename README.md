@@ -59,7 +59,7 @@ const bloque = new SDK({
 });
 
 // Connect to a user session
-const userSession = await bloque.connect('did:bloque:your-origin:user-alias');
+const userSession = await bloque.connect('user-alias');
 
 // Create a virtual card
 const card = await userSession.accounts.card.create({

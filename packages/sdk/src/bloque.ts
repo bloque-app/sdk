@@ -17,7 +17,7 @@ export class SDK {
     this.identity = new IdentityClient(this.httpClient);
   }
 
-  private buildClients() {
+  private buildClients(accessToken: string) {
     return {
       accounts: new AccountsClient(this.httpClient),
       compliance: new ComplianceClient(this.httpClient),
@@ -25,6 +25,9 @@ export class SDK {
       orgs: new OrgsClient(this.httpClient),
       swap: new SwapClient(this.httpClient),
       urn: this.httpClient.urn,
+      get accessToken(): string {
+        return accessToken;
+      },
     };
   }
 
@@ -59,10 +62,11 @@ export class SDK {
       },
       ...params,
     });
+
     this.httpClient.setAccessToken(response.accessToken);
     this.httpClient.setUrn(urn);
 
-    return this.buildClients();
+    return this.buildClients(response.accessToken);
   }
 
   async connect(alias: string) {
@@ -89,6 +93,6 @@ export class SDK {
     this.httpClient.setAccessToken(response.result.access_token);
     this.httpClient.setUrn(urn);
 
-    return this.buildClients();
+    return this.buildClients(response.result.access_token);
   }
 }
