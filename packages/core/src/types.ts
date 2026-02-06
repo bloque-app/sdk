@@ -170,6 +170,14 @@ export type AuthStrategy = { type: 'apiKey'; apiKey: string } | { type: 'jwt' };
  */
 export interface BloqueSDKConfig {
   /**
+   * Base URL for the SDK.
+   *
+   * If not specified, the SDK defaults to the production environment.
+   * If specified, the SDK will use the base URL for all requests.
+   */
+  baseUrl?: string;
+
+  /**
    * Origin identifier for the SDK.
    *
    * Used to scope requests and operations

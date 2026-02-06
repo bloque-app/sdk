@@ -1,9 +1,17 @@
 import type { HttpClient } from '@bloque/sdk-core';
-import { BaseClient } from '@bloque/sdk-core';
+import {
+  BaseClient,
+  isSupportedAsset,
+  SUPPORTED_ASSETS,
+} from '@bloque/sdk-core';
 import { BancolombiaClient } from './bancolombia/bancolombia-client';
 import { CardClient } from './card/card-client';
 import type { ListMovementsParams } from './card/types';
 import type {
+  BatchTransferRequest,
+  BatchTransferResponse,
+  GetAccountResponse,
+  GetBalanceResponse,
   ListAccountsResponse,
   ListMovementsResponse,
   TransferRequest,
@@ -12,6 +20,9 @@ import type {
 import { PolygonClient } from './polygon/polygon-client';
 import type {
   Account,
+  BatchTransferChunkResult,
+  BatchTransferParams,
+  BatchTransferResult,
   ListAccountsParams,
   ListAccountsResult,
   Movement,
@@ -46,6 +57,67 @@ export class AccountsClient extends BaseClient {
     this.polygon = new PolygonClient(this.httpClient);
     this.us = new UsClient(this.httpClient);
     this.virtual = new VirtualClient(this.httpClient);
+  }
+
+  /**
+   * Get account balance by URN
+   *
+   * Retrieves current and pending balance for a specific account.
+   * Returns balances by asset (e.g. DUSD/6, KSM/12) with current, pending, in, and out.
+   *
+   * @param urn - Account URN (e.g. did:bloque:mediums:virtual:account:acc-123)
+   * @returns Promise resolving to balance by asset
+   *
+   * @example
+   * ```typescript
+   * const balance = await bloque.accounts.balance(
+   *   'did:bloque:mediums:virtual:account:acc-12345',
+   * );
+   * Object.entries(balance).forEach(([asset, b]) => {
+   *   console.log(`${asset}: current=${b.current}, pending=${b.pending}`);
+   * });
+   * ```
+   */
+  async balance(urn: string): Promise<Record<string, TokenBalance>> {
+    if (!urn?.trim()) {
+      throw new Error('Account URN is required');
+    }
+
+    const response = await this.httpClient.request<GetBalanceResponse>({
+      method: 'GET',
+      path: `/api/accounts/${urn}/balance`,
+    });
+
+    return response.balance;
+  }
+
+  /**
+   * Get account by URN
+   *
+   * Retrieves full account details including balance for a specific account.
+   *
+   * @param urn - Account URN (e.g. did:bloque:mediums:virtual:account:acc-123)
+   * @returns Promise resolving to the account
+   *
+   * @example
+   * ```typescript
+   * const account = await bloque.accounts.get(
+   *   'did:bloque:mediums:virtual:account:acc-12345',
+   * );
+   * console.log(account.status, account.balance);
+   * ```
+   */
+  async get(urn: string): Promise<Account> {
+    if (!urn?.trim()) {
+      throw new Error('Account URN is required');
+    }
+
+    const response = await this.httpClient.request<GetAccountResponse>({
+      method: 'GET',
+      path: `/api/accounts/${urn}`,
+    });
+
+    return this._mapAccountResponse(response.account);
   }
 
   /**
@@ -112,8 +184,10 @@ export class AccountsClient extends BaseClient {
    */
   async transfer(params: TransferParams): Promise<TransferResult> {
     const asset = params.asset || 'DUSD/6';
-    if (asset !== 'DUSD/6' && asset !== 'KSM/12') {
-      throw new Error('Invalid asset type. Supported assets are USD and KSM.');
+    if (!isSupportedAsset(asset)) {
+      throw new Error(
+        `Invalid asset type "${asset}". Supported assets: ${SUPPORTED_ASSETS.join(', ')}`,
+      );
     }
 
     const request: TransferRequest = {
@@ -133,6 +207,96 @@ export class AccountsClient extends BaseClient {
       queueId: response.result.queue_id,
       status: response.result.status,
       message: response.result.message,
+    };
+  }
+
+  /**
+   * Batch transfer funds between multiple accounts
+   *
+   * Executes multiple transfer operations in a single batch transaction.
+   * Large batches are automatically split into chunks of max 80 operations.
+   *
+   * @param params - Batch transfer parameters
+   * @returns Promise resolving to batch transfer result
+   *
+   * @example
+   * ```typescript
+   * const result = await bloque.accounts.batchTransfer({
+   *   reference: 'batch-payroll-2024-01-15',
+   *   operations: [
+   *     {
+   *       fromUrn: 'did:bloque:account:virtual:acc-12345',
+   *       toUrn: 'did:bloque:account:virtual:acc-67890',
+   *       reference: 'transfer-001',
+   *       amount: '1000000000000',
+   *       asset: 'KSM/12',
+   *       metadata: { note: 'Payment for order #123' }
+   *     },
+   *     {
+   *       fromUrn: 'did:bloque:account:virtual:acc-12345',
+   *       toUrn: 'did:bloque:account:card:usr-456:crd-789',
+   *       reference: 'transfer-002',
+   *       amount: '500000000000',
+   *       asset: 'KSM/12'
+   *     }
+   *   ],
+   *   metadata: { batch_id: 'batch-2024-01-15' },
+   *   webhookUrl: 'https://api.example.com/webhooks/batch-settlement'
+   * });
+   * ```
+   */
+  async batchTransfer(
+    params: BatchTransferParams,
+  ): Promise<BatchTransferResult> {
+    if (!params.operations || params.operations.length === 0) {
+      throw new Error('At least one operation is required');
+    }
+
+    if (!params.reference) {
+      throw new Error('Batch reference is required');
+    }
+
+    // Validate all operations
+    for (const op of params.operations) {
+      if (!isSupportedAsset(op.asset)) {
+        throw new Error(
+          `Invalid asset type "${op.asset}" in operation "${op.reference}". Supported assets: ${SUPPORTED_ASSETS.join(', ')}`,
+        );
+      }
+    }
+
+    const request: BatchTransferRequest = {
+      operations: params.operations.map((op) => ({
+        from_account_urn: op.fromUrn,
+        to_account_urn: op.toUrn,
+        reference: op.reference,
+        amount: op.amount,
+        asset: op.asset,
+        metadata: op.metadata,
+      })),
+      reference: params.reference,
+      metadata: params.metadata,
+      webhook_url: params.webhookUrl,
+    };
+
+    const response = await this.httpClient.request<BatchTransferResponse>({
+      method: 'POST',
+      path: '/api/accounts/batch/transfer',
+      body: request,
+    });
+
+    const chunks: BatchTransferChunkResult[] = response.result.chunks.map(
+      (chunk) => ({
+        queueId: chunk.queue_id,
+        status: chunk.status,
+        message: chunk.message,
+      }),
+    );
+
+    return {
+      chunks,
+      totalOperations: response.result.total_operations,
+      totalChunks: response.result.total_chunks,
     };
   }
 
@@ -167,9 +331,9 @@ export class AccountsClient extends BaseClient {
     }
 
     const asset = params.asset || 'DUSD/6';
-    if (asset !== 'DUSD/6' && asset !== 'KSM/12') {
+    if (!isSupportedAsset(asset)) {
       throw new Error(
-        'Invalid asset type. Supported assets are DUSD/6 and KSM/12.',
+        `Invalid asset type "${asset}". Supported assets: ${SUPPORTED_ASSETS.join(', ')}`,
       );
     }
 
@@ -226,16 +390,6 @@ export class AccountsClient extends BaseClient {
   private _mapAccountResponse<TDetails = unknown>(
     account: ListAccountsResponse['accounts'][0],
   ): Account<TDetails> {
-    const balance: Record<string, TokenBalance> = {};
-    for (const [asset, balanceData] of Object.entries(account.balance)) {
-      balance[asset] = {
-        current: balanceData.current,
-        pending: balanceData.pending,
-        in: balanceData.in,
-        out: balanceData.out,
-      };
-    }
-
     return {
       id: account.id,
       urn: account.urn,
@@ -248,7 +402,7 @@ export class AccountsClient extends BaseClient {
       updatedAt: account.updated_at,
       webhookUrl: account.webhook_url,
       metadata: account.metadata,
-      balance,
+      balance: account.balance,
     };
   }
 }

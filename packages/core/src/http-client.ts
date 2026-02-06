@@ -88,7 +88,7 @@ export class HttpClient {
     const internalConfig: BloqueInternalConfig = { ...config };
     this.validateConfig(internalConfig);
     this._config = internalConfig;
-    this.baseUrl = API_BASE_URLS[config.mode ?? 'production'];
+    this.baseUrl = config.baseUrl || API_BASE_URLS[config.mode ?? 'production'];
   }
 
   /**
