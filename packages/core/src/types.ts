@@ -162,11 +162,13 @@ export type AuthStrategy = { type: 'apiKey'; apiKey: string } | { type: 'jwt' };
 
 type BaseSDKConfig = {
   /**
-   * Base URL for the Bloque API.
+   * Base URL for the SDK.
    *
-   * If not specified, defaults to the official Bloque API endpoint.
+   * If not specified, the SDK defaults to the production environment.
+   * If specified, the SDK will use the base URL for all requests.
    */
   baseUrl?: string;
+
   /**
    * Origin identifier for the SDK.
    *

@@ -2,6 +2,12 @@
  * Public types for @bloque/sdk-accounts
  */
 
+import type { SupportedAsset } from '@bloque/sdk-core';
+import type { TransactionStatus } from './internal/wire-types';
+
+// Re-export SupportedAsset from core
+export type { SupportedAsset } from '@bloque/sdk-core';
+
 /**
  * Options for account creation
  */
@@ -19,11 +25,6 @@ export interface CreateAccountOptions {
    */
   timeout?: number;
 }
-
-/**
- * Supported asset types for transfers and movements
- */
-export type SupportedAsset = 'DUSD/6' | 'KSM/12';
 
 /**
  * Parameters for transferring funds between accounts
@@ -66,6 +67,88 @@ export interface TransferResult {
   status: 'queued' | 'processing' | 'completed' | 'failed';
   /** Human-readable message about the transfer status */
   message: string;
+}
+
+/**
+ * Single operation in a batch transfer
+ */
+export interface BatchTransferOperation {
+  /**
+   * URN of the source account
+   * @example "did:bloque:account:card:usr-123:crd-456"
+   */
+  fromUrn: string;
+  /**
+   * URN of the destination account
+   * @example "did:bloque:account:virtual:acc-67890"
+   */
+  toUrn: string;
+  /**
+   * Unique reference ID for tracking this operation
+   * @example "transfer-001"
+   */
+  reference: string;
+  /**
+   * Amount to transfer (as string to preserve precision)
+   * @example "1000000000000"
+   */
+  amount: string;
+  /**
+   * Asset to transfer
+   * @example "KSM/12"
+   */
+  asset: SupportedAsset;
+  /**
+   * Optional per-operation metadata
+   */
+  metadata?: Record<string, unknown>;
+}
+
+/**
+ * Parameters for batch transfer
+ */
+export interface BatchTransferParams {
+  /**
+   * Array of transfer operations to execute
+   */
+  operations: BatchTransferOperation[];
+  /**
+   * Unique reference ID for the entire batch
+   * @example "batch-payroll-2024-01-15"
+   */
+  reference: string;
+  /**
+   * Optional batch-level metadata
+   */
+  metadata?: Record<string, unknown>;
+  /**
+   * Optional webhook URL to receive settlement notifications
+   */
+  webhookUrl?: string;
+}
+
+/**
+ * Result of a single chunk in a batch transfer
+ */
+export interface BatchTransferChunkResult {
+  /** Unique identifier for the queued chunk */
+  queueId: string;
+  /** Current status of the chunk */
+  status: 'queued' | 'processing' | 'completed' | 'failed';
+  /** Human-readable message about the chunk status */
+  message: string;
+}
+
+/**
+ * Result of a batch transfer operation
+ */
+export interface BatchTransferResult {
+  /** Array of chunk results */
+  chunks: BatchTransferChunkResult[];
+  /** Total number of operations in the batch */
+  totalOperations: number;
+  /** Total number of chunks the batch was split into */
+  totalChunks: number;
 }
 
 /**
@@ -178,6 +261,8 @@ export interface MovementDetails {
  * Account movement/transaction
  */
 export interface Movement {
+  /** Transaction status */
+  status: TransactionStatus;
   /** Transaction amount */
   amount: string;
   /** Asset type */
@@ -187,7 +272,7 @@ export interface Movement {
   /** Destination account ID */
   toAccountId: string;
   /** Transaction direction */
-  direction: 'in' | 'out';
+  direction: 'in' | 'out' | 'failed';
   /** Transaction reference */
   reference: string;
   /** Rail/network name */

@@ -254,6 +254,14 @@ export interface ListAccountsResponse<TDetails = unknown> {
 
 /**
  * @internal
+ * Get account by URN response
+ */
+export interface GetAccountResponse<TDetails = unknown> {
+  account: AccountWithBalance<TDetails>;
+}
+
+/**
+ * @internal
  * Transaction metadata from API
  */
 export interface TransactionMetadata {
@@ -295,6 +303,15 @@ export interface TransactionDetails {
   type: string;
 }
 
+export enum TransactionStatus {
+  PENDING = 'pending',
+  CANCELLED = 'cancelled',
+  CONFIRMED = 'confirmed',
+  SETTLED = 'settled',
+  FAILED = 'failed',
+  IGNORED = 'ignored',
+}
+
 /**
  * @internal
  * Transaction from API
@@ -304,9 +321,10 @@ export interface Transaction {
   asset: string;
   from_account_id: string;
   to_account_id: string;
-  direction: 'in' | 'out';
+  direction: 'in' | 'out' | 'failed';
   reference: string;
   rail_name: string;
+  status: TransactionStatus;
   details: TransactionDetails;
   created_at: string;
 }
@@ -347,6 +365,53 @@ export interface TransferResponse {
     queue_id: string;
     status: 'queued' | 'processing' | 'completed' | 'failed';
     message: string;
+  };
+  req_id: string;
+}
+
+/**
+ * @internal
+ * Batch transfer operation request
+ */
+export interface BatchTransferOperation {
+  from_account_urn: string;
+  to_account_urn: string;
+  reference: string;
+  amount: string;
+  asset: string;
+  metadata?: Record<string, unknown>;
+}
+
+/**
+ * @internal
+ * Batch transfer request body
+ */
+export interface BatchTransferRequest {
+  operations: BatchTransferOperation[];
+  reference: string;
+  metadata?: Record<string, unknown>;
+  webhook_url?: string;
+}
+
+/**
+ * @internal
+ * Batch transfer chunk result
+ */
+export interface BatchTransferChunk {
+  queue_id: string;
+  status: 'queued' | 'processing' | 'completed' | 'failed';
+  message: string;
+}
+
+/**
+ * @internal
+ * Batch transfer response from API
+ */
+export interface BatchTransferResponse {
+  result: {
+    chunks: BatchTransferChunk[];
+    total_operations: number;
+    total_chunks: number;
   };
   req_id: string;
 }

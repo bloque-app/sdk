@@ -240,6 +240,10 @@ export class CardClient extends BaseClient {
       queryParams.set('direction', params.direction);
     }
 
+    if (params.collapsed_view !== undefined) {
+      queryParams.set('collapsed_view', String(params.collapsed_view));
+    }
+
     const queryString = queryParams.toString();
     const path = `/api/accounts/${params.urn}/movements${queryString ? `?${queryString}` : ''}`;
 

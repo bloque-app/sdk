@@ -3,7 +3,7 @@ import type {
   ExecutionResult,
   OrderType,
   SwapOrder,
-} from '../bancolombia/types';
+} from '../bank-transfer/types';
 
 // Re-export common swap types
 export type { ExecutionHow, ExecutionResult, OrderType, SwapOrder };

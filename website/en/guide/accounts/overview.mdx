@@ -58,17 +58,27 @@ cards.forEach((card) => {
 });
 ```
 
+### Get Account by URN
+
+Fetch full account details (including balance) for any account by URN:
+
+```typescript title="get-account.ts"
+const account = await bloque.accounts.get(
+  'did:bloque:mediums:virtual:account:acc-12345',
+);
+console.log(account.status, account.urn, account.balance);
+```
+
 ### Checking Balance
 
-Get the current balance for any account:
+Get the current balance for any account by URN (works for card, virtual, bancolombia, us-account, polygon):
 
 ```typescript title="check-balance.ts"
-const balances = await bloque.accounts.card.balance({
-  urn: 'did:bloque:account:card:usr-123:crd-456',
-});
-
-Object.entries(balances).forEach(([token, balance]) => {
-  console.log(`${token}: ${balance.current}`);
+const balance = await bloque.accounts.balance(
+  'did:bloque:mediums:virtual:account:acc-12345',
+);
+Object.entries(balance).forEach(([asset, b]) => {
+  console.log(`${asset}: current=${b.current}, pending=${b.pending}`);
 });
 ```
 

@@ -73,6 +73,12 @@ export interface ListMovementsParams {
    * - 'out' for outgoing funds (withdrawals, transfers sent)
    */
   direction?: 'in' | 'out';
+
+  /**
+   * When true, returns a collapsed view of movements (e.g. grouped or summarized).
+   * See API docs: GET /api/accounts/{urn}/movements
+   */
+  collapsed_view?: boolean;
 }
 
 export interface CardMovement extends Transaction {

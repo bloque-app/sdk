@@ -114,6 +114,7 @@ export class VirtualClient extends BaseClient {
       input,
       metadata: {
         source: 'sdk-typescript',
+        name: params.name,
         ...params.metadata,
       },
     };

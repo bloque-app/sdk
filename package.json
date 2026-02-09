@@ -33,7 +33,8 @@
     "bun-types": "latest",
     "lefthook": "^2.0.12",
     "typescript": "catalog:",
-    "@types/bun": "latest"
+    "@types/bun": "latest",
+    "dotenv": "latest"
   },
   "workspaces": {
     "packages": [
