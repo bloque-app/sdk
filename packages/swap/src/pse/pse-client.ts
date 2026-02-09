@@ -140,6 +140,7 @@ export class PseClient extends BaseClient {
         ...(params.args.customerData && {
           customer_data: {
             full_name: params.args.customerData.fullName,
+            phone_number: params.args.customerData.phoneNumber,
           },
         }),
       };

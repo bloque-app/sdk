@@ -227,17 +227,18 @@ const result = await userSession.swap.pse.create({
   rateSig: rates.rates[0].sig,
   toMedium: 'kreivo',
   amountSrc: '1000000',
-  depositInformation: { 
-    urn: 'did:bloque:account:card:usr-xxx:crd-xxx' 
+  depositInformation: {
+    urn: 'did:bloque:account:card:usr-xxx:crd-xxx'
   },
-  args: { 
+  args: {
     bankCode: '1007',
     userType: 0,
     customerEmail: 'user@example.com',
     userLegalIdType: 'CC',
     userLegalId: '123456789',
     customerData: {
-      fullName: 'User Name'
+      fullName: 'User Name',
+      phoneNumber: '3018362958',
     }
   }, // Auto-executes PSE payment
 });
@@ -282,6 +283,7 @@ interface PsePaymentArgs {
   userLegalId: string;     // User legal ID number
   customerData: {           // Additional customer data
     fullName: string;         // Customer's full name
+    phoneNumber: string;
   };
 }
 ```
@@ -324,7 +326,7 @@ interface SwapOrder {
 ### Swap Order States
 
 ```typescript
-type SwapOrderStatus = 
+type SwapOrderStatus =
   | 'pending'      // Order created, waiting for execution
   | 'in_progress'  // Order in process of execution
   | 'completed'    // Order completed successfully
@@ -350,7 +352,7 @@ interface ExecutionResult {
 ### Execution States
 
 ```typescript
-type ExecutionStatus = 
+type ExecutionStatus =
   | 'pending'    // Node pending execution
   | 'running'   // Node executing
   | 'completed'  // Node completed successfully
@@ -459,6 +461,7 @@ async function performPSESwap() {
       userLegalId: '123456789',
       customerData: {
         fullName: 'John Doe',
+        phoneNumber: '3018362958',
       },
     },
   });

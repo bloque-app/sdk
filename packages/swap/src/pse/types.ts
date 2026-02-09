@@ -1,3 +1,13 @@
+import type {
+  ExecutionHow,
+  ExecutionResult,
+  OrderType,
+  SwapOrder,
+} from '../bank-transfer/types';
+
+// Re-export common swap types
+export type { ExecutionHow, ExecutionResult, OrderType, SwapOrder };
+
 export interface Bank {
   /**
    * Financial institution code
@@ -12,15 +22,6 @@ export interface Bank {
 export interface ListBanksResult {
   banks: Bank[];
 }
-
-// Order types for PSE swap
-
-/**
- * Order type for swap
- * - 'src': Taker specifies exact source amount to pay
- * - 'dst': Taker specifies exact destination amount to receive
- */
-export type OrderType = 'src' | 'dst';
 
 /**
  * Deposit information for PSE top-up
@@ -41,6 +42,10 @@ export interface PseCustomerData {
    * Customer's full name
    */
   fullName: string;
+  /**
+   * Customer's phone number
+   */
+  phoneNumber: string;
 }
 
 /**
@@ -114,133 +119,6 @@ export interface CreatePseOrderParams {
    * Additional metadata for the order
    */
   metadata?: Record<string, unknown>;
-}
-
-/**
- * Swap order details
- */
-export interface SwapOrder {
-  /**
-   * Unique order identifier
-   */
-  id: string;
-  /**
-   * Order signature
-   */
-  orderSig: string;
-  /**
-   * Rate signature used for this order
-   */
-  rateSig: string;
-  /**
-   * Swap signature
-   */
-  swapSig: string;
-  /**
-   * Taker URN
-   */
-  taker: string;
-  /**
-   * Maker URN
-   */
-  maker: string;
-  /**
-   * Source asset
-   */
-  fromAsset: string;
-  /**
-   * Destination asset
-   */
-  toAsset: string;
-  /**
-   * Source medium
-   */
-  fromMedium: string;
-  /**
-   * Destination medium
-   */
-  toMedium: string;
-  /**
-   * Source amount
-   */
-  fromAmount: string;
-  /**
-   * Destination amount
-   */
-  toAmount: string;
-  /**
-   * Timestamp when the order was created (as string)
-   */
-  at: string;
-  /**
-   * Instruction graph ID for tracking execution
-   */
-  graphId: string;
-  /**
-   * Order status (pending, in_progress, completed, failed)
-   */
-  status: string;
-  /**
-   * Additional metadata
-   */
-  metadata?: Record<string, unknown>;
-  /**
-   * Creation timestamp
-   */
-  createdAt: string;
-  /**
-   * Last update timestamp
-   */
-  updatedAt: string;
-}
-
-/**
- * Redirect instructions for completing the payment
- */
-export interface ExecutionHow {
-  /**
-   * Type of action required (e.g., "REDIRECT")
-   */
-  type: string;
-  /**
-   * URL to redirect the user to complete the payment
-   */
-  url: string;
-}
-
-/**
- * Execution result from auto-execution
- */
-export interface ExecutionResult {
-  /**
-   * Node ID that was executed
-   */
-  nodeId: string;
-  /**
-   * Execution result details
-   */
-  result: {
-    /**
-     * Execution status (e.g., "paused")
-     */
-    status: string;
-    /**
-     * Name of the current step
-     */
-    name?: string;
-    /**
-     * Description of what the user needs to do
-     */
-    description?: string;
-    /**
-     * Instructions for completing this step
-     */
-    how?: ExecutionHow;
-    /**
-     * Callback token for tracking
-     */
-    callbackToken?: string;
-  };
 }
 
 /**

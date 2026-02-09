@@ -3,65 +3,54 @@ import type {
   CreateOrderInput,
   CreateOrderResponse,
   OrderResponse,
-  BancolombiaDepositInformation as WireBancolombiaDepositInformation,
+  BancolombiaDepositInformation as WireBankDepositInformation,
   ExecutionResult as WireExecutionResult,
 } from '../internal/wire-types';
 import type {
-  BancolombiaDepositInformation,
-  CreateBancolombiaOrderParams,
-  CreateBancolombiaOrderResult,
+  BankDepositInformation,
+  CreateBankTransferOrderParams,
+  CreateBankTransferOrderResult,
   ExecutionResult,
   SwapOrder,
 } from './types';
 
 /**
- * Bancolombia client for Bancolombia-related swaps
+ * Generic bank transfer client for cash-out swaps
  *
- * Provides access to Bancolombia swap functionality for kusama to bancolombia transactions.
+ * Supports any Colombian bank as the destination medium.
+ * The specific bank is selected via the `toMedium` parameter when creating an order.
+ *
+ * @example
+ * ```typescript
+ * const result = await bloque.swap.bankTransfer.create({
+ *   rateSig: rate.sig,
+ *   toMedium: 'banco_de_bogota',
+ *   amountSrc: '5000000',
+ *   depositInformation: {
+ *     bankAccountType: 'savings',
+ *     bankAccountNumber: '123456789',
+ *     bankAccountHolderName: 'Juan Pérez',
+ *     bankAccountHolderIdentificationType: 'CC',
+ *     bankAccountHolderIdentificationValue: '1234567890',
+ *   },
+ *   args: { accountUrn: 'did:bloque:card:abc123' },
+ * });
+ * ```
  */
-export class BancolombiaClient extends BaseClient {
+export class BankTransferClient extends BaseClient {
   /**
-   * Create a Bancolombia swap order
+   * Create a bank transfer swap order
    *
-   * Creates a swap order using Kusama as the source and Bancolombia as the destination.
-   * Optionally auto-executes the first instruction node if args are provided.
+   * Creates a swap order using Kusama as the source and any supported
+   * Colombian bank as the destination. The target bank is specified
+   * via `params.toMedium`.
    *
-   * @param params - Bancolombia order parameters
+   * @param params - Bank transfer order parameters
    * @returns Promise resolving to the created order with optional execution result
-   *
-   * @example
-   * ```typescript
-   * // First find available rates
-   * const rates = await bloque.swap.findRates({
-   *   fromAsset: 'KSM/12',
-   *   toAsset: 'COP/2',
-   *   fromMediums: ['kusama'],
-   *   toMediums: ['bancolombia'],
-   *   amountSrc: '100000000'
-   * });
-   *
-   * // Create order with auto-execution
-   * const result = await bloque.swap.bancolombia.create({
-   *   rateSig: rates.rates[0].sig,
-   *   amountSrc: '100000000',
-   *   depositInformation: {
-   *     bankAccountType: 'savings',
-   *     bankAccountNumber: '5740088718',
-   *     bankAccountHolderName: 'david barinas',
-   *     bankAccountHolderIdentificationType: 'CC',
-   *     bankAccountHolderIdentificationValue: '123456789'
-   *   },
-   *   args: {
-   *     accountUrn: 'did:bloque:card:1231231'
-   *   }
-   * });
-   *
-   * console.log('Order created:', result.order.id);
-   * ```
    */
   async create(
-    params: CreateBancolombiaOrderParams,
-  ): Promise<CreateBancolombiaOrderResult> {
+    params: CreateBankTransferOrderParams,
+  ): Promise<CreateBankTransferOrderResult> {
     const takerUrn = this.httpClient.urn;
     if (!takerUrn) {
       throw new BloqueConfigError(
@@ -76,7 +65,7 @@ export class BancolombiaClient extends BaseClient {
       type: orderType,
       rate_sig: params.rateSig,
       from_medium: 'kusama',
-      to_medium: 'bancolombia',
+      to_medium: params.toMedium,
       deposit_information: this._mapDepositInformationToWire(
         params.depositInformation,
       ),
@@ -90,7 +79,7 @@ export class BancolombiaClient extends BaseClient {
 
     if (params.args) {
       input.args = {
-        account_urn: params.args.accountUrn,
+        account_urn: params.args.sourceAccountUrn,
       };
     }
 
@@ -122,8 +111,8 @@ export class BancolombiaClient extends BaseClient {
    * @internal
    */
   private _mapDepositInformationToWire(
-    depositInfo: BancolombiaDepositInformation,
-  ): WireBancolombiaDepositInformation {
+    depositInfo: BankDepositInformation,
+  ): WireBankDepositInformation {
     return {
       bank_account_type: depositInfo.bankAccountType,
       bank_account_number: depositInfo.bankAccountNumber,

@@ -27,6 +27,9 @@ if (rates.rates.length === 0) {
   );
 }
 
+const banks = await user.swap.pse.banks();
+console.log("Available PSE banks:", banks.banks);
+
 const result = await user.swap.pse.create({
   rateSig: rates.rates[0]!?.sig,
   toMedium: "kusama",
@@ -35,7 +38,7 @@ const result = await user.swap.pse.create({
     urn: "did:bloque:account:card:usr-xxx:crd-xxx",
   },
   args: {
-    bankCode: "1",
+    bankCode: banks.banks[0]!?.code,
     userType: "natural",
     customerEmail: "user@example.com",
     userLegalIdType: "CC",
