@@ -189,17 +189,18 @@ const result = await userSession.swap.pse.create({
   rateSig: rates.rates[0].sig,
   toMedium: 'kreivo',
   amountSrc: '1000000',
-  depositInformation: { 
-    urn: 'did:bloque:account:card:usr-xxx:crd-xxx' 
+  depositInformation: {
+    urn: 'did:bloque:account:card:usr-xxx:crd-xxx'
   },
-  args: { 
+  args: {
     bankCode: '1007',
     userType: 0,
     customerEmail: 'user@example.com',
     userLegalIdType: 'CC',
     userLegalId: '123456789',
     customerData: {
-      fullName: 'User Name'
+      fullName: 'User Name',
+      phoneNumber: '3018362958',
     }
   }, // Auto-ejecuta el pago PSE
 });
@@ -243,7 +244,8 @@ interface PsePaymentArgs {
   userLegalIdType: 'CC' | 'NIT' | 'CE';  // Tipo de identificación legal (ej: 'CC', 'NIT', 'CE')
   userLegalId: string;       // Número de identificación legal
   customerData: {             // Datos adicionales del cliente
-    fullName: string;         // Nombre completo del cliente
+    fullName: string;         // Nombre completo del cliente,
+    phoneNumber: string;
   };
 }
 ```
@@ -348,6 +350,7 @@ async function realizarSwapPSE() {
       userLegalId: '123456789',
       customerData: {
         fullName: 'User Name',
+        phoneNumber: '3018362958'
       },
     },
   });

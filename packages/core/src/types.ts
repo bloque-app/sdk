@@ -160,15 +160,13 @@ export interface TokenStorage {
 
 export type AuthStrategy = { type: 'apiKey'; apiKey: string } | { type: 'jwt' };
 
-/**
- * Public configuration object for the Bloque SDK.
- *
- * This is the configuration interface that users should use when
- * initializing the SDK (via `new SDK()` or `init()` in the modular API).
- *
- * @public
- */
-export interface BloqueSDKConfig {
+type BaseSDKConfig = {
+  /**
+   * Base URL for the Bloque API.
+   *
+   * If not specified, defaults to the official Bloque API endpoint.
+   */
+  baseUrl?: string;
   /**
    * Origin identifier for the SDK.
    *
@@ -292,7 +290,39 @@ export interface BloqueSDKConfig {
      */
     maxDelay?: number;
   };
-}
+};
+
+/**
+ * Configuration with custom base URL.
+ * When baseUrl is provided, mode must not be specified.
+ */
+type ConfigWithBaseUrl = Omit<BaseSDKConfig, 'baseUrl' | 'mode'> & {
+  baseUrl: string;
+  mode?: never;
+};
+
+/**
+ * Configuration with mode.
+ * When mode is provided, baseUrl must not be specified (uses default endpoint).
+ */
+type ConfigWithMode = Omit<BaseSDKConfig, 'baseUrl' | 'mode'> & {
+  mode: Mode;
+  baseUrl?: never;
+};
+
+/**
+ * Public configuration object for the Bloque SDK.
+ *
+ * This is the configuration interface that users should use when
+ * initializing the SDK (via `new SDK()` or `init()` in the modular API).
+ *
+ * Either provide:
+ * - `baseUrl`: custom API endpoint (mode cannot be specified)
+ * - `mode`: 'production' or 'sandbox' (uses default endpoints)
+ *
+ * @public
+ */
+export type BloqueSDKConfig = ConfigWithBaseUrl | ConfigWithMode;
 
 /**
  * Internal configuration object with runtime state.
@@ -303,7 +333,7 @@ export interface BloqueSDKConfig {
  * @internal - This interface is not part of the public API.
  * Users should not depend on these fields as they may change without notice.
  */
-export interface BloqueInternalConfig extends BloqueSDKConfig {
+export interface BloqueInternalConfig extends BaseSDKConfig {
   /**
    * Access token for authenticated requests.
    *
