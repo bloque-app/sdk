@@ -303,6 +303,15 @@ export interface TransactionDetails {
   type: string;
 }
 
+export enum TransactionStatus {
+  PENDING = 'pending',
+  CANCELLED = 'cancelled',
+  CONFIRMED = 'confirmed',
+  SETTLED = 'settled',
+  FAILED = 'failed',
+  IGNORED = 'ignored',
+}
+
 /**
  * @internal
  * Transaction from API
@@ -312,9 +321,10 @@ export interface Transaction {
   asset: string;
   from_account_id: string;
   to_account_id: string;
-  direction: 'in' | 'out';
+  direction: 'in' | 'out' | 'failed';
   reference: string;
   rail_name: string;
+  status: TransactionStatus;
   details: TransactionDetails;
   created_at: string;
 }

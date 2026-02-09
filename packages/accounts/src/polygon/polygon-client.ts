@@ -108,6 +108,7 @@ export class PolygonClient extends BaseClient {
       input,
       metadata: {
         source: 'sdk-typescript',
+        name: params.name,
         ...params.metadata,
       },
     };

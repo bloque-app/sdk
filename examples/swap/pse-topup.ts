@@ -1,49 +1,49 @@
-import { SDK } from '../../packages/sdk/src/index';
+import { SDK } from "../../packages/sdk/src/index";
 
 const bloque = new SDK({
   origin: process.env.ORIGIN!,
   auth: {
-    type: 'apiKey',
+    type: "apiKey",
     apiKey: process.env.API_KEY!,
   },
-  mode: 'sandbox',
-  platform: 'node',
+  mode: "sandbox",
+  platform: "node",
 });
 
-const user = await bloque.connect('nestor');
+const user = await bloque.connect("nestor");
 
 const rates = await user.swap.findRates({
-  fromAsset: 'COP/2',
-  toAsset: 'DUSD/6',
-  fromMediums: ['pse'],
-  toMediums: ['kusama'],
-  amountSrc: '1000000',
+  fromAsset: "COP/2",
+  toAsset: "DUSD/6",
+  fromMediums: ["pse"],
+  toMediums: ["kusama"],
+  amountSrc: "1000000",
 });
-console.log('Available swap rates:', rates.rates[0]);
+console.log("Available swap rates:", rates.rates[0]);
 
 if (rates.rates.length === 0) {
   throw new Error(
-    'No swap rates available for the specified assets and mediums.',
+    "No swap rates available for the specified assets and mediums.",
   );
 }
 
 const result = await user.swap.pse.create({
-  rateSig: rates.rates[0]?.sig,
-  toMedium: 'kusama',
-  amountSrc: '1000000',
+  rateSig: rates.rates[0]!?.sig,
+  toMedium: "kusama",
+  amountSrc: "1000000",
   depositInformation: {
-    urn: 'did:bloque:account:card:usr-xxx:crd-xxx',
+    urn: "did:bloque:account:card:usr-xxx:crd-xxx",
   },
   args: {
-    bankCode: '1',
-    userType: 'natural',
-    customerEmail: 'user@example.com',
-    userLegalIdType: 'CC',
-    userLegalId: '123456789',
+    bankCode: "1",
+    userType: "natural",
+    customerEmail: "user@example.com",
+    userLegalIdType: "CC",
+    userLegalId: "123456789",
     customerData: {
-      fullName: 'John Doe',
+      fullName: "John Doe",
     },
   },
 });
 
-console.log('PSE Top-up order created:', result.execution?.result.how?.url);
+console.log("PSE Top-up order created:", result.execution?.result.how?.url);

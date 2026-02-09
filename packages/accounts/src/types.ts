@@ -3,6 +3,7 @@
  */
 
 import type { SupportedAsset } from '@bloque/sdk-core';
+import type { TransactionStatus } from './internal/wire-types';
 
 // Re-export SupportedAsset from core
 export type { SupportedAsset } from '@bloque/sdk-core';
@@ -260,6 +261,8 @@ export interface MovementDetails {
  * Account movement/transaction
  */
 export interface Movement {
+  /** Transaction status */
+  status: TransactionStatus;
   /** Transaction amount */
   amount: string;
   /** Asset type */
@@ -269,7 +272,7 @@ export interface Movement {
   /** Destination account ID */
   toAccountId: string;
   /** Transaction direction */
-  direction: 'in' | 'out';
+  direction: 'in' | 'out' | 'failed';
   /** Transaction reference */
   reference: string;
   /** Rail/network name */

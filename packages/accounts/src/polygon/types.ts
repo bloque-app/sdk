@@ -35,6 +35,11 @@ export interface CreatePolygonAccountParams {
   holderUrn?: string;
 
   /**
+   * Display name for the polygon account
+   */
+  name?: string;
+
+  /**
    * Ledger account ID to associate with the polygon account
    * If not provided, a new ledger account will be created automatically
    */

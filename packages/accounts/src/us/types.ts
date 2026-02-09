@@ -104,6 +104,10 @@ export interface CreateUsAccountParams {
    */
   signedAgreementId: string;
   /**
+   * Display name for the US account
+   */
+  name?: string;
+  /**
    * Webhook URL to receive account events
    */
   webhookUrl?: string;

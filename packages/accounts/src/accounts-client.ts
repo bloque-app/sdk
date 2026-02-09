@@ -323,6 +323,12 @@ export class AccountsClient extends BaseClient {
    *   direction: 'in',
    *   after: '2025-01-01T00:00:00Z',
    * });
+   *
+   * // Collapsed view (grouped/summarized)
+   * const collapsed = await bloque.accounts.movements({
+   *   urn: 'did:bloque:account:virtual:acc-123',
+   *   collapsed_view: true,
+   * });
    * ```
    */
   async movements(params: ListMovementsParams): Promise<Movement[]> {
@@ -360,6 +366,11 @@ export class AccountsClient extends BaseClient {
       queryParams.set('direction', params.direction);
     }
 
+    if (params.collapsed_view !== undefined) {
+      queryParams.set('collapsed_view', String(params.collapsed_view));
+    }
+
+    console.log('queryParams: ', queryParams.toString());
     const path = `/api/accounts/${params.urn}/movements?${queryParams.toString()}`;
 
     const response = await this.httpClient.request<ListMovementsResponse>({
@@ -374,11 +385,9 @@ export class AccountsClient extends BaseClient {
       toAccountId: tx.to_account_id,
       direction: tx.direction,
       reference: tx.reference,
+      status: tx.status,
       railName: tx.rail_name,
-      details: {
-        metadata: tx.details.metadata,
-        type: tx.details.type,
-      },
+      details: tx.details,
       createdAt: tx.created_at,
     }));
   }
