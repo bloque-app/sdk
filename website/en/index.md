@@ -3,11 +3,6 @@ pageType: home
 titleSuffix: 'Financial Infrastructure SDK'
 
 hero:
-  name: Bloque SDK
-  text: |
-    Financial Infrastructure for Developers
-    Simple, Fast, and Secure
-  tagline: Create organizations, verify identities, issue cards, and manage accounts with a single SDK
   actions:
     - theme: brand
       text: Introduction
@@ -15,9 +10,6 @@ hero:
     - theme: alt
       text: Quick Start
       link: ./sdk/guide/start/getting-started
-  image:
-    src: /bloque-icon.png
-    alt: Bloque SDK Logo
 features:
   - title: Organization Management
     details: Create and manage business and individual organizations with full profile and compliance information.

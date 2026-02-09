@@ -236,14 +236,30 @@ console.log('Card name updated:', updatedCard.metadata?.name);
 
 Las tarjetas pueden estar en diferentes estados:
 
-| Estado | Descripción |
-|--------|-------------|
-| `creation_in_progress` | La tarjeta se está creando |
-| `creation_failed` | Falló la creación de la tarjeta |
-| `active` | La tarjeta está activa y lista para usar |
-| `disabled` | La tarjeta ha sido deshabilitada |
-| `frozen` | La tarjeta está temporalmente congelada |
-| `deleted` | La tarjeta ha sido eliminada |
+| Estado | Descripción | Puede Transicionar A |
+|--------|-------------|-------------------|
+| `creation_in_progress` | La tarjeta se está creando | `active`, `creation_failed` |
+| `creation_failed` | Falló la creación de la tarjeta | - |
+| `active` | La tarjeta está activa y lista para usar | `disabled`, `frozen`, `deleted` |
+| `disabled` | La tarjeta ha sido deshabilitada | `deleted` |
+| `frozen` | La tarjeta está temporalmente congelada | `active`, `disabled`, `deleted` |
+| `deleted` | La tarjeta ha sido eliminada | - |
+
+```mermaid
+stateDiagram-v2
+    [*] --> creation_in_progress
+    creation_in_progress --> active
+    creation_in_progress --> creation_failed
+    active --> disabled
+    active --> frozen
+    active --> deleted
+    disabled --> deleted
+    frozen --> active
+    frozen --> disabled
+    frozen --> deleted
+    creation_failed --> [*]
+    deleted --> [*]
+```
 
 ## Visualizando Detalles de Tarjeta
 

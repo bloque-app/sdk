@@ -3,11 +3,6 @@ pageType: home
 titleSuffix: 'SDK de Infraestructura Financiera'
 
 hero:
-  name: Bloque SDK
-  text: |
-    Infraestructura Financiera para Desarrolladores
-    Simple, Rápida y Segura
-  tagline: Crea organizaciones, verifica identidades, emite tarjetas y gestiona cuentas con un solo SDK
   actions:
     - theme: brand
       text: Introducción
@@ -15,9 +10,6 @@ hero:
     - theme: alt
       text: Inicio Rápido
       link: ./sdk/guide/start/getting-started
-  image:
-    src: /bloque-icon.png
-    alt: Logo de Bloque SDK
 features:
   - title: Gestión de Organizaciones
     details: Crea y gestiona organizaciones empresariales e individuales con información completa de perfil y cumplimiento.

@@ -1,5 +1,6 @@
 import type { HttpClient } from '@bloque/sdk-core';
 import { BaseClient } from '@bloque/sdk-core';
+import { BancolombiaClient } from './bancolombia/bancolombia-client';
 import type { FindRatesResponse, Rate } from './internal/wire-types';
 import { PseClient } from './pse/pse-client';
 import type { FindRatesParams, FindRatesResult, SwapRate } from './types';
@@ -9,13 +10,16 @@ import type { FindRatesParams, FindRatesResult, SwapRate } from './types';
  *
  * Provides access to exchange rate discovery and swapping functionality.
  * - pse: PSE utilities (bank listing, etc.)
+ * - bancolombia: Bancolombia swap functionality
  */
 export class SwapClient extends BaseClient {
   readonly pse: PseClient;
+  readonly bancolombia: BancolombiaClient;
 
   constructor(httpClient: HttpClient) {
     super(httpClient);
     this.pse = new PseClient(this.httpClient);
+    this.bancolombia = new BancolombiaClient(this.httpClient);
   }
   /**
    * Find available exchange rates

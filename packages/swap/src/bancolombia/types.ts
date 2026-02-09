@@ -1,19 +1,62 @@
-export interface Bank {
+/**
+ * Bancolombia swap types for @bloque/sdk-swap
+ */
+
+/**
+ * Bank account type for Bancolombia deposits
+ */
+export type BankAccountType = 'savings' | 'checking';
+
+/**
+ * Identification type for account holder
+ */
+export type IdentificationType = 'CC' | 'CE' | 'NIT' | 'PP';
+
+/**
+ * Bancolombia deposit information for direct bank deposits
+ */
+export interface BancolombiaDepositInformation {
   /**
-   * Financial institution code
+   * Bank account type
+   * @example "savings"
    */
-  code: string;
+  bankAccountType: BankAccountType;
+
   /**
-   * Financial institution name
+   * Bank account number
+   * @example "5740088718"
    */
-  name: string;
+  bankAccountNumber: string;
+
+  /**
+   * Account holder full name
+   * @example "david barinas"
+   */
+  bankAccountHolderName: string;
+
+  /**
+   * Account holder identification type
+   * @example "CC"
+   */
+  bankAccountHolderIdentificationType: IdentificationType;
+
+  /**
+   * Account holder identification number
+   * @example "123456789"
+   */
+  bankAccountHolderIdentificationValue: string;
 }
 
-export interface ListBanksResult {
-  banks: Bank[];
+/**
+ * Kusama account arguments for swap execution
+ */
+export interface KusamaAccountArgs {
+  /**
+   * Kusama account URN for source funds
+   * @example "did:bloque:card:1231231"
+   */
+  accountUrn: string;
 }
-
-// Order types for PSE swap
 
 /**
  * Order type for swap
@@ -23,93 +66,46 @@ export interface ListBanksResult {
 export type OrderType = 'src' | 'dst';
 
 /**
- * Deposit information for PSE top-up
+ * Parameters for creating a Bancolombia swap order
  */
-export interface DepositInformation {
-  /**
-   * Account URN where funds will be deposited
-   * @example "did:bloque:account:card:usr-xxx:crd-xxx"
-   */
-  urn: string;
-}
-
-/**
- * Customer data for PSE payment
- */
-export interface PseCustomerData {
-  /**
-   * Customer's full name
-   */
-  fullName: string;
-}
-
-/**
- * PSE payment arguments for auto-execution
- */
-export interface PsePaymentArgs {
-  /**
-   * Bank code from PSE banks list
-   */
-  bankCode: string;
-  /**
-   * User type: 0 for natural person, 1 for legal entity
-   */
-  userType: 0 | 1;
-  /**
-   * Customer email address
-   */
-  customerEmail: string;
-  /**
-   * User legal ID type (e.g., 'CC', 'NIT', 'CE')
-   */
-  userLegalIdType: 'CC' | 'NIT' | 'CE';
-  /**
-   * User legal ID number
-   */
-  userLegalId: string;
-  /**
-   * Additional customer data
-   */
-  customerData: PseCustomerData;
-}
-
-/**
- * Parameters for creating a PSE swap order
- */
-export interface CreatePseOrderParams {
+export interface CreateBancolombiaOrderParams {
   /**
    * Rate signature from findRates
    */
   rateSig: string;
-  /**
-   * Destination medium (e.g., 'kreivo', 'bloque')
-   */
-  toMedium: string;
+
   /**
    * Source amount as bigint string (required if type is 'src')
-   * @example "1000000" represents 10000.00 for COP/2
+   * @example "100000000" represents the exact amount in KSM smallest unit
    */
   amountSrc?: string;
+
   /**
    * Destination amount as bigint string (required if type is 'dst')
+   * @example "50000000" represents 500000.00 COP
    */
   amountDst?: string;
+
   /**
    * Order type (default: 'src')
    */
   type?: OrderType;
+
   /**
-   * Deposit information with the account URN where funds will be deposited
+   * Bancolombia bank account information for fund delivery
    */
-  depositInformation: DepositInformation;
+  depositInformation: BancolombiaDepositInformation;
+
   /**
-   * PSE payment arguments for auto-execution
+   * Kusama account arguments for swap execution
    */
-  args: PsePaymentArgs;
+  args: KusamaAccountArgs;
+
   /**
    * Specific node ID to execute (defaults to first node)
    */
   nodeId?: string;
+
   /**
    * Additional metadata for the order
    */
@@ -124,70 +120,87 @@ export interface SwapOrder {
    * Unique order identifier
    */
   id: string;
+
   /**
    * Order signature
    */
   orderSig: string;
+
   /**
    * Rate signature used for this order
    */
   rateSig: string;
+
   /**
    * Swap signature
    */
   swapSig: string;
+
   /**
    * Taker URN
    */
   taker: string;
+
   /**
    * Maker URN
    */
   maker: string;
+
   /**
    * Source asset
    */
   fromAsset: string;
+
   /**
    * Destination asset
    */
   toAsset: string;
+
   /**
    * Source medium
    */
   fromMedium: string;
+
   /**
    * Destination medium
    */
   toMedium: string;
+
   /**
    * Source amount
    */
   fromAmount: string;
+
   /**
    * Destination amount
    */
   toAmount: string;
+
   /**
    * Timestamp when the order was created (as string)
    */
   at: string;
+
   /**
    * Instruction graph ID for tracking execution
    */
   graphId: string;
+
   /**
    * Order status (pending, in_progress, completed, failed)
    */
   status: string;
+
   /**
    * Additional metadata
    */
   metadata?: Record<string, unknown>;
+
   /**
    * Creation timestamp
    */
   createdAt: string;
+
   /**
    * Last update timestamp
    */
@@ -202,6 +215,7 @@ export interface ExecutionHow {
    * Type of action required (e.g., "REDIRECT")
    */
   type: string;
+
   /**
    * URL to redirect the user to complete the payment
    */
@@ -216,6 +230,7 @@ export interface ExecutionResult {
    * Node ID that was executed
    */
   nodeId: string;
+
   /**
    * Execution result details
    */
@@ -224,18 +239,22 @@ export interface ExecutionResult {
      * Execution status (e.g., "paused")
      */
     status: string;
+
     /**
      * Name of the current step
      */
     name?: string;
+
     /**
      * Description of what the user needs to do
      */
     description?: string;
+
     /**
      * Instructions for completing this step
      */
     how?: ExecutionHow;
+
     /**
      * Callback token for tracking
      */
@@ -244,17 +263,19 @@ export interface ExecutionResult {
 }
 
 /**
- * Result of creating a PSE swap order
+ * Result of creating a Bancolombia swap order
  */
-export interface CreatePseOrderResult {
+export interface CreateBancolombiaOrderResult {
   /**
    * The created order
    */
   order: SwapOrder;
+
   /**
    * Execution result (if args were provided for auto-execution)
    */
   execution?: ExecutionResult;
+
   /**
    * Request ID for tracking
    */
