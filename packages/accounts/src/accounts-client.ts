@@ -4,22 +4,35 @@ import {
   isSupportedAsset,
   SUPPORTED_ASSETS,
 } from '@bloque/sdk-core';
-import { BancolombiaClient } from './bancolombia/bancolombia-client';
-import { CardClient } from './card/card-client';
-import type { ListMovementsParams } from './card/types';
+import {
+  BancolombiaClient,
+  mapBancolombiaAccountFromWire,
+} from './bancolombia/bancolombia-client';
+import type { BancolombiaAccount } from './bancolombia/types';
+import { CardClient, mapCardAccountFromWire } from './card/card-client';
+import type { CardAccount, ListMovementsParams } from './card/types';
 import type {
+  AccountWithBalance,
+  BancolombiaDetails,
   BatchTransferRequest,
   BatchTransferResponse,
+  CardDetails,
   GetAccountResponse,
   GetBalanceResponse,
   ListAccountsResponse,
   ListMovementsResponse,
+  PolygonDetails,
   TransferRequest,
   TransferResponse,
+  UsDetails,
+  VirtualDetails,
 } from './internal/wire-types';
-import { PolygonClient } from './polygon/polygon-client';
+import {
+  mapPolygonAccountFromWire,
+  PolygonClient,
+} from './polygon/polygon-client';
+import type { PolygonAccount } from './polygon/types';
 import type {
-  Account,
   BatchTransferChunkResult,
   BatchTransferParams,
   BatchTransferResult,
@@ -30,8 +43,24 @@ import type {
   TransferParams,
   TransferResult,
 } from './types';
-import { UsClient } from './us/us-client';
-import { VirtualClient } from './virtual/virtual-client';
+import type { UsAccount } from './us/types';
+import { mapUsAccountFromWire, UsClient } from './us/us-client';
+import type { VirtualAccount } from './virtual/types';
+import {
+  mapVirtualAccountFromWire,
+  VirtualClient,
+} from './virtual/virtual-client';
+
+/**
+ * Union of all medium-specific mapped account types.
+ * Returned by `AccountsClient.get()` and used in `AccountsClient.list()`.
+ */
+export type MappedAccount =
+  | CardAccount
+  | VirtualAccount
+  | PolygonAccount
+  | BancolombiaAccount
+  | UsAccount;
 
 /**
  * Accounts client for managing financial accounts and payment methods
@@ -107,7 +136,7 @@ export class AccountsClient extends BaseClient {
    * console.log(account.status, account.balance);
    * ```
    */
-  async get(urn: string): Promise<Account> {
+  async get(urn: string): Promise<MappedAccount> {
     if (!urn?.trim()) {
       throw new Error('Account URN is required');
     }
@@ -117,7 +146,7 @@ export class AccountsClient extends BaseClient {
       path: `/api/accounts/${urn}`,
     });
 
-    return this._mapAccountResponse(response.account);
+    return this._mapByMedium(response.account);
   }
 
   /**
@@ -156,9 +185,7 @@ export class AccountsClient extends BaseClient {
     });
 
     return {
-      accounts: response.accounts.map((account) =>
-        this._mapAccountResponse(account),
-      ),
+      accounts: response.accounts.map((account) => this._mapByMedium(account)),
     };
   }
 
@@ -393,25 +420,36 @@ export class AccountsClient extends BaseClient {
   }
 
   /**
-   * Maps API account response to SDK format
+   * Dispatches the wire account to the correct per-medium mapper.
+   * Returns a properly typed account (CardAccount, VirtualAccount, etc.)
+   * instead of a generic Account with raw details.
+   *
    * @internal
    */
-  private _mapAccountResponse<TDetails = unknown>(
+  private _mapByMedium(
     account: ListAccountsResponse['accounts'][0],
-  ): Account<TDetails> {
-    return {
-      id: account.id,
-      urn: account.urn,
-      medium: account.medium,
-      details: account.details as TDetails,
-      ledgerId: account.ledger_account_id,
-      status: account.status,
-      ownerUrn: account.owner_urn,
-      createdAt: account.created_at,
-      updatedAt: account.updated_at,
-      webhookUrl: account.webhook_url,
-      metadata: account.metadata,
-      balance: account.balance,
-    };
+  ): MappedAccount {
+    switch (account.medium) {
+      case 'card':
+        return mapCardAccountFromWire(
+          account as AccountWithBalance<CardDetails>,
+        );
+      case 'virtual':
+        return mapVirtualAccountFromWire(
+          account as AccountWithBalance<VirtualDetails>,
+        );
+      case 'polygon':
+        return mapPolygonAccountFromWire(
+          account as AccountWithBalance<PolygonDetails>,
+        );
+      case 'bancolombia':
+        return mapBancolombiaAccountFromWire(
+          account as AccountWithBalance<BancolombiaDetails>,
+        );
+      case 'us-account':
+        return mapUsAccountFromWire(account as AccountWithBalance<UsDetails>);
+      default:
+        throw new Error(`Unknown account medium: ${account.medium}`);
+    }
   }
 }

@@ -240,11 +240,19 @@ export interface ListAccountsParams {
 }
 
 /**
- * Result of listing accounts
+ * Result of listing accounts.
+ * Each account is mapped to its medium-specific type
+ * (CardAccount, VirtualAccount, PolygonAccount, BancolombiaAccount, or UsAccount).
  */
 export interface ListAccountsResult {
-  /** Array of accounts */
-  accounts: Account[];
+  /** Array of medium-specific mapped accounts */
+  accounts: Array<
+    | import('./card/types').CardAccount
+    | import('./virtual/types').VirtualAccount
+    | import('./polygon/types').PolygonAccount
+    | import('./bancolombia/types').BancolombiaAccount
+    | import('./us/types').UsAccount
+  >;
 }
 
 /**

@@ -1,6 +1,7 @@
 import { BaseClient } from '@bloque/sdk-core';
 import type {
   AccountStatus,
+  AccountWithBalance,
   CardDetails,
   CreateAccountRequest,
   CreateAccountResponse,
@@ -23,6 +24,31 @@ import type {
   ListMovementsParams,
   UpdateCardMetadataParams,
 } from './types';
+
+/**
+ * Maps a wire card account to the SDK CardAccount type.
+ * Exported so AccountsClient.get() can dispatch by medium.
+ */
+export function mapCardAccountFromWire(
+  account: AccountWithBalance<CardDetails>,
+): CardAccount {
+  return {
+    urn: account.urn,
+    id: account.id,
+    lastFour: account.details.card_last_four,
+    productType: account.details.card_product_type,
+    status: account.status,
+    cardType: account.details.card_type,
+    detailsUrl: account.details.card_url_details,
+    ownerUrn: account.owner_urn,
+    ledgerId: account.ledger_account_id,
+    webhookUrl: account.webhook_url,
+    metadata: account.metadata,
+    createdAt: account.created_at,
+    updatedAt: account.updated_at,
+    balance: account.balance,
+  };
+}
 
 export class CardClient extends BaseClient {
   /**
@@ -427,20 +453,6 @@ export class CardClient extends BaseClient {
   private _mapAccountResponse(
     account: UpdateAccountResponse<CardDetails>['result']['account'],
   ): CardAccount {
-    return {
-      urn: account.urn,
-      id: account.id,
-      lastFour: account.details.card_last_four,
-      productType: account.details.card_product_type,
-      status: account.status,
-      cardType: account.details.card_type,
-      detailsUrl: account.details.card_url_details,
-      ownerUrn: account.owner_urn,
-      ledgerId: account.ledger_account_id,
-      webhookUrl: account.webhook_url,
-      metadata: account.metadata,
-      createdAt: account.created_at,
-      updatedAt: account.updated_at,
-    };
+    return mapCardAccountFromWire(account as AccountWithBalance<CardDetails>);
   }
 }

@@ -1,6 +1,7 @@
 import { BaseClient } from '@bloque/sdk-core';
 import type {
   AccountStatus,
+  AccountWithBalance,
   BancolombiaDetails,
   CreateAccountRequest,
   CreateAccountResponse,
@@ -16,6 +17,34 @@ import type {
   ListBancolombiaAccountsResult,
   UpdateBancolombiaMetadataParams,
 } from './types';
+
+/**
+ * Maps a wire Bancolombia account to the SDK BancolombiaAccount type.
+ * Exported so AccountsClient.get() can dispatch by medium.
+ */
+export function mapBancolombiaAccountFromWire(
+  account: AccountWithBalance<BancolombiaDetails>,
+): BancolombiaAccount {
+  return {
+    urn: account.urn,
+    id: account.id,
+    referenceCode: account.details.reference_code,
+    status: account.status,
+    ownerUrn: account.owner_urn,
+    ledgerId: account.ledger_account_id,
+    webhookUrl: account.webhook_url,
+    metadata: account.metadata,
+    createdAt: account.created_at,
+    updatedAt: account.updated_at,
+    balance:
+      'balance' in account && account.balance
+        ? (account.balance as Record<
+            string,
+            { current: string; pending: string; in: string; out: string }
+          >)
+        : undefined,
+  };
+}
 
 export class BancolombiaClient extends BaseClient {
   /**
@@ -315,24 +344,8 @@ export class BancolombiaClient extends BaseClient {
   private _mapAccountResponse(
     account: UpdateAccountResponse<BancolombiaDetails>['result']['account'],
   ): BancolombiaAccount {
-    return {
-      urn: account.urn,
-      id: account.id,
-      referenceCode: account.details.reference_code,
-      status: account.status,
-      ownerUrn: account.owner_urn,
-      ledgerId: account.ledger_account_id,
-      webhookUrl: account.webhook_url,
-      metadata: account.metadata,
-      createdAt: account.created_at,
-      updatedAt: account.updated_at,
-      balance:
-        'balance' in account && account.balance
-          ? (account.balance as Record<
-              string,
-              { current: string; pending: string; in: string; out: string }
-            >)
-          : undefined,
-    };
+    return mapBancolombiaAccountFromWire(
+      account as AccountWithBalance<BancolombiaDetails>,
+    );
   }
 }

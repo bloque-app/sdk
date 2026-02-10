@@ -1,5 +1,6 @@
 import { BaseClient } from '@bloque/sdk-core';
 import type {
+  AccountWithBalance,
   CreateAccountRequest,
   CreateAccountResponse,
   CreateUsAccountInput,
@@ -20,6 +21,44 @@ import type {
   UpdateUsMetadataParams,
   UsAccount,
 } from './types';
+
+/**
+ * Maps a wire US account to the SDK UsAccount type.
+ * Exported so AccountsClient.get() can dispatch by medium.
+ */
+export function mapUsAccountFromWire(
+  account: AccountWithBalance<UsDetails>,
+): UsAccount {
+  return {
+    urn: account.urn,
+    id: account.id,
+    type: account.details.type,
+    firstName: account.details.first_name,
+    middleName: account.details.middle_name,
+    lastName: account.details.last_name,
+    email: account.details.email,
+    phone: account.details.phone,
+    address: {
+      streetLine1: account.details.address.street_line_1,
+      streetLine2: account.details.address.street_line_2,
+      city: account.details.address.city,
+      state: account.details.address.state,
+      postalCode: account.details.address.postal_code,
+      country: account.details.address.country,
+    },
+    birthDate: account.details.birth_date,
+    accountNumber: account.details.account_number,
+    routingNumber: account.details.routing_number,
+    status: account.status,
+    ownerUrn: account.owner_urn,
+    ledgerId: account.ledger_account_id,
+    webhookUrl: account.webhook_url,
+    metadata: account.metadata,
+    createdAt: account.created_at,
+    updatedAt: account.updated_at,
+    balance: account.balance,
+  };
+}
 
 export class UsClient extends BaseClient {
   /**
@@ -391,33 +430,6 @@ export class UsClient extends BaseClient {
   private _mapAccountResponse(
     account: UpdateAccountResponse<UsDetails>['result']['account'],
   ): UsAccount {
-    return {
-      urn: account.urn,
-      id: account.id,
-      type: account.details.type,
-      firstName: account.details.first_name,
-      middleName: account.details.middle_name,
-      lastName: account.details.last_name,
-      email: account.details.email,
-      phone: account.details.phone,
-      address: {
-        streetLine1: account.details.address.street_line_1,
-        streetLine2: account.details.address.street_line_2,
-        city: account.details.address.city,
-        state: account.details.address.state,
-        postalCode: account.details.address.postal_code,
-        country: account.details.address.country,
-      },
-      birthDate: account.details.birth_date,
-      accountNumber: account.details.account_number,
-      routingNumber: account.details.routing_number,
-      status: account.status,
-      ownerUrn: account.owner_urn,
-      ledgerId: account.ledger_account_id,
-      webhookUrl: account.webhook_url,
-      metadata: account.metadata,
-      createdAt: account.created_at,
-      updatedAt: account.updated_at,
-    };
+    return mapUsAccountFromWire(account as AccountWithBalance<UsDetails>);
   }
 }
