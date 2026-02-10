@@ -1,5 +1,6 @@
 {
   "lockfileVersion": 1,
+  "configVersion": 0,
   "workspaces": {
     "": {
       "name": "sdk",
@@ -16,7 +17,7 @@
     },
     "packages/accounts": {
       "name": "@bloque/sdk-accounts",
-      "version": "0.0.33",
+      "version": "0.0.34",
       "dependencies": {
         "@bloque/sdk-core": "workspace:*",
       },
@@ -29,7 +30,7 @@
     },
     "packages/compliance": {
       "name": "@bloque/sdk-compliance",
-      "version": "0.0.33",
+      "version": "0.0.34",
       "dependencies": {
         "@bloque/sdk-core": "workspace:*",
       },
@@ -42,7 +43,7 @@
     },
     "packages/core": {
       "name": "@bloque/sdk-core",
-      "version": "0.0.33",
+      "version": "0.0.34",
       "devDependencies": {
         "@rslib/core": "catalog:",
         "@types/node": "catalog:",
@@ -52,7 +53,7 @@
     },
     "packages/identity": {
       "name": "@bloque/sdk-identity",
-      "version": "0.0.33",
+      "version": "0.0.34",
       "dependencies": {
         "@bloque/sdk-core": "workspace:*",
       },
@@ -65,7 +66,7 @@
     },
     "packages/orgs": {
       "name": "@bloque/sdk-orgs",
-      "version": "0.0.33",
+      "version": "0.0.34",
       "dependencies": {
         "@bloque/sdk-core": "workspace:*",
       },
@@ -78,7 +79,7 @@
     },
     "packages/sdk": {
       "name": "@bloque/sdk",
-      "version": "0.0.33",
+      "version": "0.0.34",
       "dependencies": {
         "@bloque/sdk-accounts": "workspace:*",
         "@bloque/sdk-compliance": "workspace:*",
@@ -96,7 +97,7 @@
     },
     "packages/swap": {
       "name": "@bloque/sdk-swap",
-      "version": "0.0.33",
+      "version": "0.0.34",
       "dependencies": {
         "@bloque/sdk-core": "workspace:*",
       },
