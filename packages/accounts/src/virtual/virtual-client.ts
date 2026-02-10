@@ -1,6 +1,7 @@
 import { BaseClient } from '@bloque/sdk-core';
 import type {
   AccountStatus,
+  AccountWithBalance,
   CreateAccountRequest,
   CreateAccountResponse,
   CreateVirtualAccountInput,
@@ -17,6 +18,35 @@ import type {
   UpdateVirtualMetadataParams,
   VirtualAccount,
 } from './types';
+
+/**
+ * Maps a wire virtual account to the SDK VirtualAccount type.
+ * Exported so AccountsClient.get() can dispatch by medium.
+ */
+export function mapVirtualAccountFromWire(
+  account: AccountWithBalance<VirtualDetails>,
+): VirtualAccount {
+  return {
+    urn: account.urn,
+    id: account.id,
+    firstName: account.details.first_name,
+    lastName: account.details.last_name,
+    status: account.status,
+    ownerUrn: account.owner_urn,
+    ledgerId: account.ledger_account_id,
+    webhookUrl: account.webhook_url,
+    metadata: account.metadata as Record<string, string> | undefined,
+    createdAt: account.created_at,
+    updatedAt: account.updated_at,
+    balance:
+      'balance' in account && account.balance
+        ? (account.balance as Record<
+            string,
+            { current: string; pending: string; in: string; out: string }
+          >)
+        : undefined,
+  };
+}
 
 export class VirtualClient extends BaseClient {
   /**
@@ -289,25 +319,8 @@ export class VirtualClient extends BaseClient {
   private _mapAccountResponse(
     account: UpdateAccountResponse<VirtualDetails>['result']['account'],
   ): VirtualAccount {
-    return {
-      urn: account.urn,
-      id: account.id,
-      firstName: account.details.first_name,
-      lastName: account.details.last_name,
-      status: account.status,
-      ownerUrn: account.owner_urn,
-      ledgerId: account.ledger_account_id,
-      webhookUrl: account.webhook_url,
-      metadata: account.metadata as Record<string, string> | undefined,
-      createdAt: account.created_at,
-      updatedAt: account.updated_at,
-      balance:
-        'balance' in account && account.balance
-          ? (account.balance as Record<
-              string,
-              { current: string; pending: string; in: string; out: string }
-            >)
-          : undefined,
-    };
+    return mapVirtualAccountFromWire(
+      account as AccountWithBalance<VirtualDetails>,
+    );
   }
 }

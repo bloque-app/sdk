@@ -1,6 +1,7 @@
 import { BaseClient } from '@bloque/sdk-core';
 import type {
   AccountStatus,
+  AccountWithBalance,
   CreateAccountRequest,
   CreateAccountResponse,
   CreatePolygonAccountInput,
@@ -17,6 +18,35 @@ import type {
   PolygonAccount,
   UpdatePolygonMetadataParams,
 } from './types';
+
+/**
+ * Maps a wire polygon account to the SDK PolygonAccount type.
+ * Exported so AccountsClient.get() can dispatch by medium.
+ */
+export function mapPolygonAccountFromWire(
+  account: AccountWithBalance<PolygonDetails>,
+): PolygonAccount {
+  return {
+    urn: account.urn,
+    id: account.id,
+    address: account.details.address,
+    network: account.details.network,
+    status: account.status,
+    ownerUrn: account.owner_urn,
+    ledgerId: account.ledger_account_id,
+    webhookUrl: account.webhook_url,
+    metadata: account.metadata as Record<string, string> | undefined,
+    createdAt: account.created_at,
+    updatedAt: account.updated_at,
+    balance:
+      'balance' in account && account.balance
+        ? (account.balance as Record<
+            string,
+            { current: string; pending: string; in: string; out: string }
+          >)
+        : undefined,
+  };
+}
 
 export class PolygonClient extends BaseClient {
   /**
@@ -283,25 +313,8 @@ export class PolygonClient extends BaseClient {
   private _mapAccountResponse(
     account: UpdateAccountResponse<PolygonDetails>['result']['account'],
   ): PolygonAccount {
-    return {
-      urn: account.urn,
-      id: account.id,
-      address: account.details.address,
-      network: account.details.network,
-      status: account.status,
-      ownerUrn: account.owner_urn,
-      ledgerId: account.ledger_account_id,
-      webhookUrl: account.webhook_url,
-      metadata: account.metadata as Record<string, string> | undefined,
-      createdAt: account.created_at,
-      updatedAt: account.updated_at,
-      balance:
-        'balance' in account && account.balance
-          ? (account.balance as Record<
-              string,
-              { current: string; pending: string; in: string; out: string }
-            >)
-          : undefined,
-    };
+    return mapPolygonAccountFromWire(
+      account as AccountWithBalance<PolygonDetails>,
+    );
   }
 }
