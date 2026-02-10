@@ -11,6 +11,8 @@ Two modes:
 | `default` | Single pocket | All merchants accepted. One pocket debited. |
 | `smart` | Multi-pocket + MCC routing | Route transactions to pockets by merchant category. |
 
+**Card Details URL:** Every card has a `detailsUrl` — a PCI-compliant signed URL to view the full card number, CVV, and expiry date. This URL **expires**. To get a fresh one, always call `user.accounts.get(card.urn)` right before displaying it. Do NOT cache `detailsUrl`.
+
 ## Default Spending Control
 
 The simplest setup. One pocket, one card, all merchants accepted.

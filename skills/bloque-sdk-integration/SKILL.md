@@ -81,11 +81,12 @@ For deeper guidance, read these files in order of relevance to the task:
 
 | File | When to read |
 |------|-------------|
+| `references/api-reference.md` | **Read first for any integration.** All methods, params, and exact return types. |
 | `references/quick-start.md` | First-time setup, configuration, auth strategies |
 | `references/accounts.md` | Creating pockets, Polygon wallets, bank accounts |
 | `references/cards-and-spending-controls.md` | Card creation, default/smart spending, MCC routing |
 | `references/webhooks.md` | Handling transaction events, webhook payloads |
-| `references/transfers.md` | Moving funds, batch transfers, querying movements |
+| `references/transfers.md` | Moving funds, batch transfers, movement metadata |
 
 ## Key Concepts
 
