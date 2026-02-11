@@ -113,6 +113,7 @@ export class PseClient extends BaseClient {
       rate_sig: params.rateSig,
       from_medium: 'pse',
       to_medium: params.toMedium,
+      webhook_url: params.webhookUrl,
       deposit_information: this._mapDepositInformationToWire(
         params.depositInformation,
       ),

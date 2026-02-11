@@ -66,6 +66,7 @@ export class BankTransferClient extends BaseClient {
       rate_sig: params.rateSig,
       from_medium: 'kusama',
       to_medium: params.toMedium,
+      webhook_url: params.webhookUrl,
       deposit_information: this._mapDepositInformationToWire(
         params.depositInformation,
       ),

@@ -117,6 +117,7 @@ export interface CreateOrderInput {
   rate_sig: string;
   from_medium: string;
   to_medium: string;
+  webhook_url?: string;
   amount_src?: string;
   amount_dst?: string;
   deposit_information: DepositInformation | BancolombiaDepositInformation;
