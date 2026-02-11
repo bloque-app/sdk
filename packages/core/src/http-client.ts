@@ -97,7 +97,7 @@ export class HttpClient {
    * Get the origin identifier.
    * @public
    */
-  get origin(): string {
+  get origin(): string | undefined {
     return this._config.origin;
   }
 
@@ -140,11 +140,31 @@ export class HttpClient {
   }
 
   /**
+   * Get JWT token from configured token storage.
+   * @internal - Used internally to resume frontend JWT sessions.
+   */
+  getJwtToken(): string | null {
+    if (this._config.auth.type !== 'jwt') {
+      throw new BloqueConfigError('JWT token is only available for JWT auth');
+    }
+
+    return this._config.tokenStorage?.get() ?? null;
+  }
+
+  /**
    * Set the URN of the connected identity.
    * @internal - Called internally when connecting to a user session.
    */
   setUrn(urn: string): void {
     this._config.urn = urn;
+  }
+
+  /**
+   * Set the origin identifier for the current session.
+   * @internal - Called internally when origin is resolved after JWT authentication.
+   */
+  setOrigin(origin: string): void {
+    this._config.origin = origin;
   }
 
   private validateConfig(config: BloqueInternalConfig): void {
@@ -188,6 +208,12 @@ export class HttpClient {
       if (!config.auth.apiKey?.trim()) {
         throw new BloqueConfigError(
           'API key is required for apiKey authentication',
+        );
+      }
+
+      if (!config.origin?.trim()) {
+        throw new BloqueConfigError(
+          'Origin is required for apiKey authentication',
         );
       }
 

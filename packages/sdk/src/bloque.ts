@@ -45,18 +45,37 @@ export class SDK {
     return `did:bloque:${origin}:${alias}`;
   }
 
-  authenticateWithToken(token: string, alias: string) {
-    if (!token?.trim()) {
-      throw new Error('Token is required');
+  private requireOrigin(): string {
+    const origin = this.httpClient.origin;
+    if (!origin) {
+      throw new Error('Origin is required for this operation');
     }
+    return origin;
+  }
 
+  async authenticate() {
     const { auth } = this.httpClient;
     if (auth.type !== 'jwt') {
-      throw new Error('authenticateWithToken is only available for JWT auth');
+      throw new Error('authenticate is only available for JWT auth');
+    }
+
+    const token = this.httpClient.getJwtToken();
+    if (!token?.trim()) {
+      throw new Error('Authentication token is missing in tokenStorage');
     }
 
     this.httpClient.setJwtToken(token);
-    this.httpClient.setUrn(this.buildUrn(alias));
+
+    const response = await this.httpClient.request<{
+      urn: string;
+      origin: string;
+    }>({
+      path: '/api/identities/me',
+      method: 'GET',
+    });
+
+    this.httpClient.setOrigin(response.origin);
+    this.httpClient.setUrn(response.urn);
 
     return this.buildClients(token);
   }
@@ -65,7 +84,7 @@ export class SDK {
     if (!params.extraContext) params.extraContext = {};
 
     const urn = this.buildUrn(alias);
-    const origin = this.httpClient.origin;
+    const origin = this.requireOrigin();
 
     const response = await this.identity.origins.register(alias, origin, {
       assertionResult: {
@@ -87,7 +106,7 @@ export class SDK {
 
   async connect(alias: string) {
     const urn = this.buildUrn(alias);
-    const origin = this.httpClient.origin;
+    const origin = this.requireOrigin();
 
     const response = await this.httpClient.request<{
       result: { access_token: string };

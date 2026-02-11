@@ -174,8 +174,11 @@ type BaseSDKConfig = {
    *
    * Used to scope requests and operations
    * to a specific origin within the Bloque platform.
+   *
+   * Required for `apiKey` authentication.
+   * Optional for `jwt` authentication (it can be resolved during `authenticate()`).
    */
-  origin: string;
+  origin?: string;
 
   /**
    * Platform where the SDK is executed.
