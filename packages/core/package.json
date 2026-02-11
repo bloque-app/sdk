@@ -1,6 +1,6 @@
 {
   "name": "@bloque/sdk-core",
-  "version": "0.0.35",
+  "version": "0.0.36",
   "description": "Core utilities and types for Bloque SDK.",
   "type": "module",
   "keywords": [
