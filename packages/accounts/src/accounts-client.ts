@@ -38,6 +38,7 @@ import type {
   BatchTransferResult,
   ListAccountsParams,
   ListAccountsResult,
+  ListMovementsResult,
   Movement,
   TokenBalance,
   TransferParams,
@@ -331,19 +332,21 @@ export class AccountsClient extends BaseClient {
    * List account movements/transactions
    *
    * Retrieves transaction history for a specific account using its URN.
+   * Returns a paged result with data, pageSize, hasMore, and optional next token.
    *
    * @param params - Movement list parameters
-   * @returns Promise resolving to array of movements
+   * @returns Promise resolving to paged movements result
    *
    * @example
    * ```typescript
    * // Basic usage
-   * const movements = await bloque.accounts.movements({
+   * const { data, pageSize, hasMore, next } = await bloque.accounts.movements({
    *   urn: 'did:bloque:account:card:usr-123:crd-456',
+   *   asset: 'DUSD/6',
    * });
    *
    * // With filters
-   * const recentMovements = await bloque.accounts.movements({
+   * const result = await bloque.accounts.movements({
    *   urn: 'did:bloque:account:card:usr-123:crd-456',
    *   asset: 'DUSD/6',
    *   limit: 50,
@@ -351,14 +354,24 @@ export class AccountsClient extends BaseClient {
    *   after: '2025-01-01T00:00:00Z',
    * });
    *
-   * // Collapsed view (grouped/summarized)
-   * const collapsed = await bloque.accounts.movements({
+   * // Next page
+   * if (result.hasMore && result.next) {
+   *   const nextPage = await bloque.accounts.movements({
+   *     urn: params.urn,
+   *     asset: params.asset,
+   *     next: result.next,
+   *   });
+   * }
+   *
+   * // Filter by pocket (main = confirmed, pending = pending movements)
+   * const confirmed = await bloque.accounts.movements({
    *   urn: 'did:bloque:account:virtual:acc-123',
-   *   collapsed_view: true,
+   *   asset: 'KSM/12',
+   *   pocket: 'main',
    * });
    * ```
    */
-  async movements(params: ListMovementsParams): Promise<Movement[]> {
+  async movements(params: ListMovementsParams): Promise<ListMovementsResult> {
     if (!params.urn) {
       throw new Error('Account URN is required');
     }
@@ -397,7 +410,14 @@ export class AccountsClient extends BaseClient {
       queryParams.set('collapsed_view', String(params.collapsed_view));
     }
 
-    console.log('queryParams: ', queryParams.toString());
+    if (params.pocket) {
+      queryParams.set('pocket', params.pocket);
+    }
+
+    if (params.next) {
+      queryParams.set('next', params.next);
+    }
+
     const path = `/api/accounts/${params.urn}/movements?${queryParams.toString()}`;
 
     const response = await this.httpClient.request<ListMovementsResponse>({
@@ -405,18 +425,24 @@ export class AccountsClient extends BaseClient {
       path,
     });
 
-    return response.transactions.map((tx) => ({
-      amount: tx.amount,
-      asset: tx.asset,
-      fromAccountId: tx.from_account_id,
-      toAccountId: tx.to_account_id,
-      direction: tx.direction,
-      reference: tx.reference,
-      status: tx.status,
-      railName: tx.rail_name,
-      details: tx.details,
-      createdAt: tx.created_at,
-    }));
+    return {
+      data: response.data.map((tx) => ({
+        amount: tx.amount,
+        asset: tx.asset,
+        fromAccountId: tx.from_account_id,
+        toAccountId: tx.to_account_id,
+        direction: tx.direction,
+        type: tx.type,
+        reference: tx.reference,
+        status: tx.status,
+        railName: tx.rail_name,
+        details: tx.details,
+        createdAt: tx.created_at,
+      })),
+      pageSize: response.page_size,
+      hasMore: response.has_more,
+      next: response.next,
+    };
   }
 
   /**

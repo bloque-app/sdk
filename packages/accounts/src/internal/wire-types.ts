@@ -314,6 +314,12 @@ export enum TransactionStatus {
 
 /**
  * @internal
+ * Transaction type from API
+ */
+export type TransactionType = 'deposit' | 'withdraw' | 'transfer';
+
+/**
+ * @internal
  * Transaction from API
  */
 export interface Transaction {
@@ -321,7 +327,8 @@ export interface Transaction {
   asset: string;
   from_account_id: string;
   to_account_id: string;
-  direction: 'in' | 'out' | 'failed';
+  direction: 'in' | 'out';
+  type: TransactionType;
   reference: string;
   rail_name: string;
   status: TransactionStatus;
@@ -331,10 +338,13 @@ export interface Transaction {
 
 /**
  * @internal
- * List movements response
+ * List movements response (paged)
  */
 export interface ListMovementsResponse {
-  transactions: Transaction[];
+  data: Transaction[];
+  page_size: number;
+  has_more: boolean;
+  next?: string;
 }
 
 /**

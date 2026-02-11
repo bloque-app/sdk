@@ -256,6 +256,11 @@ export interface ListAccountsResult {
 }
 
 /**
+ * Transaction type (deposit, withdraw, transfer)
+ */
+export type MovementType = 'deposit' | 'withdraw' | 'transfer';
+
+/**
  * Transaction details metadata
  */
 export interface MovementDetails {
@@ -269,7 +274,7 @@ export interface MovementDetails {
  * Account movement/transaction
  */
 export interface Movement {
-  /** Transaction status */
+  /** Settlement status of the movement */
   status: TransactionStatus;
   /** Transaction amount */
   amount: string;
@@ -280,7 +285,9 @@ export interface Movement {
   /** Destination account ID */
   toAccountId: string;
   /** Transaction direction */
-  direction: 'in' | 'out' | 'failed';
+  direction: 'in' | 'out';
+  /** Transaction type (deposit, withdraw, transfer) */
+  type: MovementType;
   /** Transaction reference */
   reference: string;
   /** Rail/network name */
@@ -289,4 +296,18 @@ export interface Movement {
   details: MovementDetails;
   /** Creation timestamp */
   createdAt: string;
+}
+
+/**
+ * Paged result for list movements
+ */
+export interface ListMovementsResult {
+  /** Array of movements */
+  data: Movement[];
+  /** Number of results in this page */
+  pageSize: number;
+  /** Whether more results are available */
+  hasMore: boolean;
+  /** Pagination token for the next page (if hasMore is true) */
+  next?: string;
 }

@@ -21,6 +21,7 @@ import type {
   GetBalanceParams,
   ListCardAccountsParams,
   ListCardAccountsResult,
+  ListMovementsPagedResult,
   ListMovementsParams,
   UpdateCardMetadataParams,
 } from './types';
@@ -215,28 +216,48 @@ export class CardClient extends BaseClient {
   /**
    * List card account movements/transactions
    *
+   * Returns a paged result with data, pageSize, hasMore, and optional next token.
+   *
    * @param params - Movement list parameters
-   * @returns Promise resolving to array of card movements
+   * @returns Promise resolving to paged card movements result
    *
    * @example
    * ```typescript
    * // Basic usage
-   * const movements = await bloque.accounts.card.movements({
+   * const { data, pageSize, hasMore, next } = await bloque.accounts.card.movements({
    *   urn: 'did:bloque:account:card:usr-123:crd-456',
    *   asset: 'DUSD/6',
    * });
    *
    * // With pagination and filters
-   * const recentMovements = await bloque.accounts.card.movements({
+   * const result = await bloque.accounts.card.movements({
    *   urn: 'did:bloque:account:card:usr-123:crd-456',
    *   asset: 'DUSD/6',
    *   limit: 50,
    *   direction: 'in',
    *   after: '2025-01-01T00:00:00Z',
    * });
+   *
+   * // Next page
+   * if (result.hasMore && result.next) {
+   *   const nextPage = await bloque.accounts.card.movements({
+   *     urn: params.urn,
+   *     asset: params.asset,
+   *     next: result.next,
+   *   });
+   * }
+   *
+   * // Filter by pocket (main = confirmed, pending = pending movements)
+   * const confirmed = await bloque.accounts.card.movements({
+   *   urn: 'did:bloque:account:card:usr-123:crd-456',
+   *   asset: 'DUSD/6',
+   *   pocket: 'main',
+   * });
    * ```
    */
-  async movements(params: ListMovementsParams): Promise<CardMovement[]> {
+  async movements(
+    params: ListMovementsParams,
+  ): Promise<ListMovementsPagedResult> {
     const queryParams = new URLSearchParams();
 
     const asset = params.asset || 'DUSD/6';
@@ -270,6 +291,14 @@ export class CardClient extends BaseClient {
       queryParams.set('collapsed_view', String(params.collapsed_view));
     }
 
+    if (params.pocket) {
+      queryParams.set('pocket', params.pocket);
+    }
+
+    if (params.next) {
+      queryParams.set('next', params.next);
+    }
+
     const queryString = queryParams.toString();
     const path = `/api/accounts/${params.urn}/movements${queryString ? `?${queryString}` : ''}`;
 
@@ -278,7 +307,12 @@ export class CardClient extends BaseClient {
       path,
     });
 
-    return response.transactions;
+    return {
+      data: response.data,
+      pageSize: response.page_size,
+      hasMore: response.has_more,
+      next: response.next,
+    };
   }
 
   /**
