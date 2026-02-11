@@ -45,6 +45,22 @@ export class SDK {
     return `did:bloque:${origin}:${alias}`;
   }
 
+  authenticateWithToken(token: string, alias: string) {
+    if (!token?.trim()) {
+      throw new Error('Token is required');
+    }
+
+    const { auth } = this.httpClient;
+    if (auth.type !== 'jwt') {
+      throw new Error('authenticateWithToken is only available for JWT auth');
+    }
+
+    this.httpClient.setJwtToken(token);
+    this.httpClient.setUrn(this.buildUrn(alias));
+
+    return this.buildClients(token);
+  }
+
   async register(alias: string, params: CreateIdentityParams) {
     if (!params.extraContext) params.extraContext = {};
 

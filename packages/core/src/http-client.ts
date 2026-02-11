@@ -127,6 +127,19 @@ export class HttpClient {
   }
 
   /**
+   * Persist JWT token in configured token storage.
+   * @internal - Called internally for frontend JWT sessions.
+   */
+  setJwtToken(token: string): void {
+    if (this._config.auth.type !== 'jwt') {
+      throw new BloqueConfigError('JWT token can only be set for JWT auth');
+    }
+
+    this._config.tokenStorage?.set(token);
+    this._config.accessToken = token;
+  }
+
+  /**
    * Set the URN of the connected identity.
    * @internal - Called internally when connecting to a user session.
    */
