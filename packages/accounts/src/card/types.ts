@@ -79,10 +79,34 @@ export interface ListMovementsParams {
    * See API docs: GET /api/accounts/{urn}/movements
    */
   collapsed_view?: boolean;
+
+  /**
+   * Filter by pocket: 'main' for confirmed movements, 'pending' for pending movements
+   */
+  pocket?: 'main' | 'pending';
+
+  /**
+   * Pagination token for fetching the next page (from previous response's next)
+   */
+  next?: string;
+}
+
+/**
+ * Paged result for list movements (wire/snake_case from API)
+ */
+export interface ListMovementsPagedResult {
+  /** Array of movements */
+  data: CardMovement[];
+  /** Number of results in this page */
+  pageSize: number;
+  /** Whether more results are available */
+  hasMore: boolean;
+  /** Pagination token for the next page (if hasMore is true) */
+  next?: string;
 }
 
 export interface CardMovement extends Transaction {
-  // Extends Transaction from api-types
+  // Extends Transaction from wire-types (includes type, status, etc.)
 }
 
 export interface GetBalanceParams {
