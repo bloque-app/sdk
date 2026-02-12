@@ -80,6 +80,7 @@ export class HttpClient {
   private readonly publicRoutes = [
     '/api/aliases',
     '/api/origins/*/assert',
+    '/api/origins/*/connect',
     '/api/origins',
   ];
 
