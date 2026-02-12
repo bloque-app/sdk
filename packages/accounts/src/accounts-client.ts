@@ -19,6 +19,7 @@ import type {
   CardDetails,
   GetAccountResponse,
   GetBalanceResponse,
+  GetBalancesResponse,
   ListAccountsResponse,
   ListMovementsResponse,
   PolygonDetails,
@@ -36,6 +37,7 @@ import type {
   BatchTransferChunkResult,
   BatchTransferParams,
   BatchTransferResult,
+  GeneralTokenBalance,
   ListAccountsParams,
   ListAccountsResult,
   ListMovementsResult,
@@ -116,6 +118,29 @@ export class AccountsClient extends BaseClient {
     const response = await this.httpClient.request<GetBalanceResponse>({
       method: 'GET',
       path: `/api/accounts/${urn}/balance`,
+    });
+
+    return response.balance;
+  }
+
+  /**
+   * Get general balances for the authenticated holder
+   *
+   * Retrieves aggregated balances by asset (e.g. DUSD/6, KSM/12) across accounts.
+   * Some assets may only include current and pending values.
+   *
+   * @returns Promise resolving to balances by asset
+   *
+   * @example
+   * ```typescript
+   * const balances = await bloque.accounts.balances();
+   * console.log(balances['DUSD/6']?.current);
+   * ```
+   */
+  async balances(): Promise<Record<string, GeneralTokenBalance>> {
+    const response = await this.httpClient.request<GetBalancesResponse>({
+      method: 'GET',
+      path: '/api/accounts/balances',
     });
 
     return response.balance;

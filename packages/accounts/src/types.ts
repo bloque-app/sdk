@@ -187,6 +187,21 @@ export interface TokenBalance {
 }
 
 /**
+ * Token balance information for aggregated/general balances.
+ * Some assets may only include current and pending values.
+ */
+export interface GeneralTokenBalance {
+  /** Current balance */
+  current: string;
+  /** Pending balance */
+  pending: string;
+  /** Incoming amount (optional in aggregated responses) */
+  in?: string;
+  /** Outgoing amount (optional in aggregated responses) */
+  out?: string;
+}
+
+/**
  * Generic account response
  * Details type varies based on account medium
  */

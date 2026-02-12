@@ -357,6 +357,22 @@ export interface GetBalanceResponse {
 
 /**
  * @internal
+ * Get aggregated/general balances response
+ */
+export interface GetBalancesResponse {
+  balance: Record<
+    string,
+    {
+      current: string;
+      pending: string;
+      in?: string;
+      out?: string;
+    }
+  >;
+}
+
+/**
+ * @internal
  * Transfer request body
  */
 export interface TransferRequest {
