@@ -4,6 +4,7 @@ import { type BloqueSDKConfig, HttpClient } from '@bloque/sdk-core';
 import {
   type CreateIdentityParams,
   IdentityClient,
+  type IdentityMe,
 } from '@bloque/sdk-identity';
 import { OrgsClient } from '@bloque/sdk-orgs';
 import { SwapClient } from '@bloque/sdk-swap';
@@ -102,18 +103,17 @@ export class SDK {
 
     this.httpClient.setJwtToken(token);
 
-    const response = await this.httpClient.request<{
-      urn: string;
-      origin: string;
-    }>({
-      path: '/api/identities/me',
-      method: 'GET',
-    });
+    const response = await this.identity.me();
 
     this.httpClient.setOrigin(response.origin);
     this.httpClient.setUrn(response.urn);
 
     return this.buildClients(token);
+  }
+
+  async me(): Promise<IdentityMe> {
+    const response = await this.identity.me();
+    return response;
   }
 
   async register(alias: string, params: CreateIdentityParams) {

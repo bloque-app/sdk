@@ -1,4 +1,8 @@
-export type { Alias } from '@bloque/sdk-identity';
+export type {
+  Alias,
+  IdentityMe,
+  IdentityMeProfile,
+} from '@bloque/sdk-identity';
 
 import { IdentityClient } from '@bloque/sdk-identity';
 import { getHttpClient } from './config';
