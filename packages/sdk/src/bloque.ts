@@ -53,6 +53,42 @@ export class SDK {
     return origin;
   }
 
+  private buildOtpValue(
+    alias: string,
+    code: string,
+  ): { code: string; phone?: string; email?: string } {
+    const normalizedAlias = alias.trim();
+    if (normalizedAlias.includes('@')) {
+      return { code, email: normalizedAlias };
+    }
+    return { code, phone: normalizedAlias };
+  }
+
+  private assertJwtAuth(): void {
+    if (this.httpClient.auth.type !== 'jwt') {
+      throw new Error('This operation is only available for JWT auth');
+    }
+  }
+
+  async assert(origin: string, alias: string) {
+    this.assertJwtAuth();
+
+    return await this.httpClient.request<{
+      type: 'OTP';
+      value: {
+        phone?: string;
+        email?: string;
+        expires_at: number;
+      };
+      params: {
+        attempts_remaining: number;
+      };
+    }>({
+      path: `/api/origins/${origin}/assert?alias=${encodeURIComponent(alias)}`,
+      method: 'GET',
+    });
+  }
+
   async authenticate() {
     const { auth } = this.httpClient;
     if (auth.type !== 'jwt') {
@@ -104,9 +140,55 @@ export class SDK {
     return this.buildClients(response.accessToken);
   }
 
-  async connect(alias: string) {
-    const urn = this.buildUrn(alias);
-    const origin = this.requireOrigin();
+  async connect(alias: string): Promise<ReturnType<SDK['buildClients']>>;
+  async connect(
+    origin: string,
+    alias: string,
+    code: string,
+  ): Promise<ReturnType<SDK['buildClients']>>;
+  async connect(
+    arg1: string,
+    arg2?: string,
+    arg3?: string,
+  ): Promise<ReturnType<SDK['buildClients']>> {
+    if (this.httpClient.auth.type === 'apiKey') {
+      const alias = arg1;
+      const urn = this.buildUrn(alias);
+      const origin = this.requireOrigin();
+
+      const response = await this.httpClient.request<{
+        result: { access_token: string };
+      }>({
+        path: `/api/origins/${origin}/connect`,
+        method: 'POST',
+        body: {
+          assertion_result: {
+            challengeType: 'API_KEY',
+            value: {
+              api_key: this.getApiKey(),
+              alias: alias,
+            },
+          },
+          extra_context: {},
+        },
+      });
+
+      this.httpClient.setAccessToken(response.result.access_token);
+      this.httpClient.setUrn(urn);
+
+      return this.buildClients(response.result.access_token);
+    }
+
+    this.assertJwtAuth();
+    if (!arg2 || !arg3) {
+      throw new Error(
+        'JWT connect requires origin and OTP code. Use connect(origin, alias, code)',
+      );
+    }
+
+    const origin = arg1;
+    const alias = arg2;
+    const code = arg3;
 
     const response = await this.httpClient.request<{
       result: { access_token: string };
@@ -115,17 +197,17 @@ export class SDK {
       method: 'POST',
       body: {
         assertion_result: {
-          challengeType: 'API_KEY',
-          value: {
-            api_key: this.getApiKey(),
-            alias: alias,
-          },
+          challengeType: 'OTP',
+          alias,
+          value: this.buildOtpValue(alias, code),
         },
         extra_context: {},
       },
     });
 
-    this.httpClient.setAccessToken(response.result.access_token);
+    const urn = `did:bloque:${origin}:${alias}`;
+    this.httpClient.setJwtToken(response.result.access_token);
+    this.httpClient.setOrigin(origin);
     this.httpClient.setUrn(urn);
 
     return this.buildClients(response.result.access_token);
