@@ -349,6 +349,35 @@ export interface ListMovementsResponse {
 
 /**
  * @internal
+ * Global transaction from API (across all accounts)
+ */
+export interface GlobalTransaction {
+  amount: string;
+  asset: string;
+  from_account_id: string;
+  to_account_id: string;
+  direction: 'in' | 'out';
+  reference: string;
+  rail_name: string;
+  status: TransactionStatus;
+  type?: TransactionType;
+  details?: Record<string, unknown>;
+  created_at: string;
+}
+
+/**
+ * @internal
+ * List global transactions response (paged)
+ */
+export interface ListTransactionsResponse {
+  data: GlobalTransaction[];
+  page_size: number;
+  has_more: boolean;
+  next?: string;
+}
+
+/**
+ * @internal
  * Get balance response
  */
 export interface GetBalanceResponse {

@@ -326,3 +326,92 @@ export interface ListMovementsResult {
   /** Pagination token for the next page (if hasMore is true) */
   next?: string;
 }
+
+/**
+ * Parameters for listing transactions across all accounts.
+ * This endpoint does not receive account URN.
+ */
+export interface ListTransactionsParams {
+  /**
+   * Asset to filter transactions by.
+   * @example "DUSD/6"
+   */
+  asset?: SupportedAsset;
+  /**
+   * Maximum number of transactions to return.
+   * @example 50
+   */
+  limit?: number;
+  /**
+   * Filter transactions before this date (ISO 8601).
+   * @example "2026-01-01T00:00:00Z"
+   */
+  before?: string;
+  /**
+   * Filter transactions after this date (ISO 8601).
+   * @example "2026-01-01T00:00:00Z"
+   */
+  after?: string;
+  /**
+   * Filter by transaction reference.
+   */
+  reference?: string;
+  /**
+   * Filter by transaction direction.
+   */
+  direction?: 'in' | 'out';
+  /**
+   * When true, returns a collapsed view of transactions.
+   */
+  collapsed_view?: boolean;
+  /**
+   * Filter by pocket: 'main' for confirmed transactions, 'pending' for pending transactions.
+   */
+  pocket?: 'main' | 'pending';
+  /**
+   * Pagination token for fetching the next page.
+   */
+  next?: string;
+}
+
+/**
+ * Transaction returned by the global transactions endpoint.
+ */
+export interface GlobalTransaction {
+  /** Settlement status of the movement */
+  status: TransactionStatus;
+  /** Transaction amount */
+  amount: string;
+  /** Asset type */
+  asset: string;
+  /** Source account ID */
+  fromAccountId: string;
+  /** Destination account ID */
+  toAccountId: string;
+  /** Transaction direction */
+  direction: 'in' | 'out';
+  /** Transaction reference */
+  reference: string;
+  /** Rail/network name */
+  railName: string;
+  /** Transaction details (free-form payload from API) */
+  details: Record<string, unknown>;
+  /** Creation timestamp */
+  createdAt: string;
+  /** Transaction type (when provided by API) */
+  type?: MovementType;
+}
+
+/**
+ * Paged result for global transactions.
+ */
+export interface ListTransactionsResult {
+  /** Array of transactions */
+  data: GlobalTransaction[];
+  /** Number of results in this page */
+  pageSize: number;
+  /** Whether more results are available */
+  hasMore: boolean;
+  /** Pagination token for the next page (if hasMore is true) */
+  next?: string;
+}

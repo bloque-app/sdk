@@ -22,6 +22,7 @@ import type {
   GetBalancesResponse,
   ListAccountsResponse,
   ListMovementsResponse,
+  ListTransactionsResponse,
   PolygonDetails,
   TransferRequest,
   TransferResponse,
@@ -41,6 +42,8 @@ import type {
   ListAccountsParams,
   ListAccountsResult,
   ListMovementsResult,
+  ListTransactionsParams,
+  ListTransactionsResult,
   Movement,
   TokenBalance,
   TransferParams,
@@ -463,6 +466,99 @@ export class AccountsClient extends BaseClient {
         railName: tx.rail_name,
         details: tx.details,
         createdAt: tx.created_at,
+      })),
+      pageSize: response.page_size,
+      hasMore: response.has_more,
+      next: response.next,
+    };
+  }
+
+  /**
+   * List transactions across all accounts (cards, virtual, polygon, etc.)
+   *
+   * This endpoint does not require account URN.
+   *
+   * @param params - Transaction list parameters
+   * @returns Promise resolving to paged transactions result
+   *
+   * @example
+   * ```typescript
+   * const result = await bloque.accounts.transactions({
+   *   asset: 'DUSD/6',
+   *   limit: 10,
+   * });
+   *
+   * if (result.hasMore && result.next) {
+   *   const nextPage = await bloque.accounts.transactions({
+   *     asset: 'DUSD/6',
+   *     next: result.next,
+   *   });
+   * }
+   * ```
+   */
+  async transactions(
+    params: ListTransactionsParams = {},
+  ): Promise<ListTransactionsResult> {
+    const asset = params.asset || 'DUSD/6';
+    if (!isSupportedAsset(asset)) {
+      throw new Error(
+        `Invalid asset type "${asset}". Supported assets: ${SUPPORTED_ASSETS.join(', ')}`,
+      );
+    }
+
+    const queryParams = new URLSearchParams();
+    queryParams.set('asset', asset);
+
+    if (params.limit !== undefined) {
+      queryParams.set('limit', params.limit.toString());
+    }
+
+    if (params.before) {
+      queryParams.set('before', params.before);
+    }
+
+    if (params.after) {
+      queryParams.set('after', params.after);
+    }
+
+    if (params.reference) {
+      queryParams.set('reference', params.reference);
+    }
+
+    if (params.direction) {
+      queryParams.set('direction', params.direction);
+    }
+
+    if (params.collapsed_view !== undefined) {
+      queryParams.set('collapsed_view', String(params.collapsed_view));
+    }
+
+    if (params.pocket) {
+      queryParams.set('pocket', params.pocket);
+    }
+
+    if (params.next) {
+      queryParams.set('next', params.next);
+    }
+
+    const response = await this.httpClient.request<ListTransactionsResponse>({
+      method: 'GET',
+      path: `/api/accounts/transactions?${queryParams.toString()}`,
+    });
+
+    return {
+      data: response.data.map((tx) => ({
+        amount: tx.amount,
+        asset: tx.asset,
+        fromAccountId: tx.from_account_id,
+        toAccountId: tx.to_account_id,
+        direction: tx.direction,
+        reference: tx.reference,
+        status: tx.status,
+        railName: tx.rail_name,
+        details: tx.details ?? {},
+        createdAt: tx.created_at,
+        type: tx.type,
       })),
       pageSize: response.page_size,
       hasMore: response.has_more,
