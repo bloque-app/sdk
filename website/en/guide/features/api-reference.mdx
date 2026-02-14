@@ -1,0 +1,130 @@
+# API Reference
+
+This page lists the current public methods available in the SDK.
+
+## SDK Class (`@bloque/sdk`)
+
+```typescript
+import { SDK } from '@bloque/sdk';
+
+const bloque = new SDK(config);
+```
+
+Methods:
+- `assert(origin, alias)`
+- `authenticate()`
+- `me()`
+- `register(alias, params)`
+- `connect(alias)`
+- `connect(origin, alias, code)`
+
+## Modular API (`@bloque/sdk`)
+
+```typescript
+import { init, Accounts, Compliance, Identity, Orgs, Swap } from '@bloque/sdk/init';
+
+init(config);
+```
+
+Exports:
+- `init(config)`
+- `Accounts` (`AccountsClient`)
+- `Compliance` (`ComplianceClient`)
+- `Identity` (`IdentityClient`)
+- `Orgs` (`OrgsClient`)
+- `Swap` (`SwapClient`)
+
+## Accounts
+
+Top-level (`AccountsClient`):
+- `balance(urn)`
+- `balances()`
+- `get(urn)`
+- `list(params?)`
+- `transfer(params)`
+- `batchTransfer(params)`
+- `movements(params)`
+- `transactions(params?)` (global transactions, no account URN)
+
+Card (`accounts.card`):
+- `create(params?, options?)`
+- `list(params?)`
+- `movements(params)`
+- `balance(params)`
+- `updateMetadata(params)`
+- `updateName(urn, name)`
+- `activate(urn)`
+- `freeze(urn)`
+- `disable(urn)`
+
+Virtual (`accounts.virtual`):
+- `create(params, options?)`
+- `list(params?)`
+- `updateMetadata(params)`
+- `activate(urn)`
+- `freeze(urn)`
+- `disable(urn)`
+
+Bancolombia (`accounts.bancolombia`):
+- `create(params?, options?)`
+- `list(params?)`
+- `updateMetadata(params)`
+- `updateName(urn, name)`
+- `activate(urn)`
+- `freeze(urn)`
+- `disable(urn)`
+
+US (`accounts.us`):
+- `getTosLink(params)`
+- `create(params, options?)`
+- `list(params?)`
+- `updateMetadata(params)`
+- `activate(urn)`
+- `freeze(urn)`
+- `disable(urn)`
+
+Polygon (`accounts.polygon`):
+- `create(params, options?)`
+- `list(params?)`
+- `updateMetadata(params)`
+- `activate(urn)`
+- `freeze(urn)`
+- `disable(urn)`
+
+## Compliance
+
+KYC (`compliance.kyc`):
+- `startVerification(params)`
+- `getVerification(params)`
+
+## Identity
+
+Top-level (`identity`):
+- `me()`
+
+Aliases (`identity.aliases`):
+- `get(alias)`
+
+Origins (`identity.origins`):
+- `list()`
+- `register(alias, origin, params)`
+- `custom(origin).assert(alias)`
+- `whatsapp.assert(alias)`
+- `email.assert(alias)`
+
+## Organizations
+
+Top-level (`orgs`):
+- `create(params)`
+
+## Swap
+
+Top-level (`swap`):
+- `findRates(params)`
+
+PSE (`swap.pse`):
+- `banks()`
+- `create(params)`
+
+Bank Transfer (`swap.bankTransfer`):
+- `create(params)`

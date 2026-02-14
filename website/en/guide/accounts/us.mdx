@@ -24,9 +24,13 @@ Creating US accounts requires a two-step process:
 ```typescript title="get-tos-link.ts"
 import { SDK } from '@bloque/sdk';
 
-const bloque = await SDK.connect({
-  apiKey: process.env.BLOQUE_API_KEY!,
-  platform: 'node',
+const bloque = new SDK({
+  origin: 'your-origin',
+  auth: {
+    type: 'apiKey',
+    apiKey: process.env.BLOQUE_API_KEY!,
+  },
+  mode: 'production',
 });
 
 // Generate TOS link
@@ -35,7 +39,6 @@ const tosLink = await bloque.accounts.us.getTosLink({
 });
 
 console.log('TOS URL:', tosLink.url);
-console.log('Request ID:', tosLink.requestId);
 ```
 
 **Response:**
@@ -43,7 +46,6 @@ console.log('Request ID:', tosLink.requestId);
 ```typescript title="types.ts"
 interface TosLinkResponse {
   url: string;        // URL of the TOS acceptance form
-  requestId: string;  // Unique request ID
 }
 ```
 
@@ -217,12 +219,12 @@ Get all US accounts for a user:
 ```typescript title="list-accounts.ts"
 const accounts = await bloque.accounts.us.list();
 
-console.log(`Total accounts: ${accounts.length}`);
+console.log(`Total accounts: ${accounts.accounts.length}`);
 
-accounts.forEach(account => {
+accounts.accounts.forEach(account => {
   console.log(`${account.urn}: ${account.status}`);
   if (account.balance) {
-    console.log(`  Balance: $${account.balance.available}`);
+    console.log(`  DUSD/6: ${account.balance['DUSD/6']?.current ?? '0'}`);
   }
 });
 ```
@@ -301,9 +303,13 @@ import { SDK } from '@bloque/sdk';
 
 async function createUSAccount() {
   // Initialize SDK
-  const bloque = await SDK.connect({
-    apiKey: process.env.BLOQUE_API_KEY!,
-    platform: 'node',
+  const bloque = new SDK({
+    origin: 'your-origin',
+    auth: {
+      type: 'apiKey',
+      apiKey: process.env.BLOQUE_API_KEY!,
+    },
+    mode: 'production',
   });
 
   try {
@@ -355,7 +361,7 @@ async function createUSAccount() {
     // List all accounts
     console.log('\nListing accounts...');
     const accounts = await bloque.accounts.us.list();
-    console.log(`✓ Total accounts: ${accounts.length}`);
+    console.log(`✓ Total accounts: ${accounts.accounts.length}`);
 
     return { success: true, account };
   } catch (error) {

@@ -22,7 +22,7 @@ Crea una tarjeta virtual para un usuario:
 import { SDK } from '@bloque/sdk';
 
 const bloque = new SDK({
-  origin: 'your-origin',
+  origin: 'tu-origen',
   auth: {
     type: 'apiKey',
     apiKey: process.env.BLOQUE_API_KEY!,
@@ -30,25 +30,25 @@ const bloque = new SDK({
   mode: 'production',
 });
 
-// Connect to user session
+// Conectar a la sesión del usuario
 const userSession = await bloque.connect('user-alias');
 
-// Create a virtual card
+// Crear una tarjeta virtual
 const card = await userSession.accounts.card.create({
-  urn: 'did:bloque:your-origin:user-alias',
-  name: 'My Virtual Card',
+  holderUrn: 'did:bloque:tu-origen:user-alias',
+  name: 'Mi Tarjeta Virtual',
 });
 
-console.log('Card created:', card.lastFour);
-console.log('Status:', card.status);
-console.log('Details URL:', card.detailsUrl);
+console.log('Tarjeta creada:', card.lastFour);
+console.log('Estado:', card.status);
+console.log('URL de detalles:', card.detailsUrl);
 ```
 
 ### Parámetros
 
-```typescript title="types.ts"
+```typescript title="tipos.ts"
 interface CreateCardParams {
-  urn: string;          // User URN
+  holderUrn?: string;   // Optional user URN
   name?: string;        // Optional card name
   webhookUrl?: string;  // Optional webhook for events
   ledgerId?: string;    // Optional ledger account ID
@@ -58,7 +58,7 @@ interface CreateCardParams {
 
 ### Respuesta
 
-```typescript title="types.ts"
+```typescript title="tipos.ts"
 interface CardAccount {
   urn: string;                    // Unique resource name
   id: string;                     // Card account ID
@@ -82,16 +82,16 @@ interface CardAccount {
 Lista todas las cuentas de tarjetas de un usuario con sus saldos:
 
 ```typescript title="list-cards.ts"
-// Using connected session (recommended)
+// Usando sesión conectada (recomendado)
 const userSession = await bloque.connect('user-alias');
 const cards = await userSession.accounts.card.list();
 
-console.log(`Found ${cards.length} card accounts`);
+console.log(`Se encontraron ${cards.accounts.length} cuentas de tarjeta`);
 
-cards.forEach((card) => {
+cards.accounts.forEach((card) => {
   console.log('\nCard:', card.metadata?.name);
-  console.log('Last Four:', card.lastFour);
-  console.log('Status:', card.status);
+  console.log('Últimos cuatro:', card.lastFour);
+  console.log('Estado:', card.status);
 
   if (card.balance) {
     Object.entries(card.balance).forEach(([token, balance]) => {
@@ -100,9 +100,9 @@ cards.forEach((card) => {
   }
 });
 
-// Calculate total balance
+// Calcular balance total
 const totalBalances: Record<string, bigint> = {};
-cards.forEach(card => {
+cards.accounts.forEach(card => {
   if (card.balance) {
     Object.entries(card.balance).forEach(([token, balance]) => {
       if (!totalBalances[token]) {
@@ -125,13 +125,13 @@ const balances = await bloque.accounts.card.balance({
 
 Object.entries(balances).forEach(([token, balance]) => {
   console.log(`${token}:`);
-  console.log(`  Current: ${balance.current}`);
-  console.log(`  Pending: ${balance.pending}`);
-  console.log(`  Total In: ${balance.in}`);
-  console.log(`  Total Out: ${balance.out}`);
+  console.log(`  Actual: ${balance.current}`);
+  console.log(`  Pendiente: ${balance.pending}`);
+  console.log(`  Total Entradas: ${balance.in}`);
+  console.log(`  Total Salidas: ${balance.out}`);
 
   const net = BigInt(balance.in) - BigInt(balance.out);
-  console.log(`  Net: ${net.toString()}`);
+  console.log(`  Neto: ${net.toString()}`);
 });
 ```
 
@@ -178,7 +178,7 @@ const dateRange = await bloque.accounts.card.movements({
   limit: 100,
 });
 
-// Search by reference
+// Buscar por referencia
 const byReference = await bloque.accounts.card.movements({
   urn: 'did:bloque:account:card:usr-123:crd-456',
   asset: 'DUSD/6',
@@ -203,13 +203,13 @@ async function getAllTransactions(cardUrn: string, asset: string) {
       before: lastDate,
     });
 
-    allMovements.push(...movements);
-    console.log(`Fetched ${movements.length} transactions`);
+    allMovements.push(...movements.data);
+    console.log(`Se obtuvieron ${movements.data.length} transacciones`);
 
-    if (movements.length < pageSize) {
+    if (movements.data.length < pageSize) {
       hasMore = false;
     } else {
-      lastDate = movements[movements.length - 1].created_at;
+      lastDate = movements.data[movements.data.length - 1].created_at;
     }
   }
 
@@ -225,7 +225,7 @@ async function getAllTransactions(cardUrn: string, asset: string) {
 const updatedCard = await bloque.accounts.card.updateMetadata({
   urn: 'did:bloque:account:card:usr-123:crd-456',
   metadata: {
-    name: 'My Business Card'
+    name: 'Mi Tarjeta de Negocio'
   }
 });
 
@@ -267,12 +267,12 @@ El campo `detailsUrl` proporciona una URL segura y compatible con PCI donde los 
 
 ```typescript title="view-card-details.ts"
 const card = await bloque.accounts.card.create({
-  urn: userUrn,
-  name: 'My Card',
+  holderUrn: userUrn,
+  name: 'Mi Tarjeta',
 });
 
 // Redirect user to view card details
-console.log('View card details:', card.detailsUrl);
+console.log('Ver detalles de tarjeta:', card.detailsUrl);
 ```
 
 :::warning Seguridad
@@ -284,28 +284,28 @@ Nunca almacenes o registres números de tarjeta completos, CVVs u otros datos se
 Los usuarios pueden tener múltiples tarjetas para diferentes propósitos:
 
 ```typescript title="multiple-cards.ts"
-const userUrn = 'did:bloque:your-origin:user-alias';
+const userUrn = 'did:bloque:tu-origen:user-alias';
 const userSession = await bloque.connect(userUrn);
 
-// Personal card
+// Tarjeta personal
 const personalCard = await userSession.accounts.card.create({
-  urn: userUrn,
-  name: 'Personal Card',
+  holderUrn: userUrn,
+  name: 'Tarjeta Personal',
 });
 
-// Business card
+// Tarjeta de negocio
 const businessCard = await userSession.accounts.card.create({
-  urn: userUrn,
-  name: 'Business Card',
+  holderUrn: userUrn,
+  name: 'Tarjeta Negocio',
 });
 
-// Travel card
+// Tarjeta de viaje
 const travelCard = await userSession.accounts.card.create({
-  urn: userUrn,
-  name: 'Travel Expenses',
+  holderUrn: userUrn,
+  name: 'Gastos de Viaje',
 });
 
-console.log('Created 3 cards:');
+console.log('Se crearon 3 tarjetas:');
 console.log('- Personal:', personalCard.lastFour);
 console.log('- Business:', businessCard.lastFour);
 console.log('- Travel:', travelCard.lastFour);
@@ -318,11 +318,11 @@ Siempre maneja los errores apropiadamente:
 ```typescript title="error-handling.ts"
 try {
   const card = await bloque.accounts.card.create({
-    urn: userUrn,
+    holderUrn: userUrn,
     name: cardName,
   });
 
-  console.log('Card created:', card.urn);
+  console.log('Tarjeta creada:', card.urn);
 
 } catch (error) {
   if (error instanceof Error) {
@@ -346,7 +346,7 @@ try {
 import { SDK } from '@bloque/sdk';
 
 const bloque = new SDK({
-  origin: 'your-origin',
+  origin: 'tu-origen',
   auth: {
     type: 'apiKey',
     apiKey: process.env.BLOQUE_API_KEY!,
@@ -356,23 +356,23 @@ const bloque = new SDK({
 
 async function setupUserCard(userUrn: string) {
   try {
-    // Connect to user session
+    // Conectar a la sesión del usuario
     const userSession = await bloque.connect(userUrn);
 
-    // Create a virtual card
+    // Crear una tarjeta virtual
     const card = await userSession.accounts.card.create({
-      urn: userUrn,
-      name: 'Main Card',
+      holderUrn: userUrn,
+      name: 'Tarjeta Principal',
     });
 
-    console.log('✓ Card created:', card.lastFour);
+    console.log('✓ Tarjeta creada:', card.lastFour);
 
-    // Check balance
+    // Consultar saldo
     const balances = await bloque.accounts.card.balance({
       urn: card.urn,
     });
 
-    console.log('✓ Current balances:');
+    console.log('✓ Saldos actuales:');
     Object.entries(balances).forEach(([token, balance]) => {
       console.log(`  ${token}: ${balance.current}`);
     });
@@ -384,7 +384,7 @@ async function setupUserCard(userUrn: string) {
       limit: 10,
     });
 
-    console.log(`✓ Found ${movements.length} recent transactions`);
+    console.log(`✓ Se encontraron ${movements.data.length} transacciones recientes`);
 
     return { success: true, card };
 

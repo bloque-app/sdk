@@ -32,11 +32,11 @@ Todos los tipos de cuentas soportan operaciones comunes:
 
 Lista todas las cuentas de un usuario con sus balances actuales:
 
-```typescript title="list-accounts.ts"
+```typescript title="listar-cuentas.ts"
 import { SDK } from '@bloque/sdk';
 
 const bloque = new SDK({
-  origin: 'your-origin',
+  origin: 'tu-origen',
   auth: {
     type: 'apiKey',
     apiKey: process.env.BLOQUE_API_KEY!,
@@ -44,15 +44,15 @@ const bloque = new SDK({
   mode: 'production',
 });
 
-// Connect to user session
+// Conectar a la sesión del usuario
 const userSession = await bloque.connect('user-alias');
 
-// List all card accounts
+// Listar todas las cuentas de tarjeta
 const cards = await userSession.accounts.card.list();
 
-console.log(`Found ${cards.length} card accounts`);
+console.log(`Se encontraron ${cards.accounts.length} cuentas de tarjeta`);
 
-cards.forEach((card) => {
+cards.accounts.forEach((card) => {
   console.log('Card:', card.metadata?.name);
   console.log('Balance:', card.balance);
 });
@@ -86,15 +86,29 @@ Object.entries(balance).forEach(([asset, b]) => {
 
 Lista el historial de transacciones con paginación:
 
-```typescript title="types.ts"
+```typescript title="tipos.ts"
 const movements = await bloque.accounts.card.movements({
   urn: 'did:bloque:account:card:usr-123:crd-456',
   asset: 'DUSD/6',
   limit: 50,
-  direction: 'in', // incoming transactions only
+  direction: 'in', // solo transacciones entrantes
 });
 
-console.log(`Found ${movements.length} transactions`);
+console.log(`Se encontraron ${movements.data.length} transacciones`);
+```
+
+### Ver Transacciones Globales (Todas las Cuentas)
+
+Lista transacciones de todas tus cuentas (cards, virtual, polygon, etc.) sin URN de cuenta:
+
+```typescript title="tipos.ts"
+const transactions = await bloque.accounts.transactions({
+  asset: 'DUSD/6',
+  limit: 10,
+});
+
+console.log(`Se encontraron ${transactions.data.length} transacciones`);
+console.log('Hay más:', transactions.hasMore);
 ```
 
 ## Transferencias
@@ -126,7 +140,7 @@ console.log('Transfer queued:', transfer.queueId);
 :::tip Importante
 La mayoría de las operaciones de cuentas requieren conectarse primero a una sesión de usuario:
 
-```typescript title="types.ts"
+```typescript title="tipos.ts"
 const userSession = await bloque.connect('user-alias');
 const cards = await userSession.accounts.card.list();
 ```

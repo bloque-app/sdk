@@ -50,9 +50,9 @@ const userSession = await bloque.connect('user-alias');
 // List all card accounts
 const cards = await userSession.accounts.card.list();
 
-console.log(`Found ${cards.length} card accounts`);
+console.log(`Found ${cards.accounts.length} card accounts`);
 
-cards.forEach((card) => {
+cards.accounts.forEach((card) => {
   console.log('Card:', card.metadata?.name);
   console.log('Balance:', card.balance);
 });
@@ -94,7 +94,21 @@ const movements = await bloque.accounts.card.movements({
   direction: 'in', // incoming transactions only
 });
 
-console.log(`Found ${movements.length} transactions`);
+console.log(`Found ${movements.data.length} transactions`);
+```
+
+### Viewing Global Transactions (All Accounts)
+
+List transactions across all your accounts (cards, virtual, polygon, etc.) without account URN:
+
+```typescript title="types.ts"
+const transactions = await bloque.accounts.transactions({
+  asset: 'DUSD/6',
+  limit: 10,
+});
+
+console.log(`Found ${transactions.data.length} transactions`);
+console.log('Has more:', transactions.hasMore);
 ```
 
 ## Transfers

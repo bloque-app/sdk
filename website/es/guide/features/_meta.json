@@ -1,6 +1,11 @@
 [
   {
     "type": "file",
+    "name": "api-reference",
+    "label": "Referencia de API"
+  },
+  {
+    "type": "file",
     "name": "compliance",
     "label": "Compliance"
   },

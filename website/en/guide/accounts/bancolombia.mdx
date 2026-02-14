@@ -25,7 +25,7 @@ const userSession = await bloque.connect('user-alias');
 
 // Create Bancolombia account
 const account = await userSession.accounts.bancolombia.create({
-  urn: 'did:bloque:your-origin:user-alias',
+  holderUrn: 'did:bloque:your-origin:user-alias',
   name: 'Main Account',
 });
 
@@ -38,7 +38,7 @@ console.log('URN:', account.urn);
 
 ```typescript title="types.ts"
 interface CreateBancolombiaAccountParams {
-  urn: string;          // User URN
+  holderUrn?: string;   // Optional user URN
   name?: string;        // Optional account name
   webhookUrl?: string;  // Optional webhook for events
   ledgerId?: string;    // Optional ledger account ID
@@ -79,7 +79,7 @@ The reference code can be shared with payers to receive funds:
 
 ```typescript title="list-bancolombia-accounts.ts"
 const account = await bloque.accounts.bancolombia.create({
-  urn: userUrn,
+  holderUrn: userUrn,
   name: 'Savings Account',
 });
 
@@ -96,9 +96,9 @@ List all Bancolombia accounts for a user:
 const userSession = await bloque.connect(userUrn);
 const accounts = await userSession.accounts.bancolombia.list();
 
-console.log(`Found ${accounts.length} Bancolombia accounts`);
+console.log(`Found ${accounts.accounts.length} Bancolombia accounts`);
 
-accounts.forEach((account) => {
+accounts.accounts.forEach((account) => {
   console.log('\nAccount:', account.metadata?.name);
   console.log('Reference:', account.referenceCode);
   console.log('Status:', account.status);
@@ -110,9 +110,9 @@ accounts.forEach((account) => {
 Check the balance of a Bancolombia account:
 
 ```typescript title="types.ts"
-const balances = await bloque.accounts.bancolombia.balance({
-  urn: 'did:bloque:account:bancolombia:acc-12345',
-});
+const balances = await bloque.accounts.balance(
+  'did:bloque:account:bancolombia:acc-12345',
+);
 
 Object.entries(balances).forEach(([token, balance]) => {
   console.log(`${token}:`);
@@ -126,15 +126,15 @@ Object.entries(balances).forEach(([token, balance]) => {
 View transactions for a Bancolombia account:
 
 ```typescript title="types.ts"
-const movements = await bloque.accounts.bancolombia.movements({
+const movements = await bloque.accounts.movements({
   urn: 'did:bloque:account:bancolombia:acc-12345',
   asset: 'DUSD/6',
   limit: 50,
 });
 
-movements.forEach((transaction) => {
+movements.data.forEach((transaction) => {
   console.log(`${transaction.direction}: ${transaction.amount}`);
-  console.log(`Date: ${transaction.created_at}`);
+  console.log(`Date: ${transaction.createdAt}`);
 });
 ```
 
@@ -175,7 +175,7 @@ async function setupBancolombiaAccount(userUrn: string) {
 
     // Create account
     const account = await userSession.accounts.bancolombia.create({
-      urn: userUrn,
+      holderUrn: userUrn,
       name: 'Receiving Account',
     });
 
@@ -184,9 +184,7 @@ async function setupBancolombiaAccount(userUrn: string) {
     console.log('  Status:', account.status);
 
     // Check balance
-    const balances = await bloque.accounts.bancolombia.balance({
-      urn: account.urn,
-    });
+    const balances = await bloque.accounts.balance(account.urn);
 
     console.log('✓ Current balances:');
     Object.entries(balances).forEach(([token, balance]) => {
@@ -207,7 +205,7 @@ async function setupBancolombiaAccount(userUrn: string) {
 ```typescript title="types.ts"
 try {
   const account = await bloque.accounts.bancolombia.create({
-    urn: userUrn,
+    holderUrn: userUrn,
     name: accountName,
   });
 
