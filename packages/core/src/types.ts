@@ -63,8 +63,8 @@ export type Platform =
    * Characteristics:
    * - No access to private API keys
    * - Authentication is performed via JWT
-   * - Token persistence must be explicitly configured
-   *   (e.g. localStorage, sessionStorage, in-memory)
+   * - Requests include credentials (`credentials: 'include'`) to support httpOnly cookies
+   * - `tokenStorage` is optional
    */
   | 'browser'
 
@@ -76,8 +76,7 @@ export type Platform =
    * Characteristics:
    * - No access to private API keys
    * - Authentication is performed via JWT
-   * - Token persistence must be provided by the consumer
-   *   (e.g. AsyncStorage, secure storage, in-memory)
+   * - `tokenStorage` is required to provide/store the JWT token
    */
   | 'react-native';
 
@@ -224,15 +223,19 @@ type BaseSDKConfig = {
   /**
    * JWT token storage strategy.
    *
-   * Only applies when `platform` is set to `browser` or `react-native`.
+   * Used by JWT authentication.
    *
-   * **Default behavior (browser only)**:
-   * - The SDK uses `localStorage` by default for browser platform
-   * - ⚠️ localStorage is INSECURE and vulnerable to XSS attacks
-   * - A security warning will be logged to the console
+   * **Browser (`platform: 'browser'`)**:
+   * - Optional
+   * - JWT requests use `credentials: 'include'` to send cookies
+   * - No localStorage persistence is configured by default
    *
-   * **For production applications**, provide a custom `tokenStorage` using:
-   * - httpOnly cookies (recommended - immune to XSS)
+   * **React Native and non-browser platforms**:
+   * - Required for JWT auth
+   * - The SDK reads the JWT from `tokenStorage` and sends it as `Authorization: Bearer <token>`
+   *
+   * If you need explicit client-side token persistence, provide a custom `tokenStorage`:
+   * - httpOnly cookies are still recommended (managed by the server, not by `tokenStorage`)
    * - Secure storage libraries (for React Native)
    * - sessionStorage (slightly better than localStorage, but still vulnerable)
    * - In-memory storage (most secure, but lost on refresh)

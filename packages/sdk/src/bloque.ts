@@ -96,19 +96,12 @@ export class SDK {
       throw new Error('authenticate is only available for JWT auth');
     }
 
-    const token = this.httpClient.getJwtToken();
-    if (!token?.trim()) {
-      throw new Error('Authentication token is missing in tokenStorage');
-    }
-
-    this.httpClient.setJwtToken(token);
-
     const response = await this.identity.me();
 
     this.httpClient.setOrigin(response.origin);
     this.httpClient.setUrn(response.urn);
 
-    return this.buildClients(token);
+    return this.buildClients(this.httpClient.getJwtToken() ?? '');
   }
 
   async me(): Promise<IdentityMe> {
