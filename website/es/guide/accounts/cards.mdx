@@ -395,6 +395,405 @@ async function setupUserCard(userUrn: string) {
 }
 ```
 
+## Controles de Gasto
+
+Los controles de gasto determinan cómo se procesan las transacciones con tarjeta, incluyendo qué cuentas se debitan, cómo funciona la conversión multicurrency y cómo se enrutan los fondos. El modo de control de gasto se configura a través del `metadata` de la tarjeta al crearla o actualizarla.
+
+### Control de Gasto por Defecto
+
+El modo por defecto debita una única cuenta de tarjeta. Soporta conversión automática de moneda cuando la moneda de la transacción difiere del activo de la tarjeta.
+
+```typescript title="create-card-default.ts"
+const card = await userSession.accounts.card.create({
+  urn: userUrn,
+  name: 'Tarjeta Estándar',
+  metadata: {
+    spending_control: 'default',      // Opcional, es el valor por defecto
+    default_asset: 'DUSD/6',          // Activo principal de la tarjeta
+    fallback_asset: 'KSM/12',         // Usado cuando el activo principal no está disponible
+    currency_asset_map: {             // Mapea monedas de transacción a activos preferidos
+      USD: ['DUSD/6'],
+      COP: ['COPM/2'],
+      EUR: ['EURc/6'],
+    },
+  },
+});
+```
+
+| Campo | Tipo | Requerido | Descripción |
+|-------|------|-----------|-------------|
+| `spending_control` | `string` | No | Establecer como `"default"` (o no incluir). |
+| `default_asset` | `string` | No | Activo principal (ej. `"DUSD/6"`). Por defecto `"DUSD/6"`. |
+| `fallback_asset` | `string` | No | Activo de respaldo cuando el principal no está disponible. |
+| `currency_asset_map` | `object` | No | Mapea códigos de moneda ISO 4217 a un array de identificadores de activos. |
+| `whatsapp_notification` | `boolean` | No | Habilitar notificaciones de compra por WhatsApp. Por defecto `true`. |
+
+### Control de Gasto Inteligente
+
+El gasto inteligente permite **enrutamiento multi-bolsillo** basado en Códigos de Categoría de Comercio (MCC). Las transacciones se enrutan a subcuentas (bolsillos) según la categoría del comercio, y el excedente se maneja por bolsillos de menor prioridad.
+
+```typescript title="create-card-smart.ts"
+const card = await userSession.accounts.card.create({
+  urn: userUrn,
+  name: 'Tarjeta Inteligente',
+  metadata: {
+    spending_control: 'smart',
+    priority_mcc: [
+      'did:bloque:account:card:usr-xxx:pocket-food',
+      'did:bloque:account:card:usr-xxx:pocket-transport',
+      'did:bloque:account:card:usr-xxx:pocket-main',
+    ],
+    mcc_whitelist: {
+      'did:bloque:account:card:usr-xxx:pocket-food': ['5411', '5412', '5812', '5814'],
+      'did:bloque:account:card:usr-xxx:pocket-transport': ['4111', '4121', '4131'],
+      // Sin whitelist para pocket-main = propósito general (acepta cualquier MCC)
+    },
+    default_asset: 'DUSD/6',
+    fallback_asset: 'KSM/12',
+  },
+});
+```
+
+| Campo | Tipo | Requerido | Descripción |
+|-------|------|-----------|-------------|
+| `spending_control` | `string` | Sí | Debe ser `"smart"`. |
+| `priority_mcc` | `string[]` | Sí | URNs de bolsillos en orden de prioridad. Los bolsillos de mayor prioridad se debitan primero. |
+| `mcc_whitelist` | `object` | Sí | Mapea URN de bolsillo a un array de códigos MCC permitidos, o una URL que retorna el array. Bolsillos sin entrada aceptan cualquier MCC. |
+| `default_asset` | `string` | No | Activo principal. Por defecto `"DUSD/6"`. |
+| `fallback_asset` | `string` | No | Activo de respaldo cuando el principal no está disponible. |
+| `currency_asset_map` | `object` | No | Mapea códigos de moneda a activos preferidos. |
+
+**Cómo funciona el enrutamiento:**
+
+1. El MCC del comercio se compara contra la whitelist de cada bolsillo en orden de prioridad
+2. Los bolsillos elegibles se debitan comenzando por el de mayor prioridad
+3. Si un bolsillo tiene fondos insuficientes, el remanente pasa al siguiente bolsillo elegible
+4. Los bolsillos sin entrada en la whitelist actúan como receptores generales
+5. Los reembolsos se enrutan de vuelta a los **bolsillos originales** que fueron debitados, proporcionalmente
+
+```mermaid
+flowchart LR
+    TX[Transacción MCC 5411] --> P1{Bolsillo Comida}
+    P1 -->|Cubre monto total| Done[Debitar Comida]
+    P1 -->|Fondos insuficientes| P2{Bolsillo Principal}
+    P2 --> Split[Débito dividido]
+```
+
+:::tip Whitelists de MCC
+Puedes proporcionar las whitelists de MCC como arrays en línea o como URLs que apuntan a un array JSON. Usar URLs facilita actualizar las whitelists sin modificar el metadata de la tarjeta.
+:::
+
+## Configuración de Comisiones
+
+Las comisiones se pueden configurar en dos niveles usando el array `spending_fees`. Cada comisión puede ser incondicional o estar controlada por una **regla** que evalúa el contexto de la transacción al momento de la autorización.
+
+### Prioridad de Resolución (Fusión por Nombre)
+
+Las comisiones se **fusionan** a través de tres capas por `fee_name`. Cada capa puede sobreescribir comisiones específicas de la capa inferior y agregar nuevas. Las comisiones que no se redefinen en una capa superior siempre se preservan.
+
+| Capa | Fuente | Descripción |
+|------|--------|-------------|
+| Base | **Por defecto** | Comisiones predeterminadas (1.44% interchange + 2% FX). Siempre presentes a menos que se sobreescriban explícitamente por nombre. |
+| + | **Metadata de origen** | `spending_fees` en el metadata del origen. Puede sobreescribir valores por defecto y agregar nuevas comisiones para todas las tarjetas. |
+| + | **Metadata de tarjeta** | `spending_fees` en el `metadata` de la cuenta de tarjeta. Puede sobreescribir comisiones del origen/defecto y agregar nuevas para esta tarjeta específica. |
+
+Por ejemplo, si los valores por defecto definen `interchange` y `fx`, el origen agrega `premium`, y la tarjeta sobreescribe `fx`:
+
+| Comisión | Por defecto | + Origen | + Tarjeta (final) |
+|----------|-------------|----------|-------------------|
+| `interchange` | 1.44% | 1.44% | 1.44% |
+| `fx` | 2.00% | 2.00% | **1.50%** (sobreescrito por tarjeta) |
+| `premium` | — | 0.50% | 0.50% |
+
+:::warning Las Comisiones Base No Se Pueden Eliminar
+Las comisiones de capas inferiores siempre se preservan. Una tarjeta u origen puede cambiar el `value`, `type`, `account_urn` o `rule` de una comisión existente redefiniéndola con el mismo `fee_name`, pero no puede eliminar una comisión por completo.
+:::
+
+### Definiendo Comisiones a Nivel de Origen
+
+Las comisiones a nivel de origen aplican a todas las tarjetas bajo el origen. Se configuran a través del panel de Bloque o la API:
+
+```typescript title="origin-fee-configuration.ts"
+// Metadata del origen (configurado via panel de Bloque o API)
+{
+  spending_fees: [
+    {
+      fee_name: 'interchange',
+      account_urn: 'urn:bloque:treasury:interchange',
+      type: 'percentage',
+      value: 0.0144,       // 1.44% del monto de la transacción
+    },
+    {
+      fee_name: 'fx',
+      account_urn: 'urn:bloque:treasury:fx',
+      type: 'percentage',
+      value: 0.02,          // 2% — solo en transacciones con conversión de moneda
+      rule: 'fx_conversion',
+    },
+    {
+      fee_name: 'high_ticket_fx',
+      account_urn: 'urn:bloque:treasury:fx',
+      type: 'percentage',
+      value: 0.035,         // 3.5% — solo en liquidaciones USD de alto valor
+      rule: 'amount_range_usd',
+      rule_params: { min: 500, max: 5000 },
+    },
+    {
+      fee_name: 'apple_wallet',
+      account_urn: 'urn:bloque:treasury:wallet',
+      type: 'percentage',
+      value: 0.01,          // 1% — solo para transacciones de Apple Wallet
+      rule: 'wallet',
+      rule_params: { wallet_name: 'Apple' },
+    },
+  ],
+}
+```
+
+### Definiendo Comisiones a Nivel de Tarjeta
+
+Las comisiones a nivel de tarjeta sobreescriben las del origen para una tarjeta específica. Se configuran en `metadata.spending_fees` al crear o actualizar la tarjeta:
+
+```typescript title="card-fee-override.ts"
+const card = await userSession.accounts.card.create({
+  urn: userUrn,
+  name: 'Tarjeta Premium',
+  metadata: {
+    spending_fees: [
+      {
+        fee_name: 'interchange',
+        account_urn: 'urn:bloque:treasury:interchange',
+        type: 'percentage',
+        value: 0.01,         // 1% — interchange reducido para esta tarjeta
+      },
+      {
+        fee_name: 'fx',
+        account_urn: 'urn:bloque:treasury:fx',
+        type: 'percentage',
+        value: 0.015,        // 1.5% — comisión FX reducida
+        rule: 'fx_conversion',
+      },
+    ],
+  },
+});
+```
+
+:::tip Sobreescritura de Comisiones por Tarjeta
+Las comisiones a nivel de tarjeta se fusionan por `fee_name`. Solo necesitas incluir las comisiones que deseas sobreescribir o agregar — todas las demás comisiones del origen y los valores por defecto se preservan automáticamente.
+:::
+
+### Tipos de Comisión
+
+```typescript title="types.ts"
+interface SpendingFee {
+  fee_name: string;           // Identificador único (ej. "interchange", "fx")
+  account_urn: string;        // Cuenta destino para la comisión
+  type: 'percentage' | 'flat';
+  value: number;              // Tasa (0.02 = 2%) para porcentaje, o monto para fijo
+  rule?: string;              // Opcional: nombre de regla condicional
+  rule_params?: Record<string, unknown>; // Opcional: parámetros para la regla
+}
+```
+
+| Tipo de Comisión | Significado de `value` | Ejemplo |
+|-----------------|------------------------|---------|
+| `percentage` | Fracción del monto de la transacción | `0.0144` = 1.44% |
+| `flat` | Monto fijo en el activo de la transacción | `100000` (escalado) |
+
+### Reglas Condicionales de Comisiones
+
+Las comisiones sin campo `rule` siempre se aplican. Las comisiones con una regla se evalúan contra la solicitud completa de la transacción al momento de la autorización.
+
+| Regla | Descripción | Parámetros |
+|-------|-------------|------------|
+| `fx_conversion` | Se aplica cuando la transacción requirió conversión de moneda (el activo de gasto difiere de la moneda de la transacción). | Ninguno |
+| `amount_range_usd` | Se aplica cuando el monto de liquidación en USD cae dentro de un rango. | `min?: number`, `max?: number` |
+| `wallet` | Se aplica cuando la transacción se realizó a través de una billetera de tokenización específica (coincidencia parcial, sin distinción de mayúsculas). | `wallet_name: string` |
+
+:::warning Cálculo de Comisiones
+Las comisiones se calculan usando aritmética BigInt para evitar problemas de precisión de punto flotante. Durante reembolsos parciales (ajustes), las comisiones se recalculan proporcionalmente basándose en el monto del reembolso relativo a la autorización original.
+:::
+
+### Desglose de Comisiones en Eventos
+
+Cada webhook de transacción exitosa incluye un objeto `fee_breakdown` mostrando exactamente qué comisiones se aplicaron:
+
+```typescript title="types.ts"
+interface FeeBreakdown {
+  total_fees: string;          // Comisiones totales como string BigInt escalado
+  fees: Array<{
+    fee_name: string;          // Identificador de la comisión
+    amount: string;            // Monto de la comisión como string BigInt escalado
+    rate: number;              // La tasa o valor fijo utilizado
+  }>;
+}
+```
+
+## Webhooks de Tarjeta
+
+Cuando proporcionas un `webhookUrl` durante la creación de la tarjeta, tu endpoint recibe notificaciones POST en tiempo real para cada evento de transacción — compras, rechazos y ajustes (reembolsos).
+
+### Payload del Webhook
+
+Todos los eventos de tarjeta comparten esta estructura:
+
+```typescript title="types.ts"
+interface CardWebhookPayload {
+  account_urn: string;         // URN de la cuenta de tarjeta
+  transaction_id: string;      // Identificador único de la transacción
+  type: 'authorization' | 'adjustment';
+  direction: 'debit' | 'credit';
+  event: CardEventType;
+  amount?: string;             // Monto escalado como string BigInt
+  asset?: string;              // Activo utilizado (ej. "DUSD/6")
+  local_amount?: number;       // Monto en la moneda local del comercio
+  local_currency?: string;     // Código de moneda ISO 4217 (ej. "USD", "COP")
+  exchange_rate?: number;      // Tasa de conversión aplicada (1 si coincidencia directa)
+  merchant?: MerchantInfo;
+  medium?: TransactionMedium;
+  fee_breakdown?: FeeBreakdown;
+  reason?: string;             // Presente en eventos de rechazo
+}
+```
+
+### Tipos de Evento
+
+| Evento | Tipo | Dirección | Descripción |
+|--------|------|-----------|-------------|
+| `purchase` | `authorization` | `debit` | Compra con tarjeta autorizada y debitada. |
+| `rejected_insufficient_funds` | `authorization` | `debit` | Compra rechazada — saldo insuficiente. |
+| `rejected_credit` | `authorization` | `credit` | Autorización de crédito rechazada (no soportada). |
+| `rejected_currency` | `authorization` | `debit` | Compra rechazada — moneda no soportada. |
+| `credit_adjustment` | `adjustment` | `credit` | Reembolso o ajuste de crédito procesado. |
+| `debit_adjustment` | `adjustment` | `debit` | Ajuste de débito procesado. |
+
+### Ejemplo de Evento de Compra
+
+```json title="purchase-webhook.json"
+{
+  "account_urn": "did:bloque:account:card:usr-abc:crd-123",
+  "transaction_id": "ctx-200kXoaEJLNzcsvNxY1pmBO7fEx",
+  "type": "authorization",
+  "direction": "debit",
+  "event": "purchase",
+  "amount": "50000000",
+  "asset": "DUSD/6",
+  "local_amount": 50.0,
+  "local_currency": "USD",
+  "exchange_rate": 1,
+  "merchant": {
+    "name": "AMAZON.COM",
+    "mcc": "5411",
+    "city": "Seattle",
+    "country": "USA"
+  },
+  "fee_breakdown": {
+    "total_fees": "720000",
+    "fees": [
+      { "fee_name": "interchange", "amount": "720000", "rate": 0.0144 }
+    ]
+  }
+}
+```
+
+### Ejemplo de Evento de Reembolso
+
+```json title="refund-webhook.json"
+{
+  "account_urn": "did:bloque:account:card:usr-abc:crd-123",
+  "transaction_id": "ctx-adj-456",
+  "type": "adjustment",
+  "direction": "credit",
+  "event": "credit_adjustment",
+  "amount": "25000000",
+  "asset": "DUSD/6",
+  "local_amount": 25.0,
+  "local_currency": "USD",
+  "exchange_rate": 1,
+  "merchant": {
+    "name": "AMAZON.COM",
+    "mcc": "5411",
+    "city": "Seattle",
+    "country": "USA"
+  },
+  "fee_breakdown": {
+    "total_fees": "360000",
+    "fees": [
+      { "fee_name": "interchange", "amount": "360000", "rate": 0.0144 }
+    ]
+  }
+}
+```
+
+### Ejemplo de Evento de Rechazo
+
+```json title="rejection-webhook.json"
+{
+  "account_urn": "did:bloque:account:card:usr-abc:crd-123",
+  "transaction_id": "ctx-789",
+  "type": "authorization",
+  "direction": "debit",
+  "event": "rejected_insufficient_funds",
+  "required_usd": 150.0,
+  "reason": "Insufficient funds"
+}
+```
+
+### Manejando Webhooks
+
+```typescript title="card-webhook-handler.ts"
+import express from 'express';
+
+const app = express();
+
+app.post('/webhooks/cards', express.json(), (req, res) => {
+  const payload = req.body;
+
+  console.log(`[${payload.transaction_id}] ${payload.event} — ${payload.type}/${payload.direction}`);
+
+  switch (payload.event) {
+    case 'purchase':
+      console.log(`Compra: ${payload.local_amount} ${payload.local_currency}`);
+      console.log(`Comercio: ${payload.merchant?.name}`);
+      console.log(`Comisiones: ${payload.fee_breakdown?.total_fees}`);
+      // Actualizar registros, notificar usuario, etc.
+      break;
+
+    case 'credit_adjustment':
+      console.log(`Reembolso: ${payload.local_amount} ${payload.local_currency}`);
+      // Procesar reembolso en tu sistema
+      break;
+
+    case 'debit_adjustment':
+      console.log(`Ajuste de débito: ${payload.local_amount} ${payload.local_currency}`);
+      break;
+
+    case 'rejected_insufficient_funds':
+      console.log(`Rechazado: ${payload.reason}`);
+      // Notificar al usuario de la transacción fallida
+      break;
+
+    case 'rejected_currency':
+      console.log(`Moneda no soportada: ${payload.currency}`);
+      break;
+
+    case 'rejected_credit':
+      console.log(`Crédito rechazado: ${payload.reason}`);
+      break;
+  }
+
+  res.status(200).send('OK');
+});
+```
+
+:::warning Idempotencia
+La entrega de webhooks usa claves de idempotencia basadas en `${type}-${transaction_id}`. Tu handler debe ser idempotente — procesar el mismo evento dos veces debe producir el mismo resultado.
+:::
+
+:::tip Notificaciones de WhatsApp
+Los eventos de compra también pueden activar notificaciones de WhatsApp al titular de la tarjeta si `whatsapp_notification` está habilitado en el metadata de la tarjeta y el usuario tiene un número de teléfono registrado.
+:::
+
 ## Mejores Prácticas
 
 1. **Sesiones de Usuario**: Siempre conéctate a una sesión de usuario
@@ -404,6 +803,9 @@ async function setupUserCard(userUrn: string) {
 5. **Seguridad**: Nunca almacenes números de tarjeta completos
 6. **Manejo de Errores**: Usa bloques try-catch
 7. **Probar en Sandbox**: Prueba exhaustivamente antes de producción
+8. **Webhooks Idempotentes**: Siempre maneja entregas duplicadas de forma segura
+9. **Transparencia de Comisiones**: Incluye el desglose de comisiones en los recibos mostrados a los usuarios
+10. **Presupuestos Inteligentes**: Usa controles de gasto por bolsillo para ayudar a los usuarios a gestionar presupuestos por categoría
 
 ## Próximos Pasos
 
