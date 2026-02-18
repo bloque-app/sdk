@@ -522,12 +522,14 @@ Origin-level fees apply to all cards under the origin. Configure them via the Bl
       account_urn: 'urn:bloque:treasury:interchange',
       type: 'percentage',
       value: 0.0144,       // 1.44% of the transaction amount
+      category: 'interchange',
     },
     {
       fee_name: 'fx',
       account_urn: 'urn:bloque:treasury:fx',
       type: 'percentage',
-      value: 0.02,          // 2% — only on cross-currency transactions
+      value: 0.02,          // 2% — drives the conversion spread
+      category: 'fx',
       rule: 'fx_conversion',
     },
     {
@@ -535,6 +537,7 @@ Origin-level fees apply to all cards under the origin. Configure them via the Bl
       account_urn: 'urn:bloque:treasury:fx',
       type: 'percentage',
       value: 0.035,         // 3.5% — only on high-value USD settlements
+      category: 'fx',
       rule: 'amount_range_usd',
       rule_params: { min: 500, max: 5000 },
     },
@@ -565,12 +568,14 @@ const card = await userSession.accounts.card.create({
         account_urn: 'urn:bloque:treasury:interchange',
         type: 'percentage',
         value: 0.01,         // 1% — lower interchange for this card
+        category: 'interchange',
       },
       {
         fee_name: 'fx',
         account_urn: 'urn:bloque:treasury:fx',
         type: 'percentage',
-        value: 0.015,        // 1.5% — reduced FX fee
+        value: 0.015,        // 1.5% — reduced FX spread for this card
+        category: 'fx',
         rule: 'fx_conversion',
       },
     ],
@@ -585,11 +590,14 @@ Card-level fees are merged by `fee_name`. You only need to include the fees you 
 ### Fee Types
 
 ```typescript title="types.ts"
+type SpendingFeeCategory = 'fx' | 'interchange' | 'custom';
+
 interface SpendingFee {
   fee_name: string;           // Unique identifier (e.g., "interchange", "fx")
   account_urn: string;        // Destination account for the fee
   type: 'percentage' | 'flat';
   value: number;              // Rate (0.02 = 2%) for percentage, or amount for flat
+  category?: SpendingFeeCategory; // Purpose of the fee (defaults to "custom")
   rule?: string;              // Optional: conditional rule name
   rule_params?: Record<string, unknown>; // Optional: parameters for the rule
 }
@@ -599,6 +607,16 @@ interface SpendingFee {
 |----------|----------------|---------|
 | `percentage` | Fraction of the transaction amount | `0.0144` = 1.44% |
 | `flat` | Fixed amount in the transaction's asset | `100000` (scaled) |
+
+| Category | Purpose |
+|----------|---------|
+| `fx` | Drives the exchange rate spread in currency conversions. Multiple `fx` fees are summed. |
+| `interchange` | Standard interchange fee. |
+| `custom` | Default for any other fee. |
+
+:::info FX Category and Conversion Spread
+Fees with `category: "fx"` directly control the exchange rate spread applied during currency conversions. For example, an `fx` fee with `value: 0.02` results in a 2% spread (rate multiplied by 0.98). If multiple fees have `category: "fx"`, their values are summed to determine the total spread. If no `fx` category fees are configured, the default 2% spread is used.
+:::
 
 ### Conditional Fee Rules
 

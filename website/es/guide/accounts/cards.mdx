@@ -522,12 +522,14 @@ Las comisiones a nivel de origen aplican a todas las tarjetas bajo el origen. Se
       account_urn: 'urn:bloque:treasury:interchange',
       type: 'percentage',
       value: 0.0144,       // 1.44% del monto de la transacción
+      category: 'interchange',
     },
     {
       fee_name: 'fx',
       account_urn: 'urn:bloque:treasury:fx',
       type: 'percentage',
-      value: 0.02,          // 2% — solo en transacciones con conversión de moneda
+      value: 0.02,          // 2% — controla el spread de conversión
+      category: 'fx',
       rule: 'fx_conversion',
     },
     {
@@ -535,6 +537,7 @@ Las comisiones a nivel de origen aplican a todas las tarjetas bajo el origen. Se
       account_urn: 'urn:bloque:treasury:fx',
       type: 'percentage',
       value: 0.035,         // 3.5% — solo en liquidaciones USD de alto valor
+      category: 'fx',
       rule: 'amount_range_usd',
       rule_params: { min: 500, max: 5000 },
     },
@@ -565,12 +568,14 @@ const card = await userSession.accounts.card.create({
         account_urn: 'urn:bloque:treasury:interchange',
         type: 'percentage',
         value: 0.01,         // 1% — interchange reducido para esta tarjeta
+        category: 'interchange',
       },
       {
         fee_name: 'fx',
         account_urn: 'urn:bloque:treasury:fx',
         type: 'percentage',
-        value: 0.015,        // 1.5% — comisión FX reducida
+        value: 0.015,        // 1.5% — spread FX reducido para esta tarjeta
+        category: 'fx',
         rule: 'fx_conversion',
       },
     ],
@@ -585,11 +590,14 @@ Las comisiones a nivel de tarjeta se fusionan por `fee_name`. Solo necesitas inc
 ### Tipos de Comisión
 
 ```typescript title="types.ts"
+type SpendingFeeCategory = 'fx' | 'interchange' | 'custom';
+
 interface SpendingFee {
   fee_name: string;           // Identificador único (ej. "interchange", "fx")
   account_urn: string;        // Cuenta destino para la comisión
   type: 'percentage' | 'flat';
   value: number;              // Tasa (0.02 = 2%) para porcentaje, o monto para fijo
+  category?: SpendingFeeCategory; // Propósito de la comisión (por defecto "custom")
   rule?: string;              // Opcional: nombre de regla condicional
   rule_params?: Record<string, unknown>; // Opcional: parámetros para la regla
 }
@@ -599,6 +607,16 @@ interface SpendingFee {
 |-----------------|------------------------|---------|
 | `percentage` | Fracción del monto de la transacción | `0.0144` = 1.44% |
 | `flat` | Monto fijo en el activo de la transacción | `100000` (escalado) |
+
+| Categoría | Propósito |
+|-----------|-----------|
+| `fx` | Controla el spread del tipo de cambio en conversiones de moneda. Múltiples comisiones `fx` se suman. |
+| `interchange` | Comisión de intercambio estándar. |
+| `custom` | Valor por defecto para cualquier otra comisión. |
+
+:::info Categoría FX y Spread de Conversión
+Las comisiones con `category: "fx"` controlan directamente el spread del tipo de cambio aplicado durante las conversiones de moneda. Por ejemplo, una comisión `fx` con `value: 0.02` resulta en un spread del 2% (tasa multiplicada por 0.98). Si múltiples comisiones tienen `category: "fx"`, sus valores se suman para determinar el spread total. Si no se configuran comisiones con categoría `fx`, se usa el spread por defecto del 2%.
+:::
 
 ### Reglas Condicionales de Comisiones
 
