@@ -91,6 +91,10 @@ export interface CreatePseOrderParams {
    */
   toMedium: string;
   /**
+   * Optional webhook URL for order status notifications
+   */
+  webhookUrl?: string;
+  /**
    * Source amount as bigint string (required if type is 'src')
    * @example "1000000" represents 10000.00 for COP/2
    */

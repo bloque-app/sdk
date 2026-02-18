@@ -24,9 +24,13 @@ La creación de cuentas US requiere un proceso de dos pasos:
 ```typescript title="obtener-tos-link.ts"
 import { SDK } from '@bloque/sdk';
 
-const bloque = await SDK.connect({
-  apiKey: process.env.BLOQUE_API_KEY!,
-  platform: 'node',
+const bloque = new SDK({
+  origin: 'tu-origen',
+  auth: {
+    type: 'apiKey',
+    apiKey: process.env.BLOQUE_API_KEY!,
+  },
+  mode: 'production',
 });
 
 // Generar link de TOS
@@ -35,7 +39,6 @@ const tosLink = await bloque.accounts.us.getTosLink({
 });
 
 console.log('URL de TOS:', tosLink.url);
-console.log('Request ID:', tosLink.requestId);
 ```
 
 **Respuesta:**
@@ -216,12 +219,12 @@ Obtén todas las cuentas US de un usuario:
 ```typescript title="listar-cuentas.ts"
 const accounts = await bloque.accounts.us.list();
 
-console.log(`Total de cuentas: ${accounts.length}`);
+console.log(`Total de cuentas: ${accounts.accounts.length}`);
 
-accounts.forEach(account => {
+accounts.accounts.forEach(account => {
   console.log(`${account.urn}: ${account.status}`);
   if (account.balance) {
-    console.log(`  Balance: $${account.balance.available}`);
+    console.log(`  DUSD/6: ${account.balance['DUSD/6']?.current ?? '0'}`);
   }
 });
 ```
@@ -300,9 +303,13 @@ import { SDK } from '@bloque/sdk';
 
 async function crearCuentaUS() {
   // Inicializar SDK
-  const bloque = await SDK.connect({
-    apiKey: process.env.BLOQUE_API_KEY!,
-    platform: 'node',
+  const bloque = new SDK({
+    origin: 'tu-origen',
+    auth: {
+      type: 'apiKey',
+      apiKey: process.env.BLOQUE_API_KEY!,
+    },
+    mode: 'production',
   });
 
   try {
@@ -354,7 +361,7 @@ async function crearCuentaUS() {
     // Listar todas las cuentas
     console.log('\nListando cuentas...');
     const accounts = await bloque.accounts.us.list();
-    console.log(`✓ Total de cuentas: ${accounts.length}`);
+    console.log(`✓ Total de cuentas: ${accounts.accounts.length}`);
 
     return { success: true, account };
   } catch (error) {

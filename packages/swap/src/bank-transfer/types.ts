@@ -172,6 +172,11 @@ export interface CreateBankTransferOrderParams {
   toMedium: SupportedBank;
 
   /**
+   * Optional webhook URL for order status notifications
+   */
+  webhookUrl?: string;
+
+  /**
    * Source amount as bigint string (required if type is 'src')
    * @example "100000000"
    */

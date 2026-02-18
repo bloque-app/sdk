@@ -1,4 +1,8 @@
-import { BaseClient } from '@bloque/sdk-core';
+import {
+  BaseClient,
+  isSupportedAsset,
+  SUPPORTED_ASSETS,
+} from '@bloque/sdk-core';
 import type {
   AccountStatus,
   AccountWithBalance,
@@ -16,7 +20,6 @@ import type {
 import type { CreateAccountOptions } from '../types';
 import type {
   CardAccount,
-  CardMovement,
   CreateCardParams,
   GetBalanceParams,
   ListCardAccountsParams,
@@ -261,8 +264,10 @@ export class CardClient extends BaseClient {
     const queryParams = new URLSearchParams();
 
     const asset = params.asset || 'DUSD/6';
-    if (asset !== 'DUSD/6' && asset !== 'KSM/12') {
-      throw new Error('Invalid asset type. Supported assets are USD and KSM.');
+    if (!isSupportedAsset(asset)) {
+      throw new Error(
+        `Invalid asset type "${asset}". Supported assets: ${SUPPORTED_ASSETS.join(', ')}`,
+      );
     }
 
     queryParams.set('asset', asset);

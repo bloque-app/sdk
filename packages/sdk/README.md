@@ -18,35 +18,7 @@ The official TypeScript/JavaScript SDK for integrating [Bloque](https://www.bloq
 ## Installation
 
 ```bash
-pnpm install @bloque/sdk
-```
-
-## Quick Start
-
-```typescript
-import { SDK } from '@bloque/sdk';
-
-// Initialize SDK
-const bloque = await SDK.connect({
-  apiKey: process.env.BLOQUE_API_KEY!,
-  platform: 'node',
-});
-const bloque = new SDK({
-  origin: 'bloque',
-  auth: {
-    type: 'apiKey',
-    apiKey: 'sk_live_862f110...',
-  },
-  mode: 'production', // or 'sandbox' for testing
-  platform: 'node',
-});
-
-// Create a virtual card
-const card = await bloque.accounts.card.create({
-  name: 'My Virtual Card',
-});
-
-console.log('Card created:', card.urn);
+bun install @bloque/sdk
 ```
 
 ## Documentation

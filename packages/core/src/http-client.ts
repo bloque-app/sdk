@@ -11,62 +11,10 @@ import type {
   BloqueInternalConfig,
   BloqueSDKConfig,
   RequestOptions,
-  TokenStorage,
 } from './types';
 
 const isFrontendPlatform = (platform?: string) =>
   platform === 'browser' || platform === 'react-native';
-
-/**
- * Creates a localStorage-based token storage adapter.
- *
- * ⚠️ SECURITY WARNING: localStorage is vulnerable to XSS attacks.
- * Tokens stored in localStorage can be accessed by any JavaScript code
- * running in the same origin, including malicious scripts injected via XSS.
- *
- * For production applications, consider using:
- * - httpOnly cookies (best option, not accessible to JavaScript)
- * - secure storage libraries (e.g., @react-native-async-storage/async-storage for React Native)
- * - sessionStorage (slightly better, cleared when tab closes, but still vulnerable to XSS)
- * - encrypted storage solutions
- *
- * Only use localStorage for:
- * - Development and testing
- * - Non-sensitive applications
- * - When you fully trust all scripts on your page
- *
- * @internal
- */
-const createLocalStorageAdapter = (): TokenStorage => {
-  // Emit warning once when adapter is created
-  if (typeof console !== 'undefined' && console.warn) {
-    console.warn(
-      '[Bloque SDK Security Warning] Using localStorage for token storage. ' +
-        'localStorage is vulnerable to XSS attacks. ' +
-        'For production use, provide a custom tokenStorage with httpOnly cookies or secure storage. ' +
-        'See: https://owasp.org/www-community/attacks/xss/',
-    );
-  }
-
-  return {
-    get: () => {
-      if (typeof localStorage === 'undefined') {
-        return null;
-      }
-      return localStorage.getItem('access_token');
-    },
-    set: (token: string) => {
-      if (typeof localStorage !== 'undefined') {
-        localStorage.setItem('access_token', token);
-      }
-    },
-    clear: () => {
-      if (typeof localStorage !== 'undefined') {
-        localStorage.removeItem('access_token');
-      }
-    },
-  };
-};
 
 export class HttpClient {
   /**
@@ -80,6 +28,7 @@ export class HttpClient {
   private readonly publicRoutes = [
     '/api/aliases',
     '/api/origins/*/assert',
+    '/api/origins/*/connect',
     '/api/origins',
   ];
 
@@ -97,7 +46,7 @@ export class HttpClient {
    * Get the origin identifier.
    * @public
    */
-  get origin(): string {
+  get origin(): string | undefined {
     return this._config.origin;
   }
 
@@ -127,11 +76,44 @@ export class HttpClient {
   }
 
   /**
+   * Persist JWT token in configured token storage, when provided.
+   * @internal - Optional for cookie-based JWT sessions.
+   */
+  setJwtToken(token: string): void {
+    if (this._config.auth.type !== 'jwt') {
+      throw new BloqueConfigError('JWT token can only be set for JWT auth');
+    }
+
+    this._config.tokenStorage?.set(token);
+    this._config.accessToken = token;
+  }
+
+  /**
+   * Get JWT token from configured token storage, when provided.
+   * @internal - Optional helper for sessions that persist tokens client-side.
+   */
+  getJwtToken(): string | null {
+    if (this._config.auth.type !== 'jwt') {
+      throw new BloqueConfigError('JWT token is only available for JWT auth');
+    }
+
+    return this._config.tokenStorage?.get() ?? null;
+  }
+
+  /**
    * Set the URN of the connected identity.
    * @internal - Called internally when connecting to a user session.
    */
   setUrn(urn: string): void {
     this._config.urn = urn;
+  }
+
+  /**
+   * Set the origin identifier for the current session.
+   * @internal - Called internally when origin is resolved after JWT authentication.
+   */
+  setOrigin(origin: string): void {
+    this._config.origin = origin;
   }
 
   private validateConfig(config: BloqueInternalConfig): void {
@@ -178,6 +160,12 @@ export class HttpClient {
         );
       }
 
+      if (!config.origin?.trim()) {
+        throw new BloqueConfigError(
+          'Origin is required for apiKey authentication',
+        );
+      }
+
       if (isFrontendPlatform(config.platform)) {
         throw new BloqueConfigError(
           'API key authentication is not allowed in frontend platforms',
@@ -186,14 +174,10 @@ export class HttpClient {
     }
 
     if (config.auth.type === 'jwt') {
-      if (!config.tokenStorage) {
-        if (config.platform === 'browser') {
-          config.tokenStorage = createLocalStorageAdapter();
-        } else {
-          throw new BloqueConfigError(
-            'tokenStorage must be provided when using JWT authentication',
-          );
-        }
+      if (config.platform !== 'browser' && !config.tokenStorage) {
+        throw new BloqueConfigError(
+          'tokenStorage must be provided when using JWT authentication outside browser platform',
+        );
       }
     }
   }
@@ -224,6 +208,10 @@ export class HttpClient {
     }
 
     if (this._config.auth.type === 'jwt') {
+      if (this._config.platform === 'browser') {
+        return {};
+      }
+
       const token = this._config.tokenStorage?.get();
       if (!token) {
         throw new BloqueConfigError('Authentication token is missing');
@@ -337,6 +325,11 @@ export class HttpClient {
           method,
           headers: requestHeaders,
           body: body ? JSON.stringify(body) : undefined,
+          credentials:
+            this._config.auth.type === 'jwt' &&
+            this._config.platform === 'browser'
+              ? 'include'
+              : undefined,
           signal: controller.signal,
         });
 

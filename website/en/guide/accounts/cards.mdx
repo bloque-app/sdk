@@ -35,7 +35,7 @@ const userSession = await bloque.connect('user-alias');
 
 // Create a virtual card
 const card = await userSession.accounts.card.create({
-  urn: 'did:bloque:your-origin:user-alias',
+  holderUrn: 'did:bloque:your-origin:user-alias',
   name: 'My Virtual Card',
 });
 
@@ -48,7 +48,7 @@ console.log('Details URL:', card.detailsUrl);
 
 ```typescript title="types.ts"
 interface CreateCardParams {
-  urn: string;          // User URN
+  holderUrn?: string;   // Optional user URN
   name?: string;        // Optional card name
   webhookUrl?: string;  // Optional webhook for events
   ledgerId?: string;    // Optional ledger account ID
@@ -86,9 +86,9 @@ List all card accounts for a user with their balances:
 const userSession = await bloque.connect('user-alias');
 const cards = await userSession.accounts.card.list();
 
-console.log(`Found ${cards.length} card accounts`);
+console.log(`Found ${cards.accounts.length} card accounts`);
 
-cards.forEach((card) => {
+cards.accounts.forEach((card) => {
   console.log('\nCard:', card.metadata?.name);
   console.log('Last Four:', card.lastFour);
   console.log('Status:', card.status);
@@ -102,7 +102,7 @@ cards.forEach((card) => {
 
 // Calculate total balance
 const totalBalances: Record<string, bigint> = {};
-cards.forEach(card => {
+cards.accounts.forEach(card => {
   if (card.balance) {
     Object.entries(card.balance).forEach(([token, balance]) => {
       if (!totalBalances[token]) {
@@ -203,13 +203,13 @@ async function getAllTransactions(cardUrn: string, asset: string) {
       before: lastDate,
     });
 
-    allMovements.push(...movements);
-    console.log(`Fetched ${movements.length} transactions`);
+    allMovements.push(...movements.data);
+    console.log(`Fetched ${movements.data.length} transactions`);
 
-    if (movements.length < pageSize) {
+    if (movements.data.length < pageSize) {
       hasMore = false;
     } else {
-      lastDate = movements[movements.length - 1].created_at;
+      lastDate = movements.data[movements.data.length - 1].created_at;
     }
   }
 
@@ -267,7 +267,7 @@ The `detailsUrl` field provides a secure, PCI-compliant URL where users can view
 
 ```typescript title="view-card-details.ts"
 const card = await bloque.accounts.card.create({
-  urn: userUrn,
+  holderUrn: userUrn,
   name: 'My Card',
 });
 
@@ -289,19 +289,19 @@ const userSession = await bloque.connect(userUrn);
 
 // Personal card
 const personalCard = await userSession.accounts.card.create({
-  urn: userUrn,
+  holderUrn: userUrn,
   name: 'Personal Card',
 });
 
 // Business card
 const businessCard = await userSession.accounts.card.create({
-  urn: userUrn,
+  holderUrn: userUrn,
   name: 'Business Card',
 });
 
 // Travel card
 const travelCard = await userSession.accounts.card.create({
-  urn: userUrn,
+  holderUrn: userUrn,
   name: 'Travel Expenses',
 });
 
@@ -318,7 +318,7 @@ Always handle errors appropriately:
 ```typescript title="error-handling.ts"
 try {
   const card = await bloque.accounts.card.create({
-    urn: userUrn,
+    holderUrn: userUrn,
     name: cardName,
   });
 
@@ -361,7 +361,7 @@ async function setupUserCard(userUrn: string) {
 
     // Create a virtual card
     const card = await userSession.accounts.card.create({
-      urn: userUrn,
+      holderUrn: userUrn,
       name: 'Main Card',
     });
 
@@ -384,7 +384,7 @@ async function setupUserCard(userUrn: string) {
       limit: 10,
     });
 
-    console.log(`✓ Found ${movements.length} recent transactions`);
+    console.log(`✓ Found ${movements.data.length} recent transactions`);
 
     return { success: true, card };
 

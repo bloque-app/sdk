@@ -1,4 +1,9 @@
 [
+  {
+    "type": "file",
+    "name": "api-reference",
+    "label": "API Reference"
+  },
   "compliance",
   "organizations",
   {
