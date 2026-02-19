@@ -91,30 +91,30 @@ async function waitForCompletion(getStatus: () => Promise<{status: string}>) {
 
 ### 🪝 Webhook Pattern
 
-For real-time notifications of state changes:
+For real-time notifications of state changes, pass a `webhookUrl` when creating entities:
 
 ```typescript
-// Set webhook URL when creating entities
 const account = await session.accounts.virtual.create({
   firstName: 'John',
   lastName: 'Doe',
-  webhookUrl: 'https://api.example.com/webhooks/account-status'
+  webhookUrl: 'https://api.example.com/webhooks/accounts'
 });
 
-// Handle state changes
-app.post('/webhooks/account-status', (req, res) => {
-  const { type, data } = req.body;
-  
-  if (type === 'account.status_changed') {
-    console.log(`Account ${data.urn} changed to: ${data.status}`);
-    
-    // Update local database
-    updateLocalAccount(data.urn, { status: data.status });
+// Handle account lifecycle events
+app.post('/webhooks/accounts', (req, res) => {
+  const { account_urn, event_type, event_data } = req.body;
+
+  if (event_type === 'account.activated') {
+    console.log(`Account ${account_urn} is now active`);
+    console.log(`Settlement: ${event_data.settlement_status}`);
+    updateLocalAccount(account_urn, { status: 'active' });
   }
-  
+
   res.status(200).send('OK');
 });
 ```
+
+**Complete documentation:** [Account Webhooks](/sdk/guide/accounts/webhooks)
 
 ## Error Handling by State
 

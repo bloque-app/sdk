@@ -148,6 +148,12 @@ const cards = await userSession.accounts.card.list();
 Esto asegura la autenticación y autorización adecuada para operaciones específicas del usuario.
 :::
 
+## Webhooks de Cuentas
+
+Todos los tipos de cuenta soportan notificaciones por webhook para eventos del ciclo de vida. Pasa un `webhookUrl` al crear una cuenta para recibir notificaciones POST en tiempo real cuando ocurren transiciones de estado — como cuando una cuenta se activa después de la liquidación on-chain.
+
+[Más sobre Webhooks de Cuentas](/sdk/guide/accounts/webhooks)
+
 ## Mejores Prácticas
 
 1. **Usa Sesiones de Usuario**: Conéctate a sesiones de usuario para operaciones de cuentas
@@ -156,9 +162,11 @@ Esto asegura la autenticación y autorización adecuada para operaciones especí
 4. **Paginación**: Usa paginación para listas grandes de transacciones
 5. **Manejo de Errores**: Siempre usa bloques try-catch
 6. **Prueba Primero**: Prueba en modo sandbox antes de producción
+7. **Configura Webhooks**: Configura webhooks para reaccionar a la activación de cuentas en lugar de hacer polling
 
 ## Próximos Pasos
 
+- [Webhooks de Cuentas](/sdk/guide/accounts/webhooks) - Notificaciones en tiempo real del ciclo de vida
 - [Tarjetas Virtuales](/sdk/guide/accounts/cards) - Crea y gestiona tarjetas virtuales
 - [Bancolombia](/sdk/guide/accounts/bancolombia) - Integración de cuentas Bancolombia
 - [Transferencias](/sdk/guide/accounts/transfers) - Transfiere fondos entre cuentas

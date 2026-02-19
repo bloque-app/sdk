@@ -6,6 +6,11 @@
   },
   {
     "type": "file",
+    "name": "webhooks",
+    "label": "Account Webhooks"
+  },
+  {
+    "type": "file",
     "name": "virtual",
     "label": "Virtual Accounts"
   },
