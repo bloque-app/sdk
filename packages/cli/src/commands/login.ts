@@ -3,6 +3,7 @@ import { SDK } from '@bloque/sdk';
 import { input, password, select } from '@inquirer/prompts';
 
 import { SessionStore } from '../session/store.ts';
+import { portalAnimation } from '../ui/portal.ts';
 
 const store = new SessionStore();
 
@@ -61,7 +62,7 @@ export const loginCommand = new Command('login')
         createdAt: new Date().toISOString(),
       });
 
-      console.log(`Logged in as ${clients.urn ?? alias}`);
+      await portalAnimation(`Connected as ${clients.urn ?? alias}`);
       return;
     }
 
@@ -101,5 +102,5 @@ export const loginCommand = new Command('login')
       createdAt: new Date().toISOString(),
     });
 
-    console.log(`Logged in as ${clients.urn ?? userAlias}`);
+    await portalAnimation(`Connected as ${clients.urn ?? userAlias}`);
   });

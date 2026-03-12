@@ -9,7 +9,8 @@
       "@bloque/sdk-compliance",
       "@bloque/sdk-identity",
       "@bloque/sdk-orgs",
-      "@bloque/sdk"
+      "@bloque/sdk",
+      "@bloque/cli"
     ]
   ],
   "access": "public",

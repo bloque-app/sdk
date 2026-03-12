@@ -9,8 +9,13 @@
   "files": [
     "dist"
   ],
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
   "scripts": {
     "build": "tsup",
+    "release": "bun publish --provenance",
     "dev": "bun run src/bin.ts",
     "start": "node dist/bin.js",
     "typecheck": "tsc --noEmit"
