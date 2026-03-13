@@ -43,7 +43,7 @@ export function registerUsTools(server: McpServer, clients: BloqueClients) {
         signedAgreementId: z.string(),
         name: z.string().optional(),
         ledgerId: z.string().optional(),
-        metadata: z.record(z.unknown()).optional(),
+        metadata: z.record(z.string(), z.unknown()).optional(),
       },
     },
     async (params) => {

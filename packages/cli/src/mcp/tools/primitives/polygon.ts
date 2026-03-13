@@ -11,7 +11,7 @@ export function registerPolygonTools(server: McpServer, clients: BloqueClients) 
       inputSchema: {
         ledgerId: z.string().optional(),
         name: z.string().optional(),
-        metadata: z.record(z.string()).optional(),
+        metadata: z.record(z.string(), z.string()).optional(),
       },
     },
     async ({ ledgerId, name, metadata }) => {
