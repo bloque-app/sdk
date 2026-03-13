@@ -16,6 +16,8 @@ Once set up, talk to your agent like you would a financial assistant:
 
 - **"Create a card for food expenses, load it with $200"**
 - **"I need a one-time $25 card for this website"**
+- **"Assign my card ending in 4532 to amazon.com"**
+- **"Which card should I use for netflix.com?"**
 - **"Show me my balances"**
 - **"Top up my account with 100,000 COP from my bank"**
 - **"Freeze my card"**
@@ -25,7 +27,7 @@ Your agent handles the rest — creating accounts, issuing cards, moving money, 
 
 ## How It Works
 
-The CLI installs an [MCP server](https://modelcontextprotocol.io/) that gives your AI agent access to 38 financial tools. When you ask your agent to create a card, it calls `create_card` behind the scenes — you never need to learn the tool names.
+The CLI installs an [MCP server](https://modelcontextprotocol.io/) that gives your AI agent access to 40 financial tools. When you ask your agent to create a card, it calls `create_card` behind the scenes — you never need to learn the tool names.
 
 Every card is a **crypto card**: it automatically gets a virtual account (holds the balance) and a Polygon address (receives USDC). You can top up via crypto, PSE bank transfer, or internal transfer.
 
@@ -85,16 +87,18 @@ npx @bloque/cli login
 ## Tools Reference
 
 <details>
-<summary>Workflows — 12 high-level tools (click to expand)</summary>
+<summary>Workflows — 14 high-level tools (click to expand)</summary>
 
 | Tool | What it does |
 |------|-------------|
 | `get_profile` | Your identity and KYC status |
 | `verify_identity` | Start or check KYC verification |
 | `create_account` | Create a pocket + Polygon address |
-| `create_card` | Full card setup with optional spending restrictions and funding |
-| `create_disposable_card` | One-time card with exact funded amount |
+| `create_card` | Full card setup with optional spending restrictions, website binding, and funding |
+| `create_disposable_card` | One-time card with exact funded amount and optional website binding |
 | `fund_card` | Top up a card |
+| `resolve_card_for_website` | Find which card(s) to use for a given website |
+| `assign_card_to_website` | Associate a card with one or more website domains |
 | `topup_via_pse` | Load COP via PSE bank transfer |
 | `cashout_to_bank` | Cash out USD to a Colombian bank |
 | `configure_spending_rules` | Route transactions to different accounts by merchant type |
