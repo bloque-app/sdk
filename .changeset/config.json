@@ -10,6 +10,7 @@
       "@bloque/sdk-identity",
       "@bloque/sdk-orgs",
       "@bloque/sdk",
+      "@bloque/sdk-swap",
       "@bloque/cli"
     ]
   ],

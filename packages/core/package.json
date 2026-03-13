@@ -1,6 +1,6 @@
 {
   "name": "@bloque/sdk-core",
-  "version": "0.0.43",
+  "version": "0.0.45",
   "description": "Core utilities and types for Bloque SDK.",
   "type": "module",
   "keywords": [
@@ -37,7 +37,7 @@
   },
   "scripts": {
     "prerelease": "bun ../../scripts/prerelease.ts",
-    "release": "bun publish --provenance",
+    "release": "bun ../../scripts/safe-publish.ts",
     "build": "rslib build",
     "dev": "rslib build --watch",
     "clean": "rm -rf node_modules && rm -rf dist",
