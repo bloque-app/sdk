@@ -1,16 +1,28 @@
 import { SDK } from '../../packages/sdk/src/index';
 
 const bloque = new SDK({
-  origin: process.env.ORIGIN!,
+  origin: 'bloque-root',
   auth: {
     type: 'apiKey',
-    apiKey: process.env.API_KEY!,
+    apiKey: `sk_dev_327dc8b78f293b8ec0cd3b7c8ce90c5acd71f4cde0200172f5f599e62e7a6240`,
   },
-  mode: process.env.MODE as 'production' | 'sandbox',
+  // mode: 'sandbox',
+  baseUrl: 'http://localhost:3000',
 });
 
-const user = await bloque.connect('@nestor');
+const user = await bloque.register('david', {
+  type: 'individual',
+  profile: {
+    email: 'david@bloque.app',
+    firstName: 'David',
+    lastName: 'Doe',
+    phone: '+573178901234',
+    birthdate: '1990-01-01',
+    countryOfBirthCode: 'USA',
+    countryOfResidenceCode: 'USA',
+    personalIdType: 'SSN',
+    personalIdNumber: '1234567890',
+  },
+});
 
-const virtual = await user.accounts.virtual.create({}, { waitLedger: true });
-
-console.log('Virtual account created:', virtual.urn);
+console.log(user.accessToken);

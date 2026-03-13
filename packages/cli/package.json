@@ -1,0 +1,45 @@
+{
+  "name": "@bloque/cli",
+  "version": "0.0.1",
+  "description": "Bloque CLI — authenticate and expose SDK capabilities as an MCP server",
+  "type": "module",
+  "bin": {
+    "bloque": "./dist/bin.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
+  "scripts": {
+    "build": "tsup",
+    "release": "bun publish --provenance",
+    "dev": "bun run src/bin.ts",
+    "start": "node dist/bin.js",
+    "typecheck": "tsc --noEmit"
+  },
+  "tsup": {
+    "entry": ["src/bin.ts"],
+    "format": ["esm"],
+    "target": "node22",
+    "outDir": "dist",
+    "clean": true,
+    "banner": {
+      "js": "#!/usr/bin/env node"
+    }
+  },
+  "dependencies": {
+    "@bloque/sdk": "workspace:*",
+    "@inquirer/prompts": "^8.3.0",
+    "@modelcontextprotocol/sdk": "^1.27.1",
+    "commander": "^14.0.3",
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:",
+    "tsup": "^8.5.1",
+    "typescript": "catalog:"
+  }
+}

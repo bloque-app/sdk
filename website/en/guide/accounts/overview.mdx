@@ -148,6 +148,12 @@ const cards = await userSession.accounts.card.list();
 This ensures proper authentication and authorization for user-specific operations.
 :::
 
+## Account Webhooks
+
+All account types support webhook notifications for lifecycle events. Pass a `webhookUrl` when creating an account to receive real-time POST notifications when state transitions occur — such as when an account becomes active after on-chain settlement.
+
+[Learn more about Account Webhooks](/sdk/guide/accounts/webhooks)
+
 ## Best Practices
 
 1. **Use User Sessions**: Connect to user sessions for account operations
@@ -156,9 +162,11 @@ This ensures proper authentication and authorization for user-specific operation
 4. **Pagination**: Use pagination for large transaction lists
 5. **Error Handling**: Always use try-catch blocks
 6. **Test First**: Test in sandbox mode before production
+7. **Configure Webhooks**: Set up webhooks to react to account activation instead of polling
 
 ## Next Steps
 
+- [Account Webhooks](/sdk/guide/accounts/webhooks) - Real-time account lifecycle notifications
 - [Virtual Cards](/sdk/guide/accounts/cards) - Create and manage virtual cards
 - [Bancolombia](/sdk/guide/accounts/bancolombia) - Bancolombia account integration
 - [Transfers](/sdk/guide/accounts/transfers) - Transfer funds between accounts

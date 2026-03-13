@@ -26,43 +26,79 @@ This SDK is compatible with multiple JavaScript runtimes:
 - **Deno** Latest version
 - **Web/Browsers** Modern browsers with ES2020+ support
 
+## Use Bloque with AI Agents
+
+One command. Then just ask your agent.
+
+```bash
+npx @bloque/cli setup
+```
+
+After setup, talk to your agent naturally:
+
+- *"Create a card for food expenses, load it with $200"*
+- *"I need a $25 disposable card for this website"*
+- *"Show me my balances"*
+- *"Top up my account with 100,000 COP from my bank"*
+
+Supports **Cursor**, **Claude Desktop**, **Claude Code**, and **Antigravity** on macOS, Linux, and Windows.
+
+See the full CLI docs at [`packages/cli`](./packages/cli).
+
 ## Packages
 
 This monorepo contains the following packages:
 
-- **[@bloque/sdk](./packages/sdk)** - Main SDK package for Bloque platform integration
-- **[@bloque/sdk-core](./packages/core)** - Core utilities, HTTP client, and shared types
-- **[@bloque/sdk-orgs](./packages/orgs)** - Organizations API client
-- **[@bloque/sdk-compliance](./packages/compliance)** - Compliance and KYC verification API client
-- **[@bloque/sdk-accounts](./packages/accounts)** - Accounts and virtual cards API client
-- **[@bloque/sdk-identity](./packages/identity)** - Identity and aliases API client
+| Package | Description |
+|---------|-------------|
+| **[@bloque/sdk](./packages/sdk)** | Main SDK — aggregates all packages |
+| **[@bloque/sdk-core](./packages/core)** | Core utilities, HTTP client, and shared types |
+| **[@bloque/sdk-accounts](./packages/accounts)** | Accounts, cards, Polygon, and transfers |
+| **[@bloque/sdk-orgs](./packages/orgs)** | Organizations API |
+| **[@bloque/sdk-compliance](./packages/compliance)** | KYC verification and compliance |
+| **[@bloque/sdk-identity](./packages/identity)** | Identity and aliases |
+| **[@bloque/cli](./packages/cli)** | CLI + MCP server for AI agents |
 
 ## Installation
 
+### For AI agents (recommended)
+
 ```bash
+npx @bloque/cli setup
+```
+
+### For programmatic use
+
+```bash
+npm install @bloque/sdk
+# or
 bun add @bloque/sdk
 ```
 
 ## Quick Start
 
+### With AI Agents
+
+Run `npx @bloque/cli setup`, restart your agent, and start asking. No code needed.
+
+### With Code
+
 ```typescript
 import { SDK } from '@bloque/sdk';
 
 const bloque = new SDK({
-  origin: 'your-origin', // Required: your origin identifier
+  origin: 'your-origin',
   auth: {
     type: 'apiKey',
     apiKey: process.env.BLOQUE_API_KEY!,
   },
-  mode: 'production', // or 'sandbox'
-  platform: 'node', // optional: 'node' | 'bun' | 'deno'
+  mode: 'production',
 });
 
-// Connect to a user session
-const userSession = await bloque.connect('user-alias');
+const session = await bloque.connect('user-alias');
 
 // Create a virtual card
-const card = await userSession.accounts.card.create({
+const card = await session.accounts.card.create({
   urn: 'did:bloque:your-origin:user-alias',
   name: 'My Virtual Card',
 });
@@ -71,16 +107,14 @@ console.log('Card created:', card.urn);
 console.log('Last four digits:', card.lastFour);
 
 // Create a Polygon wallet
-const wallet = await userSession.accounts.polygon.create({
-  metadata: {
-    purpose: 'web3-transactions',
-  },
+const wallet = await session.accounts.polygon.create({
+  metadata: { purpose: 'web3-transactions' },
 });
 
 console.log('Polygon wallet created:', wallet.address);
 ```
 
-For detailed documentation, see the [@bloque/sdk package README](./packages/sdk/README.md).
+For detailed SDK documentation, see the [@bloque/sdk package README](./packages/sdk/README.md).
 
 ## Development
 

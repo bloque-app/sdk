@@ -1,0 +1,163 @@
+# CLI & MCP Server
+
+Use Bloque from your AI agent. One command to set up, then just ask.
+
+## Get Started
+
+```bash
+npx @bloque/cli setup
+```
+
+The wizard:
+
+1. Logs you in (WhatsApp or Email OTP)
+2. Finds your installed AI agents
+3. Configures everything automatically
+
+Restart your agent and you're ready.
+
+Already have a JWT? Skip the OTP:
+
+```bash
+npx @bloque/cli setup --jwt eyJhbGciOi...
+```
+
+## What You Can Ask Your Agent
+
+Once set up, just talk naturally:
+
+- **"Create a card for food expenses, load it with $200"**
+- **"I need a one-time $25 card for this website"**
+- **"Show me my balances and recent transactions"**
+- **"Top up my account with 100,000 COP from my bank"**
+- **"Freeze my card"**
+- **"Create two cards that share the same budget"**
+
+Your agent handles the accounts, cards, transfers, and reporting behind the scenes.
+
+## How It Works
+
+The CLI installs an [MCP server](https://modelcontextprotocol.io/) that gives your agent access to 38 financial tools — organized in two tiers:
+
+- **Workflows** (12 tools) — high-level operations like "create a card" or "show my finances." One call does everything.
+- **Primitives** (26 tools) — low-level control when you need it. One tool per SDK method.
+
+Every card is a **crypto card**: it automatically gets a virtual account (holds the balance) and a Polygon address (receives USDC). Top up via crypto, PSE bank transfer, or internal transfer.
+
+**Amounts are always human-readable.** Say "$50" for $50 USD or "100000" for 100,000 COP. No need to think about internal formats.
+
+**Spending restrictions use friendly names.** Say "food" instead of MCC code 5411. Available categories: `food`, `transport`, `ads`, `entertainment`, `health`, `shopping`, `travel`, `subscriptions`.
+
+## Commands
+
+| Command | What it does |
+|---------|-------------|
+| `bloque setup` | Wizard: log in + install MCP in your agents |
+| `bloque login` | Log in via WhatsApp/Email OTP or API key |
+| `bloque logout` | Clear your local session |
+| `bloque whoami` | Show who you're logged in as |
+| `bloque mcp` | Start the MCP server (stdio) |
+| `bloque mcp --http` | Start the MCP server over HTTP |
+
+### `bloque setup`
+
+| Option | Description |
+|--------|-------------|
+| `--jwt <token>` | JWT token (skips OTP) |
+| `--sandbox` | Use sandbox instead of production |
+
+### `bloque login`
+
+**OTP mode** (default):
+
+```bash
+npx @bloque/cli login
+```
+
+**API key mode** (for backend use):
+
+```bash
+npx @bloque/cli login --api-key sk_live_... --origin your-origin --alias user-alias
+```
+
+### `bloque mcp`
+
+```bash
+npx @bloque/cli mcp          # stdio (default)
+npx @bloque/cli mcp --http   # HTTP on port 3100
+```
+
+## Supported Agents
+
+| Agent | Platforms |
+|-------|-----------|
+| Cursor | macOS, Linux, Windows |
+| Claude Desktop | macOS, Windows |
+| Claude Code | macOS, Linux, Windows |
+| Antigravity (Google) | macOS, Linux, Windows |
+
+## Manual Configuration
+
+If you prefer to configure manually instead of using `bloque setup`:
+
+1. Log in:
+
+```bash
+npx @bloque/cli login
+```
+
+2. Add this to your agent's MCP config:
+
+```json
+{
+  "mcpServers": {
+    "bloque": {
+      "command": "npx",
+      "args": ["-y", "@bloque/cli", "mcp"]
+    }
+  }
+}
+```
+
+3. Restart your agent.
+
+## Tools Reference
+
+### Workflows (12 tools)
+
+High-level tools. One call handles multi-step operations.
+
+| Tool | What it does |
+|------|-------------|
+| `get_profile` | Your identity and KYC status |
+| `verify_identity` | Start or check identity verification |
+| `create_account` | Create a pocket + Polygon address |
+| `create_card` | Full card setup with optional restrictions and funding |
+| `create_disposable_card` | One-time card with exact funded amount |
+| `fund_card` | Top up a card |
+| `topup_via_pse` | Load COP via PSE bank transfer |
+| `cashout_to_bank` | Cash out USD to a Colombian bank |
+| `configure_spending_rules` | Route transactions to different accounts by merchant type |
+| `add_spending_category` | Add a spending category to a card |
+| `wallet_overview` | All accounts, balances, and recent transactions |
+| `card_summary` | Everything about a specific card |
+
+### Primitives (26 tools)
+
+Low-level tools. 1:1 with SDK methods for full control.
+
+| Domain | Tools |
+|--------|-------|
+| Accounts | `list_accounts`, `get_account`, `get_balance`, `get_all_balances` |
+| Virtual | `create_virtual_account`, `list_virtual_accounts` |
+| Cards | `create_raw_card`, `list_cards`, `freeze_card`, `activate_card`, `disable_card`, `update_card_metadata`, `rename_card` |
+| Polygon | `create_polygon_account`, `list_polygon_accounts` |
+| US Bank | `get_us_tos_link`, `create_us_account`, `list_us_accounts` |
+| Transfers | `transfer`, `batch_transfer` |
+| History | `list_transactions`, `list_account_movements` |
+| Swap | `find_rates`, `list_pse_banks`, `create_pse_order`, `create_bank_transfer_order` |
+
+## Requirements
+
+- Node.js 22+ or Bun 1+
+- A [Bloque](https://www.bloque.app) account
