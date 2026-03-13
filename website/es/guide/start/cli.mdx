@@ -28,6 +28,8 @@ Una vez configurado, solo habla naturalmente:
 
 - **"Crea una tarjeta para gastos de comida, cárgale $200"**
 - **"Necesito una tarjeta desechable de $25 para este sitio web"**
+- **"Asigna mi tarjeta a amazon.com"**
+- **"¿Qué tarjeta debo usar para netflix.com?"**
 - **"Muéstrame mis saldos y transacciones recientes"**
 - **"Carga 100,000 COP de mi banco a mi cuenta"**
 - **"Congela mi tarjeta"**
@@ -37,9 +39,9 @@ Tu agente maneja las cuentas, tarjetas, transferencias y reportes detrás de esc
 
 ## Cómo Funciona
 
-La CLI instala un [servidor MCP](https://modelcontextprotocol.io/) que le da a tu agente acceso a 38 herramientas financieras — organizadas en dos niveles:
+La CLI instala un [servidor MCP](https://modelcontextprotocol.io/) que le da a tu agente acceso a 40 herramientas financieras — organizadas en dos niveles:
 
-- **Workflows** (12 herramientas) — operaciones de alto nivel como "crear una tarjeta" o "mostrar mis finanzas." Una llamada hace todo.
+- **Workflows** (14 herramientas) — operaciones de alto nivel como "crear una tarjeta" o "buscar mi tarjeta para este sitio web." Una llamada hace todo.
 - **Primitivas** (26 herramientas) — control de bajo nivel cuando lo necesitas. Una herramienta por método del SDK.
 
 Cada tarjeta es una **tarjeta crypto**: automáticamente obtiene una cuenta virtual (guarda el saldo) y una dirección Polygon (recibe USDC). Recarga vía crypto, transferencia bancaria PSE, o transferencia interna.
@@ -123,7 +125,7 @@ npx @bloque/cli login
 
 ## Referencia de Herramientas
 
-### Workflows (12 herramientas)
+### Workflows (14 herramientas)
 
 Herramientas de alto nivel. Una llamada maneja operaciones de múltiples pasos.
 
@@ -132,9 +134,11 @@ Herramientas de alto nivel. Una llamada maneja operaciones de múltiples pasos.
 | `get_profile` | Tu identidad y estado KYC |
 | `verify_identity` | Iniciar o verificar la verificación de identidad |
 | `create_account` | Crear un pocket + dirección Polygon |
-| `create_card` | Configuración completa con restricciones y fondeo opcionales |
-| `create_disposable_card` | Tarjeta de un solo uso con monto exacto |
+| `create_card` | Configuración completa con restricciones, sitios web asignados, y fondeo opcionales |
+| `create_disposable_card` | Tarjeta de un solo uso con monto exacto y sitios web opcionales |
 | `fund_card` | Recargar una tarjeta |
+| `resolve_card_for_website` | Encontrar qué tarjeta(s) usar para un sitio web dado |
+| `assign_card_to_website` | Asociar una tarjeta con uno o más dominios web |
 | `topup_via_pse` | Cargar COP vía transferencia PSE |
 | `cashout_to_bank` | Retirar USD a un banco colombiano |
 | `configure_spending_rules` | Enrutar transacciones a diferentes cuentas por tipo de comercio |

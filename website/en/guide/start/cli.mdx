@@ -28,6 +28,8 @@ Once set up, just talk naturally:
 
 - **"Create a card for food expenses, load it with $200"**
 - **"I need a one-time $25 card for this website"**
+- **"Assign my card to amazon.com"**
+- **"Which card should I use for netflix.com?"**
 - **"Show me my balances and recent transactions"**
 - **"Top up my account with 100,000 COP from my bank"**
 - **"Freeze my card"**
@@ -37,9 +39,9 @@ Your agent handles the accounts, cards, transfers, and reporting behind the scen
 
 ## How It Works
 
-The CLI installs an [MCP server](https://modelcontextprotocol.io/) that gives your agent access to 38 financial tools — organized in two tiers:
+The CLI installs an [MCP server](https://modelcontextprotocol.io/) that gives your agent access to 40 financial tools — organized in two tiers:
 
-- **Workflows** (12 tools) — high-level operations like "create a card" or "show my finances." One call does everything.
+- **Workflows** (14 tools) — high-level operations like "create a card" or "find my card for this website." One call does everything.
 - **Primitives** (26 tools) — low-level control when you need it. One tool per SDK method.
 
 Every card is a **crypto card**: it automatically gets a virtual account (holds the balance) and a Polygon address (receives USDC). Top up via crypto, PSE bank transfer, or internal transfer.
@@ -123,7 +125,7 @@ npx @bloque/cli login
 
 ## Tools Reference
 
-### Workflows (12 tools)
+### Workflows (14 tools)
 
 High-level tools. One call handles multi-step operations.
 
@@ -132,9 +134,11 @@ High-level tools. One call handles multi-step operations.
 | `get_profile` | Your identity and KYC status |
 | `verify_identity` | Start or check identity verification |
 | `create_account` | Create a pocket + Polygon address |
-| `create_card` | Full card setup with optional restrictions and funding |
-| `create_disposable_card` | One-time card with exact funded amount |
+| `create_card` | Full card setup with optional restrictions, website binding, and funding |
+| `create_disposable_card` | One-time card with exact funded amount and optional website binding |
 | `fund_card` | Top up a card |
+| `resolve_card_for_website` | Find which card(s) to use for a given website |
+| `assign_card_to_website` | Associate a card with one or more website domains |
 | `topup_via_pse` | Load COP via PSE bank transfer |
 | `cashout_to_bank` | Cash out USD to a Colombian bank |
 | `configure_spending_rules` | Route transactions to different accounts by merchant type |
