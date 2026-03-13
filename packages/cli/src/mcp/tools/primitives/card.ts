@@ -11,7 +11,7 @@ export function registerCardTools(server: McpServer, clients: BloqueClients) {
       inputSchema: {
         ledgerId: z.string(),
         name: z.string().optional(),
-        metadata: z.record(z.unknown()).optional(),
+        metadata: z.record(z.string(), z.unknown()).optional(),
         webhookUrl: z.string().optional(),
       },
     },
@@ -93,7 +93,7 @@ export function registerCardTools(server: McpServer, clients: BloqueClients) {
       description: "Update the metadata on a card. Metadata controls spending behavior (spending_control, mcc_whitelist, priority_mcc). For a friendlier interface, use 'configure_spending_rules' workflow.",
       inputSchema: {
         urn: z.string(),
-        metadata: z.record(z.unknown()),
+        metadata: z.record(z.string(), z.unknown()),
       },
     },
     async ({ urn, metadata }) => {

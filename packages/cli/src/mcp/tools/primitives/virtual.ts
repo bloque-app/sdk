@@ -11,7 +11,7 @@ export function registerVirtualTools(server: McpServer, clients: BloqueClients) 
       inputSchema: {
         name: z.string().optional(),
         ledgerId: z.string().optional(),
-        metadata: z.record(z.string()).optional(),
+        metadata: z.record(z.string(), z.string()).optional(),
       },
     },
     async ({ name, ledgerId, metadata }) => {
