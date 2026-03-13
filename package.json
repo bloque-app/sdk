@@ -20,6 +20,7 @@
     "dev": "bun run -r --parallel --filter='./packages/*' dev",
     "changeset": "changeset",
     "version": "changeset version",
+    "bump": "bun scripts/bump.ts",
     "release": "bun run -r --parallel --filter='./packages/*' release"
   },
   "homepage": "git+https://github.com/bloque-app/sdk.git#readme",
