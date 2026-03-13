@@ -1,17 +1,20 @@
-import { z } from 'zod';
+import { z } from 'zod/v4';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { BloqueClients } from '../../types.ts';
 import { toRaw, humanizeBalance } from '../../currency.ts';
 
 export function registerFundCardWorkflows(server: McpServer, clients: BloqueClients) {
-  server.tool(
+  server.registerTool(
     'fund_card',
-    "Add funds to a card (tops up its backing account). Provide the card URN and a source — the tool resolves the card's backing account automatically. If multiple cards share the same account, all see the updated balance.",
     {
-      cardUrn: z.string(),
-      sourceUrn: z.string(),
-      amount: z.string(),
-      currency: z.string().optional().default('USD'),
+      description:
+        "Add funds to a card (tops up its backing account). Provide the card URN and a source — the tool resolves the card's backing account automatically. If multiple cards share the same account, all see the updated balance.",
+      inputSchema: {
+        cardUrn: z.string(),
+        sourceUrn: z.string(),
+        amount: z.string(),
+        currency: z.string().optional().default('USD'),
+      },
     },
     async ({ cardUrn, sourceUrn, amount, currency }) => {
       const cardAccount = await clients.accounts.get(cardUrn);

@@ -1,23 +1,26 @@
-import { z } from 'zod';
+import { z } from 'zod/v4';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { BloqueClients } from '../../types.ts';
 import { toRaw } from '../../currency.ts';
 
 export function registerTopupWorkflows(server: McpServer, clients: BloqueClients) {
-  server.tool(
+  server.registerTool(
     'topup_via_pse',
-    'Top up an account with Colombian pesos (COP) via PSE bank transfer. Finds the best exchange rate, creates the PSE order, and returns a checkout URL for the user to complete payment at their bank.',
     {
-      accountUrn: z.string(),
-      amount: z.string(),
-      bankCode: z.string(),
-      userType: z.union([z.literal(0), z.literal(1)]),
-      customerEmail: z.string(),
-      userLegalIdType: z.enum(['CC', 'NIT', 'CE']),
-      userLegalId: z.string(),
-      fullName: z.string(),
-      phoneNumber: z.string().optional(),
-      webhookUrl: z.string().optional(),
+      description:
+        'Top up an account with Colombian pesos (COP) via PSE bank transfer. Finds the best exchange rate, creates the PSE order, and returns a checkout URL for the user to complete payment at their bank.',
+      inputSchema: {
+        accountUrn: z.string(),
+        amount: z.string(),
+        bankCode: z.string(),
+        userType: z.union([z.literal(0), z.literal(1)]),
+        customerEmail: z.string(),
+        userLegalIdType: z.enum(['CC', 'NIT', 'CE']),
+        userLegalId: z.string(),
+        fullName: z.string(),
+        phoneNumber: z.string().optional(),
+        webhookUrl: z.string().optional(),
+      },
     },
     async ({
       accountUrn, amount, bankCode, userType,
@@ -75,20 +78,23 @@ export function registerTopupWorkflows(server: McpServer, clients: BloqueClients
     },
   );
 
-  server.tool(
+  server.registerTool(
     'cashout_to_bank',
-    'Cash out USD to Colombian pesos via bank transfer. Converts from a Bloque account and deposits COP into any Colombian bank account. Handles rate lookup and order creation.',
     {
-      sourceAccountUrn: z.string(),
-      amount: z.string(),
-      currency: z.string().optional().default('USD'),
-      bankName: z.string(),
-      bankAccountType: z.enum(['savings', 'checking']),
-      bankAccountNumber: z.string(),
-      bankAccountHolderName: z.string(),
-      idType: z.enum(['CC', 'CE', 'NIT', 'PP']),
-      idNumber: z.string(),
-      webhookUrl: z.string().optional(),
+      description:
+        'Cash out USD to Colombian pesos via bank transfer. Converts from a Bloque account and deposits COP into any Colombian bank account. Handles rate lookup and order creation.',
+      inputSchema: {
+        sourceAccountUrn: z.string(),
+        amount: z.string(),
+        currency: z.string().optional().default('USD'),
+        bankName: z.string(),
+        bankAccountType: z.enum(['savings', 'checking']),
+        bankAccountNumber: z.string(),
+        bankAccountHolderName: z.string(),
+        idType: z.enum(['CC', 'CE', 'NIT', 'PP']),
+        idNumber: z.string(),
+        webhookUrl: z.string().optional(),
+      },
     },
     async ({
       sourceAccountUrn, amount, currency, bankName,

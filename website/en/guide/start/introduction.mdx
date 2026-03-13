@@ -10,6 +10,7 @@ The Bloque SDK is a TypeScript-first library that simplifies integration with Bl
 - **KYC Verification**: Implement Know Your Customer (KYC) compliance workflows
 - **Virtual Cards**: Issue virtual cards instantly for your users
 - **Compliance**: Meet regulatory requirements with built-in compliance tools
+- **AI Agent Integration**: Expose the full SDK to AI code agents via MCP with the [Bloque CLI](/sdk/guide/start/cli)
 
 ## Key Features
 
@@ -86,15 +87,26 @@ Issue virtual cards for employees and track spending with detailed transaction d
 
 Add financial features to your SaaS product without building infrastructure from scratch.
 
+### AI Agent Integration
+
+Use Bloque directly from your AI code agent. The CLI installs an MCP server that exposes 38 financial tools — from creating cards to moving funds — all through natural language.
+
+```bash
+npx @bloque/cli setup
+```
+
+Supports Cursor, Claude Desktop, Claude Code, and Antigravity.
+
 ## Architecture
 
-The Bloque SDK is organized into three main modules:
+The Bloque SDK is organized into focused modules plus a CLI for AI agents:
 
 ```
 @bloque/sdk
 ├── orgs        # Organization management
 ├── compliance  # KYC and compliance
-└── accounts    # Virtual cards and accounts
+├── accounts    # Virtual cards and accounts
+└── cli         # CLI + MCP server for AI agents
 ```
 
 Each module is independently accessible but works seamlessly together to provide a complete financial infrastructure solution.
@@ -104,6 +116,7 @@ Each module is independently accessible but works seamlessly together to provide
 Ready to get started? Follow our Quick Start guide to make your first API call in minutes.
 
 - [Quick Start](/sdk/guide/start/getting-started) - Get up and running quickly
+- [CLI & MCP Server](/sdk/guide/start/cli) - Use Bloque with AI agents
 - [Organizations Guide](/sdk/guide/features/organizations) - Learn about organization management
 - [Compliance Guide](/sdk/guide/features/compliance) - Implement KYC verification
 - [Accounts Guide](/sdk/guide/accounts/overview) - Create virtual cards

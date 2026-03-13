@@ -9,10 +9,11 @@ export class SessionStore {
   static SESSION_PATH = path.join(SessionStore.SESSION_DIR, 'session.json');
 
   save(session: PersistedSession): void {
-    fs.mkdirSync(SessionStore.SESSION_DIR, { recursive: true });
+    fs.mkdirSync(SessionStore.SESSION_DIR, { recursive: true, mode: 0o700 });
     fs.writeFileSync(
       SessionStore.SESSION_PATH,
       JSON.stringify(session, null, 2),
+      { mode: 0o600 },
     );
   }
 

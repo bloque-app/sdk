@@ -1,22 +1,25 @@
-import { z } from 'zod';
+import { z } from 'zod/v4';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { BloqueClients } from '../../types.ts';
 import { toRaw } from '../../currency.ts';
 import { resolveMccs } from '../../categories.ts';
 
 export function registerSpendingRulesWorkflows(server: McpServer, clients: BloqueClients) {
-  server.tool(
+  server.registerTool(
     'configure_spending_rules',
-    "Advanced: configure smart spending rules that route a card's transactions across MULTIPLE accounts based on merchant category. Each route maps categories/MCCs to an account. Purchases are checked in route order; first match is debited. Routes without categories act as catch-all. Use create_card with allowedCategories for simple restrictions; use this only when one card needs to draw from multiple balance pools.",
     {
-      cardUrn: z.string(),
-      routes: z.array(
-        z.object({
-          accountUrn: z.string(),
-          categories: z.array(z.string()).optional(),
-          mccs: z.array(z.string()).optional(),
-        }),
-      ),
+      description:
+        "Advanced: configure smart spending rules that route a card's transactions across MULTIPLE accounts based on merchant category. Each route maps categories/MCCs to an account. Purchases are checked in route order; first match is debited. Routes without categories act as catch-all. Use create_card with allowedCategories for simple restrictions; use this only when one card needs to draw from multiple balance pools.",
+      inputSchema: {
+        cardUrn: z.string(),
+        routes: z.array(
+          z.object({
+            accountUrn: z.string(),
+            categories: z.array(z.string()).optional(),
+            mccs: z.array(z.string()).optional(),
+          }),
+        ),
+      },
     },
     async ({ cardUrn, routes }) => {
       const allMccs: string[] = [];
@@ -67,17 +70,20 @@ export function registerSpendingRulesWorkflows(server: McpServer, clients: Bloqu
     },
   );
 
-  server.tool(
+  server.registerTool(
     'add_spending_category',
-    "Add a new spending category to a card's smart routing. Creates a new account for the category and wires it into the routing rules. If the card doesn't have smart routing yet, it is automatically enabled.",
     {
-      cardUrn: z.string(),
-      categoryName: z.string(),
-      categories: z.array(z.string()).optional(),
-      mccs: z.array(z.string()).optional(),
-      fundFromUrn: z.string().optional(),
-      fundAmount: z.string().optional(),
-      currency: z.string().optional().default('USD'),
+      description:
+        "Add a new spending category to a card's smart routing. Creates a new account for the category and wires it into the routing rules. If the card doesn't have smart routing yet, it is automatically enabled.",
+      inputSchema: {
+        cardUrn: z.string(),
+        categoryName: z.string(),
+        categories: z.array(z.string()).optional(),
+        mccs: z.array(z.string()).optional(),
+        fundFromUrn: z.string().optional(),
+        fundAmount: z.string().optional(),
+        currency: z.string().optional().default('USD'),
+      },
     },
     async ({ cardUrn, categoryName, categories, mccs, fundFromUrn, fundAmount, currency }) => {
       const pocket = await clients.accounts.virtual.create({ name: categoryName });

@@ -2,10 +2,12 @@ import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { BloqueClients } from '../../types.ts';
 
 export function registerIdentityWorkflows(server: McpServer, clients: BloqueClients) {
-  server.tool(
+  server.registerTool(
     'get_profile',
-    "Get the authenticated user's identity profile and verification status. Returns name, email, phone, legal ID, address, and KYC status (approved/awaiting/rejected). Use this as the first call to understand who the user is, check if they can create cards (requires KYC approval), and to auto-fill forms like PSE top-ups. If KYC is not approved, tell the user to run verify_identity first.",
-    {},
+    {
+      description:
+        "Get the authenticated user's identity profile and verification status. Returns name, email, phone, legal ID, address, and KYC status (approved/awaiting/rejected). Use this as the first call to understand who the user is, check if they can create cards (requires KYC approval), and to auto-fill forms like PSE top-ups. If KYC is not approved, tell the user to run verify_identity first.",
+    },
     async () => {
       const me = await clients.identity.me();
       let kyc: any = {};
@@ -40,10 +42,12 @@ export function registerIdentityWorkflows(server: McpServer, clients: BloqueClie
     },
   );
 
-  server.tool(
+  server.registerTool(
     'verify_identity',
-    'Start or check identity verification (KYC). If the user has not started verification, initiates it and returns a URL to complete the process. The user MUST complete KYC before they can create cards. Call get_profile to check status afterward.',
-    {},
+    {
+      description:
+        'Start or check identity verification (KYC). If the user has not started verification, initiates it and returns a URL to complete the process. The user MUST complete KYC before they can create cards. Call get_profile to check status afterward.',
+    },
     async () => {
       const me = await clients.identity.me();
       let kyc: any = {};

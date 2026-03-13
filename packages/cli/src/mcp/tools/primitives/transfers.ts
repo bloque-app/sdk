@@ -1,18 +1,20 @@
-import { z } from 'zod';
+import { z } from 'zod/v4';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { BloqueClients } from '../../types.ts';
 import { toRaw, toHuman } from '../../currency.ts';
 
 export function registerTransferTools(server: McpServer, clients: BloqueClients) {
-  server.tool(
+  server.registerTool(
     'transfer',
-    "Transfer funds between two accounts. Specify source/destination URN, amount in human-readable format (e.g. '100' for $100), and currency ('USD' or 'COP'). The transfer is queued asynchronously. Returns a queueId to track.",
     {
-      sourceUrn: z.string(),
-      destinationUrn: z.string(),
-      amount: z.string(),
-      currency: z.string().default('USD'),
-      metadata: z.record(z.unknown()).optional(),
+      description: "Transfer funds between two accounts. Specify source/destination URN, amount in human-readable format (e.g. '100' for $100), and currency ('USD' or 'COP'). The transfer is queued asynchronously. Returns a queueId to track.",
+      inputSchema: {
+        sourceUrn: z.string(),
+        destinationUrn: z.string(),
+        amount: z.string(),
+        currency: z.string().default('USD'),
+        metadata: z.record(z.unknown()).optional(),
+      },
     },
     async ({ sourceUrn, destinationUrn, amount, currency, metadata }) => {
       const { amount: rawAmount, asset } = toRaw(amount, currency);
@@ -34,23 +36,25 @@ export function registerTransferTools(server: McpServer, clients: BloqueClients)
     },
   );
 
-  server.tool(
+  server.registerTool(
     'batch_transfer',
-    'Execute multiple transfers in a single batch. Useful for payroll, distributions. Operations are auto-chunked into groups of 80.',
     {
-      reference: z.string(),
-      operations: z.array(
-        z.object({
-          fromUrn: z.string(),
-          toUrn: z.string(),
-          reference: z.string(),
-          amount: z.string(),
-          currency: z.string().default('USD'),
-          metadata: z.record(z.unknown()).optional(),
-        }),
-      ),
-      metadata: z.record(z.unknown()).optional(),
-      webhookUrl: z.string().optional(),
+      description: 'Execute multiple transfers in a single batch. Useful for payroll, distributions. Operations are auto-chunked into groups of 80.',
+      inputSchema: {
+        reference: z.string(),
+        operations: z.array(
+          z.object({
+            fromUrn: z.string(),
+            toUrn: z.string(),
+            reference: z.string(),
+            amount: z.string(),
+            currency: z.string().default('USD'),
+            metadata: z.record(z.unknown()).optional(),
+          }),
+        ),
+        metadata: z.record(z.unknown()).optional(),
+        webhookUrl: z.string().optional(),
+      },
     },
     async ({ reference, operations, metadata, webhookUrl }) => {
       const mappedOps = operations.map((op) => {

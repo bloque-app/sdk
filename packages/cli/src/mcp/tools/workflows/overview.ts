@@ -1,13 +1,15 @@
-import { z } from 'zod';
+import { z } from 'zod/v4';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { BloqueClients } from '../../types.ts';
 import { toHuman, humanizeBalance } from '../../currency.ts';
 
 export function registerOverviewWorkflows(server: McpServer, clients: BloqueClients) {
-  server.tool(
+  server.registerTool(
     'wallet_overview',
-    "Get a complete financial overview in a single call. Returns all accounts grouped by type, with polygon addresses and attached cards, aggregated balances, and recent transactions. Use as the starting point when the user asks 'what do I have?'.",
-    {},
+    {
+      description:
+        "Get a complete financial overview in a single call. Returns all accounts grouped by type, with polygon addresses and attached cards, aggregated balances, and recent transactions. Use as the starting point when the user asks 'what do I have?'.",
+    },
     async () => {
       const { accounts } = await clients.accounts.list();
       const rawBalances = await clients.accounts.balances();
@@ -64,12 +66,15 @@ export function registerOverviewWorkflows(server: McpServer, clients: BloqueClie
     },
   );
 
-  server.tool(
+  server.registerTool(
     'card_summary',
-    "Get everything about a specific card: details (lastFour, status, detailsUrl), backing account, polygon address, balance, MCC restrictions, smart routing config, and recent movements. The detailsUrl is a PCI-compliant link for the USER to open to view full card number/CVV/expiry — the agent cannot read these.",
     {
-      cardUrn: z.string(),
-      movementsLimit: z.number().optional().default(10),
+      description:
+        "Get everything about a specific card: details (lastFour, status, detailsUrl), backing account, polygon address, balance, MCC restrictions, smart routing config, and recent movements. The detailsUrl is a PCI-compliant link for the USER to open to view full card number/CVV/expiry — the agent cannot read these.",
+      inputSchema: {
+        cardUrn: z.string(),
+        movementsLimit: z.number().optional().default(10),
+      },
     },
     async ({ cardUrn, movementsLimit }) => {
       const card: any = await clients.accounts.get(cardUrn);

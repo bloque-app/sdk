@@ -1,19 +1,21 @@
-import { z } from 'zod';
+import { z } from 'zod/v4';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { BloqueClients } from '../../types.ts';
 import { toHuman, resolveAsset } from '../../currency.ts';
 
 export function registerHistoryTools(server: McpServer, clients: BloqueClients) {
-  server.tool(
+  server.registerTool(
     'list_transactions',
-    'List transaction history across ALL accounts. Supports filtering by currency, date range, direction (in/out), and pagination. Use this for a global view of all money movement.',
     {
-      currency: z.string().optional(),
-      limit: z.number().optional(),
-      before: z.string().optional(),
-      after: z.string().optional(),
-      direction: z.enum(['in', 'out']).optional(),
-      next: z.string().optional(),
+      description: 'List transaction history across ALL accounts. Supports filtering by currency, date range, direction (in/out), and pagination. Use this for a global view of all money movement.',
+      inputSchema: {
+        currency: z.string().optional(),
+        limit: z.number().optional(),
+        before: z.string().optional(),
+        after: z.string().optional(),
+        direction: z.enum(['in', 'out']).optional(),
+        next: z.string().optional(),
+      },
     },
     async ({ currency, limit, before, after, direction, next }) => {
       const asset = currency ? resolveAsset(currency) : undefined;
@@ -49,18 +51,20 @@ export function registerHistoryTools(server: McpServer, clients: BloqueClients) 
     },
   );
 
-  server.tool(
+  server.registerTool(
     'list_account_movements',
-    'List transaction history for a SPECIFIC account by URN. Shows deposits, withdrawals, and transfers with human-readable amounts.',
     {
-      urn: z.string(),
-      currency: z.string().optional(),
-      limit: z.number().optional(),
-      before: z.string().optional(),
-      after: z.string().optional(),
-      direction: z.enum(['in', 'out']).optional(),
-      pocket: z.enum(['main', 'pending']).optional(),
-      next: z.string().optional(),
+      description: 'List transaction history for a SPECIFIC account by URN. Shows deposits, withdrawals, and transfers with human-readable amounts.',
+      inputSchema: {
+        urn: z.string(),
+        currency: z.string().optional(),
+        limit: z.number().optional(),
+        before: z.string().optional(),
+        after: z.string().optional(),
+        direction: z.enum(['in', 'out']).optional(),
+        pocket: z.enum(['main', 'pending']).optional(),
+        next: z.string().optional(),
+      },
     },
     async ({ urn, currency, limit, before, after, direction, pocket, next }) => {
       const result = await clients.accounts.movements({
