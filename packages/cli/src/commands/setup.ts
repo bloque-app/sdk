@@ -229,17 +229,18 @@ async function runOtpLogin(mode: 'production' | 'sandbox'): Promise<void> {
 export const setupCommand = new Command('setup')
   .description('Set up Bloque MCP in your AI code agents')
   .option('--web', 'Authenticate via browser')
+  .option('--host <url>', 'Copilot app URL (only with --web)')
   .option('--jwt <token>', 'JWT token for authentication (skips OTP)')
   .option('--sandbox', 'Use sandbox environment instead of production')
   .action(async (opts) => {
-    const { web, jwt, sandbox } = opts as { web?: boolean; jwt?: string; sandbox?: boolean };
+    const { web, host, jwt, sandbox } = opts as { web?: boolean; host?: string; jwt?: string; sandbox?: boolean };
     const mode = sandbox ? 'sandbox' : 'production';
 
     console.log('\n  Bloque Setup Wizard\n');
 
     // --- Step 1: Authenticate ---
     if (web) {
-      const session = await startWebAuth(mode);
+      const session = await startWebAuth(mode, host);
       store.save(session);
     } else if (jwt) {
       store.save({

@@ -1,6 +1,6 @@
-import http from 'node:http';
-import crypto from 'node:crypto';
 import { exec } from 'node:child_process';
+import crypto from 'node:crypto';
+import http from 'node:http';
 
 import { SessionStore } from '../session/store.ts';
 import type { PersistedSession } from '../session/types.ts';
@@ -10,21 +10,24 @@ import { portalAnimation } from '../ui/portal.ts';
 const TIMEOUT_MS = 5 * 60 * 1000;
 const MAX_PORT_RETRIES = 3;
 
-function resolveCopilotUrl(mode: 'production' | 'sandbox'): string {
-  if (process.env.BLOQUE_COPILOT_URL) {
-    return process.env.BLOQUE_COPILOT_URL;
-  }
+function resolveCopilotUrl(
+  mode: 'production' | 'sandbox',
+  host?: string,
+): string {
+  if (host) return host;
+  if (process.env.BLOQUE_COPILOT_URL) return process.env.BLOQUE_COPILOT_URL;
   return mode === 'sandbox'
     ? 'https://copilot-dev.bloque.app'
     : 'https://copilot.bloque.app';
 }
 
 function openBrowser(url: string): void {
-  const cmd = process.platform === 'darwin'
-    ? `open "${url}"`
-    : process.platform === 'win32'
-      ? `start "" "${url}"`
-      : `xdg-open "${url}"`;
+  const cmd =
+    process.platform === 'darwin'
+      ? `open "${url}"`
+      : process.platform === 'win32'
+        ? `start "" "${url}"`
+        : `xdg-open "${url}"`;
   exec(cmd, () => {});
 }
 
@@ -51,6 +54,7 @@ function listenOnRandomPort(server: http.Server): Promise<number> {
 
 interface CallbackResult {
   token: string;
+  apiUrl?: string;
 }
 
 function startCallbackServer(
@@ -73,21 +77,28 @@ function startCallbackServer(
 
     if (req.method === 'POST' && req.url === '/callback') {
       let body = '';
-      req.on('data', (chunk: Buffer) => { body += chunk; });
+      req.on('data', (chunk: Buffer) => {
+        body += chunk;
+      });
       req.on('end', () => {
         try {
           const data = JSON.parse(body);
 
           if (data.nonce !== nonce) {
             res.writeHead(403, { 'Content-Type': 'application/json' });
-            res.end(JSON.stringify({ error: 'invalid_nonce', message: 'Nonce does not match' }));
+            res.end(
+              JSON.stringify({
+                error: 'invalid_nonce',
+                message: 'Nonce does not match',
+              }),
+            );
             return;
           }
 
           res.writeHead(200, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify({ success: true }));
 
-          resolveToken({ token: data.token });
+          resolveToken({ token: data.token, apiUrl: data.api_url });
         } catch {
           res.writeHead(400, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify({ error: 'invalid_body' }));
@@ -103,8 +114,11 @@ function startCallbackServer(
   return { server, tokenPromise };
 }
 
-export async function startWebAuth(mode: 'production' | 'sandbox'): Promise<PersistedSession> {
-  const copilotUrl = resolveCopilotUrl(mode);
+export async function startWebAuth(
+  mode: 'production' | 'sandbox',
+  host?: string,
+): Promise<PersistedSession> {
+  const copilotUrl = resolveCopilotUrl(mode, host);
   const nonce = crypto.randomBytes(32).toString('hex');
   const { server, tokenPromise } = startCallbackServer(nonce, copilotUrl);
 
@@ -114,7 +128,10 @@ export async function startWebAuth(mode: 'production' | 'sandbox'): Promise<Pers
       port = await listenOnRandomPort(server);
       break;
     } catch (err: unknown) {
-      const isAddrInUse = err instanceof Error && 'code' in err && (err as NodeJS.ErrnoException).code === 'EADDRINUSE';
+      const isAddrInUse =
+        err instanceof Error &&
+        'code' in err &&
+        (err as NodeJS.ErrnoException).code === 'EADDRINUSE';
       if (!isAddrInUse || attempt === MAX_PORT_RETRIES - 1) {
         throw err;
       }
@@ -129,7 +146,7 @@ export async function startWebAuth(mode: 'production' | 'sandbox'): Promise<Pers
 
   console.log('\n🔑 Opening browser for authorization...\n');
   console.log('   Waiting for you to authorize in the browser.');
-  console.log('   If the browser didn\'t open, visit:\n');
+  console.log("   If the browser didn't open, visit:\n");
   console.log(`   ${authUrl}\n`);
 
   openBrowser(authUrl);
@@ -165,13 +182,16 @@ export async function startWebAuth(mode: 'production' | 'sandbox'): Promise<Pers
       origin: copilotUrl,
       mode,
       authType: 'jwt',
+      apiUrl: result.apiUrl,
       createdAt: new Date().toISOString(),
     };
 
     try {
       store.save(session);
     } catch {
-      console.warn('\n  ⚠ Could not write credentials to ~/.bloque/session.json');
+      console.warn(
+        '\n  ⚠ Could not write credentials to ~/.bloque/session.json',
+      );
       console.warn('    Printing token so you can save it manually:\n');
       console.log(result.token);
     }
