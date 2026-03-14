@@ -33,12 +33,16 @@ Every card is a **crypto card**: it automatically gets a virtual account (holds 
 
 ## Supported Agents
 
-| Agent | Platforms |
-|-------|-----------|
-| Cursor | macOS, Linux, Windows |
-| Claude Desktop | macOS, Windows |
-| Claude Code | macOS, Linux, Windows |
-| Antigravity (Google) | macOS, Linux, Windows |
+| Agent | Platforms | Auto-Setup |
+|-------|-----------|------------|
+| Cursor | macOS, Linux, Windows | Yes |
+| Claude Desktop | macOS, Linux, Windows | Yes |
+| Claude Code | macOS, Linux, Windows | Yes |
+| Antigravity (Google) | macOS, Linux, Windows | Yes |
+| Windsurf | macOS, Linux, Windows | Yes |
+| VS Code (Copilot) | macOS, Linux, Windows | Yes |
+| Zed | macOS, Linux | Yes |
+| JetBrains (AI Assistant) | macOS, Linux, Windows | Manual |
 
 ## Commands
 
@@ -59,6 +63,43 @@ Every card is a **crypto card**: it automatically gets a virtual account (holds 
 
 **`bloque mcp`** — `--http` for HTTP transport, `--port <port>` to set port (default 3100).
 
+## Download Binary (No Node.js Required)
+
+If you don't have Node.js installed, download a standalone binary from [GitHub Releases](https://github.com/bloque-app/sdk/releases):
+
+| Platform | Binary |
+|----------|--------|
+| macOS (Apple Silicon) | `bloque-darwin-arm64` |
+| macOS (Intel) | `bloque-darwin-x64` |
+| Linux (x86_64) | `bloque-linux-x64` |
+| Linux (ARM) | `bloque-linux-arm64` |
+| Windows (x64) | `bloque-windows-x64.exe` |
+
+**macOS / Linux:**
+
+```bash
+# Download (replace PLATFORM with your target, e.g. darwin-arm64)
+curl -fsSL https://github.com/bloque-app/sdk/releases/latest/download/bloque-PLATFORM -o bloque
+
+# Make executable
+chmod +x bloque
+
+# Move to PATH
+sudo mv bloque /usr/local/bin/bloque
+
+# Run setup
+bloque setup
+```
+
+> **macOS Gatekeeper:** If macOS blocks the binary, run:
+> `xattr -d com.apple.quarantine /usr/local/bin/bloque`
+
+**Windows:**
+
+Download `bloque-windows-x64.exe` from the release page, rename to `bloque.exe`, and add its directory to your `PATH`.
+
+When running via the binary, `bloque setup` automatically configures your agents to use the binary path instead of `npx`.
+
 ## Manual Setup
 
 If you'd rather configure manually:
@@ -69,7 +110,56 @@ If you'd rather configure manually:
 npx @bloque/cli login
 ```
 
-2. Add this to your agent's MCP config file:
+2. Add the config for your agent:
+
+**Cursor, Claude Desktop, Antigravity, Windsurf** — add to the agent's MCP config file:
+
+```json
+{
+  "mcpServers": {
+    "bloque": {
+      "command": "npx",
+      "args": ["-y", "@bloque/cli", "mcp"]
+    }
+  }
+}
+```
+
+**Claude Code** — run:
+
+```bash
+claude mcp add bloque -- npx -y @bloque/cli mcp
+```
+
+**VS Code (Copilot)** — add to `.vscode/mcp.json` or user-level MCP config:
+
+```json
+{
+  "servers": {
+    "bloque": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "@bloque/cli", "mcp"]
+    }
+  }
+}
+```
+
+**Zed** — add to `~/.config/zed/settings.json`:
+
+```json
+{
+  "context_servers": {
+    "bloque": {
+      "source": "custom",
+      "command": "npx",
+      "args": ["-y", "@bloque/cli", "mcp"]
+    }
+  }
+}
+```
+
+**JetBrains (AI Assistant)** — open Settings > Tools > AI Assistant > Model Context Protocol (MCP), click Add, select STDIO, and paste:
 
 ```json
 {
@@ -144,7 +234,8 @@ Restrict cards with friendly names — no need to memorize MCC codes:
 
 ## Requirements
 
-- Node.js 22+ or Bun 1+
+- **Via npm:** Node.js 22+ or Bun 1+
+- **Via binary:** No runtime needed — download from [GitHub Releases](https://github.com/bloque-app/sdk/releases)
 - A [Bloque](https://www.bloque.app) account
 
 ## License

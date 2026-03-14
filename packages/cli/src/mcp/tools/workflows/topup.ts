@@ -61,13 +61,13 @@ export function registerTopupWorkflows(server: McpServer, clients: BloqueClients
         },
       });
 
-      const checkoutUrl = (orderResult as any).execution?.result?.how?.url;
+      const checkoutUrl = orderResult.execution?.result?.how?.url;
       const result = {
         order: {
-          id: (orderResult as any).order.id,
-          fromAmount: (orderResult as any).order.fromAmount,
-          toAmount: (orderResult as any).order.toAmount,
-          status: (orderResult as any).order.status,
+          id: orderResult.order.id,
+          fromAmount: orderResult.order.fromAmount,
+          toAmount: orderResult.order.toAmount,
+          status: orderResult.order.status,
         },
         checkoutUrl,
         rate: { ratio: rate.ratio, fee: rate.fee },
@@ -139,10 +139,10 @@ export function registerTopupWorkflows(server: McpServer, clients: BloqueClients
 
       const result = {
         order: {
-          id: (orderResult as any).order.id,
-          fromAmount: (orderResult as any).order.fromAmount,
-          toAmount: (orderResult as any).order.toAmount,
-          status: (orderResult as any).order.status,
+          id: orderResult.order.id,
+          fromAmount: orderResult.order.fromAmount,
+          toAmount: orderResult.order.toAmount,
+          status: orderResult.order.status,
         },
         rate: { ratio: rate.ratio, fee: rate.fee },
       };

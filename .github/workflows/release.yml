@@ -29,6 +29,15 @@ jobs:
       - name: Build code
         run: bun run build
 
+      - name: Compile CLI binaries
+        working-directory: packages/cli
+        run: bun run compile
+
+      - name: Smoke test binary
+        run: |
+          chmod +x packages/cli/dist/bloque-linux-x64
+          packages/cli/dist/bloque-linux-x64 --version
+
       - name: Publish Packages
         env:
           NPM_CONFIG_TOKEN: ${{ secrets.NPM_TOKEN }}
@@ -51,4 +60,9 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           body_path: CHANGELOG.txt
-          files: dist/*
+          files: |
+            packages/cli/dist/bloque-darwin-arm64
+            packages/cli/dist/bloque-darwin-x64
+            packages/cli/dist/bloque-linux-x64
+            packages/cli/dist/bloque-linux-arm64
+            packages/cli/dist/bloque-windows-x64.exe

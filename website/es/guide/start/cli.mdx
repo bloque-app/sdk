@@ -91,12 +91,53 @@ npx @bloque/cli mcp --http   # HTTP en puerto 3100
 
 ## Agentes Soportados
 
-| Agente | Plataformas |
-|--------|------------|
-| Cursor | macOS, Linux, Windows |
-| Claude Desktop | macOS, Windows |
-| Claude Code | macOS, Linux, Windows |
-| Antigravity (Google) | macOS, Linux, Windows |
+| Agente | Plataformas | Auto-Setup |
+|--------|------------|------------|
+| Cursor | macOS, Linux, Windows | Sí |
+| Claude Desktop | macOS, Linux, Windows | Sí |
+| Claude Code | macOS, Linux, Windows | Sí |
+| Antigravity (Google) | macOS, Linux, Windows | Sí |
+| Windsurf | macOS, Linux, Windows | Sí |
+| VS Code (Copilot) | macOS, Linux, Windows | Sí |
+| Zed | macOS, Linux | Sí |
+| JetBrains (AI Assistant) | macOS, Linux, Windows | Manual |
+
+## Descargar Binario (Sin Node.js)
+
+Si no tienes Node.js instalado, descarga un binario independiente desde [GitHub Releases](https://github.com/bloque-app/sdk/releases):
+
+| Plataforma | Binario |
+|------------|---------|
+| macOS (Apple Silicon) | `bloque-darwin-arm64` |
+| macOS (Intel) | `bloque-darwin-x64` |
+| Linux (x86_64) | `bloque-linux-x64` |
+| Linux (ARM) | `bloque-linux-arm64` |
+| Windows (x64) | `bloque-windows-x64.exe` |
+
+**macOS / Linux:**
+
+```bash
+# Descargar (reemplaza PLATFORM con tu plataforma, e.g. darwin-arm64)
+curl -fsSL https://github.com/bloque-app/sdk/releases/latest/download/bloque-PLATFORM -o bloque
+
+# Hacer ejecutable
+chmod +x bloque
+
+# Mover al PATH
+sudo mv bloque /usr/local/bin/bloque
+
+# Ejecutar setup
+bloque setup
+```
+
+> **macOS Gatekeeper:** Si macOS bloquea el binario, ejecuta:
+> `xattr -d com.apple.quarantine /usr/local/bin/bloque`
+
+**Windows:**
+
+Descarga `bloque-windows-x64.exe` de la página de releases, renómbralo a `bloque.exe` y agrega su directorio a tu `PATH`.
+
+Cuando ejecutas desde el binario, `bloque setup` configura automáticamente tus agentes para usar la ruta del binario en vez de `npx`.
 
 ## Configuración Manual
 
@@ -163,5 +204,6 @@ Herramientas de bajo nivel. 1:1 con métodos del SDK para control total.
 
 ## Requisitos
 
-- Node.js 22+ o Bun 1+
+- **Vía npm:** Node.js 22+ o Bun 1+
+- **Vía binario:** No necesitas runtime — descarga desde [GitHub Releases](https://github.com/bloque-app/sdk/releases)
 - Una cuenta en [Bloque](https://www.bloque.app)

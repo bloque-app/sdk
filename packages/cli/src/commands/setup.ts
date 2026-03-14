@@ -31,6 +31,9 @@ interface AgentDef {
   id: string;
   name: string;
   configPath: string;
+  configKey: string;
+  entryKey: string;
+  mcpEntry: Record<string, unknown>;
   skillAgent?: string;
   detect: () => boolean;
 }
@@ -86,11 +89,34 @@ function claudeDesktopConfigPath(): string {
   return path.join(HOME, 'Library', 'Application Support', 'Claude', 'claude_desktop_config.json');
 }
 
+function vscodeMcpConfigPath(): string {
+  if (PLATFORM === 'win32')
+    return path.join(APPDATA, 'Code', 'User', 'mcp.json');
+  if (PLATFORM === 'linux')
+    return path.join(HOME, '.config', 'Code', 'User', 'mcp.json');
+  return path.join(HOME, 'Library', 'Application Support', 'Code', 'User', 'mcp.json');
+}
+
+function zedConfigPath(): string {
+  return path.join(HOME, '.config', 'zed', 'settings.json');
+}
+
+export function isCompiledBinary(): boolean {
+  return path.basename(process.execPath).startsWith('bloque');
+}
+
+const STDIO_ENTRY = isCompiledBinary()
+  ? { command: process.execPath, args: ['mcp'] }
+  : { command: 'npx', args: ['-y', '@bloque/cli', 'mcp'] };
+
 const AGENTS: AgentDef[] = [
   {
     id: 'cursor',
     name: 'Cursor',
     configPath: path.join(HOME, '.cursor', 'mcp.json'),
+    configKey: 'mcpServers',
+    entryKey: 'bloque',
+    mcpEntry: STDIO_ENTRY,
     skillAgent: 'cursor',
     detect: () =>
       hasMacApp('com.todesktop.230313mzl4w4u92') ||
@@ -103,6 +129,9 @@ const AGENTS: AgentDef[] = [
     id: 'claude-desktop',
     name: 'Claude Desktop',
     configPath: claudeDesktopConfigPath(),
+    configKey: 'mcpServers',
+    entryKey: 'bloque',
+    mcpEntry: STDIO_ENTRY,
     detect: () =>
       hasMacApp('com.anthropic.claudefordesktop') ||
       hasWindowsApp('AnthropicClaude\\Claude.exe', 'Programs\\Claude\\Claude.exe') ||
@@ -113,6 +142,9 @@ const AGENTS: AgentDef[] = [
     id: 'claude-code',
     name: 'Claude Code',
     configPath: path.join(HOME, '.claude.json'),
+    configKey: 'mcpServers',
+    entryKey: 'bloque',
+    mcpEntry: STDIO_ENTRY,
     skillAgent: 'claude-code',
     detect: () => hasCommand('claude'),
   },
@@ -120,15 +152,53 @@ const AGENTS: AgentDef[] = [
     id: 'antigravity',
     name: 'Antigravity (Google)',
     configPath: path.join(HOME, '.gemini', 'antigravity', 'mcp_config.json'),
+    configKey: 'mcpServers',
+    entryKey: 'bloque',
+    mcpEntry: STDIO_ENTRY,
     skillAgent: 'gemini-cli',
     detect: () => hasCommand('gemini'),
   },
+  {
+    id: 'windsurf',
+    name: 'Windsurf',
+    configPath: path.join(HOME, '.codeium', 'windsurf', 'mcp_config.json'),
+    configKey: 'mcpServers',
+    entryKey: 'bloque',
+    mcpEntry: STDIO_ENTRY,
+    detect: () =>
+      hasMacApp('com.exafunction.windsurf') ||
+      hasWindowsApp('Programs\\Windsurf\\Windsurf.exe') ||
+      hasLinuxDesktop('windsurf.desktop') ||
+      hasCommand('windsurf') ||
+      fs.existsSync(path.join(HOME, '.codeium', 'windsurf')),
+  },
+  {
+    id: 'vscode',
+    name: 'VS Code (Copilot)',
+    configPath: vscodeMcpConfigPath(),
+    configKey: 'servers',
+    entryKey: 'bloque',
+    mcpEntry: { type: 'stdio', ...STDIO_ENTRY },
+    detect: () =>
+      hasMacApp('com.microsoft.VSCode') ||
+      hasWindowsApp('Programs\\Microsoft VS Code\\Code.exe') ||
+      hasLinuxDesktop('code.desktop') ||
+      hasCommand('code') ||
+      fs.existsSync(path.join(HOME, '.vscode')),
+  },
+  {
+    id: 'zed',
+    name: 'Zed',
+    configPath: zedConfigPath(),
+    configKey: 'context_servers',
+    entryKey: 'bloque',
+    mcpEntry: { source: 'custom', ...STDIO_ENTRY },
+    detect: () =>
+      hasMacApp('dev.zed.Zed') ||
+      hasLinuxDesktop('zed.desktop') ||
+      hasCommand('zed'),
+  },
 ];
-
-const MCP_ENTRY = {
-  command: 'npx',
-  args: ['-y', '@bloque/cli', 'mcp'],
-};
 
 function detectInstalled(): AgentDef[] {
   return AGENTS.filter((agent) => {
@@ -157,15 +227,15 @@ function writeJsonFile(filePath: string, data: Record<string, any>): void {
 function injectMcpConfig(agent: AgentDef): { action: string } {
   const config = readJsonFile(agent.configPath);
 
-  if (!config.mcpServers) {
-    config.mcpServers = {};
+  if (!config[agent.configKey]) {
+    config[agent.configKey] = {};
   }
 
-  if (config.mcpServers.bloque) {
+  if (config[agent.configKey][agent.entryKey]) {
     return { action: 'exists' };
   }
 
-  config.mcpServers.bloque = MCP_ENTRY;
+  config[agent.configKey][agent.entryKey] = agent.mcpEntry;
   writeJsonFile(agent.configPath, config);
   return { action: 'added' };
 }
@@ -310,7 +380,7 @@ export const setupCommand = new Command('setup')
         });
         if (overwrite) {
           const config = readJsonFile(agent.configPath);
-          config.mcpServers.bloque = MCP_ENTRY;
+          config[agent.configKey][agent.entryKey] = agent.mcpEntry;
           writeJsonFile(agent.configPath, config);
           mcpResults.push({ agent: agent.name, result: 'overwritten' });
         } else {
