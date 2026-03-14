@@ -1,52 +1,25 @@
 import { stdout } from 'node:process';
 
-const ESC = '\x1b';
-const RESET = `${ESC}[0m`;
-const BOLD = `${ESC}[1m`;
-const HIDE_CURSOR = `${ESC}[?25l`;
-const SHOW_CURSOR = `${ESC}[?25h`;
-
-const PALETTE = [
-  `${ESC}[38;5;53m`,   //  0 — deep magenta
-  `${ESC}[38;5;54m`,   //  1 — dark purple
-  `${ESC}[38;5;55m`,   //  2 — plum
-  `${ESC}[38;5;92m`,   //  3 — muted violet
-  `${ESC}[38;5;93m`,   //  4 — violet
-  `${ESC}[38;5;129m`,  //  5 — purple
-  `${ESC}[38;5;135m`,  //  6 — light purple
-  `${ESC}[38;5;141m`,  //  7 — lavender
-  `${ESC}[38;5;111m`,  //  8 — soft blue
-  `${ESC}[38;5;75m`,   //  9 — sky blue
-  `${ESC}[38;5;81m`,   // 10 — cyan
-  `${ESC}[38;5;123m`,  // 11 — bright cyan
-  `${ESC}[38;5;159m`,  // 12 — ice blue
-  `${ESC}[38;5;195m`,  // 13 — pale cyan
-  `${ESC}[38;5;231m`,  // 14 — white
-];
-
-const SUCCESS_COLOR = `${ESC}[38;5;49m`;
-const DIM_STAR = `${ESC}[38;5;236m`;
-const MED_STAR = `${ESC}[38;5;240m`;
-
-const MAX_RADIUS = 6;
-const WIDTH = 52;
-const HEIGHT = MAX_RADIUS * 2 + 3;
-const CX = Math.floor(WIDTH / 2);
-const CY = Math.floor(HEIGHT / 2);
-const ASPECT = 2.1;
-
-const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
-
-function generateStarField(): boolean[][] {
-  const field: boolean[][] = [];
-  for (let y = 0; y < HEIGHT; y++) {
-    field[y] = [];
-    for (let x = 0; x < WIDTH; x++) {
-      field[y][x] = Math.random() < 0.025;
-    }
-  }
-  return field;
-}
+import {
+  BOLD,
+  RESET,
+  HIDE_CURSOR,
+  SHOW_CURSOR,
+  PALETTE,
+  SUCCESS_COLOR,
+  DIM_STAR,
+  MED_STAR,
+  MAX_RADIUS,
+  WIDTH,
+  HEIGHT,
+  CX,
+  CY,
+  ASPECT,
+  sleep,
+  generateStarField,
+  writeLines,
+  clearLines,
+} from './shared.ts';
 
 function renderFrame(
   radius: number,
@@ -70,11 +43,11 @@ function renderFrame(
         if (Math.abs(dist - r) < hitThreshold) {
           const t = 1 - r / MAX_RADIUS;
           const idx = Math.round(t * (PALETTE.length - 1));
-          color = PALETTE[idx];
+          color = PALETTE[idx] ?? '';
 
           if (r === 0) {
             char = '✦';
-            color = BOLD + PALETTE[PALETTE.length - 1];
+            color = BOLD + (PALETTE[PALETTE.length - 1] ?? '');
           } else if (r <= 2) {
             char = shimmer && Math.random() < 0.3 ? '✧' : '◦';
           } else {
@@ -84,7 +57,7 @@ function renderFrame(
         }
       }
 
-      if (char === ' ' && stars[y][x]) {
+      if (char === ' ' && stars[y]?.[x]) {
         const twinkle = shimmer && Math.random() < 0.3;
         color = twinkle ? MED_STAR : DIM_STAR;
         char = '.';
@@ -105,14 +78,6 @@ function renderSuccess(message: string): string[] {
     `${pad}${BOLD}${SUCCESS_COLOR}◆${RESET} ${SUCCESS_COLOR}${message}${RESET}`,
     '',
   ];
-}
-
-function writeLines(lines: string[]): void {
-  stdout.write(lines.join('\n') + '\n');
-}
-
-function clearLines(count: number): void {
-  stdout.write(`${ESC}[${count}A${ESC}[0J`);
 }
 
 export async function portalAnimation(message: string): Promise<void> {

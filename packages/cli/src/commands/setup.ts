@@ -7,6 +7,7 @@ import { SDK } from '@bloque/sdk';
 import { checkbox, confirm, input, password, select } from '@inquirer/prompts';
 
 import { SessionStore } from '../session/store.ts';
+import { startWebAuth } from '../auth/web.ts';
 import { portalAnimation } from '../ui/portal.ts';
 
 const store = new SessionStore();
@@ -227,16 +228,20 @@ async function runOtpLogin(mode: 'production' | 'sandbox'): Promise<void> {
 
 export const setupCommand = new Command('setup')
   .description('Set up Bloque MCP in your AI code agents')
+  .option('--web', 'Authenticate via browser')
   .option('--jwt <token>', 'JWT token for authentication (skips OTP)')
   .option('--sandbox', 'Use sandbox environment instead of production')
   .action(async (opts) => {
-    const { jwt, sandbox } = opts as { jwt?: string; sandbox?: boolean };
+    const { web, jwt, sandbox } = opts as { web?: boolean; jwt?: string; sandbox?: boolean };
     const mode = sandbox ? 'sandbox' : 'production';
 
     console.log('\n  Bloque Setup Wizard\n');
 
     // --- Step 1: Authenticate ---
-    if (jwt) {
+    if (web) {
+      const session = await startWebAuth(mode);
+      store.save(session);
+    } else if (jwt) {
       store.save({
         accessToken: jwt,
         urn: '',
