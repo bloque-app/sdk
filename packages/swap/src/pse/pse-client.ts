@@ -128,16 +128,10 @@ export class PseClient extends BaseClient {
     if (params.args) {
       input.args = {
         bank_code: params.args.bankCode,
-        ...(params.args.userType && { user_type: params.args.userType }),
-        ...(params.args.customerEmail && {
-          customer_email: params.args.customerEmail,
-        }),
-        ...(params.args.userLegalIdType && {
-          user_legal_id_type: params.args.userLegalIdType,
-        }),
-        ...(params.args.userLegalId && {
-          user_legal_id: params.args.userLegalId,
-        }),
+        user_type: params.args.userType,
+        customer_email: params.args.customerEmail,
+        user_legal_id_type: params.args.userLegalIdType,
+        user_legal_id: params.args.userLegalId,
         ...(params.args.customerData && {
           customer_data: {
             full_name: params.args.customerData.fullName,

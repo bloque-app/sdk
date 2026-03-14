@@ -91,12 +91,53 @@ npx @bloque/cli mcp --http   # HTTP on port 3100
 
 ## Supported Agents
 
-| Agent | Platforms |
-|-------|-----------|
-| Cursor | macOS, Linux, Windows |
-| Claude Desktop | macOS, Windows |
-| Claude Code | macOS, Linux, Windows |
-| Antigravity (Google) | macOS, Linux, Windows |
+| Agent | Platforms | Auto-Setup |
+|-------|-----------|------------|
+| Cursor | macOS, Linux, Windows | Yes |
+| Claude Desktop | macOS, Linux, Windows | Yes |
+| Claude Code | macOS, Linux, Windows | Yes |
+| Antigravity (Google) | macOS, Linux, Windows | Yes |
+| Windsurf | macOS, Linux, Windows | Yes |
+| VS Code (Copilot) | macOS, Linux, Windows | Yes |
+| Zed | macOS, Linux | Yes |
+| JetBrains (AI Assistant) | macOS, Linux, Windows | Manual |
+
+## Download Binary (No Node.js Required)
+
+If you don't have Node.js installed, download a standalone binary from [GitHub Releases](https://github.com/bloque-app/sdk/releases):
+
+| Platform | Binary |
+|----------|--------|
+| macOS (Apple Silicon) | `bloque-darwin-arm64` |
+| macOS (Intel) | `bloque-darwin-x64` |
+| Linux (x86_64) | `bloque-linux-x64` |
+| Linux (ARM) | `bloque-linux-arm64` |
+| Windows (x64) | `bloque-windows-x64.exe` |
+
+**macOS / Linux:**
+
+```bash
+# Download (replace PLATFORM with your target, e.g. darwin-arm64)
+curl -fsSL https://github.com/bloque-app/sdk/releases/latest/download/bloque-PLATFORM -o bloque
+
+# Make executable
+chmod +x bloque
+
+# Move to PATH
+sudo mv bloque /usr/local/bin/bloque
+
+# Run setup
+bloque setup
+```
+
+> **macOS Gatekeeper:** If macOS blocks the binary, run:
+> `xattr -d com.apple.quarantine /usr/local/bin/bloque`
+
+**Windows:**
+
+Download `bloque-windows-x64.exe` from the release page, rename to `bloque.exe`, and add its directory to your `PATH`.
+
+When running via the binary, `bloque setup` automatically configures your agents to use the binary path instead of `npx`.
 
 ## Manual Configuration
 
@@ -163,5 +204,6 @@ Low-level tools. 1:1 with SDK methods for full control.
 
 ## Requirements
 
-- Node.js 22+ or Bun 1+
+- **Via npm:** Node.js 22+ or Bun 1+
+- **Via binary:** No runtime needed — download from [GitHub Releases](https://github.com/bloque-app/sdk/releases)
 - A [Bloque](https://www.bloque.app) account
