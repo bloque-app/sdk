@@ -599,7 +599,7 @@ export class AccountsClient extends BaseClient {
         return mapBancolombiaAccountFromWire(
           account as AccountWithBalance<BancolombiaDetails>,
         );
-      case 'bre-b':
+      case 'breb':
         return mapBrebAccountFromWire(
           account as AccountWithBalance<BrebDetails>,
         );

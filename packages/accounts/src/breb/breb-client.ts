@@ -1,35 +1,29 @@
-import { BaseClient } from '@bloque/sdk-core';
-import type { AccountWithBalance, BrebDetails } from '../internal/wire-types';
+import { BaseClient, BloqueAPIError } from '@bloque/sdk-core';
+import type {
+  Account,
+  AccountWithBalance,
+  BrebDetails,
+  CreateAccountRequest,
+  CreateAccountResponse,
+} from '../internal/wire-types';
 import type {
   BrebKeyAccount,
+  BrebOperationError,
+  BrebOperationResult,
   BrebResolvedKey,
   CreateBrebKeyParams,
   ResolveBrebKeyParams,
 } from './types';
 
 type CreateBrebKeyRequest = {
-  key_type: CreateBrebKeyParams['keyType'];
-  key: string;
-  display_name?: string;
+  holder_urn: string;
+  input: {
+    key_type: CreateBrebKeyParams['keyType'];
+    key_value: string;
+    display_name?: string;
+  };
   webhook_url?: string;
-  ledger_account_id: string;
-  metadata?: Record<string, unknown>;
-};
-
-type CreateBrebKeyResponse = {
-  id: string;
-  urn: string;
-  ownerUrn: string;
-  medium: 'breb';
-  remoteKeyId: string;
-  accountId: string;
-  webhookUrl: string | null;
-  ledgerAccountId: string;
-  keyType: CreateBrebKeyParams['keyType'];
-  key: string;
-  displayName: string | null;
-  status: BrebKeyAccount['status'];
-  details: BrebKeyAccount['details'];
+  ledger_account_id?: string;
   metadata?: Record<string, unknown>;
 };
 
@@ -40,8 +34,15 @@ type ResolveBrebKeyRequest = {
 
 type ResolveBrebKeyResponse = BrebResolvedKey;
 
+type BloqueErrorResponse = {
+  extra_details?: {
+    provider_code?: string;
+    message?: string;
+  };
+};
+
 export function mapBrebAccountFromWire(
-  account: AccountWithBalance<BrebDetails>,
+  account: Account<BrebDetails> | AccountWithBalance<BrebDetails>,
 ): BrebKeyAccount {
   return {
     id: account.id,
@@ -69,6 +70,29 @@ export function mapBrebAccountFromWire(
 }
 
 export class BrebClient extends BaseClient {
+  private mapError(error: unknown): BrebOperationError {
+    if (error instanceof BloqueAPIError) {
+      const response = error.response as BloqueErrorResponse | undefined;
+
+      return {
+        code: response?.extra_details?.provider_code ?? error.code ?? null,
+        message: error.message,
+      };
+    }
+
+    if (error instanceof Error) {
+      return {
+        code: null,
+        message: error.message,
+      };
+    }
+
+    return {
+      code: null,
+      message: 'Unknown BRE-B error',
+    };
+  }
+
   /**
    * Create a BRE-B key account by calling the BRE-B key creation endpoint.
    *
@@ -83,50 +107,52 @@ export class BrebClient extends BaseClient {
    * });
    * ```
    */
-  async createKey(params: CreateBrebKeyParams): Promise<BrebKeyAccount> {
-    if (!params.ledgerId?.trim()) {
-      throw new Error('Ledger account ID is required');
-    }
+  async createKey(
+    params: CreateBrebKeyParams,
+  ): Promise<BrebOperationResult<BrebKeyAccount>> {
+    try {
+      const holderUrn = this.httpClient.urn;
 
-    if (!params.key?.trim()) {
-      throw new Error('BRE-B key value is required');
-    }
+      if (!holderUrn?.trim()) {
+        throw new Error('Holder URN is required');
+      }
 
-    const response = await this.httpClient.request<
-      CreateBrebKeyResponse,
-      CreateBrebKeyRequest
-    >({
-      method: 'POST',
-      path: '/api/v2/breb/keys',
-      body: {
-        key_type: params.keyType,
-        key: params.key,
-        display_name: params.displayName,
-        webhook_url: params.webhookUrl,
-        ledger_account_id: params.ledgerId,
-        metadata: {
-          source: 'sdk-typescript',
-          ...params.metadata,
+      if (!params.key?.trim()) {
+        throw new Error('BRE-B key value is required');
+      }
+
+      const response = await this.httpClient.request<
+        CreateAccountResponse<BrebDetails>,
+        CreateAccountRequest<CreateBrebKeyRequest['input']>
+      >({
+        method: 'POST',
+        path: '/api/mediums/breb',
+        body: {
+          holder_urn: holderUrn,
+          input: {
+            key_type: params.keyType,
+            key_value: params.key,
+            display_name: params.displayName,
+          },
+          webhook_url: params.webhookUrl,
+          ledger_account_id: params.ledgerId,
+          metadata: {
+            source: 'sdk-typescript',
+            ...params.metadata,
+          },
         },
-      },
-    });
+      });
 
-    return {
-      id: response.id,
-      urn: response.urn,
-      ownerUrn: response.ownerUrn,
-      medium: 'breb',
-      remoteKeyId: response.remoteKeyId,
-      accountId: response.accountId,
-      keyType: response.keyType,
-      key: response.key,
-      displayName: response.displayName,
-      status: response.status,
-      ledgerId: response.ledgerAccountId,
-      webhookUrl: response.webhookUrl,
-      metadata: response.metadata,
-      details: response.details,
-    };
+      return {
+        data: mapBrebAccountFromWire(response.result.account),
+        error: null,
+      };
+    } catch (error) {
+      return {
+        data: null,
+        error: this.mapError(error),
+      };
+    }
   }
 
   /**
@@ -140,23 +166,35 @@ export class BrebClient extends BaseClient {
    * });
    * ```
    */
-  async resolveKey(params: ResolveBrebKeyParams): Promise<BrebResolvedKey> {
-    if (!params.key?.trim()) {
-      throw new Error('BRE-B key value is required');
+  async resolveKey(
+    params: ResolveBrebKeyParams,
+  ): Promise<BrebOperationResult<BrebResolvedKey>> {
+    try {
+      if (!params.key?.trim()) {
+        throw new Error('BRE-B key value is required');
+      }
+
+      const response = await this.httpClient.request<
+        ResolveBrebKeyResponse,
+        ResolveBrebKeyRequest
+      >({
+        method: 'POST',
+        path: '/api/v2/breb/keys/resolve',
+        body: {
+          key_type: params.keyType,
+          key: params.key,
+        },
+      });
+
+      return {
+        data: response,
+        error: null,
+      };
+    } catch (error) {
+      return {
+        data: null,
+        error: this.mapError(error),
+      };
     }
-
-    const response = await this.httpClient.request<
-      ResolveBrebKeyResponse,
-      ResolveBrebKeyRequest
-    >({
-      method: 'POST',
-      path: '/api/v2/breb/keys/resolve',
-      body: {
-        key_type: params.keyType,
-        key: params.key,
-      },
-    });
-
-    return response;
   }
 }

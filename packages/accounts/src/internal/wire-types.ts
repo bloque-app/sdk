@@ -26,7 +26,7 @@ export interface Account<TDetails = unknown> {
   urn: string;
   medium:
     | 'bancolombia'
-    | 'bre-b'
+    | 'breb'
     | 'card'
     | 'virtual'
     | 'us-account'

@@ -167,7 +167,7 @@ export type AccountStatus =
  */
 export type AccountMedium =
   | 'bancolombia'
-  | 'bre-b'
+  | 'breb'
   | 'card'
   | 'virtual'
   | 'polygon'

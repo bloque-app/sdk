@@ -2,6 +2,30 @@ import type { AccountStatus, TokenBalance } from '../types';
 
 export type BrebKeyType = 'ID' | 'PHONE' | 'EMAIL' | 'ALPHA' | 'BCODE';
 
+export interface BrebOperationError {
+  /**
+   * Provider-specific error code when available.
+   */
+  code: string | null;
+
+  /**
+   * Human-readable error message.
+   */
+  message: string;
+}
+
+export interface BrebOperationResult<T> {
+  /**
+   * Operation data. Null when the operation failed.
+   */
+  data: T | null;
+
+  /**
+   * Minimal error payload. Null when the operation succeeded.
+   */
+  error: BrebOperationError | null;
+}
+
 export interface CreateBrebKeyParams {
   /**
    * Key type accepted by BRE-B.
@@ -21,7 +45,7 @@ export interface CreateBrebKeyParams {
   /**
    * Ledger account ID associated with the BRE-B key account.
    */
-  ledgerId: string;
+  ledgerId?: string;
 
   /**
    * Optional webhook URL to receive events for the stored account.
