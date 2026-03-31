@@ -167,6 +167,7 @@ export type AccountStatus =
  */
 export type AccountMedium =
   | 'bancolombia'
+  | 'breb'
   | 'card'
   | 'virtual'
   | 'polygon'
@@ -257,7 +258,7 @@ export interface ListAccountsParams {
 /**
  * Result of listing accounts.
  * Each account is mapped to its medium-specific type
- * (CardAccount, VirtualAccount, PolygonAccount, BancolombiaAccount, or UsAccount).
+ * (CardAccount, VirtualAccount, PolygonAccount, BancolombiaAccount, BrebKeyAccount, or UsAccount).
  */
 export interface ListAccountsResult {
   /** Array of medium-specific mapped accounts */
@@ -266,6 +267,7 @@ export interface ListAccountsResult {
     | import('./virtual/types').VirtualAccount
     | import('./polygon/types').PolygonAccount
     | import('./bancolombia/types').BancolombiaAccount
+    | import('./breb/types').BrebKeyAccount
     | import('./us/types').UsAccount
   >;
 }
