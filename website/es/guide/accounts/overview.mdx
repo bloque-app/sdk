@@ -24,6 +24,17 @@ Crea cuentas de pago que se integran con el sistema bancario de Bancolombia:
 
 [Aprende más sobre Cuentas Bancolombia](/sdk/guide/accounts/bancolombia)
 
+### Llaves BRE-B
+
+Crea y resuelve llaves BRE-B para el enrutamiento de pagos en tiempo real:
+- **Tipos soportados**: `PHONE`, `EMAIL`, `ID`, `ALPHA`, `BCODE`
+- **Creación de llave**: Registra una llave contra la cuenta Passport configurada
+- **Resolución de llave**: Resuelve una llave antes de iniciar un flujo de pago
+- **Gestión del ciclo de vida**: Suspende, activa y elimina llaves guardadas
+- **Pagos**: Paga a llaves resueltas con `session.swap.breb.create()`
+
+[Aprende más sobre BRE-B](/sdk/guide/accounts/breb)
+
 ## Operaciones Comunes
 
 Todos los tipos de cuentas soportan operaciones comunes:
@@ -71,7 +82,7 @@ console.log(account.status, account.urn, account.balance);
 
 ### Verificar Balance
 
-Obtén el balance actual de cualquier cuenta por URN (válido para card, virtual, bancolombia, us-account, polygon):
+Obtén el balance actual de cualquier cuenta por URN (válido para card, virtual, bancolombia, breb, us-account, polygon):
 
 ```typescript title="check-balance.ts"
 const balance = await bloque.accounts.balance(
@@ -169,5 +180,6 @@ Todos los tipos de cuenta soportan notificaciones por webhook para eventos del c
 - [Webhooks de Cuentas](/sdk/guide/accounts/webhooks) - Notificaciones en tiempo real del ciclo de vida
 - [Tarjetas Virtuales](/sdk/guide/accounts/cards) - Crea y gestiona tarjetas virtuales
 - [Bancolombia](/sdk/guide/accounts/bancolombia) - Integración de cuentas Bancolombia
+- [BRE-B](/sdk/guide/accounts/breb) - Crear y resolver llaves BRE-B
 - [Transferencias](/sdk/guide/accounts/transfers) - Transfiere fondos entre cuentas
 - [Cumplimiento](/sdk/guide/features/compliance) - Verificación KYC

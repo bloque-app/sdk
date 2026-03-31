@@ -7,12 +7,18 @@ import type {
   CreateAccountResponse,
 } from '../internal/wire-types';
 import type {
+  ActivateBrebKeyParams,
+  ActivateBrebKeyResult,
   BrebKeyAccount,
   BrebOperationError,
   BrebOperationResult,
   BrebResolvedKey,
   CreateBrebKeyParams,
+  DeleteBrebKeyParams,
+  DeleteBrebKeyResult,
   ResolveBrebKeyParams,
+  SuspendBrebKeyParams,
+  SuspendBrebKeyResult,
 } from './types';
 
 type CreateBrebKeyRequest = {
@@ -32,7 +38,25 @@ type ResolveBrebKeyRequest = {
   key: string;
 };
 
-type ResolveBrebKeyResponse = BrebResolvedKey;
+type ResolveBrebKeyResponse = {
+  result: BrebResolvedKey;
+  req_id: string;
+};
+
+type DeleteBrebKeyResponse = {
+  result: DeleteBrebKeyResult;
+  req_id: string;
+};
+
+type SuspendBrebKeyResponse = {
+  result: SuspendBrebKeyResult;
+  req_id: string;
+};
+
+type ActivateBrebKeyResponse = {
+  result: ActivateBrebKeyResult;
+  req_id: string;
+};
 
 type BloqueErrorResponse = {
   extra_details?: {
@@ -179,7 +203,7 @@ export class BrebClient extends BaseClient {
         ResolveBrebKeyRequest
       >({
         method: 'POST',
-        path: '/api/v2/breb/keys/resolve',
+        path: '/api/mediums/breb/resolve-key',
         body: {
           key_type: params.keyType,
           key: params.key,
@@ -187,7 +211,112 @@ export class BrebClient extends BaseClient {
       });
 
       return {
-        data: response,
+        data: response.result,
+        error: null,
+      };
+    } catch (error) {
+      return {
+        data: null,
+        error: this.mapError(error),
+      };
+    }
+  }
+
+  /**
+   * Delete a BRE-B key account previously created in mediums.
+   *
+   * @example
+   * ```ts
+   * const result = await bloque.accounts.breb.deleteKey({
+   *   accountUrn: 'did:bloque:account:breb:859dc591-f313-44dd-82fd-a5db603a2d6a',
+   * });
+   * ```
+   */
+  async deleteKey(
+    params: DeleteBrebKeyParams,
+  ): Promise<BrebOperationResult<DeleteBrebKeyResult>> {
+    try {
+      if (!params.accountUrn?.trim()) {
+        throw new Error('BRE-B account URN is required');
+      }
+
+      const response = await this.httpClient.request<DeleteBrebKeyResponse>({
+        method: 'DELETE',
+        path: `/api/accounts/${encodeURIComponent(params.accountUrn)}/breb/key`,
+      });
+
+      return {
+        data: response.result,
+        error: null,
+      };
+    } catch (error) {
+      return {
+        data: null,
+        error: this.mapError(error),
+      };
+    }
+  }
+
+  /**
+   * Suspend a BRE-B key account.
+   *
+   * @example
+   * ```ts
+   * const result = await bloque.accounts.breb.suspendKey({
+   *   accountUrn: 'did:bloque:account:breb:859dc591-f313-44dd-82fd-a5db603a2d6a',
+   * });
+   * ```
+   */
+  async suspendKey(
+    params: SuspendBrebKeyParams,
+  ): Promise<BrebOperationResult<SuspendBrebKeyResult>> {
+    try {
+      if (!params.accountUrn?.trim()) {
+        throw new Error('BRE-B account URN is required');
+      }
+
+      const response = await this.httpClient.request<SuspendBrebKeyResponse>({
+        method: 'PATCH',
+        path: `/api/accounts/${encodeURIComponent(params.accountUrn)}/breb/key/suspend`,
+      });
+
+      return {
+        data: response.result,
+        error: null,
+      };
+    } catch (error) {
+      return {
+        data: null,
+        error: this.mapError(error),
+      };
+    }
+  }
+
+  /**
+   * Activate a previously suspended BRE-B key account.
+   *
+   * @example
+   * ```ts
+   * const result = await bloque.accounts.breb.activateKey({
+   *   accountUrn: 'did:bloque:account:breb:859dc591-f313-44dd-82fd-a5db603a2d6a',
+   * });
+   * ```
+   */
+  async activateKey(
+    params: ActivateBrebKeyParams,
+  ): Promise<BrebOperationResult<ActivateBrebKeyResult>> {
+    try {
+      if (!params.accountUrn?.trim()) {
+        throw new Error('BRE-B account URN is required');
+      }
+
+      const response = await this.httpClient.request<ActivateBrebKeyResponse>({
+        method: 'PATCH',
+        path: `/api/accounts/${encodeURIComponent(params.accountUrn)}/breb/key/activate`,
+      });
+
+      return {
+        data: response.result,
         error: null,
       };
     } catch (error) {

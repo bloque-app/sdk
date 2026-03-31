@@ -70,6 +70,93 @@ export interface ResolveBrebKeyParams {
   key: string;
 }
 
+export interface DeleteBrebKeyParams {
+  /**
+   * Local BRE-B account URN to delete.
+   */
+  accountUrn: string;
+}
+
+export interface SuspendBrebKeyParams {
+  /**
+   * Local BRE-B account URN to suspend.
+   */
+  accountUrn: string;
+}
+
+export interface ActivateBrebKeyParams {
+  /**
+   * Local BRE-B account URN to activate.
+   */
+  accountUrn: string;
+}
+
+export interface DeleteBrebKeyResult {
+  /**
+   * Whether the key was deleted successfully.
+   */
+  deleted: true;
+
+  /**
+   * Local BRE-B account URN that was deleted.
+   */
+  accountUrn: string;
+
+  /**
+   * Remote BRE-B key id deleted upstream.
+   */
+  keyId: string;
+
+  /**
+   * Final local account status.
+   */
+  status: 'deleted';
+}
+
+export interface SuspendBrebKeyResult {
+  /**
+   * Local BRE-B account URN that was suspended.
+   */
+  accountUrn: string;
+
+  /**
+   * Remote BRE-B key id updated upstream.
+   */
+  keyId: string;
+
+  /**
+   * Upstream BRE-B key status.
+   */
+  keyStatus: string;
+
+  /**
+   * Final local account status.
+   */
+  status: 'frozen';
+}
+
+export interface ActivateBrebKeyResult {
+  /**
+   * Local BRE-B account URN that was activated.
+   */
+  accountUrn: string;
+
+  /**
+   * Remote BRE-B key id updated upstream.
+   */
+  keyId: string;
+
+  /**
+   * Upstream BRE-B key status.
+   */
+  keyStatus: string;
+
+  /**
+   * Final local account status.
+   */
+  status: 'active';
+}
+
 export interface BrebKeyAccount {
   /**
    * Local account identifier.
