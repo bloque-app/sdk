@@ -28,10 +28,9 @@ Crea una instancia del SDK con tu configuración:
 import { SDK } from '@bloque/sdk';
 
 const bloque = new SDK({
-  origin: 'tu-origen',
   auth: {
     type: 'apiKey',
-    apiKey: process.env.BLOQUE_API_KEY!,
+    apiKey: process.env.BLOQUE_SECRET_KEY!, // sk_live_... o sk_test_...
   },
   mode: 'production', // o 'sandbox' para pruebas
   platform: 'node', // opcional: 'node' | 'bun' | 'deno'
@@ -43,6 +42,8 @@ const bloque = new SDK({
     maxDelay: 30000, // por defecto: 30000ms
   },
 });
+
+const user = await bloque.connect(); // intercambia la clave sk_ por JWT y resuelve la identidad
 ```
 
 ### Frontend (Browser, React Native)
@@ -69,8 +70,8 @@ const bloque = new SDK({
 
 | Opción | Tipo | Requerido | Por Defecto | Descripción |
 |--------|------|-----------|-------------|-------------|
-| `origin` | `string` | Sí | - | Tu identificador de origen |
-| `auth` | `AuthStrategy` | Sí | - | Estrategia de autenticación |
+| `origin` | `string` | Para `originKey` | - | Tu identificador de origen |
+| `auth` | `AuthStrategy` | Sí | - | Estrategia de autenticación (`apiKey`, `originKey` o `jwt`) |
 | `mode` | `'production' \| 'sandbox'` | No | `'production'` | Modo de entorno |
 | `platform` | `Platform` | No | `'node'` | Plataforma de ejecución |
 | `timeout` | `number` | No | `30000` | Timeout de request en milisegundos |
@@ -117,18 +118,17 @@ Vamos a crear una tarjeta virtual:
 import { SDK } from '@bloque/sdk';
 
 const bloque = new SDK({
-  origin: 'tu-origen',
   auth: {
     type: 'apiKey',
-    apiKey: process.env.BLOQUE_API_KEY!,
+    apiKey: process.env.BLOQUE_SECRET_KEY!,
   },
   mode: 'production',
 });
 
 async function crearTarjeta() {
   try {
-    // Conectar a sesión de usuario
-    const session = await bloque.connect('did:bloque:tu-origen:alias-usuario');
+    // Conectar — intercambia la clave sk_ por JWT y resuelve la identidad
+    const session = await bloque.connect();
 
     // Crear una tarjeta virtual
     const card = await session.accounts.card.create({
@@ -214,8 +214,7 @@ import type {
 
 // Configuración con tipos seguros
 const config: BloqueSDKConfig = {
-  origin: 'tu-origen',
-  auth: { type: 'apiKey', apiKey: process.env.BLOQUE_API_KEY! },
+  auth: { type: 'apiKey', apiKey: process.env.BLOQUE_SECRET_KEY! },
   mode: 'production',
 };
 
@@ -234,8 +233,7 @@ Usa variables de entorno para almacenar tu configuración de forma segura:
 
 ```bash
 # .env
-BLOQUE_ORIGIN=tu-origen
-BLOQUE_API_KEY=tu_api_key_aqui
+BLOQUE_SECRET_KEY=sk_live_tu_clave_aqui
 BLOQUE_MODE=sandbox
 BLOQUE_TIMEOUT=30000
 ```
@@ -247,10 +245,9 @@ import { SDK } from '@bloque/sdk';
 import 'dotenv/config'; // o tu cargador de env preferido
 
 const bloque = new SDK({
-  origin: process.env.BLOQUE_ORIGIN!,
   auth: {
     type: 'apiKey',
-    apiKey: process.env.BLOQUE_API_KEY!,
+    apiKey: process.env.BLOQUE_SECRET_KEY!,
   },
   mode: process.env.BLOQUE_MODE as 'production' | 'sandbox',
   timeout: Number.parseInt(process.env.BLOQUE_TIMEOUT || '30000', 10),
@@ -262,7 +259,8 @@ const bloque = new SDK({
 Después de conectarte a una sesión de usuario, tienes acceso a estos clientes:
 
 ```typescript
-const session = await bloque.connect('did:bloque:tu-origen:alias-usuario');
+const session = await bloque.connect(); // auth apiKey (sin alias)
+// o: await bloque.connect('@alice')   // auth originKey
 
 // Clientes disponibles
 session.accounts    // Gestión de cuentas (cards, virtual, bancolombia)

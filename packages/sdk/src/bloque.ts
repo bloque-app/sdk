@@ -32,9 +32,9 @@ export class SDK {
     };
   }
 
-  private getApiKey(): string {
+  private getOriginKey(): string {
     const { auth } = this.httpClient;
-    return auth.type === 'apiKey' ? auth.apiKey : '';
+    return auth.type === 'originKey' ? auth.originKey : '';
   }
 
   private buildUrn(alias: string): string {
@@ -110,6 +110,10 @@ export class SDK {
   }
 
   async register(alias: string, params: CreateIdentityParams) {
+    if (this.httpClient.auth.type !== 'originKey') {
+      throw new Error('register() is only available for originKey auth');
+    }
+
     if (!params.extraContext) params.extraContext = {};
 
     const urn = this.buildUrn(alias);
@@ -120,7 +124,7 @@ export class SDK {
         alias: alias,
         challengeType: 'API_KEY',
         value: {
-          apiKey: this.getApiKey(),
+          apiKey: this.getOriginKey(),
           alias: alias,
         },
       },
@@ -133,6 +137,10 @@ export class SDK {
     return this.buildClients(response.accessToken);
   }
 
+  async connect(): Promise<ReturnType<SDK['buildClients']>>;
+  async connect(options: {
+    scopes?: string[];
+  }): Promise<ReturnType<SDK['buildClients']>>;
   async connect(alias: string): Promise<ReturnType<SDK['buildClients']>>;
   async connect(
     origin: string,
@@ -140,11 +148,35 @@ export class SDK {
     code: string,
   ): Promise<ReturnType<SDK['buildClients']>>;
   async connect(
-    arg1: string,
+    arg1?: string | { scopes?: string[] },
     arg2?: string,
     arg3?: string,
   ): Promise<ReturnType<SDK['buildClients']>> {
-    if (this.httpClient.auth.type === 'apiKey') {
+    const authType = this.httpClient.auth.type;
+
+    // --- apiKey: exchange sk_ key for JWT, resolve identity via /me ---
+    if (authType === 'apiKey') {
+      if (typeof arg1 === 'string') {
+        throw new Error(
+          'connect() takes no alias for apiKey auth. Use connect() or connect({ scopes })',
+        );
+      }
+
+      await this.httpClient.ensureExchanged();
+
+      const me = await this.identity.me();
+      this.httpClient.setOrigin(me.origin);
+      this.httpClient.setUrn(me.urn);
+
+      return this.buildClients(this.httpClient.accessToken ?? '');
+    }
+
+    // --- originKey: legacy API_KEY challenge connect(alias) ---
+    if (authType === 'originKey') {
+      if (!arg1 || typeof arg1 !== 'string') {
+        throw new Error('connect(alias) is required for originKey auth');
+      }
+
       const alias = arg1;
       const urn = this.buildUrn(alias);
       const origin = this.requireOrigin();
@@ -158,7 +190,7 @@ export class SDK {
           assertion_result: {
             challengeType: 'API_KEY',
             value: {
-              api_key: this.getApiKey(),
+              api_key: this.getOriginKey(),
               alias: alias,
             },
           },
@@ -172,11 +204,11 @@ export class SDK {
       return this.buildClients(response.result.access_token);
     }
 
+    // --- jwt: OTP connect(origin, alias, code) ---
     this.assertJwtAuth();
-    if (!arg2 || !arg3) {
-      throw new Error(
-        'JWT connect requires origin and OTP code. Use connect(origin, alias, code)',
-      );
+
+    if (!arg1 || typeof arg1 !== 'string' || !arg2 || !arg3) {
+      throw new Error('connect(origin, alias, code) is required for JWT auth');
     }
 
     const origin = arg1;

@@ -812,6 +812,232 @@ La entrega de webhooks usa claves de idempotencia basadas en `${type}-${transact
 Los eventos de compra también pueden activar notificaciones de WhatsApp al titular de la tarjeta si `whatsapp_notification` está habilitado en el metadata de la tarjeta y el usuario tiene un número de teléfono registrado.
 :::
 
+## Tokenización de Tarjetas
+
+Agrega tarjetas a Apple Pay y Google Pay.
+
+### Apple Pay
+
+```typescript title="tokenize-apple.ts"
+const result = await bloque.accounts.card.tokenizeApple(
+  'did:bloque:account:card:usr-123:crd-456',
+  {
+    nonce: 'apple-nonce-from-device',
+    nonceSignature: 'nonce-signature',
+    certificates: ['cert-leaf', 'cert-intermediate'],
+  }
+);
+
+console.log('Datos de activación:', result.activationData);
+console.log('Pass encriptado:', result.encryptedPassData);
+```
+
+### Google Pay
+
+```typescript title="tokenize-google.ts"
+const result = await bloque.accounts.card.tokenizeGoogle(
+  'did:bloque:account:card:usr-123:crd-456',
+  {
+    deviceId: 'google-device-id',
+    deviceType: 'MOBILE_PHONE',
+    provisioningAppVersion: '1.0.0',
+    walletAccountId: 'wallet-123',
+  }
+);
+
+console.log('OPC:', result.opaquePaymentCard);
+console.log('Push token:', result.pushTokenizeRequestData);
+```
+
+### Parámetros de Tokenización
+
+| Método | Parámetro | Tipo | Requerido | Descripción |
+|--------|-----------|------|-----------|-------------|
+| `tokenizeApple` | `nonce` | `string` | Sí | Nonce del dispositivo Apple Pay |
+| | `nonceSignature` | `string` | Sí | Firma del nonce |
+| | `certificates` | `string[]` | Sí | Certificados leaf e intermedio |
+| `tokenizeGoogle` | `deviceId` | `string` | Sí | Identificador del dispositivo Google |
+| | `deviceType` | `string` | Sí | Tipo de dispositivo (ej. `MOBILE_PHONE`) |
+| | `provisioningAppVersion` | `string` | Sí | Versión de la app |
+| | `walletAccountId` | `string` | Sí | ID de cuenta Google Wallet |
+
+## Actualizar una Tarjeta
+
+Usa el método `update` para modificar el webhook URL, el ledger vinculado o los metadatos:
+
+```typescript title="update-card.ts"
+const card = await bloque.accounts.card.update({
+  urn: 'did:bloque:account:card:usr-123:crd-456',
+  webhookUrl: 'https://api.example.com/webhooks/cards',
+  metadata: { name: 'Tarjeta Actualizada' },
+});
+```
+
+### UpdateCardParams
+
+| Campo | Tipo | Requerido | Descripción |
+|-------|------|-----------|-------------|
+| `urn` | `string` | Sí | URN de la cuenta de tarjeta |
+| `metadata` | `Record<string, unknown>` | No | Metadatos a fusionar |
+| `status` | `string` | No | Nuevo estado |
+| `webhookUrl` | `string` | No | URL del webhook para eventos de tarjeta |
+| `ledgerId` | `string` | No | ID de cuenta del ledger a vincular |
+
+## Programas de Cashback
+
+Tres enfoques para el ahorro automatico en transacciones con tarjeta. Todos los modos funcionan con controles de gasto `default` y `smart`.
+
+### Modo 1: Participacion del Interchange
+
+Envia una porcion de los ingresos de interchange al bolsillo de ahorro del usuario usando el sistema de `spending_fees`:
+
+```typescript title="interchange-share.ts"
+const savingsPocket = await user.accounts.virtual.create(
+  { name: 'Ahorros' },
+  { waitLedger: true },
+);
+
+const card = await user.accounts.card.create({
+  holderUrn: userUrn,
+  name: 'Tarjeta Cashback',
+  ledgerId: mainPocket.ledgerId,
+  metadata: {
+    spending_fees: [
+      {
+        fee_name: 'interchange_share',
+        account_urn: savingsPocket.urn,
+        type: 'percentage',
+        value: 0.002,           // 0.2% de cada compra → ahorros
+        category: 'custom',
+      },
+    ],
+  },
+});
+```
+
+### Modo 2: Ahorro Extra
+
+Cobra un porcentaje o monto fijo adicional por transaccion y envialo a un bolsillo de ahorro:
+
+```typescript title="extra-savings.ts"
+const card = await user.accounts.card.create({
+  holderUrn: userUrn,
+  name: 'Tarjeta Auto-Ahorro',
+  ledgerId: mainPocket.ledgerId,
+  metadata: {
+    cashback_programs: [
+      {
+        program_name: 'ahorro_5pct',
+        type: 'extra_savings',
+        target_pocket_urn: savingsPocket.urn,
+        fee_type: 'percentage',
+        value: 0.05,            // 5% de recargo → ahorros
+      },
+    ],
+  },
+});
+```
+
+Para montos fijos, usa `fee_type: 'flat'` y `value` como el monto fijo en moneda local (ej. `1.0` para $1 por transaccion).
+
+### Modo 3: Redondeo
+
+Redondea cada compra al siguiente numero entero. Una compra de $34.70 se convierte en $35.00 — los $0.30 extra van al bolsillo destino:
+
+```typescript title="round-up.ts"
+const card = await user.accounts.card.create({
+  holderUrn: userUrn,
+  name: 'Tarjeta Redondeo',
+  ledgerId: mainPocket.ledgerId,
+  metadata: {
+    cashback_programs: [
+      {
+        program_name: 'vuelto',
+        type: 'round_up',
+        target_pocket_urn: savingsPocket.urn,
+      },
+    ],
+  },
+});
+```
+
+### Programas Combinados
+
+Combina multiples programas en la misma tarjeta:
+
+```typescript title="combined-cashback.ts"
+metadata: {
+  cashback_programs: [
+    {
+      program_name: 'auto_ahorro',
+      type: 'extra_savings',
+      target_pocket_urn: savingsPocket.urn,
+      fee_type: 'percentage',
+      value: 0.03,              // 3% de recargo → ahorros
+    },
+    {
+      program_name: 'vuelto',
+      type: 'round_up',
+      target_pocket_urn: roundUpPocket.urn,
+    },
+  ],
+}
+```
+
+### CashbackProgram
+
+```typescript title="types.ts"
+interface CashbackProgram {
+  program_name: string;
+  type: 'extra_savings' | 'round_up';
+  target_pocket_urn: string;
+  fee_type?: 'percentage' | 'flat';   // Requerido para extra_savings
+  value?: number;                      // Tasa (0.05 = 5%) o monto fijo
+}
+```
+
+| Campo | Tipo | Requerido | Descripcion |
+|-------|------|-----------|-------------|
+| `program_name` | `string` | Si | Nombre unico del programa |
+| `type` | `'extra_savings' \| 'round_up'` | Si | Modo de ahorro |
+| `target_pocket_urn` | `string` | Si | URN del bolsillo que recibe el recargo |
+| `fee_type` | `'percentage' \| 'flat'` | Solo extra_savings | Como calcular el recargo |
+| `value` | `number` | Solo extra_savings | Tasa (0.05 = 5%) para porcentaje, o monto fijo en moneda local para flat |
+
+### Como Funciona el Cashback
+
+1. El `CashbackDecorator` calcula los recargos de cada programa configurado
+2. El monto de la transaccion se infla (original + recargos) para la verificacion de saldo
+3. `fee_basis` se establece con el monto original — interchange y FX se calculan sobre el original, no el total inflado
+4. El control de gasto base (default o smart) debita el monto inflado completo
+5. Los movimientos de recargo envian fondos de la tesoreria a los bolsillos destino
+6. Un evento webhook `cashback_surcharge` reporta el desglose
+
+### Evento Webhook de Cashback
+
+Cuando los programas de cashback estan activos, un evento `cashback_surcharge` se entrega junto con el evento estandar `purchase`:
+
+```json title="cashback-webhook.json"
+{
+  "account_urn": "did:bloque:account:card:usr-abc:crd-123",
+  "transaction_id": "ctx-200kXoaEJLNzcsvNxY1pmBO7fEx",
+  "type": "authorization",
+  "direction": "debit",
+  "event": "cashback_surcharge",
+  "surcharge_total": 1.341,
+  "programs": [
+    { "name": "auto_ahorro", "type": "extra_savings", "amount": 1.041 },
+    { "name": "vuelto", "type": "round_up", "amount": 0.30 }
+  ]
+}
+```
+
+Los montos estan en la moneda local del comercio. Los recargos no aparecen en `fee_breakdown`.
+
+### Reembolsos con Cashback
+
+En ajustes de credito (reembolsos), los recargos de cashback se revierten proporcionalmente. Un reembolso del 50% devuelve el 50% del recargo de cada programa desde los bolsillos de ahorro. No se envia un evento webhook separado para las reversiones de cashback.
+
 ## Mejores Prácticas
 
 1. **Sesiones de Usuario**: Siempre conéctate a una sesión de usuario

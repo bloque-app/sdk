@@ -1,6 +1,11 @@
 export type {
   CardAccount,
   CreateCardParams,
+  TokenizeAppleParams,
+  TokenizeAppleResult,
+  TokenizeGoogleParams,
+  TokenizeGoogleResult,
+  UpdateCardParams,
 } from '@bloque/sdk-accounts';
 
 import { AccountsClient } from '@bloque/sdk-accounts';

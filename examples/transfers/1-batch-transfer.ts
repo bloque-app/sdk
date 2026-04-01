@@ -11,8 +11,8 @@ import { SDK } from '../../packages/sdk/src/index';
 const bloque = new SDK({
   origin: process.env.ORIGIN!,
   auth: {
-    type: 'apiKey',
-    apiKey: process.env.API_KEY!,
+    type: 'originKey',
+    originKey: process.env.ORIGIN_KEY!,
   },
   mode: process.env.MODE as 'production' | 'sandbox',
 });

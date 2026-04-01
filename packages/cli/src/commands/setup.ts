@@ -298,18 +298,43 @@ async function runOtpLogin(mode: 'production' | 'sandbox'): Promise<void> {
 
 export const setupCommand = new Command('setup')
   .description('Set up Bloque MCP in your AI code agents')
+  .option('--api-key <key>', 'Secret key (sk_) for headless API key authentication')
   .option('--web', 'Authenticate via browser')
   .option('--host <url>', 'Copilot app URL (only with --web)')
   .option('--jwt <token>', 'JWT token for authentication (skips OTP)')
   .option('--sandbox', 'Use sandbox environment instead of production')
   .action(async (opts) => {
-    const { web, host, jwt, sandbox } = opts as { web?: boolean; host?: string; jwt?: string; sandbox?: boolean };
+    const { apiKey, web, host, jwt, sandbox } = opts as {
+      apiKey?: string; web?: boolean; host?: string; jwt?: string; sandbox?: boolean;
+    };
     const mode = sandbox ? 'sandbox' : 'production';
+
+    if (apiKey && web) {
+      console.error('Error: --api-key and --web are mutually exclusive');
+      process.exit(1);
+    }
+    if (apiKey && jwt) {
+      console.error('Error: --api-key and --jwt are mutually exclusive');
+      process.exit(1);
+    }
 
     console.log('\n  Bloque Setup Wizard\n');
 
     // --- Step 1: Authenticate ---
-    if (web) {
+    if (apiKey) {
+      const sdk = new SDK({ auth: { type: 'apiKey', apiKey }, mode });
+      const clients = await sdk.connect();
+      store.save({
+        accessToken: clients.accessToken,
+        urn: clients.urn ?? '',
+        origin: '',
+        mode,
+        authType: 'apiKey',
+        apiKey,
+        createdAt: new Date().toISOString(),
+      });
+      console.log('  Session saved from API key.\n');
+    } else if (web) {
       const session = await startWebAuth(mode, host);
       store.save(session);
     } else if (jwt) {

@@ -250,6 +250,12 @@ export interface SwapOrder {
   status: string;
   /** Additional metadata */
   metadata?: Record<string, unknown>;
+  /** Webhook URL for status notifications */
+  webhookUrl?: string;
+  /** Failure reason (when status is 'failed') */
+  failureReason?: string;
+  /** Failure details (when status is 'failed') */
+  failureDetails?: Record<string, unknown>;
   /** Creation timestamp */
   createdAt: string;
   /** Last update timestamp */

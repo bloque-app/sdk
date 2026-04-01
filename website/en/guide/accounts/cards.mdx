@@ -812,6 +812,232 @@ Webhook delivery uses idempotency keys based on `${type}-${transaction_id}`. You
 Purchase events can also trigger WhatsApp notifications to the cardholder if `whatsapp_notification` is enabled in the card's metadata and the user has a phone number on file.
 :::
 
+## Card Tokenization
+
+Add cards to Apple Pay and Google Pay wallets.
+
+### Apple Pay
+
+```typescript title="tokenize-apple.ts"
+const result = await bloque.accounts.card.tokenizeApple(
+  'did:bloque:account:card:usr-123:crd-456',
+  {
+    nonce: 'apple-nonce-from-device',
+    nonceSignature: 'nonce-signature',
+    certificates: ['cert-leaf', 'cert-intermediate'],
+  }
+);
+
+console.log('Provisioning data:', result.activationData);
+console.log('Encrypted pass:', result.encryptedPassData);
+```
+
+### Google Pay
+
+```typescript title="tokenize-google.ts"
+const result = await bloque.accounts.card.tokenizeGoogle(
+  'did:bloque:account:card:usr-123:crd-456',
+  {
+    deviceId: 'google-device-id',
+    deviceType: 'MOBILE_PHONE',
+    provisioningAppVersion: '1.0.0',
+    walletAccountId: 'wallet-123',
+  }
+);
+
+console.log('OPC:', result.opaquePaymentCard);
+console.log('Push token:', result.pushTokenizeRequestData);
+```
+
+### Tokenization Parameters
+
+| Method | Parameter | Type | Required | Description |
+|--------|-----------|------|----------|-------------|
+| `tokenizeApple` | `nonce` | `string` | Yes | Device nonce from Apple Pay |
+| | `nonceSignature` | `string` | Yes | Signature for the nonce |
+| | `certificates` | `string[]` | Yes | Leaf and intermediate certificates |
+| `tokenizeGoogle` | `deviceId` | `string` | Yes | Google device identifier |
+| | `deviceType` | `string` | Yes | Device type (e.g. `MOBILE_PHONE`) |
+| | `provisioningAppVersion` | `string` | Yes | App version |
+| | `walletAccountId` | `string` | Yes | Google Wallet account ID |
+
+## Updating a Card
+
+Use the `update` method to modify a card's webhook URL, linked ledger, or metadata:
+
+```typescript title="update-card.ts"
+const card = await bloque.accounts.card.update({
+  urn: 'did:bloque:account:card:usr-123:crd-456',
+  webhookUrl: 'https://api.example.com/webhooks/cards',
+  metadata: { name: 'Updated Card' },
+});
+```
+
+### UpdateCardParams
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `urn` | `string` | Yes | Card account URN |
+| `metadata` | `Record<string, unknown>` | No | Metadata to merge |
+| `status` | `string` | No | New status |
+| `webhookUrl` | `string` | No | Webhook URL for card events |
+| `ledgerId` | `string` | No | Ledger account ID to link |
+
+## Cashback Programs
+
+Three approaches to automatic savings on card transactions. All modes work with both default and smart spending controls.
+
+### Mode 1: Interchange Share
+
+Route a portion of interchange revenue to a user's savings pocket using the existing `spending_fees` system:
+
+```typescript title="interchange-share.ts"
+const savingsPocket = await user.accounts.virtual.create(
+  { name: 'Savings' },
+  { waitLedger: true },
+);
+
+const card = await user.accounts.card.create({
+  holderUrn: userUrn,
+  name: 'Cashback Card',
+  ledgerId: mainPocket.ledgerId,
+  metadata: {
+    spending_fees: [
+      {
+        fee_name: 'interchange_share',
+        account_urn: savingsPocket.urn,
+        type: 'percentage',
+        value: 0.002,           // 0.2% of every purchase → savings
+        category: 'custom',
+      },
+    ],
+  },
+});
+```
+
+### Mode 2: Extra Savings
+
+Charge an extra percentage or flat amount per transaction and route it to a savings pocket:
+
+```typescript title="extra-savings.ts"
+const card = await user.accounts.card.create({
+  holderUrn: userUrn,
+  name: 'Auto-Save Card',
+  ledgerId: mainPocket.ledgerId,
+  metadata: {
+    cashback_programs: [
+      {
+        program_name: 'savings_5pct',
+        type: 'extra_savings',
+        target_pocket_urn: savingsPocket.urn,
+        fee_type: 'percentage',
+        value: 0.05,            // 5% surcharge → savings
+      },
+    ],
+  },
+});
+```
+
+For flat amounts, set `fee_type: 'flat'` and `value` to the fixed amount in local currency (e.g., `1.0` for $1 per transaction).
+
+### Mode 3: Round Up
+
+Round every purchase up to the next whole unit. A $34.70 purchase becomes $35.00 — the extra $0.30 goes to the target pocket:
+
+```typescript title="round-up.ts"
+const card = await user.accounts.card.create({
+  holderUrn: userUrn,
+  name: 'Round-Up Card',
+  ledgerId: mainPocket.ledgerId,
+  metadata: {
+    cashback_programs: [
+      {
+        program_name: 'spare_change',
+        type: 'round_up',
+        target_pocket_urn: savingsPocket.urn,
+      },
+    ],
+  },
+});
+```
+
+### Combined Programs
+
+Stack multiple programs on the same card:
+
+```typescript title="combined-cashback.ts"
+metadata: {
+  cashback_programs: [
+    {
+      program_name: 'auto_save',
+      type: 'extra_savings',
+      target_pocket_urn: savingsPocket.urn,
+      fee_type: 'percentage',
+      value: 0.03,              // 3% surcharge → savings
+    },
+    {
+      program_name: 'spare_change',
+      type: 'round_up',
+      target_pocket_urn: roundUpPocket.urn,
+    },
+  ],
+}
+```
+
+### CashbackProgram
+
+```typescript title="types.ts"
+interface CashbackProgram {
+  program_name: string;
+  type: 'extra_savings' | 'round_up';
+  target_pocket_urn: string;
+  fee_type?: 'percentage' | 'flat';   // Required for extra_savings
+  value?: number;                      // Rate (0.05 = 5%) or fixed amount
+}
+```
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `program_name` | `string` | Yes | Unique name for the program |
+| `type` | `'extra_savings' \| 'round_up'` | Yes | Savings mode |
+| `target_pocket_urn` | `string` | Yes | Pocket URN receiving the surcharge |
+| `fee_type` | `'percentage' \| 'flat'` | extra_savings only | How to compute the surcharge |
+| `value` | `number` | extra_savings only | Rate (0.05 = 5%) for percentage, or fixed local-currency amount for flat |
+
+### How Cashback Works
+
+1. The `CashbackDecorator` calculates surcharges from each configured program
+2. The transaction amount is inflated (original + surcharges) for the balance check
+3. `fee_basis` is set to the original amount — interchange and FX fees are computed on the original, not the inflated total
+4. The base spending control (default or smart) debits the full inflated amount
+5. Surcharge movements route funds from the treasury to the target pockets
+6. A `cashback_surcharge` webhook event reports the breakdown
+
+### Cashback Webhook Event
+
+When cashback programs are active, a `cashback_surcharge` event is delivered alongside the standard `purchase` event:
+
+```json title="cashback-webhook.json"
+{
+  "account_urn": "did:bloque:account:card:usr-abc:crd-123",
+  "transaction_id": "ctx-200kXoaEJLNzcsvNxY1pmBO7fEx",
+  "type": "authorization",
+  "direction": "debit",
+  "event": "cashback_surcharge",
+  "surcharge_total": 1.341,
+  "programs": [
+    { "name": "auto_save", "type": "extra_savings", "amount": 1.041 },
+    { "name": "spare_change", "type": "round_up", "amount": 0.30 }
+  ]
+}
+```
+
+Amounts are in the merchant's local currency. Surcharges do not appear in `fee_breakdown`.
+
+### Cashback Refunds
+
+On credit adjustments (refunds), cashback surcharges are reversed proportionally. A 50% refund returns 50% of each program's surcharge from the savings pockets. No separate webhook event is sent for cashback reversals.
+
 ## Best Practices
 
 1. **User Sessions**: Always connect to a user session

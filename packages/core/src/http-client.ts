@@ -1,6 +1,7 @@
 import { API_BASE_URLS, DEFAULT_HEADERS } from './constants';
 import {
   type BloqueAPIError,
+  BloqueAuthenticationError,
   BloqueConfigError,
   BloqueNetworkError,
   BloqueRateLimitError,
@@ -12,6 +13,8 @@ import type {
   BloqueSDKConfig,
   RequestOptions,
 } from './types';
+
+const EXCHANGE_REFRESH_BUFFER_MS = 60_000;
 
 const isFrontendPlatform = (platform?: string) =>
   platform === 'browser' || platform === 'react-native';
@@ -25,11 +28,15 @@ export class HttpClient {
   private readonly _config: BloqueInternalConfig;
   private readonly baseUrl: string;
 
+  private _exchangeExpiry = 0;
+  private _exchangePromise: Promise<void> | null = null;
+
   private readonly publicRoutes = [
     '/api/aliases',
     '/api/origins/*/assert',
     '/api/origins/*/connect',
     '/api/origins',
+    '/api/api-keys/exchange',
   ];
 
   constructor(config: BloqueSDKConfig) {
@@ -65,6 +72,14 @@ export class HttpClient {
    */
   get urn(): string | undefined {
     return this._config.urn;
+  }
+
+  /**
+   * Get the current access token (if any).
+   * @internal
+   */
+  get accessToken(): string | undefined {
+    return this._config.accessToken;
   }
 
   /**
@@ -156,19 +171,33 @@ export class HttpClient {
     if (config.auth.type === 'apiKey') {
       if (!config.auth.apiKey?.trim()) {
         throw new BloqueConfigError(
-          'API key is required for apiKey authentication',
-        );
-      }
-
-      if (!config.origin?.trim()) {
-        throw new BloqueConfigError(
-          'Origin is required for apiKey authentication',
+          'API key (sk_ secret key) is required for apiKey authentication',
         );
       }
 
       if (isFrontendPlatform(config.platform)) {
         throw new BloqueConfigError(
           'API key authentication is not allowed in frontend platforms',
+        );
+      }
+    }
+
+    if (config.auth.type === 'originKey') {
+      if (!config.auth.originKey?.trim()) {
+        throw new BloqueConfigError(
+          'Origin key is required for originKey authentication',
+        );
+      }
+
+      if (!config.origin?.trim()) {
+        throw new BloqueConfigError(
+          'Origin is required for originKey authentication',
+        );
+      }
+
+      if (isFrontendPlatform(config.platform)) {
+        throw new BloqueConfigError(
+          'Origin key authentication is not allowed in frontend platforms',
         );
       }
     }
@@ -198,13 +227,16 @@ export class HttpClient {
 
     if (this._config.auth.type === 'apiKey') {
       if (this._config.accessToken) {
-        return {
-          Authorization: `Bearer ${this._config.accessToken}`,
-        };
+        return { Authorization: `Bearer ${this._config.accessToken}` };
       }
-      return {
-        Authorization: this._config.auth.apiKey,
-      };
+      return {};
+    }
+
+    if (this._config.auth.type === 'originKey') {
+      if (this._config.accessToken) {
+        return { Authorization: `Bearer ${this._config.accessToken}` };
+      }
+      return { Authorization: this._config.auth.originKey };
     }
 
     if (this._config.auth.type === 'jwt') {
@@ -217,9 +249,7 @@ export class HttpClient {
         throw new BloqueConfigError('Authentication token is missing');
       }
 
-      return {
-        Authorization: `Bearer ${token}`,
-      };
+      return { Authorization: `Bearer ${token}` };
     }
 
     return {};
@@ -287,7 +317,66 @@ export class HttpClient {
     return new Promise((resolve) => setTimeout(resolve, ms));
   }
 
+  /**
+   * Ensures the SDK has a valid JWT from exchanging the sk_ secret key.
+   * Uses promise coalescing to prevent concurrent exchange calls.
+   * @internal
+   */
+  async ensureExchanged(): Promise<void> {
+    if (this._config.auth.type !== 'apiKey') return;
+
+    if (this._exchangePromise) {
+      await this._exchangePromise;
+      return;
+    }
+
+    if (
+      this._config.accessToken &&
+      Date.now() < this._exchangeExpiry - EXCHANGE_REFRESH_BUFFER_MS
+    ) {
+      return;
+    }
+
+    this._exchangePromise = (async () => {
+      try {
+        const auth = this._config.auth as {
+          type: 'apiKey';
+          apiKey: string;
+          scopes?: string[];
+        };
+        const response = await this.request<{
+          access_token: string;
+          expires_in: number;
+          token_type: string;
+        }>({
+          method: 'POST',
+          path: '/api/api-keys/exchange',
+          body: { key: auth.apiKey, scopes: auth.scopes },
+          _skipExchange: true,
+        });
+
+        if (!response.access_token) {
+          throw new BloqueAuthenticationError(
+            'API key exchange returned an invalid response (missing access_token)',
+            { status: 401 },
+          );
+        }
+
+        this._config.accessToken = response.access_token;
+        this._exchangeExpiry = Date.now() + response.expires_in * 1000;
+      } finally {
+        this._exchangePromise = null;
+      }
+    })();
+
+    await this._exchangePromise;
+  }
+
   async request<T, U = unknown>(options: RequestOptions<U>): Promise<T> {
+    if (this._config.auth.type === 'apiKey' && !options._skipExchange) {
+      await this.ensureExchanged();
+    }
+
     const { method, path, body, headers = {}, timeout } = options;
     const url = `${this.baseUrl}${path}`;
 

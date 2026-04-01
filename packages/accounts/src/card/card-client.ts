@@ -14,6 +14,10 @@ import type {
   ListAccountsResponse,
   ListMovementsResponse,
   TokenBalance,
+  TokenizeAppleCardRequest,
+  TokenizeAppleCardResponse,
+  TokenizeGoogleCardRequest,
+  TokenizeGoogleCardResponse,
   UpdateAccountRequest,
   UpdateAccountResponse,
 } from '../internal/wire-types';
@@ -26,7 +30,12 @@ import type {
   ListCardAccountsResult,
   ListMovementsPagedResult,
   ListMovementsParams,
+  TokenizeAppleParams,
+  TokenizeAppleResult,
+  TokenizeGoogleParams,
+  TokenizeGoogleResult,
   UpdateCardMetadataParams,
+  UpdateCardParams,
 } from './types';
 
 /**
@@ -345,6 +354,41 @@ export class CardClient extends BaseClient {
   }
 
   /**
+   * Update a card account (metadata, webhook URL, ledger ID, or status)
+   *
+   * @param params - Update parameters
+   * @returns Promise resolving to the updated card account
+   *
+   * @example
+   * ```typescript
+   * const card = await bloque.accounts.card.update({
+   *   urn: 'did:bloque:account:card:usr-123:crd-456',
+   *   webhookUrl: 'https://api.example.com/webhooks/cards',
+   *   metadata: { name: 'Updated Card' },
+   * });
+   * ```
+   */
+  async update(params: UpdateCardParams): Promise<CardAccount> {
+    const request: UpdateAccountRequest = {
+      ...(params.metadata && { metadata: params.metadata }),
+      ...(params.status && { status: params.status as AccountStatus }),
+      ...(params.webhookUrl && { webhook_url: params.webhookUrl }),
+      ...(params.ledgerId && { ledger_account_id: params.ledgerId }),
+    };
+
+    const response = await this.httpClient.request<
+      UpdateAccountResponse<CardDetails>,
+      UpdateAccountRequest
+    >({
+      method: 'PATCH',
+      path: `/api/accounts/${params.urn}`,
+      body: request,
+    });
+
+    return this._mapAccountResponse(response.result.account);
+  }
+
+  /**
    * Update card account metadata
    *
    * @param params - Metadata update parameters
@@ -461,6 +505,88 @@ export class CardClient extends BaseClient {
    */
   async disable(urn: string): Promise<CardAccount> {
     return this._updateStatus(urn, 'disabled');
+  }
+
+  /**
+   * Tokenize a card for Apple Pay
+   *
+   * @param urn - Card account URN
+   * @param params - Apple Pay tokenization parameters
+   * @returns Promise resolving to tokenization data
+   *
+   * @example
+   * ```typescript
+   * const result = await bloque.accounts.card.tokenizeApple(
+   *   'did:bloque:mediums:card:account:123',
+   *   {
+   *     certificates: ['cert1', 'cert2'],
+   *     nonce: 'random_nonce',
+   *     nonceSignature: 'signed_nonce',
+   *   },
+   * );
+   * console.log(result.activationData);
+   * ```
+   */
+  async tokenizeApple(
+    urn: string,
+    params: TokenizeAppleParams,
+  ): Promise<TokenizeAppleResult> {
+    const request: TokenizeAppleCardRequest = {
+      certificates: params.certificates,
+      nonce: params.nonce,
+      nonce_signature: params.nonceSignature,
+    };
+
+    const response = await this.httpClient.request<TokenizeAppleCardResponse>({
+      method: 'POST',
+      path: `/api/accounts/${urn}/tokenize/apple`,
+      body: request,
+    });
+
+    return {
+      activationData: response.result.tokenization.activation_data,
+      encryptedPassData: response.result.tokenization.encrypted_pass_data,
+      ephemeralPublicKey: response.result.tokenization.ephemeral_public_key,
+    };
+  }
+
+  /**
+   * Tokenize a card for Google Pay
+   *
+   * @param urn - Card account URN
+   * @param params - Google Pay tokenization parameters
+   * @returns Promise resolving to tokenization data
+   *
+   * @example
+   * ```typescript
+   * const result = await bloque.accounts.card.tokenizeGoogle(
+   *   'did:bloque:mediums:card:account:123',
+   *   {
+   *     deviceId: 'device_123',
+   *     walletAccountId: 'wallet_456',
+   *   },
+   * );
+   * console.log(result.opc);
+   * ```
+   */
+  async tokenizeGoogle(
+    urn: string,
+    params: TokenizeGoogleParams,
+  ): Promise<TokenizeGoogleResult> {
+    const request: TokenizeGoogleCardRequest = {
+      device_id: params.deviceId,
+      wallet_account_id: params.walletAccountId,
+    };
+
+    const response = await this.httpClient.request<TokenizeGoogleCardResponse>({
+      method: 'POST',
+      path: `/api/accounts/${urn}/tokenize/google`,
+      body: request,
+    });
+
+    return {
+      opc: response.result.tokenization.opc,
+    };
   }
 
   /**

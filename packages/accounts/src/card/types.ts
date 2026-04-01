@@ -143,6 +143,19 @@ export interface CreateCardParams {
   metadata?: Record<string, unknown>;
 }
 
+export interface UpdateCardParams {
+  /** URN of the card account to update */
+  urn: string;
+  /** Metadata to update */
+  metadata?: Record<string, unknown>;
+  /** Account status */
+  status?: string;
+  /** Webhook URL for card events */
+  webhookUrl?: string;
+  /** Ledger account ID to link */
+  ledgerId?: string;
+}
+
 export interface UpdateCardMetadataParams {
   /**
    * URN of the card account to update
@@ -157,6 +170,45 @@ export interface UpdateCardMetadataParams {
     name?: never;
     source?: never;
   };
+}
+
+/**
+ * Parameters for Apple Pay tokenization
+ */
+export interface TokenizeAppleParams {
+  /** Apple Pay certificates */
+  certificates: string[];
+  /** Cryptographic nonce */
+  nonce: string;
+  /** Signature of the nonce */
+  nonceSignature: string;
+}
+
+/**
+ * Result of Apple Pay tokenization
+ */
+export interface TokenizeAppleResult {
+  activationData: string;
+  encryptedPassData: string;
+  ephemeralPublicKey: string;
+}
+
+/**
+ * Parameters for Google Pay tokenization
+ */
+export interface TokenizeGoogleParams {
+  /** Device ID for Google Pay */
+  deviceId: string;
+  /** Google wallet account ID */
+  walletAccountId: string;
+}
+
+/**
+ * Result of Google Pay tokenization
+ */
+export interface TokenizeGoogleResult {
+  /** One-time passcode */
+  opc: string;
 }
 
 export interface CardAccount {

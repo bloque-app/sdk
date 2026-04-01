@@ -16,34 +16,36 @@ export const mcpCommand = new Command('mcp')
       process.exit(1);
     }
 
-    const sdkConfig =
-      session.authType === 'apiKey' && session.apiKey
-        ? {
-            auth: { type: 'apiKey' as const, apiKey: session.apiKey },
-            mode: session.mode,
-            origin: session.origin,
-          }
-        : {
-            auth: { type: 'jwt' as const },
-            mode: session.mode,
-            origin: session.origin,
-            tokenStorage: {
-              get: () => session.accessToken,
-              set: () => {},
-              clear: () => {},
-            },
-          };
+    let clients: Awaited<ReturnType<SDK['connect']>>;
 
-    const sdk = new SDK(sdkConfig);
-
-    let clients: Awaited<ReturnType<typeof sdk.connect>>;
-    if (session.authType === 'apiKey' && session.alias) {
+    if (session.authType === 'apiKey' && session.apiKey) {
+      const sdk = new SDK({
+        auth: { type: 'apiKey', apiKey: session.apiKey },
+        mode: session.mode,
+      });
+      clients = await sdk.connect();
+    } else if (session.authType === 'originKey' && session.originKey && session.alias) {
+      const sdk = new SDK({
+        auth: { type: 'originKey', originKey: session.originKey },
+        mode: session.mode,
+        origin: session.origin,
+      });
       clients = await sdk.connect(session.alias);
     } else {
+      const sdk = new SDK({
+        auth: { type: 'jwt' },
+        mode: session.mode,
+        origin: session.origin,
+        tokenStorage: {
+          get: () => session.accessToken,
+          set: () => {},
+          clear: () => {},
+        },
+      });
       clients = await sdk.authenticate();
     }
 
-    const server = createBloqueServer(clients);
+    const server = createBloqueServer(clients, session);
 
     if (opts.http) {
       await startServer(server, 'http', { port: Number(opts.port) });
