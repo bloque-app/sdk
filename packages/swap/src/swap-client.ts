@@ -2,6 +2,7 @@ import type { HttpClient } from '@bloque/sdk-core';
 import { BaseClient, BloqueConfigError } from '@bloque/sdk-core';
 import { BankTransferClient } from './bank-transfer/bank-transfer-client';
 import type { SwapOrder } from './bank-transfer/types';
+import { BrebClient } from './breb/breb-client';
 import type {
   FindRatesResponse,
   ListOrdersResponse,
@@ -23,15 +24,18 @@ import type {
  * Provides access to exchange rate discovery and swapping functionality.
  * - pse: PSE utilities (bank listing, etc.)
  * - bankTransfer: Generic bank transfer cash-out (supports all Colombian banks)
+ * - breb: BRE-B cash-out via a resolved recipient key
  */
 export class SwapClient extends BaseClient {
   readonly pse: PseClient;
   readonly bankTransfer: BankTransferClient;
+  readonly breb: BrebClient;
 
   constructor(httpClient: HttpClient) {
     super(httpClient);
     this.pse = new PseClient(this.httpClient);
     this.bankTransfer = new BankTransferClient(this.httpClient);
+    this.breb = new BrebClient(this.httpClient);
   }
   /**
    * Find available exchange rates

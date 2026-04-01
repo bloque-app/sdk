@@ -284,7 +284,7 @@ const session = await bloque.connect(); // apiKey auth (no alias)
 // or: await bloque.connect('@alice')   // originKey auth
 
 // Available clients
-session.accounts    // Account management (cards, virtual, bancolombia)
+session.accounts    // Account management (cards, virtual, bancolombia, breb)
 session.identity    // Identity and aliases
 session.compliance  // KYC/KYB verification
 session.orgs        // Organization management
@@ -306,6 +306,34 @@ await session.accounts.virtual.create({
 
 // Bancolombia - Colombian virtual accounts
 await session.accounts.bancolombia.create({ name: 'Main Account' });
+
+// BRE-B - create and resolve payment keys
+const { data, error } = await session.accounts.breb.createKey({
+  ledgerId: 'ledger-account-id',
+  keyType: 'PHONE',
+  key: '3015550184',
+  displayName: 'Camila Ortega',
+});
+
+if (!error) {
+  const resolution = await session.accounts.breb.resolveKey({
+    keyType: 'PHONE',
+    key: data!.key,
+  });
+
+  if (!resolution.error && resolution.data) {
+    await session.swap.breb.create({
+      rateSig: 'rate-signature',
+      amountSrc: '10000000',
+      depositInformation: {
+        resolutionId: resolution.data.resolutionId,
+      },
+      args: {
+        sourceAccountUrn: 'did:bloque:account:breb:demo-account-id',
+      },
+    });
+  }
+}
 
 // Transfers - Move funds between accounts
 await session.accounts.transfer({
@@ -366,6 +394,7 @@ For production applications, use httpOnly cookies or secure storage instead.
 
 - [Virtual Cards](/sdk/guide/accounts/cards) - Create and manage payment cards
 - [Virtual Accounts](/sdk/guide/accounts/virtual) - Create testing accounts
+- [BRE-B](/sdk/guide/accounts/breb) - Create and resolve payment keys
 - [Transfers](/sdk/guide/accounts/transfers) - Transfer funds between accounts
 - [Organizations](/sdk/guide/features/organizations) - Create organizations
 - [Compliance](/sdk/guide/features/compliance) - KYC verification

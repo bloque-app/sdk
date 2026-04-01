@@ -9,6 +9,8 @@ import {
   mapBancolombiaAccountFromWire,
 } from './bancolombia/bancolombia-client';
 import type { BancolombiaAccount } from './bancolombia/types';
+import { BrebClient, mapBrebAccountFromWire } from './breb/breb-client';
+import type { BrebKeyAccount } from './breb/types';
 import { CardClient, mapCardAccountFromWire } from './card/card-client';
 import type { CardAccount, ListMovementsParams } from './card/types';
 import type {
@@ -16,6 +18,7 @@ import type {
   BancolombiaDetails,
   BatchTransferRequest,
   BatchTransferResponse,
+  BrebDetails,
   CardDetails,
   GetAccountResponse,
   GetBalanceResponse,
@@ -44,7 +47,6 @@ import type {
   ListMovementsResult,
   ListTransactionsParams,
   ListTransactionsResult,
-  Movement,
   TokenBalance,
   TransferParams,
   TransferResult,
@@ -66,6 +68,7 @@ export type MappedAccount =
   | VirtualAccount
   | PolygonAccount
   | BancolombiaAccount
+  | BrebKeyAccount
   | UsAccount;
 
 /**
@@ -75,11 +78,13 @@ export type MappedAccount =
  * - card: Credit/debit cards
  * - virtual: Virtual accounts
  * - bancolombia: Bancolombia accounts
+ * - breb: BRE-B key accounts
  * - us: US bank accounts
  * - polygon: Polygon wallets
  */
 export class AccountsClient extends BaseClient {
   readonly bancolombia: BancolombiaClient;
+  readonly breb: BrebClient;
   readonly card: CardClient;
   readonly polygon: PolygonClient;
   readonly us: UsClient;
@@ -88,6 +93,7 @@ export class AccountsClient extends BaseClient {
   constructor(httpClient: HttpClient) {
     super(httpClient);
     this.bancolombia = new BancolombiaClient(this.httpClient);
+    this.breb = new BrebClient(this.httpClient);
     this.card = new CardClient(this.httpClient);
     this.polygon = new PolygonClient(this.httpClient);
     this.us = new UsClient(this.httpClient);
@@ -592,6 +598,10 @@ export class AccountsClient extends BaseClient {
       case 'bancolombia':
         return mapBancolombiaAccountFromWire(
           account as AccountWithBalance<BancolombiaDetails>,
+        );
+      case 'breb':
+        return mapBrebAccountFromWire(
+          account as AccountWithBalance<BrebDetails>,
         );
       case 'us-account':
         return mapUsAccountFromWire(account as AccountWithBalance<UsDetails>);

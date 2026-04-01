@@ -14,6 +14,13 @@ export type {
   SupportedBank,
   SwapOrder,
 } from './bank-transfer/types';
+export { BrebClient } from './breb/breb-client';
+export type {
+  BrebDepositInformation,
+  BrebSwapArgs,
+  CreateBrebOrderParams,
+  CreateBrebOrderResult,
+} from './breb/types';
 export { PseClient } from './pse/pse-client';
 // PSE — only unique types
 export type {

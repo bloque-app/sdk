@@ -36,6 +36,11 @@
   },
   {
     "type": "file",
+    "name": "breb",
+    "label": "BRE-B"
+  },
+  {
+    "type": "file",
     "name": "transfers",
     "label": "Transferencias"
   }

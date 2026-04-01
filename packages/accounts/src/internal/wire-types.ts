@@ -24,7 +24,13 @@ export type AccountStatus =
 export interface Account<TDetails = unknown> {
   id: string;
   urn: string;
-  medium: 'bancolombia' | 'card' | 'virtual' | 'us-account' | 'polygon';
+  medium:
+    | 'bancolombia'
+    | 'breb'
+    | 'card'
+    | 'virtual'
+    | 'us-account'
+    | 'polygon';
   details: TDetails;
   ledger_account_id: string;
   status: AccountStatus;
@@ -102,6 +108,25 @@ export type BancolombiaDetails = {
   reference_code: string;
   payment_agreement_code: string;
   network: string[];
+};
+
+/**
+ * @internal
+ * BRE-B account details from API.
+ */
+export type BrebDetails = {
+  id: string;
+  remote_key_id: string;
+  account_id: string;
+  key: {
+    key_type: 'ID' | 'PHONE' | 'EMAIL' | 'ALPHA' | 'BCODE';
+    key_value: string;
+  };
+  display_name: string | null;
+  status: string;
+  created_at: string | null;
+  updated_at: string | null;
+  raw_response: Record<string, unknown>;
 };
 
 /**

@@ -91,6 +91,8 @@ export type OrderType = 'src' | 'dst';
 export interface DepositInformation {
   /** PSE deposit URN */
   urn?: string;
+  /** BRE-B payout resolution id */
+  resolution_id?: string;
   /** Bancolombia deposit information */
   bancolombia?: BancolombiaDepositInformation;
 }
