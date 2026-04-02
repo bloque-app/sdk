@@ -6,8 +6,12 @@ export type {
   FindRatesParams,
   FindRatesResult,
   ListBanksResult,
+  ListOrdersParams,
+  ListOrdersResult,
+  OrderStatus,
   RateLimits,
   RateTuple,
+  SwapOrder,
   SwapRate,
 } from '@bloque/sdk-swap';
 

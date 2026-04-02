@@ -1,5 +1,7 @@
 export * from './aliases/aliases-client';
 export * from './aliases/types';
+export * from './api-keys/api-keys-client';
+export * from './api-keys/types';
 export * from './identity-client';
 export * from './origins/origin-client';
 export * from './origins/origins-client';

@@ -7,6 +7,26 @@ export type CreateIdentityParams =
   | Pick<IndividualRegisterParams, 'extraContext' | 'type' | 'profile'>
   | Pick<BusinessRegisterParams, 'extraContext' | 'type' | 'profile'>;
 
+/**
+ * Parameters for updating the current user's identity
+ */
+export interface UpdateIdentityParams {
+  /** Partial profile fields to update (merged with existing) */
+  profile?: Partial<IdentityMeProfile>;
+  /** Partial metadata to update (merged with existing) */
+  metadata?: Record<string, unknown>;
+}
+
+/**
+ * Alias information
+ */
+export interface IdentityAlias {
+  alias: string;
+  type: string;
+  verified: boolean;
+  primary: boolean;
+}
+
 export interface IdentityMeProfile {
   city: string;
   email: string;

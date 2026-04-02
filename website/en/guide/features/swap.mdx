@@ -318,6 +318,9 @@ interface SwapOrder {
   at: number;                        // Creation timestamp
   graphId: string;                   // Instruction graph ID
   status: SwapOrderStatus;           // Order status
+  webhookUrl?: string;               // Webhook URL for order events
+  failureReason?: string;            // Failure reason (when status is 'failed')
+  failureDetails?: string;           // Detailed failure information
   createdAt: string;                 // Creation date
   updatedAt: string;                 // Last update date
 }
@@ -359,6 +362,28 @@ type ExecutionStatus =
   | 'failed'     // Node failed during execution
   | 'timeout';   // Node timed out
 ```
+
+## Listing Orders
+
+Retrieve all swap orders for the authenticated user:
+
+```typescript
+const orders = await userSession.swap.listOrders();
+orders.forEach(order => {
+  console.log(`${order.id}: ${order.status} — ${order.fromAmount} ${order.fromAsset} → ${order.toAmount} ${order.toAsset}`);
+  if (order.failureReason) {
+    console.log(`  Failed: ${order.failureReason}`);
+  }
+});
+```
+
+### ListOrdersParams
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `status` | `string` | No | Filter by order status |
+| `limit` | `number` | No | Max results per page |
+| `offset` | `number` | No | Pagination offset |
 
 ## States and Transitions
 

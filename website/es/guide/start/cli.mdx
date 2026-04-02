@@ -42,7 +42,7 @@ Tu agente maneja las cuentas, tarjetas, transferencias y reportes detrás de esc
 La CLI instala un [servidor MCP](https://modelcontextprotocol.io/) que le da a tu agente acceso a 40 herramientas financieras — organizadas en dos niveles:
 
 - **Workflows** (14 herramientas) — operaciones de alto nivel como "crear una tarjeta" o "buscar mi tarjeta para este sitio web." Una llamada hace todo.
-- **Primitivas** (26 herramientas) — control de bajo nivel cuando lo necesitas. Una herramienta por método del SDK.
+- **Primitivas** (30 herramientas) — control de bajo nivel cuando lo necesitas. Una herramienta por método del SDK.
 
 Cada tarjeta es una **tarjeta crypto**: automáticamente obtiene una cuenta virtual (guarda el saldo) y una dirección Polygon (recibe USDC). Recarga vía crypto, transferencia bancaria PSE, o transferencia interna.
 
@@ -65,6 +65,8 @@ Cada tarjeta es una **tarjeta crypto**: automáticamente obtiene una cuenta virt
 
 | Opción | Descripción |
 |--------|-------------|
+| `--api-key <clave>` | Clave secreta (`sk_`) para configuración sin navegador |
+| `--web` | Autenticarse vía navegador |
 | `--jwt <token>` | Token JWT (salta el OTP) |
 | `--sandbox` | Usar sandbox en vez de producción |
 
@@ -76,10 +78,16 @@ Cada tarjeta es una **tarjeta crypto**: automáticamente obtiene una cuenta virt
 npx @bloque/cli login
 ```
 
-**Modo API key** (para uso en backend):
+**Modo API key** (recomendado para backend/CI):
 
 ```bash
-npx @bloque/cli login --api-key sk_live_... --origin tu-origin --alias alias-usuario
+npx @bloque/cli login --api-key sk_live_...
+```
+
+**Modo clave de origen** (heredado):
+
+```bash
+npx @bloque/cli login --origin-key tu-clave --origin tu-origen --alias @usuario
 ```
 
 ### `bloque mcp`
@@ -187,7 +195,7 @@ Herramientas de alto nivel. Una llamada maneja operaciones de múltiples pasos.
 | `wallet_overview` | Todas las cuentas, saldos y transacciones recientes |
 | `card_summary` | Todo sobre una tarjeta específica |
 
-### Primitivas (26 herramientas)
+### Primitivas (30 herramientas)
 
 Herramientas de bajo nivel. 1:1 con métodos del SDK para control total.
 
@@ -201,6 +209,7 @@ Herramientas de bajo nivel. 1:1 con métodos del SDK para control total.
 | Transferencias | `transfer`, `batch_transfer` |
 | Historial | `list_transactions`, `list_account_movements` |
 | Swap | `find_rates`, `list_pse_banks`, `create_pse_order`, `create_bank_transfer_order` |
+| Claves API | `list_api_keys`, `get_api_key`, `revoke_api_key`, `rotate_api_key` |
 
 ## Requisitos
 

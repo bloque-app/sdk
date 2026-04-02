@@ -157,7 +157,48 @@ export interface TokenStorage {
   clear(): void;
 }
 
-export type AuthStrategy = { type: 'apiKey'; apiKey: string } | { type: 'jwt' };
+export type AuthStrategy =
+  /**
+   * Opaque API key authentication (`sk_live_...` / `sk_test_...`).
+   *
+   * The SDK automatically exchanges the secret key for a short-lived JWT
+   * via `POST /api/api-keys/exchange` and refreshes it before expiry.
+   *
+   * Intended for backend platforms (`node`, `bun`, `deno`).
+   */
+  | { type: 'apiKey'; apiKey: string; scopes?: string[] }
+
+  /**
+   * Legacy origins-based key authentication.
+   *
+   * Sends the raw key as an `Authorization` header and uses the
+   * `API_KEY` challenge type in `connect(alias)` / `register()` flows.
+   *
+   * Intended for backend platforms (`node`, `bun`, `deno`).
+   */
+  | { type: 'originKey'; originKey: string }
+
+  /**
+   * JWT authentication for frontend platforms (`browser`, `react-native`).
+   */
+  | { type: 'jwt' };
+
+/**
+ * Parameters for exchanging an API secret key for a short-lived JWT.
+ */
+export interface ExchangeApiKeyParams {
+  key: string;
+  scopes?: string[];
+}
+
+/**
+ * Result of an API key exchange.
+ */
+export interface ExchangeApiKeyResult {
+  accessToken: string;
+  expiresIn: number;
+  tokenType: string;
+}
 
 type BaseSDKConfig = {
   /**
@@ -174,8 +215,9 @@ type BaseSDKConfig = {
    * Used to scope requests and operations
    * to a specific origin within the Bloque platform.
    *
-   * Required for `apiKey` authentication.
-   * Optional for `jwt` authentication (it can be resolved during `authenticate()`).
+   * Required for `originKey` authentication.
+   * Optional for `apiKey` authentication (resolved via `/me` after exchange).
+   * Optional for `jwt` authentication (resolved during `authenticate()`).
    */
   origin?: string;
 
@@ -202,8 +244,9 @@ type BaseSDKConfig = {
   /**
    * Authentication strategy used by the SDK.
    *
-   * - `apiKey`: intended for backend platforms (`node`, `bun`, `deno`).
-   * - `jwt`: intended for frontend platforms (`browser`, `react-native`).
+   * - `apiKey`: opaque `sk_` keys exchanged for short-lived JWTs. Backend only.
+   * - `originKey`: legacy origins-based key. Backend only.
+   * - `jwt`: interactive OTP / browser / React Native.
    *
    * The SDK validates the compatibility between the selected
    * platform and the authentication strategy at runtime.
@@ -378,6 +421,8 @@ export interface RequestOptions<U = unknown> {
    * @default 30000 (30 seconds)
    */
   timeout?: number;
+  /** @internal Bypass the auto-exchange guard to prevent recursion. */
+  _skipExchange?: boolean;
 }
 
 export interface BloqueResponse<T> {

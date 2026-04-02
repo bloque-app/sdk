@@ -53,7 +53,8 @@ function listenOnRandomPort(server: http.Server): Promise<number> {
 }
 
 interface CallbackResult {
-  token: string;
+  apiKey?: string;
+  token?: string;
   apiUrl?: string;
 }
 
@@ -98,7 +99,7 @@ function startCallbackServer(
           res.writeHead(200, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify({ success: true }));
 
-          resolveToken({ token: data.token, apiUrl: data.api_url });
+          resolveToken({ apiKey: data.api_key, token: data.token, apiUrl: data.api_url });
         } catch {
           res.writeHead(400, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify({ error: 'invalid_body' }));
@@ -176,15 +177,27 @@ export async function startWebAuth(
     process.removeListener('SIGINT', sigintHandler);
 
     const store = new SessionStore();
-    const session: PersistedSession = {
-      accessToken: result.token,
-      urn: '',
-      origin: copilotUrl,
-      mode,
-      authType: 'jwt',
-      apiUrl: result.apiUrl,
-      createdAt: new Date().toISOString(),
-    };
+
+    const session: PersistedSession = result.apiKey
+      ? {
+          accessToken: '',
+          urn: '',
+          origin: '',
+          mode,
+          authType: 'apiKey',
+          apiKey: result.apiKey,
+          apiUrl: result.apiUrl,
+          createdAt: new Date().toISOString(),
+        }
+      : {
+          accessToken: result.token ?? '',
+          urn: '',
+          origin: copilotUrl,
+          mode,
+          authType: 'jwt',
+          apiUrl: result.apiUrl,
+          createdAt: new Date().toISOString(),
+        };
 
     try {
       store.save(session);
@@ -192,8 +205,8 @@ export async function startWebAuth(
       console.warn(
         '\n  ⚠ Could not write credentials to ~/.bloque/session.json',
       );
-      console.warn('    Printing token so you can save it manually:\n');
-      console.log(result.token);
+      console.warn('    Printing credential so you can save it manually:\n');
+      console.log(result.apiKey ?? result.token);
     }
 
     await portalAnimation(`Authenticated via ${copilotUrl}`);

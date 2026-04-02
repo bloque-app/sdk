@@ -39,7 +39,7 @@ Your agent handles the accounts, cards, transfers, and reporting behind the scen
 
 ## How It Works
 
-The CLI installs an [MCP server](https://modelcontextprotocol.io/) that gives your agent access to 40 financial tools — organized in two tiers:
+The CLI installs an [MCP server](https://modelcontextprotocol.io/) that gives your agent access to 44 financial tools — organized in two tiers:
 
 - **Workflows** (14 tools) — high-level operations like "create a card" or "find my card for this website." One call does everything.
 - **Primitives** (26 tools) — low-level control when you need it. One tool per SDK method.
@@ -65,6 +65,8 @@ Every card is a **crypto card**: it automatically gets a virtual account (holds 
 
 | Option | Description |
 |--------|-------------|
+| `--api-key <key>` | Secret key (`sk_`) for headless setup |
+| `--web` | Authenticate via browser |
 | `--jwt <token>` | JWT token (skips OTP) |
 | `--sandbox` | Use sandbox instead of production |
 
@@ -76,10 +78,16 @@ Every card is a **crypto card**: it automatically gets a virtual account (holds 
 npx @bloque/cli login
 ```
 
-**API key mode** (for backend use):
+**API key mode** (recommended for backend/CI):
 
 ```bash
-npx @bloque/cli login --api-key sk_live_... --origin your-origin --alias user-alias
+npx @bloque/cli login --api-key sk_live_...
+```
+
+**Origin key mode** (legacy):
+
+```bash
+npx @bloque/cli login --origin-key your-key --origin your-origin --alias @user
 ```
 
 ### `bloque mcp`
@@ -187,7 +195,7 @@ High-level tools. One call handles multi-step operations.
 | `wallet_overview` | All accounts, balances, and recent transactions |
 | `card_summary` | Everything about a specific card |
 
-### Primitives (26 tools)
+### Primitives (30 tools)
 
 Low-level tools. 1:1 with SDK methods for full control.
 
@@ -201,6 +209,7 @@ Low-level tools. 1:1 with SDK methods for full control.
 | Transfers | `transfer`, `batch_transfer` |
 | History | `list_transactions`, `list_account_movements` |
 | Swap | `find_rates`, `list_pse_banks`, `create_pse_order`, `create_bank_transfer_order` |
+| API Keys | `list_api_keys`, `get_api_key`, `revoke_api_key`, `rotate_api_key` |
 
 ## Requirements
 

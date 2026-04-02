@@ -149,8 +149,19 @@ export interface OrderResponse {
   graph_id: string;
   status: string;
   metadata?: Record<string, unknown>;
+  webhook_url?: string;
+  failure_reason?: string;
+  failure_details?: Record<string, unknown>;
   created_at: string;
   updated_at: string;
+}
+
+/**
+ * @internal
+ * List orders by taker response
+ */
+export interface ListOrdersResponse {
+  orders: OrderResponse[];
 }
 
 /**

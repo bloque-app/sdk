@@ -5,6 +5,8 @@ import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import type { BloqueClients } from './types.ts';
 
+import type { PersistedSession } from '../session/types.ts';
+
 import { registerAccountTools } from './tools/primitives/accounts.ts';
 import { registerVirtualTools } from './tools/primitives/virtual.ts';
 import { registerCardTools } from './tools/primitives/card.ts';
@@ -13,6 +15,7 @@ import { registerUsTools } from './tools/primitives/us.ts';
 import { registerTransferTools } from './tools/primitives/transfers.ts';
 import { registerHistoryTools } from './tools/primitives/history.ts';
 import { registerSwapTools } from './tools/primitives/swap.ts';
+import { registerApiKeyTools } from './tools/primitives/api-keys.ts';
 
 import { registerIdentityWorkflows } from './tools/workflows/identity.ts';
 import { registerAccountWorkflows } from './tools/workflows/account.ts';
@@ -22,7 +25,7 @@ import { registerTopupWorkflows } from './tools/workflows/topup.ts';
 import { registerSpendingRulesWorkflows } from './tools/workflows/spending-rules.ts';
 import { registerOverviewWorkflows } from './tools/workflows/overview.ts';
 
-export function createBloqueServer(clients: BloqueClients): McpServer {
+export function createBloqueServer(clients: BloqueClients, session?: PersistedSession): McpServer {
   const server = new McpServer({ name: 'bloque', version: '0.0.1' });
 
   registerAccountTools(server, clients);
@@ -33,6 +36,7 @@ export function createBloqueServer(clients: BloqueClients): McpServer {
   registerTransferTools(server, clients);
   registerHistoryTools(server, clients);
   registerSwapTools(server, clients);
+  registerApiKeyTools(server, clients, session);
 
   registerIdentityWorkflows(server, clients);
   registerAccountWorkflows(server, clients);

@@ -24,13 +24,15 @@ const OTP_CHANNELS = [
 
 export const loginCommand = new Command('login')
   .description('Authenticate with Bloque')
-  .option('--api-key <key>', 'API key for backend authentication')
-  .option('--origin <origin>', 'Origin (only needed with --api-key)')
-  .option('--alias <alias>', 'Alias (required with --api-key)')
+  .option('--api-key <key>', 'Secret key (sk_) for API key authentication')
+  .option('--origin-key <key>', 'Origin key for legacy authentication')
+  .option('--origin <origin>', 'Origin (required with --origin-key)')
+  .option('--alias <alias>', 'Alias (required with --origin-key)')
   .option('--sandbox', 'Use sandbox environment instead of production')
   .action(async (opts) => {
-    const { apiKey, origin, alias, sandbox } = opts as {
+    const { apiKey, originKey, origin, alias, sandbox } = opts as {
       apiKey?: string;
+      originKey?: string;
       origin?: string;
       alias?: string;
       sandbox?: boolean;
@@ -38,17 +40,37 @@ export const loginCommand = new Command('login')
 
     const mode = sandbox ? 'sandbox' : 'production';
 
+    // --- New apiKey (sk_) flow: exchange + /me, no alias needed ---
     if (apiKey) {
+      const sdk = new SDK({ auth: { type: 'apiKey', apiKey }, mode });
+      const clients = await sdk.connect();
+
+      store.save({
+        accessToken: clients.accessToken,
+        urn: clients.urn ?? '',
+        origin: '',
+        mode,
+        authType: 'apiKey',
+        apiKey,
+        createdAt: new Date().toISOString(),
+      });
+
+      await portalAnimation(`Connected as ${clients.urn ?? 'API key session'}`);
+      return;
+    }
+
+    // --- Legacy originKey flow: connect(alias) ---
+    if (originKey) {
       if (!alias) {
-        console.error('Error: --alias is required when using --api-key');
+        console.error('Error: --alias is required when using --origin-key');
         process.exit(1);
       }
       if (!origin) {
-        console.error('Error: --origin is required when using --api-key');
+        console.error('Error: --origin is required when using --origin-key');
         process.exit(1);
       }
 
-      const sdk = new SDK({ auth: { type: 'apiKey', apiKey }, mode, origin });
+      const sdk = new SDK({ auth: { type: 'originKey', originKey }, mode, origin });
       const clients = await sdk.connect(alias);
 
       store.save({
@@ -56,8 +78,8 @@ export const loginCommand = new Command('login')
         urn: clients.urn ?? '',
         origin,
         mode,
-        authType: 'apiKey',
-        apiKey,
+        authType: 'originKey',
+        originKey,
         alias,
         createdAt: new Date().toISOString(),
       });
@@ -66,6 +88,7 @@ export const loginCommand = new Command('login')
       return;
     }
 
+    // --- Interactive OTP flow ---
     const channel = await select({
       message: 'How would you like to receive your OTP?',
       choices: OTP_CHANNELS.map((c) => ({ name: c.name, value: c.value })),

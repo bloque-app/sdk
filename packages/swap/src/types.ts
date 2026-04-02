@@ -151,3 +151,37 @@ export interface FindRatesResult {
   /** Array of available rates */
   rates: SwapRate[];
 }
+
+/**
+ * Order status
+ */
+export type OrderStatus = 'pending' | 'in_progress' | 'completed' | 'failed';
+
+/**
+ * Parameters for listing orders by taker
+ */
+export interface ListOrdersParams {
+  /** Filter by order signature */
+  orderSig?: string;
+  /** Filter by swap signature */
+  swapSig?: string;
+  /** Filter by rate signature */
+  rateSig?: string;
+  /** Filter by maker URN */
+  makerUrn?: string;
+  /** Filter by order status */
+  status?: OrderStatus;
+  /** Filter by graph ID */
+  graphId?: string;
+  /** Filter orders after this timestamp */
+  after?: number;
+  /** Filter orders before this timestamp */
+  before?: number;
+}
+
+/**
+ * Result of listing orders
+ */
+export interface ListOrdersResult {
+  orders: import('./bank-transfer/types').SwapOrder[];
+}

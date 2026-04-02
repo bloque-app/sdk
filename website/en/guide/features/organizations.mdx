@@ -186,6 +186,122 @@ const params: CreateOrgParams = {
 };
 ```
 
+## Retrieving Organizations
+
+### Get by URN
+
+```typescript
+const org = await bloque.orgs.get('bloque:org:abc123');
+console.log(org.profile.legal_name, org.status);
+```
+
+### List Your Organizations
+
+```typescript
+const orgs = await bloque.orgs.list();
+orgs.forEach(org => console.log(org.urn, org.profile.legal_name));
+```
+
+### Verify Slug Availability
+
+```typescript
+const result = await bloque.orgs.verifySlug('acme-corp');
+console.log('Available:', result.available);
+```
+
+### Delete an Organization
+
+```typescript
+await bloque.orgs.delete('bloque:org:abc123');
+```
+
+## Members
+
+Manage organization members.
+
+```typescript
+// List members
+const members = await bloque.orgs.listMembers('bloque:org:abc123');
+
+// Update a member's role
+await bloque.orgs.members.update('bloque:member:m1', {
+  role: 'admin',
+});
+
+// Remove a member
+await bloque.orgs.members.remove('bloque:org:abc123', 'bloque:member:m1');
+```
+
+| Method | Parameters | Description |
+|--------|-----------|-------------|
+| `listMembers(orgUrn)` | `string` | List all members of the org |
+| `members.update(urn, params)` | URN + `{ role }` | Update member role |
+| `members.remove(orgUrn, memberUrn)` | Two URNs | Remove member from org |
+
+## Teams
+
+Organize members into teams with specific roles.
+
+```typescript
+// List teams
+const teams = await bloque.orgs.teams.list('bloque:org:abc123');
+
+// Update a team
+await bloque.orgs.teams.update('bloque:team:t1', { name: 'Engineering' });
+
+// List team members
+const teamMembers = await bloque.orgs.teams.listMembers('bloque:team:t1');
+
+// Update a team member's role
+await bloque.orgs.teams.updateMember('bloque:team:t1', 'bloque:member:m1', {
+  role: 'lead',
+});
+
+// Remove from team
+await bloque.orgs.teams.removeMember('bloque:team:t1', 'bloque:member:m1');
+```
+
+| Method | Description |
+|--------|-------------|
+| `teams.list(orgUrn)` | List all teams in the org |
+| `teams.update(teamUrn, params)` | Update team name or metadata |
+| `teams.listMembers(teamUrn)` | List members of a team |
+| `teams.updateMember(teamUrn, memberUrn, params)` | Update a member's team role |
+| `teams.removeMember(teamUrn, memberUrn)` | Remove a member from the team |
+
+## Invites
+
+Send, accept, reject, and manage organization invitations.
+
+```typescript
+// Create an invite
+const invite = await bloque.orgs.invites.create('bloque:org:abc123', {
+  email: 'new-member@example.com',
+  role: 'member',
+});
+
+// List invites
+const invites = await bloque.orgs.invites.list({ orgUrn: 'bloque:org:abc123' });
+
+// Accept an invite
+await bloque.orgs.invites.accept('invite-code-123');
+
+// Reject an invite
+await bloque.orgs.invites.reject('invite-code-123', 'Not interested');
+
+// Resend an invite
+await bloque.orgs.invites.resend('invite-code-123');
+```
+
+| Method | Description |
+|--------|-------------|
+| `invites.create(orgUrn, params)` | Send an invite |
+| `invites.get(code)` | Get invite details by code |
+| `invites.list(params?)` | List invites (filter by `orgUrn`, `status`) |
+| `invites.accept(code)` | Accept an invite |
+| `invites.reject(code, reason?)` | Reject an invite |
+| `invites.resend(code)` | Resend an invite email |
+
 ## Best Practices
 
 1. **Validate Data**: Ensure all required fields are present before calling the API

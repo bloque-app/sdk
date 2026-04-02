@@ -280,6 +280,9 @@ interface SwapOrder {
   at: number;                        // Timestamp de creación
   graphId: string;                   // ID del grafo de instrucciones
   status: string;                    // Estado (pending, in_progress, completed, failed)
+  webhookUrl?: string;               // URL de webhook para eventos de la orden
+  failureReason?: string;           // Razón del fallo (cuando status es 'failed')
+  failureDetails?: string;           // Información detallada del fallo
   createdAt: string;                 // Fecha de creación
   updatedAt: string;                 // Fecha de actualización
 }
@@ -511,6 +514,28 @@ realizarSwapBancolombia();
 
 - [Guía de Cuentas](/sdk/guide/accounts/overview) - Crea y gestiona cuentas para operar swaps
 - [Guía de Organizaciones](/sdk/guide/features/organizations) - Administra entidades que pueden realizar swaps
+
+## Listado de Órdenes
+
+Obtén todas las órdenes de swap del usuario autenticado:
+
+```typescript
+const orders = await userSession.swap.listOrders();
+orders.forEach(order => {
+  console.log(`${order.id}: ${order.status} — ${order.fromAmount} ${order.fromAsset} → ${order.toAmount} ${order.toAsset}`);
+  if (order.failureReason) {
+    console.log(`  Error: ${order.failureReason}`);
+  }
+});
+```
+
+### ListOrdersParams
+
+| Campo | Tipo | Requerido | Descripción |
+|-------|------|-----------|-------------|
+| `status` | `string` | No | Filtrar por estado de la orden |
+| `limit` | `number` | No | Resultados máximos por página |
+| `offset` | `number` | No | Offset de paginación |
 
 ## Estados y Transiciones
 

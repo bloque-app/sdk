@@ -147,6 +147,9 @@ export class BankTransferClient extends BaseClient {
       graphId: order.graph_id,
       status: order.status,
       metadata: order.metadata,
+      webhookUrl: order.webhook_url,
+      failureReason: order.failure_reason,
+      failureDetails: order.failure_details,
       createdAt: order.created_at,
       updatedAt: order.updated_at,
     };

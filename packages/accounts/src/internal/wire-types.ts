@@ -236,6 +236,8 @@ export interface UpdateAccountRequest<TInput = unknown> {
   input?: TInput;
   metadata?: Record<string, unknown>;
   status?: AccountStatus;
+  webhook_url?: string;
+  ledger_account_id?: string;
 }
 
 /**
@@ -423,6 +425,53 @@ export interface GetBalancesResponse {
       out?: string;
     }
   >;
+}
+
+/**
+ * @internal
+ * Apple Pay tokenization request body
+ */
+export interface TokenizeAppleCardRequest {
+  certificates: string[];
+  nonce: string;
+  nonce_signature: string;
+}
+
+/**
+ * @internal
+ * Apple Pay tokenization response
+ */
+export interface TokenizeAppleCardResponse {
+  result: {
+    tokenization: {
+      activation_data: string;
+      encrypted_pass_data: string;
+      ephemeral_public_key: string;
+    };
+  };
+  req_id: string;
+}
+
+/**
+ * @internal
+ * Google Pay tokenization request body
+ */
+export interface TokenizeGoogleCardRequest {
+  device_id: string;
+  wallet_account_id: string;
+}
+
+/**
+ * @internal
+ * Google Pay tokenization response
+ */
+export interface TokenizeGoogleCardResponse {
+  result: {
+    tokenization: {
+      opc: string;
+    };
+  };
+  req_id: string;
 }
 
 /**

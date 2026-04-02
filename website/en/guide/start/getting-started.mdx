@@ -10,31 +10,34 @@ Install the SDK using your preferred package manager:
 
 <PackageManagerTabs command="add @bloque/sdk" />
 
-## API Key
+## Authentication
 
-To use the Bloque SDK, you'll need an API key. You can obtain one from the [Bloque Dashboard](https://app.bloque.app/settings/api).
+To use the Bloque SDK, you'll need credentials. You can create API keys from the [Bloque Dashboard](https://app.bloque.app/settings/api).
+
+The SDK supports three authentication strategies:
+- **`apiKey`** (recommended): Uses `sk_` secret keys that auto-exchange for short-lived JWTs.
+- **`originKey`** (legacy): Uses origin-scoped keys with the API_KEY challenge.
+- **`jwt`**: For browser and React Native apps using OTP login.
 
 :::warning Security
-Never expose your API key in client-side code. Always use environment variables and keep your keys secure.
+Never expose your secret key (`sk_`) or origin key in client-side code. Always use environment variables and keep your keys secure.
 :::
 
 ## Initialize the SDK
 
 Create an instance of the SDK with your configuration:
 
-### Backend (Node.js, Bun, Deno)
+### Backend — API Key (Recommended)
 
 ```typescript
 import { SDK } from '@bloque/sdk';
 
 const bloque = new SDK({
-  origin: 'your-origin',
   auth: {
     type: 'apiKey',
-    apiKey: process.env.BLOQUE_API_KEY!,
+    apiKey: process.env.BLOQUE_SECRET_KEY!, // sk_live_... or sk_test_...
   },
   mode: 'production', // or 'sandbox' for testing
-  platform: 'node', // optional: 'node' | 'bun' | 'deno'
   timeout: 30000, // optional: 30 seconds (default)
   retry: { // optional: automatic retry configuration
     enabled: true, // default: true
@@ -43,6 +46,25 @@ const bloque = new SDK({
     maxDelay: 30000, // default: 30000ms
   },
 });
+
+const user = await bloque.connect(); // auto-exchanges sk_ key, resolves identity
+```
+
+### Backend — Origin Key (Legacy)
+
+```typescript
+import { SDK } from '@bloque/sdk';
+
+const bloque = new SDK({
+  origin: 'your-origin',
+  auth: {
+    type: 'originKey',
+    originKey: process.env.BLOQUE_ORIGIN_KEY!,
+  },
+  mode: 'production',
+});
+
+const user = await bloque.connect('@alice'); // requires alias
 ```
 
 ### Frontend (Browser, React Native)
@@ -69,8 +91,8 @@ const bloque = new SDK({
 
 | Option | Type | Required | Default | Description |
 |--------|------|----------|---------|-------------|
-| `origin` | `string` | Yes | - | Your origin identifier |
-| `auth` | `AuthStrategy` | Yes | - | Authentication strategy |
+| `origin` | `string` | For `originKey` | - | Your origin identifier |
+| `auth` | `AuthStrategy` | Yes | - | Authentication strategy (`apiKey`, `originKey`, or `jwt`) |
 | `mode` | `'production' \| 'sandbox'` | No | `'production'` | Environment mode |
 | `platform` | `Platform` | No | `'node'` | Runtime platform |
 | `timeout` | `number` | No | `30000` | Request timeout in milliseconds |
@@ -117,18 +139,17 @@ Let's create a virtual card:
 import { SDK } from '@bloque/sdk';
 
 const bloque = new SDK({
-  origin: 'your-origin',
   auth: {
     type: 'apiKey',
-    apiKey: process.env.BLOQUE_API_KEY!,
+    apiKey: process.env.BLOQUE_SECRET_KEY!,
   },
   mode: 'production',
 });
 
 async function createCard() {
   try {
-    // Connect to user session
-    const session = await bloque.connect('user-alias');
+    // Connect — auto-exchanges sk_ key for JWT, resolves identity
+    const session = await bloque.connect();
 
     // Create a virtual card
     const card = await session.accounts.card.create({
@@ -214,8 +235,7 @@ import type {
 
 // Type-safe configuration
 const config: BloqueSDKConfig = {
-  origin: 'your-origin',
-  auth: { type: 'apiKey', apiKey: process.env.BLOQUE_API_KEY! },
+  auth: { type: 'apiKey', apiKey: process.env.BLOQUE_SECRET_KEY! },
   mode: 'production',
 };
 
@@ -234,8 +254,7 @@ Use environment variables to store your configuration securely:
 
 ```bash
 # .env
-BLOQUE_ORIGIN=your-origin
-BLOQUE_API_KEY=your_api_key_here
+BLOQUE_SECRET_KEY=sk_live_your_key_here
 BLOQUE_MODE=sandbox
 BLOQUE_TIMEOUT=30000
 ```
@@ -247,10 +266,9 @@ import { SDK } from '@bloque/sdk';
 import 'dotenv/config'; // or your preferred env loader
 
 const bloque = new SDK({
-  origin: process.env.BLOQUE_ORIGIN!,
   auth: {
     type: 'apiKey',
-    apiKey: process.env.BLOQUE_API_KEY!,
+    apiKey: process.env.BLOQUE_SECRET_KEY!,
   },
   mode: process.env.BLOQUE_MODE as 'production' | 'sandbox',
   timeout: Number.parseInt(process.env.BLOQUE_TIMEOUT || '30000', 10),
@@ -262,7 +280,8 @@ const bloque = new SDK({
 After connecting to a user session, you have access to these clients:
 
 ```typescript
-const session = await bloque.connect('user-alias');
+const session = await bloque.connect(); // apiKey auth (no alias)
+// or: await bloque.connect('@alice')   // originKey auth
 
 // Available clients
 session.accounts    // Account management (cards, virtual, bancolombia, breb)
