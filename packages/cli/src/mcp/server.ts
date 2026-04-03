@@ -3,29 +3,32 @@ import { createServer } from 'node:http';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
-import type { BloqueClients } from './types.ts';
-
 import type { PersistedSession } from '../session/types.ts';
+import { mcpDebug } from './debug-log.ts';
 
 import { registerAccountTools } from './tools/primitives/accounts.ts';
-import { registerVirtualTools } from './tools/primitives/virtual.ts';
-import { registerCardTools } from './tools/primitives/card.ts';
-import { registerPolygonTools } from './tools/primitives/polygon.ts';
-import { registerUsTools } from './tools/primitives/us.ts';
-import { registerTransferTools } from './tools/primitives/transfers.ts';
-import { registerHistoryTools } from './tools/primitives/history.ts';
-import { registerSwapTools } from './tools/primitives/swap.ts';
 import { registerApiKeyTools } from './tools/primitives/api-keys.ts';
-
-import { registerIdentityWorkflows } from './tools/workflows/identity.ts';
+import { registerCardTools } from './tools/primitives/card.ts';
+import { registerHistoryTools } from './tools/primitives/history.ts';
+import { registerPolygonTools } from './tools/primitives/polygon.ts';
+import { registerSwapTools } from './tools/primitives/swap.ts';
+import { registerTransferTools } from './tools/primitives/transfers.ts';
+import { registerUsTools } from './tools/primitives/us.ts';
+import { registerVirtualTools } from './tools/primitives/virtual.ts';
 import { registerAccountWorkflows } from './tools/workflows/account.ts';
 import { registerCardWorkflows } from './tools/workflows/card.ts';
 import { registerFundCardWorkflows } from './tools/workflows/fund-card.ts';
-import { registerTopupWorkflows } from './tools/workflows/topup.ts';
-import { registerSpendingRulesWorkflows } from './tools/workflows/spending-rules.ts';
+import { registerIdentityWorkflows } from './tools/workflows/identity.ts';
 import { registerOverviewWorkflows } from './tools/workflows/overview.ts';
+import { registerSpendingRulesWorkflows } from './tools/workflows/spending-rules.ts';
+import { registerTopupWorkflows } from './tools/workflows/topup.ts';
+import type { BloqueClients } from './types.ts';
 
-export function createBloqueServer(clients: BloqueClients, session?: PersistedSession): McpServer {
+export function createBloqueServer(
+  clients: BloqueClients,
+  session?: PersistedSession,
+): McpServer {
+  mcpDebug('createBloqueServer: registering tools');
   const server = new McpServer({ name: 'bloque', version: '0.0.1' });
 
   registerAccountTools(server, clients);
@@ -77,6 +80,8 @@ export async function startServer(
   });
 
   httpServer.listen(port, () => {
-    console.error(`Bloque MCP server listening on http://localhost:${port}/mcp`);
+    console.error(
+      `Bloque MCP server listening on http://localhost:${port}/mcp`,
+    );
   });
 }

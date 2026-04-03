@@ -53,7 +53,9 @@ export function registerIdentityWorkflows(server: McpServer, clients: BloqueClie
       let kyc: any = {};
       try {
         kyc = await clients.compliance.kyc.getVerification({ urn: me.urn });
-      } catch {}
+      } catch {
+        // No existing verification record — will attempt startVerification below
+      }
 
       if (kyc.status === 'approved') {
         return {
@@ -69,7 +71,27 @@ export function registerIdentityWorkflows(server: McpServer, clients: BloqueClie
       let result: any = kyc;
       try {
         result = await clients.compliance.kyc.startVerification({ urn: me.urn });
-      } catch {}
+      } catch (err: unknown) {
+        const message =
+          err instanceof Error ? err.message : 'Unknown error starting verification';
+        return {
+          content: [
+            {
+              type: 'text',
+              text: JSON.stringify(
+                {
+                  status: 'error',
+                  error: message,
+                  hint: 'Ensure your profile has a complete address, valid ID, and birthdate. Use get_profile to check.',
+                },
+                null,
+                2,
+              ),
+            },
+          ],
+          isError: true,
+        };
+      }
 
       return {
         content: [
