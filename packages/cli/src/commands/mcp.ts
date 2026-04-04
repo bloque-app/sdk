@@ -1,7 +1,8 @@
-import { Command } from 'commander';
 import { SDK } from '@bloque/sdk';
-import { SessionStore } from '../session/store.ts';
+import { Command } from 'commander';
+import { mcpDebug } from '../mcp/debug-log.ts';
 import { createBloqueServer, startServer } from '../mcp/server.ts';
+import { SessionStore } from '../session/store.ts';
 
 const store = new SessionStore();
 
@@ -24,7 +25,11 @@ export const mcpCommand = new Command('mcp')
         mode: session.mode,
       });
       clients = await sdk.connect();
-    } else if (session.authType === 'originKey' && session.originKey && session.alias) {
+    } else if (
+      session.authType === 'originKey' &&
+      session.originKey &&
+      session.alias
+    ) {
       const sdk = new SDK({
         auth: { type: 'originKey', originKey: session.originKey },
         mode: session.mode,
@@ -46,6 +51,7 @@ export const mcpCommand = new Command('mcp')
     }
 
     const server = createBloqueServer(clients, session);
+    mcpDebug('MCP server ready', { transport: opts.http ? 'http' : 'stdio' });
 
     if (opts.http) {
       await startServer(server, 'http', { port: Number(opts.port) });
