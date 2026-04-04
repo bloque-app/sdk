@@ -1,5 +1,12 @@
 # @bloque/sdk-core
 
+## 0.1.1
+
+### Patch Changes
+
+- Add logs and have a working version of the MCP
+- 0a3b58a: new API keys security model.
+
 ## 0.1.0
 
 ## 0.0.23
