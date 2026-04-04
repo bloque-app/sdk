@@ -1,5 +1,13 @@
 # @bloque/sdk-identity
 
+## 0.1.2
+
+### Patch Changes
+
+- Upgrade internal versions
+- Updated dependencies
+  - @bloque/sdk-core@0.1.2
+
 ## 0.1.1
 
 ### Patch Changes

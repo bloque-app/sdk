@@ -1,5 +1,18 @@
 # @bloque/sdk
 
+## 0.1.2
+
+### Patch Changes
+
+- Upgrade internal versions
+- Updated dependencies
+  - @bloque/sdk-accounts@0.1.2
+  - @bloque/sdk-compliance@0.1.2
+  - @bloque/sdk-core@0.1.2
+  - @bloque/sdk-identity@0.1.2
+  - @bloque/sdk-orgs@0.1.2
+  - @bloque/sdk-swap@0.1.2
+
 ## 0.1.1
 
 ### Patch Changes

@@ -1,5 +1,11 @@
 # @bloque/sdk-core
 
+## 0.1.2
+
+### Patch Changes
+
+- Upgrade internal versions
+
 ## 0.1.1
 
 ### Patch Changes
