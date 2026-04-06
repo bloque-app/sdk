@@ -6,8 +6,8 @@ Create and resolve BRE-B payment keys through the SDK.
 
 The BRE-B client lets you:
 
-- create a BRE-B key bound to the Passport account configured in your backend
-- store the key in Bloque `mediums` as a `breb` account
+- create a BRE-B account with a BRE-B key
+- associate the account to an existing ledger when `ledgerId` is provided, or create one automatically when it is omitted
 - resolve a BRE-B key before starting a payment flow
 - pay to a resolved BRE-B key through `session.swap.breb.create()`
 - manage the key lifecycle by suspending, activating, or deleting a stored key
@@ -61,7 +61,9 @@ type BrebOperationResult<T> = {
 
 `createKey()` returns `{ data, error }`. On success, `error` is `null`. On failure, `data` is `null`.
 
-When `createKey()` succeeds, `data` contains the stored BRE-B account:
+If you pass `ledgerId`, the BRE-B account is associated with that ledger. If you omit it, the SDK creates a ledger automatically.
+
+When `createKey()` succeeds, `data` contains the created BRE-B account:
 
 ```typescript title="types.ts"
 interface BrebKeyAccount {
@@ -294,13 +296,12 @@ if (error) {
 ## Notes
 
 - `holder_urn` is taken from the connected SDK session
-- key creation uses `POST /api/mediums/breb`
-- key resolution uses `POST /api/mediums/breb/resolve-key`
+- if `ledgerId` is provided, the account is linked to that ledger
+- if `ledgerId` is omitted, a ledger is created automatically
 - key suspension updates the account with `PATCH /api/accounts/:accountUrn` and `status: 'frozen'`
 - key activation updates the account with `PATCH /api/accounts/:accountUrn` and `status: 'active'`
 - key deletion updates the account with `PATCH /api/accounts/:accountUrn` and `status: 'deleted'`
 - BRE-B payments are created through `session.swap.breb.create()`
-- Passport `customer_id` and `account_id` are configured server-side in `medium_configs`
 
 ## Next Steps
 

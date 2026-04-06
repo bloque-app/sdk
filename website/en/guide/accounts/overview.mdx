@@ -28,7 +28,7 @@ Create payment accounts that integrate with Bancolombia's banking system:
 
 Create and resolve BRE-B payment keys for real-time payment routing:
 - **Supported key types**: `PHONE`, `EMAIL`, `ID`, `ALPHA`, `BCODE`
-- **Key creation**: Register a key against the configured Passport account
+- **Key creation**: Create a BRE-B account and associate it to a `ledgerId` when provided, or create one automatically
 - **Key resolution**: Resolve a key before initiating a payment flow
 - **Lifecycle management**: Suspend, activate, and delete stored keys
 - **Payouts**: Pay to resolved keys with `session.swap.breb.create()`

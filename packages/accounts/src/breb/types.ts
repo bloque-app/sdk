@@ -164,7 +164,7 @@ export interface BrebKeyAccount {
   id: string;
 
   /**
-   * Account URN in mediums.
+   * Account URN.
    */
   urn: string;
 
@@ -179,7 +179,7 @@ export interface BrebKeyAccount {
   medium: 'breb';
 
   /**
-   * Remote BRE-B key id returned by Passport.
+   * Remote BRE-B key id returned by the source system.
    */
   remoteKeyId: string;
 

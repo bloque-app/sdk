@@ -6,8 +6,8 @@ Crea y resuelve llaves BRE-B desde el SDK.
 
 El cliente de BRE-B te permite:
 
-- crear una llave BRE-B asociada a la cuenta Passport configurada en tu backend
-- guardar la llave en Bloque `mediums` como una cuenta `breb`
+- crear una cuenta BRE-B con una llave BRE-B
+- asociar la cuenta a un ledger existente cuando envías `ledgerId`, o crear uno automáticamente cuando no lo envías
 - resolver una llave BRE-B antes de iniciar un flujo de pago
 - pagar a una llave BRE-B resuelta a través de `session.swap.breb.create()`
 - gestionar el ciclo de vida de la llave suspendiendo, activando o eliminando una llave guardada
@@ -61,7 +61,9 @@ type BrebOperationResult<T> = {
 
 `createKey()` retorna `{ data, error }`. En éxito, `error` es `null`. En error, `data` es `null`.
 
-Cuando `createKey()` es exitoso, `data` contiene la cuenta BRE-B almacenada:
+Si envías `ledgerId`, la cuenta BRE-B se asocia a ese ledger. Si no lo envías, el SDK crea uno automáticamente.
+
+Cuando `createKey()` es exitoso, `data` contiene la cuenta BRE-B creada:
 
 ```typescript title="tipos.ts"
 interface BrebKeyAccount {
@@ -294,13 +296,12 @@ if (error) {
 ## Notas
 
 - `holder_urn` se toma de la sesión conectada del SDK
-- la creación usa `POST /api/mediums/breb`
-- la resolución usa `POST /api/mediums/breb/resolve-key`
+- si envías `ledgerId`, la cuenta se asocia a ese ledger
+- si no envías `ledgerId`, se crea un ledger automáticamente
 - la suspensión actualiza la cuenta con `PATCH /api/accounts/:accountUrn` y `status: 'frozen'`
 - la activación actualiza la cuenta con `PATCH /api/accounts/:accountUrn` y `status: 'active'`
 - la eliminación actualiza la cuenta con `PATCH /api/accounts/:accountUrn` y `status: 'deleted'`
 - los pagos BRE-B se crean con `session.swap.breb.create()`
-- `customer_id` y `account_id` de Passport se configuran del lado servidor en `medium_configs`
 
 ## Próximos pasos
 
