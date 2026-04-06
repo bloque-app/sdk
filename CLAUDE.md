@@ -140,7 +140,8 @@ The `HttpClient` (in `core` package) provides:
 - **Rate limit handling** (respects `Retry-After` header)
 - **Platform-specific auth**:
   - Backend (node/bun/deno): API key
-  - Frontend (browser/react-native): JWT with token storage
+  - Browser: JWT with cookie-based sessions (`credentials: 'include'`)
+  - React Native: JWT via `TokenStorage` (`Authorization: Bearer`)
 
 **Error hierarchy** (all errors extend `BloqueAPIError`):
 - `BloqueRateLimitError` (429)
@@ -164,9 +165,9 @@ The SDK supports 5 platforms: `node` | `bun` | `deno` | `browser` | `react-nativ
 
 **Frontend platforms** (browser/react-native):
 - Use JWT authentication
-- Require `TokenStorage` interface implementation
-- Browser defaults to localStorage (with security warning)
-- React Native should use AsyncStorage or secure storage
+- Browser uses cookie-based sessions by default (`credentials: 'include'`)
+- React Native requires `tokenStorage`
+- For React Native, use secure storage
 
 ## TypeScript Configuration
 

@@ -5,6 +5,8 @@ import type {
   BrebDetails,
   CreateAccountRequest,
   CreateAccountResponse,
+  UpdateAccountRequest,
+  UpdateAccountResponse,
 } from '../internal/wire-types';
 import type {
   ActivateBrebKeyParams,
@@ -40,11 +42,6 @@ type ResolveBrebKeyRequest = {
 
 type ResolveBrebKeyResponse = {
   result: BrebResolvedKey;
-  req_id: string;
-};
-
-type DeleteBrebKeyResponse = {
-  result: DeleteBrebKeyResult;
   req_id: string;
 };
 
@@ -240,13 +237,24 @@ export class BrebClient extends BaseClient {
         throw new Error('BRE-B account URN is required');
       }
 
-      const response = await this.httpClient.request<DeleteBrebKeyResponse>({
-        method: 'DELETE',
-        path: `/api/accounts/${encodeURIComponent(params.accountUrn)}/breb/key`,
+      const response = await this.httpClient.request<
+        UpdateAccountResponse<BrebDetails>,
+        UpdateAccountRequest
+      >({
+        method: 'PATCH',
+        path: `/api/accounts/${encodeURIComponent(params.accountUrn)}`,
+        body: {
+          status: 'deleted',
+        },
       });
 
       return {
-        data: response.result,
+        data: {
+          deleted: true,
+          accountUrn: response.result.account.urn,
+          keyId: response.result.account.details.id,
+          status: 'deleted',
+        },
         error: null,
       };
     } catch (error) {
@@ -275,13 +283,24 @@ export class BrebClient extends BaseClient {
         throw new Error('BRE-B account URN is required');
       }
 
-      const response = await this.httpClient.request<SuspendBrebKeyResponse>({
+      const response = await this.httpClient.request<
+        UpdateAccountResponse<BrebDetails>,
+        UpdateAccountRequest
+      >({
         method: 'PATCH',
-        path: `/api/accounts/${encodeURIComponent(params.accountUrn)}/breb/key/suspend`,
+        path: `/api/accounts/${encodeURIComponent(params.accountUrn)}`,
+        body: {
+          status: 'frozen',
+        },
       });
 
       return {
-        data: response.result,
+        data: {
+          accountUrn: response.result.account.urn,
+          keyId: response.result.account.details.id,
+          keyStatus: response.result.account.details.status,
+          status: 'frozen',
+        },
         error: null,
       };
     } catch (error) {
@@ -310,13 +329,24 @@ export class BrebClient extends BaseClient {
         throw new Error('BRE-B account URN is required');
       }
 
-      const response = await this.httpClient.request<ActivateBrebKeyResponse>({
+      const response = await this.httpClient.request<
+        UpdateAccountResponse<BrebDetails>,
+        UpdateAccountRequest
+      >({
         method: 'PATCH',
-        path: `/api/accounts/${encodeURIComponent(params.accountUrn)}/breb/key/activate`,
+        path: `/api/accounts/${encodeURIComponent(params.accountUrn)}`,
+        body: {
+          status: 'active',
+        },
       });
 
       return {
-        data: response.result,
+        data: {
+          accountUrn: response.result.account.urn,
+          keyId: response.result.account.details.id,
+          keyStatus: response.result.account.details.status,
+          status: 'active',
+        },
         error: null,
       };
     } catch (error) {

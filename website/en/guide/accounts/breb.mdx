@@ -61,6 +61,41 @@ type BrebOperationResult<T> = {
 
 `createKey()` returns `{ data, error }`. On success, `error` is `null`. On failure, `data` is `null`.
 
+When `createKey()` succeeds, `data` contains the stored BRE-B account:
+
+```typescript title="types.ts"
+interface BrebKeyAccount {
+  id: string;
+  urn: string;
+  ownerUrn: string;
+  medium: 'breb';
+  remoteKeyId: string;
+  accountId: string;
+  keyType: 'ID' | 'PHONE' | 'EMAIL' | 'ALPHA' | 'BCODE';
+  key: string;
+  displayName: string | null;
+  status: AccountStatus;
+  ledgerId: string;
+  webhookUrl: string | null;
+  metadata?: Record<string, unknown>;
+  details: {
+    id: string;
+    remote_key_id: string;
+    account_id: string;
+    key: {
+      key_type: 'ID' | 'PHONE' | 'EMAIL' | 'ALPHA' | 'BCODE';
+      key_value: string;
+    };
+    display_name: string | null;
+    status: string;
+    created_at: string | null;
+    updated_at: string | null;
+    raw_response: Record<string, unknown>;
+  };
+  balance?: Record<string, TokenBalance>;
+}
+```
+
 ## Resolve a BRE-B Key
 
 ```typescript title="resolve-breb-key.ts"
@@ -261,9 +296,9 @@ if (error) {
 - `holder_urn` is taken from the connected SDK session
 - key creation uses `POST /api/mediums/breb`
 - key resolution uses `POST /api/mediums/breb/resolve-key`
-- key suspension uses `PATCH /api/accounts/:accountUrn/breb/key/suspend`
-- key activation uses `PATCH /api/accounts/:accountUrn/breb/key/activate`
-- key deletion uses `DELETE /api/accounts/:accountUrn/breb/key`
+- key suspension updates the account with `PATCH /api/accounts/:accountUrn` and `status: 'frozen'`
+- key activation updates the account with `PATCH /api/accounts/:accountUrn` and `status: 'active'`
+- key deletion updates the account with `PATCH /api/accounts/:accountUrn` and `status: 'deleted'`
 - BRE-B payments are created through `session.swap.breb.create()`
 - Passport `customer_id` and `account_id` are configured server-side in `medium_configs`
 
