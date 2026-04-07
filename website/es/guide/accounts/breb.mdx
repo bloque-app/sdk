@@ -6,8 +6,8 @@ Crea y resuelve llaves BRE-B desde el SDK.
 
 El cliente de BRE-B te permite:
 
-- crear una cuenta BRE-B con una llave BRE-B
-- asociar la cuenta a un ledger existente cuando envías `ledgerId`, o crear uno automáticamente cuando no lo envías
+- crear una llave BRE-B
+- asociar la llave a la cuenta de un ledger existente cuando envías `ledgerId`, o crear una cuenta automáticamente cuando no lo envías
 - resolver una llave BRE-B antes de iniciar un flujo de pago
 - pagar a una llave BRE-B resuelta a través de `session.swap.breb.create()`
 - gestionar el ciclo de vida de la llave suspendiendo, activando o eliminando una llave guardada
@@ -36,6 +36,10 @@ if (error) {
 
 ## Parámetros de creación
 
+### Crear una llave
+
+Para más detalles del endpoint, consulta esta sección: [Crear una llave BRE-B](#crear-una-llave-bre-b).
+
 ```typescript title="tipos.ts"
 interface CreateBrebKeyParams {
   keyType: 'ID' | 'PHONE' | 'EMAIL' | 'ALPHA' | 'BCODE';
@@ -46,6 +50,24 @@ interface CreateBrebKeyParams {
   metadata?: Record<string, unknown>;
 }
 ```
+
+### Tipos de llave y valor de la llave
+
+En el SDK usas `keyType` y `key`. En la infraestructura BRE-B esos campos suelen aparecer como `key_type` y `key_value`.
+
+`keyType` define el formato y propósito de la llave dentro del sistema BRE-B, mientras `key` contiene el valor de la llave. Estas llaves permiten pagos rápidos y seguros entre personas y empresas, sin necesidad de compartir información bancaria tradicional.
+
+| Tipo en SDK (`keyType`) | Referencia BRE-B (`key_type`) | Descripción | Ejemplo de valor (`key`) |
+| --- | --- | --- | --- |
+| `ID` | `ID` | Número de documento | `7922089` |
+| `PHONE` | `MOBILE` | Número de celular | `+573001234567` |
+| `EMAIL` | `EMAIL` | Correo electrónico | `user@example.com` |
+| `ALPHA` | `ALPHA` | Alias personalizado | `@clientalias123` |
+| `BCODE` | `BCODE` | Código comercial de la entidad | `0012345678` |
+
+:::note
+La combinación de `keyType` + `key` debe ser única en toda la infraestructura BRE-B. La plataforma valida esta unicidad.
+:::
 
 ## Resultado de creación
 
@@ -61,9 +83,9 @@ type BrebOperationResult<T> = {
 
 `createKey()` retorna `{ data, error }`. En éxito, `error` es `null`. En error, `data` es `null`.
 
-Si envías `ledgerId`, la cuenta BRE-B se asocia a ese ledger. Si no lo envías, el SDK crea uno automáticamente.
+Si envías `ledgerId`, la llave BRE-B se asocia a la cuenta de ese ledger. Si no lo envías, el SDK crea una cuenta automáticamente.
 
-Cuando `createKey()` es exitoso, `data` contiene la cuenta BRE-B creada:
+Cuando `createKey()` es exitoso, `data` contiene la llave BRE-B creada y su cuenta asociada:
 
 ```typescript title="tipos.ts"
 interface BrebKeyAccount {
