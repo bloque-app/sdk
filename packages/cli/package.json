@@ -1,6 +1,6 @@
 {
   "name": "@bloque/cli",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "description": "Bloque CLI — authenticate and expose SDK capabilities as an MCP server",
   "type": "module",
   "bin": {
