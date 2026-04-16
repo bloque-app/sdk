@@ -171,7 +171,8 @@ export type AccountMedium =
   | 'card'
   | 'virtual'
   | 'polygon'
-  | 'us-account';
+  | 'us-account'
+  | 'us2-account';
 
 /**
  * Token balance information
@@ -269,6 +270,7 @@ export interface ListAccountsResult {
     | import('./bancolombia/types').BancolombiaAccount
     | import('./breb/types').BrebKeyAccount
     | import('./us/types').UsAccount
+    | import('./us2/types').Us2Account
   >;
 }
 
