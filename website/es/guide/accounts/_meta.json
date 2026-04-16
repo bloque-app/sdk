@@ -21,6 +21,11 @@
   },
   {
     "type": "file",
+    "name": "us2",
+    "label": "Cuentas US2 (Kira)"
+  },
+  {
+    "type": "file",
     "name": "polygon",
     "label": "Polygon"
   },

@@ -21,6 +21,11 @@
   },
   {
     "type": "file",
+    "name": "us2",
+    "label": "US2 Accounts (Kira)"
+  },
+  {
+    "type": "file",
     "name": "polygon",
     "label": "Polygon"
   },

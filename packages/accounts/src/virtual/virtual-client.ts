@@ -29,6 +29,7 @@ export function mapVirtualAccountFromWire(
   return {
     urn: account.urn,
     id: account.id,
+    medium: 'virtual',
     firstName: account.details.first_name,
     lastName: account.details.last_name,
     status: account.status,

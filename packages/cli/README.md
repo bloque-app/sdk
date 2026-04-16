@@ -27,7 +27,7 @@ Your agent handles the rest — creating accounts, issuing cards, moving money, 
 
 ## How It Works
 
-The CLI installs an [MCP server](https://modelcontextprotocol.io/) that gives your AI agent access to 40 financial tools. When you ask your agent to create a card, it calls `create_card` behind the scenes — you never need to learn the tool names.
+The CLI installs an [MCP server](https://modelcontextprotocol.io/) that gives your AI agent access to 42 financial tools. When you ask your agent to create a card, it calls `create_card` behind the scenes — you never need to learn the tool names.
 
 Every card is a **crypto card**: it automatically gets a virtual account (holds the balance) and a Polygon address (receives USDC). You can top up via crypto, PSE bank transfer, or internal transfer.
 
@@ -199,7 +199,7 @@ claude mcp add bloque -- npx -y @bloque/cli mcp
 </details>
 
 <details>
-<summary>Primitives — 26 low-level tools (click to expand)</summary>
+<summary>Primitives — 28 low-level tools (click to expand)</summary>
 
 | Domain | Tools |
 |--------|-------|
@@ -207,7 +207,7 @@ claude mcp add bloque -- npx -y @bloque/cli mcp
 | Virtual | `create_virtual_account`, `list_virtual_accounts` |
 | Cards | `create_raw_card`, `list_cards`, `freeze_card`, `activate_card`, `disable_card`, `update_card_metadata`, `rename_card` |
 | Polygon | `create_polygon_account`, `list_polygon_accounts` |
-| US Bank | `get_us_tos_link`, `create_us_account`, `list_us_accounts` |
+| US Bank | `get_us_tos_link`, `create_us_account`, `list_us_accounts`, `create_us2_account`, `list_us2_accounts` |
 | Transfers | `transfer`, `batch_transfer` |
 | History | `list_transactions`, `list_account_movements` |
 | Swap | `find_rates`, `list_pse_banks`, `create_pse_order`, `create_bank_transfer_order` |

@@ -92,6 +92,11 @@ export interface VirtualAccount {
   id: string;
 
   /**
+   * Account medium
+   */
+  medium: 'virtual';
+
+  /**
    * Account holder's first name
    */
   firstName: string;

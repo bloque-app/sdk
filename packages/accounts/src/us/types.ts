@@ -196,6 +196,10 @@ export interface UsAccount {
    */
   id: string;
   /**
+   * Account medium
+   */
+  medium: 'us-account';
+  /**
    * Account type (individual or business)
    */
   type: UsAccountType;
