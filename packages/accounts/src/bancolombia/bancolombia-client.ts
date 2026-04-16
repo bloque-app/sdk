@@ -28,6 +28,7 @@ export function mapBancolombiaAccountFromWire(
   return {
     urn: account.urn,
     id: account.id,
+    medium: 'bancolombia',
     referenceCode: account.details.reference_code,
     status: account.status,
     ownerUrn: account.owner_urn,

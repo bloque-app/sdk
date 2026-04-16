@@ -220,6 +220,8 @@ export interface CardAccount {
    * Card account ID
    */
   id: string;
+  /** Account medium */
+  medium: 'card';
   /**
    * Last four digits of the card
    */

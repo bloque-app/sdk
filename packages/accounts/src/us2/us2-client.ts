@@ -50,6 +50,7 @@ export function mapUs2AccountFromWire(
   return {
     urn: account.urn,
     id: account.id,
+    medium: 'us2-account',
     userId: account.details.user_id,
     virtualAccountId: account.details.virtual_account_id,
     type: account.details.type,

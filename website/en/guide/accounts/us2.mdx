@@ -1,0 +1,192 @@
+# US2 Accounts (Kira)
+
+Create and manage United States bank accounts using the new `accounts.us2` flow.
+
+## Overview
+
+`accounts.us2` is separate from the existing Bridge-backed `accounts.us` client. Both media exist at the same time during the migration:
+
+- **`accounts.us`** keeps the Bridge flow with `getTosLink()` and `signedAgreementId`
+- **`accounts.us2`** uses compliance-driven onboarding and does not require a TOS link
+
+This first SDK pass supports **`type: 'individual'` only**. Business onboarding is intentionally deferred.
+
+## Key Differences From `accounts.us`
+
+- No `getTosLink()` step
+- No `signedAgreementId`
+- `proofOfAddress` is required
+- Bank instructions may appear later, after async provisioning completes
+- `virtualAccountId` and `sourceDepositInstructions` are not guaranteed to exist immediately after `create()`
+
+## Create An Account
+
+```typescript title="create-us2-account.ts"
+import { SDK } from '@bloque/sdk';
+
+const bloque = new SDK({
+  origin: 'your-origin',
+  auth: {
+    type: 'apiKey',
+    apiKey: process.env.BLOQUE_API_KEY!,
+  },
+  mode: 'production',
+});
+
+const account = await bloque.accounts.us2.create({
+  type: 'individual',
+  email: 'robert.johnson@example.com',
+  phone: '+12125551234',
+  taxId: '123-45-6789',
+  address: {
+    street: '456 Wall Street',
+    city: 'New York',
+    state: 'NY',
+    postalCode: '10005',
+    country: 'US',
+  },
+  proofOfAddress: {
+    document_type: 'utility_bill',
+    document_front: 'base64_encoded_image_here',
+  },
+  webhookUrl: 'https://api.example.com/webhooks/account-events',
+  metadata: {
+    source: 'mobile_app',
+    onboarding_version: 'us2-v1',
+  },
+});
+
+console.log(account.urn);
+console.log(account.status);
+console.log(account.virtualAccountId);
+console.log(account.sourceDepositInstructions);
+```
+
+## Create Parameters
+
+```typescript title="types.ts"
+interface CreateUs2AccountParams {
+  holderUrn?: string;
+  type: 'individual';
+  email: string;
+  phone?: string;
+  taxId?: string;
+  address?: {
+    street: string;
+    city: string;
+    state: string;
+    postalCode: string;
+    country: string;
+  };
+  proofOfAddress: Record<string, unknown>;
+  name?: string;
+  webhookUrl?: string;
+  ledgerId?: string;
+  metadata?: Record<string, unknown>;
+}
+```
+
+:::warning Individual Only
+The current SDK surface only accepts `type: 'individual'` for `accounts.us2.create()`. Business support is intentionally not exposed yet.
+:::
+
+## Response Shape
+
+```typescript title="types.ts"
+interface Us2Account {
+  urn: string;
+  id: string;
+  medium: 'us2-account';
+  userId: string;
+  virtualAccountId?: string;
+  type: string;
+  currency: string;
+  sourceDepositInstructions?: {
+    currency?: string;
+    bankName?: string;
+    bankAddress?: string;
+    bankRoutingNumber?: string;
+    bankAccountNumber?: string;
+    bankBeneficiaryName?: string;
+    bankBeneficiaryAddress?: string;
+    clabe?: string;
+  };
+  status:
+    | 'creation_in_progress'
+    | 'active'
+    | 'disabled'
+    | 'frozen'
+    | 'deleted'
+    | 'creation_failed';
+  ownerUrn: string;
+  ledgerId: string;
+  webhookUrl: string | null;
+  metadata?: Record<string, unknown>;
+  createdAt: string;
+  updatedAt: string;
+  balance?: Record<string, { current: string; pending: string; in: string; out: string }>;
+}
+```
+
+## Async Provisioning
+
+US2 accounts are async by design. A successful `create()` call means the account record exists, not that bank instructions are already available.
+
+Typical lifecycle:
+
+- `creation_in_progress`
+- `active`
+- `creation_failed`
+- `disabled`
+
+When the async provider flow completes, later `get()` or `list()` calls may start returning:
+
+- `virtualAccountId`
+- `sourceDepositInstructions.bankRoutingNumber`
+- `sourceDepositInstructions.bankAccountNumber`
+- other deposit instruction fields
+
+## Listing Accounts
+
+```typescript title="list-us2-accounts.ts"
+const result = await bloque.accounts.us2.list();
+
+for (const account of result.accounts) {
+  console.log(account.urn, account.status, account.medium);
+  console.log(account.sourceDepositInstructions?.bankRoutingNumber);
+}
+```
+
+## Updating Metadata
+
+```typescript title="update-us2-metadata.ts"
+const updated = await bloque.accounts.us2.updateMetadata({
+  urn: 'did:bloque:mediums:us2-account:account:123e4567',
+  metadata: {
+    updatedBy: 'admin',
+    updateReason: 'customer_request',
+  },
+});
+
+console.log(updated.metadata);
+```
+
+## Status Helpers
+
+```typescript title="manage-us2-state.ts"
+const accountUrn = 'did:bloque:mediums:us2-account:account:123e4567';
+
+await bloque.accounts.us2.activate(accountUrn);
+await bloque.accounts.us2.freeze(accountUrn);
+await bloque.accounts.us2.disable(accountUrn);
+```
+
+:::note Status Semantics
+The SDK exposes the same generic status helpers as other account clients, but the underlying provider behavior for freeze/reactivate is not a dedicated Kira-native operation. Treat these as generic account status updates.
+:::
+
+## Choosing Between `us` And `us2`
+
+- Use **`accounts.us`** when you need the existing Bridge-backed flow
+- Use **`accounts.us2`** for the new Kira-backed onboarding and async bank provisioning
+- Do not assume the two flows return the same fields

@@ -100,6 +100,8 @@ export interface Us2Account {
   urn: string;
   /** Account ID */
   id: string;
+  /** Account medium */
+  medium: 'us2-account';
   /** Provider user ID */
   userId: string;
   /** Provisioned virtual account ID when available */

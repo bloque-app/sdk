@@ -35,6 +35,17 @@ Crea y resuelve llaves BRE-B para el enrutamiento de pagos en tiempo real:
 
 [Aprende más sobre BRE-B](/sdk/guide/accounts/breb)
 
+### Cuentas Bancarias US
+
+Bloque expone actualmente dos flujos bancarios de EE.UU. en paralelo durante la transición:
+
+- **`accounts.us`**: cuentas US respaldadas por Bridge con flujo de TOS y `signedAgreementId`
+- **`accounts.us2`**: cuentas US respaldadas por Kira con onboarding de cumplimiento y provisión asíncrona de instrucciones bancarias
+
+[Aprende más sobre Cuentas US (Bridge)](/sdk/guide/accounts/us)
+
+[Aprende más sobre Cuentas US2 (Kira)](/sdk/guide/accounts/us2)
+
 ## Operaciones Comunes
 
 Todos los tipos de cuentas soportan operaciones comunes:
@@ -82,7 +93,7 @@ console.log(account.status, account.urn, account.balance);
 
 ### Verificar Balance
 
-Obtén el balance actual de cualquier cuenta por URN (válido para card, virtual, bancolombia, breb, us-account, polygon):
+Obtén el balance actual de cualquier cuenta por URN (válido para card, virtual, bancolombia, breb, us-account, us2-account, polygon):
 
 ```typescript title="check-balance.ts"
 const balance = await bloque.accounts.balance(
@@ -181,5 +192,7 @@ Todos los tipos de cuenta soportan notificaciones por webhook para eventos del c
 - [Tarjetas Virtuales](/sdk/guide/accounts/cards) - Crea y gestiona tarjetas virtuales
 - [Bancolombia](/sdk/guide/accounts/bancolombia) - Integración de cuentas Bancolombia
 - [BRE-B](/sdk/guide/accounts/breb) - Crear y resolver llaves BRE-B
+- [Cuentas US (Bridge)](/sdk/guide/accounts/us) - Onboarding de Bridge con TOS
+- [Cuentas US2 (Kira)](/sdk/guide/accounts/us2) - Provisión bancaria asíncrona con Kira
 - [Transferencias](/sdk/guide/accounts/transfers) - Transfiere fondos entre cuentas
 - [Cumplimiento](/sdk/guide/features/compliance) - Verificación KYC

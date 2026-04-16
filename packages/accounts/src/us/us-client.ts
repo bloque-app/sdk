@@ -32,6 +32,7 @@ export function mapUsAccountFromWire(
   return {
     urn: account.urn,
     id: account.id,
+    medium: 'us-account',
     type: account.details.type,
     firstName: account.details.first_name,
     middleName: account.details.middle_name,
@@ -248,35 +249,9 @@ export class UsClient extends BaseClient {
     });
 
     return {
-      accounts: response.accounts.map((account) => ({
-        urn: account.urn,
-        id: account.id,
-        type: account.details.type,
-        firstName: account.details.first_name,
-        middleName: account.details.middle_name,
-        lastName: account.details.last_name,
-        email: account.details.email,
-        phone: account.details.phone,
-        address: {
-          streetLine1: account.details.address.street_line_1,
-          streetLine2: account.details.address.street_line_2,
-          city: account.details.address.city,
-          state: account.details.address.state,
-          postalCode: account.details.address.postal_code,
-          country: account.details.address.country,
-        },
-        birthDate: account.details.birth_date,
-        accountNumber: account.details.account_number,
-        routingNumber: account.details.routing_number,
-        status: account.status,
-        ownerUrn: account.owner_urn,
-        ledgerId: account.ledger_account_id,
-        webhookUrl: account.webhook_url,
-        metadata: account.metadata,
-        createdAt: account.created_at,
-        updatedAt: account.updated_at,
-        balance: account.balance,
-      })),
+      accounts: response.accounts.map((account) =>
+        mapUsAccountFromWire(account as AccountWithBalance<UsDetails>),
+      ),
     };
   }
 

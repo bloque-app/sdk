@@ -29,6 +29,7 @@ export function mapPolygonAccountFromWire(
   return {
     urn: account.urn,
     id: account.id,
+    medium: 'polygon',
     address: account.details.address,
     network: account.details.network,
     status: account.status,
