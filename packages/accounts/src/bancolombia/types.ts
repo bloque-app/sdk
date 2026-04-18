@@ -79,11 +79,6 @@ export interface BancolombiaAccount {
   id: string;
 
   /**
-   * Account medium
-   */
-  medium: 'bancolombia';
-
-  /**
    * Reference code for the Bancolombia account
    */
   referenceCode: string;

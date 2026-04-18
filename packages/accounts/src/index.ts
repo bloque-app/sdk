@@ -10,7 +10,5 @@ export * from './polygon/types';
 export * from './types';
 export * from './us/types';
 export * from './us/us-client';
-export * from './us2/types';
-export * from './us2/us2-client';
 export * from './virtual/types';
 export * from './virtual/virtual-client';

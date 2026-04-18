@@ -30,7 +30,6 @@ export interface Account<TDetails = unknown> {
     | 'card'
     | 'virtual'
     | 'us-account'
-    | 'us2-account'
     | 'polygon';
   details: TDetails;
   ledger_account_id: string;
@@ -216,72 +215,6 @@ export interface UsDetails {
   birth_date: string;
   account_number?: string;
   routing_number?: string;
-}
-
-/**
- * @internal
- * US2 account applicant type used during creation.
- */
-export type Us2AccountApplicantType = 'individual' | 'business';
-
-/**
- * @internal
- * US2 account address for creation.
- */
-export interface Us2AccountAddress {
-  street: string;
-  city: string;
-  state: string;
-  postal_code: string;
-  country: string;
-}
-
-/**
- * @internal
- * Proof-of-address document payload accepted by the backend.
- * The backend contract is provider-shaped and not fully stabilized yet.
- */
-export type Us2ProofOfAddress = Record<string, unknown>;
-
-/**
- * @internal
- * US2 account input for creation.
- */
-export interface CreateUs2AccountInput {
-  type: Us2AccountApplicantType;
-  email: string;
-  phone?: string;
-  tax_id?: string;
-  address?: Us2AccountAddress;
-  proof_of_address: Us2ProofOfAddress;
-}
-
-/**
- * @internal
- * Source deposit instructions returned for an activated US2 account.
- */
-export interface Us2SourceDepositInstructions {
-  currency?: string;
-  bank_name?: string;
-  bank_address?: string;
-  bank_routing_number?: string;
-  bank_account_number?: string;
-  bank_beneficiary_name?: string;
-  bank_beneficiary_address?: string;
-  clabe?: string;
-}
-
-/**
- * @internal
- * US2 account details from API.
- */
-export interface Us2Details {
-  id: string;
-  user_id: string;
-  virtual_account_id?: string;
-  type: string;
-  currency: string;
-  source_deposit_instructions?: Us2SourceDepositInstructions;
 }
 
 /**

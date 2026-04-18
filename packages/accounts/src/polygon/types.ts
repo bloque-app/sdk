@@ -92,11 +92,6 @@ export interface PolygonAccount {
   id: string;
 
   /**
-   * Account medium
-   */
-  medium: 'polygon';
-
-  /**
    * Polygon wallet address
    */
   address: string;

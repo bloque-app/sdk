@@ -3,10 +3,7 @@ import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { BloqueClients } from '../../types.ts';
 import { toHuman, humanizeBalance } from '../../currency.ts';
 
-export function registerOverviewWorkflows(
-  server: McpServer,
-  clients: BloqueClients,
-) {
+export function registerOverviewWorkflows(server: McpServer, clients: BloqueClients) {
   server.registerTool(
     'wallet_overview',
     {
@@ -18,34 +15,20 @@ export function registerOverviewWorkflows(
       const rawBalances = await clients.accounts.balances();
       const txs = await clients.accounts.transactions({ limit: 10 });
 
-      const grouped: {
-        cards: any[];
-        virtual: any[];
-        polygon: any[];
-        us: any[];
-        us2: any[];
-        bancolombia: any[];
-        breb: any[];
-        [key: string]: any[];
-      } = {
+      const grouped: Record<string, any[]> = {
         cards: [],
         virtual: [],
         polygon: [],
         us: [],
-        us2: [],
         bancolombia: [],
-        breb: [],
       };
 
       for (const account of accounts) {
-        const medium = (account as any).medium as string;
         const humanized = {
           ...account,
-          balance: (account as any).balance
-            ? humanizeBalance((account as any).balance)
-            : undefined,
+          balance: (account as any).balance ? humanizeBalance((account as any).balance) : undefined,
         };
-        switch (medium) {
+        switch ((account as any).medium) {
           case 'card':
             grouped.cards.push(humanized);
             break;
@@ -58,20 +41,12 @@ export function registerOverviewWorkflows(
           case 'us-account':
             grouped.us.push(humanized);
             break;
-          case 'us2-account':
-            grouped.us2.push(humanized);
-            break;
           case 'bancolombia':
             grouped.bancolombia.push(humanized);
             break;
-          case 'breb':
-            grouped.breb.push(humanized);
-            break;
-          default: {
-            if (!grouped[medium]) grouped[medium] = [];
-            const bucket = grouped[medium];
-            bucket.push(humanized);
-          }
+          default:
+            if (!grouped[(account as any).medium]) grouped[(account as any).medium] = [];
+            grouped[(account as any).medium].push(humanized);
         }
       }
 
@@ -95,7 +70,7 @@ export function registerOverviewWorkflows(
     'card_summary',
     {
       description:
-        'Get everything about a specific card: details (lastFour, status, detailsUrl), backing account, polygon address, balance, MCC restrictions, smart routing config, and recent movements. The detailsUrl is a PCI-compliant link for the USER to open to view full card number/CVV/expiry — the agent cannot read these.',
+        "Get everything about a specific card: details (lastFour, status, detailsUrl), backing account, polygon address, balance, MCC restrictions, smart routing config, and recent movements. The detailsUrl is a PCI-compliant link for the USER to open to view full card number/CVV/expiry — the agent cannot read these.",
       inputSchema: {
         cardUrn: z.string(),
         movementsLimit: z.number().optional().default(10),
@@ -105,18 +80,10 @@ export function registerOverviewWorkflows(
       const card: any = await clients.accounts.get(cardUrn);
       const rawBalance = await clients.accounts.balance(cardUrn);
 
-      let polygonAccount: {
-        urn: string;
-        address: string;
-        network: string;
-      } | null = null;
+      let polygonAccount: { urn: string; address: string; network: string } | null = null;
       try {
-        const { accounts: polygonAccounts } = await clients.accounts.list({
-          medium: 'polygon',
-        } as any);
-        const match = polygonAccounts.find(
-          (a: any) => a.ledgerId === card.ledgerId,
-        );
+        const { accounts: polygonAccounts } = await clients.accounts.list({ medium: 'polygon' } as any);
+        const match = polygonAccounts.find((a: any) => a.ledgerId === card.ledgerId);
         if (match) {
           polygonAccount = {
             urn: match.urn,
@@ -129,10 +96,7 @@ export function registerOverviewWorkflows(
       let movements: any[] = [];
       let movementsMeta: any = {};
       try {
-        const mvResult = await clients.accounts.movements({
-          urn: cardUrn,
-          limit: movementsLimit,
-        } as any);
+        const mvResult = await clients.accounts.movements({ urn: cardUrn, limit: movementsLimit } as any);
         movements = mvResult.data;
         movementsMeta = {
           pageSize: mvResult.pageSize,
