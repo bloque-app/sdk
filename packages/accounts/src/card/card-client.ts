@@ -48,7 +48,6 @@ export function mapCardAccountFromWire(
   return {
     urn: account.urn,
     id: account.id,
-    medium: 'card',
     lastFour: account.details.card_last_four,
     productType: account.details.card_product_type,
     status: account.status,
@@ -207,9 +206,22 @@ export class CardClient extends BaseClient {
     });
 
     return {
-      accounts: response.accounts.map((account) =>
-        mapCardAccountFromWire(account as AccountWithBalance<CardDetails>),
-      ),
+      accounts: response.accounts.map((account) => ({
+        urn: account.urn,
+        id: account.id,
+        lastFour: account.details.card_last_four,
+        productType: account.details.card_product_type,
+        status: account.status,
+        cardType: account.details.card_type,
+        detailsUrl: account.details.card_url_details,
+        ownerUrn: account.owner_urn,
+        ledgerId: account.ledger_account_id,
+        webhookUrl: account.webhook_url,
+        metadata: account.metadata,
+        createdAt: account.created_at,
+        updatedAt: account.updated_at,
+        balance: account.balance,
+      })),
     };
   }
 

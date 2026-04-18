@@ -35,17 +35,6 @@ Create and resolve BRE-B payment keys for real-time payment routing:
 
 [Learn more about BRE-B](/sdk/guide/accounts/breb)
 
-### US Bank Accounts
-
-Bloque currently exposes two US banking flows side by side during the transition:
-
-- **`accounts.us`**: Bridge-backed US accounts with a TOS link and `signedAgreementId` flow
-- **`accounts.us2`**: Kira-backed US accounts with compliance-driven onboarding and async bank-instruction provisioning
-
-[Learn more about US Accounts (Bridge)](/sdk/guide/accounts/us)
-
-[Learn more about US2 Accounts (Kira)](/sdk/guide/accounts/us2)
-
 ## Common Operations
 
 All account types support common operations:
@@ -93,7 +82,7 @@ console.log(account.status, account.urn, account.balance);
 
 ### Checking Balance
 
-Get the current balance for any account by URN (works for card, virtual, bancolombia, breb, us-account, us2-account, polygon):
+Get the current balance for any account by URN (works for card, virtual, bancolombia, breb, us-account, polygon):
 
 ```typescript title="check-balance.ts"
 const balance = await bloque.accounts.balance(
@@ -192,7 +181,5 @@ All account types support webhook notifications for lifecycle events. Pass a `we
 - [Virtual Cards](/sdk/guide/accounts/cards) - Create and manage virtual cards
 - [Bancolombia](/sdk/guide/accounts/bancolombia) - Bancolombia account integration
 - [BRE-B](/sdk/guide/accounts/breb) - Create and resolve BRE-B keys
-- [US Accounts (Bridge)](/sdk/guide/accounts/us) - TOS-driven Bridge onboarding
-- [US2 Accounts (Kira)](/sdk/guide/accounts/us2) - Async Kira-backed bank provisioning
 - [Transfers](/sdk/guide/accounts/transfers) - Transfer funds between accounts
 - [Compliance](/sdk/guide/features/compliance) - KYC verification
