@@ -1,0 +1,9 @@
+{
+  "extends": "./tsconfig.json",
+  "include": [
+    "src/chain/clients.ts",
+    "src/chain/descriptors/transfer-api.ts",
+    "src/chain/descriptors/teleport-api.ts",
+    "src/chain/descriptors/descriptors.typecheck.ts"
+  ]
+}

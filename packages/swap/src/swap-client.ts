@@ -127,6 +127,33 @@ export class SwapClient extends BaseClient {
       );
     }
 
+    return this.listOrdersByTaker(takerUrn, params);
+  }
+
+  /**
+   * List orders for an arbitrary taker URN.
+   *
+   * Unlike `listOrders`, this does not require a user session — the taker URN
+   * is supplied explicitly. Intended for admin / back-office workflows that
+   * inspect orders on behalf of other users (e.g., resolving a Polygon account
+   * URN to its owner and then enumerating that owner's swap history).
+   *
+   * @param takerUrn - URN of the taker whose orders to list
+   * @param params - Optional filter parameters
+   * @returns Promise resolving to list of orders
+   *
+   * @example
+   * ```typescript
+   * const { orders } = await bloque.swap.listOrdersByTaker(
+   *   'did:bloque:user:abc123',
+   *   { status: 'failed' },
+   * );
+   * ```
+   */
+  async listOrdersByTaker(
+    takerUrn: string,
+    params: ListOrdersParams = {},
+  ): Promise<ListOrdersResult> {
     const queryParams = new URLSearchParams();
 
     if (params.orderSig) queryParams.set('order_sig', params.orderSig);

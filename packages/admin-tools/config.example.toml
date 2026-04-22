@@ -1,0 +1,28 @@
+# Bloque admin-tools config — copy to ~/.bloque/admin-tools.toml and fill in.
+# This file holds signing keys and privileged JWTs; keep permissions at 0600.
+
+[chain.signer]
+# SS58 address of the on-chain proxy controller account. The signing key below
+# must itself be a proxy controller for this account.
+controller_address = "F3opxRbN5ZavB4LTn..."
+mnemonic           = "word word word word word word word word word word word word"
+derivation_path    = "//Controller//0"
+
+[chain.endpoints]
+kreivo    = "wss://kreivo.kippu.rocks"
+asset_hub = "wss://kusama-asset-hub-rpc.polkadot.io"
+
+[api]
+base_url         = "https://api.bloque.app"
+jwt              = "eyJ..."                              # must include accounts.read, accounts.list_transactions, swap.read, swap.orders.list
+treasury_account = "did:bloque:account:polygon:0x..."     # canonical URN of the treasury polygon account
+
+[indexer]
+api_key = "..."                # Alchemy API key
+network = "polygon-mainnet"    # Alchemy network identifier
+
+[server]
+host          = "127.0.0.1"
+port          = 3737
+mcp_path      = "/mcp"
+shared_secret = ""             # optional bearer token applied to REST + MCP HTTP

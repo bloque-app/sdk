@@ -1,0 +1,18 @@
+{
+  "version": 0,
+  "descriptorPath": ".papi/descriptors",
+  "entries": {
+    "ksmAssetHub": {
+      "wsUrl": "wss://kusama-asset-hub-rpc.polkadot.io",
+      "metadata": ".papi/metadata/ksmAssetHub.scale",
+      "genesis": "0x48239ef607d7928874027a43a67689209727dfb3d3dc5e5b03a39bdc2eda771a",
+      "codeHash": "0x75086dc1a829e7a39bef2398d082e29adb23511defe35fd26a829798af49942b"
+    },
+    "kreivo": {
+      "wsUrl": "wss://kreivo.kippu.rocks",
+      "metadata": ".papi/metadata/kreivo.scale",
+      "genesis": "0xc710a5f16adc17bcd212cff0aedcbf1c1212a043cdc0fb2dcba861efe5305b01",
+      "codeHash": "0x59c07b0c96efc943f41e083d101708984ec1f317de0cb8dc0902db4e58890647"
+    }
+  }
+}

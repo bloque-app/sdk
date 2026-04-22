@@ -10,3 +10,6 @@ dist/
 
 .env
 .github/copilot-mcp.json
+
+# Generated fiels
+tsconfig.tsbuildinfo

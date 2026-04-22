@@ -1,0 +1,55 @@
+{
+  "name": "@bloque/admin-tools",
+  "version": "0.0.1",
+  "description": "Bloque admin tools — chain signing + polygon swap diagnostics (internal)",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "bloque-admin": "./dist/admin-bin.js"
+  },
+  "files": [
+    "dist",
+    "config.example.toml"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "compile": "bun run compile:darwin-arm64 && bun run compile:darwin-x64",
+    "compile:darwin-arm64": "bun build src/admin-bin.ts --compile --target=bun-darwin-arm64 --outfile=dist/bloque-admin-darwin-arm64",
+    "compile:darwin-x64": "bun build src/admin-bin.ts --compile --target=bun-darwin-x64 --outfile=dist/bloque-admin-darwin-x64",
+    "dev": "bun run src/admin-bin.ts",
+    "typecheck:descriptors": "bun x tsc --noEmit --incremental false -p tsconfig.descriptors.json",
+    "typecheck": "bun x tsc --noEmit --incremental false -p tsconfig.json"
+  },
+  "tsup": {
+    "entry": [
+      "src/admin-bin.ts"
+    ],
+    "format": [
+      "esm"
+    ],
+    "target": "node22",
+    "outDir": "dist",
+    "clean": true,
+    "banner": {
+      "js": "#!/usr/bin/env node"
+    }
+  },
+  "dependencies": {
+    "@bloque/cli": "workspace:*",
+    "@bloque/sdk": "workspace:*",
+    "@modelcontextprotocol/sdk": "^1.27.1",
+    "@polkadot-api/descriptors": "file:.papi/descriptors",
+    "@polkadot-labs/hdkd": "0.0.28",
+    "@polkadot-labs/hdkd-helpers": "0.0.29",
+    "alchemy-sdk": "^3.5.9",
+    "commander": "^14.0.3",
+    "polkadot-api": "2.1.0",
+    "smol-toml": "1.6.1",
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:",
+    "tsup": "^8.5.1",
+    "typescript": "catalog:"
+  }
+}
