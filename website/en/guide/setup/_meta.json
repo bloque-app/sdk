@@ -1,0 +1,6 @@
+[
+  { "type": "file", "name": "install", "label": "Install" },
+  { "type": "file", "name": "register", "label": "Register" },
+  { "type": "file", "name": "connect", "label": "Connect" },
+  { "type": "file", "name": "sandbox", "label": "Sandbox" }
+]

@@ -1,0 +1,142 @@
+---
+pageType: doc
+---
+
+import { QuestHeader, ConceptCard, Checkpoint } from '@theme';
+
+<QuestHeader
+  prereqs={["SDK installed", "Origin Key from the Bloque dashboard"]}
+  unlocks={["Registered identity", "URN for the user", "Authenticated client"]}
+  time="5 min"
+/>
+
+# Register
+
+Registration creates a permanent identity for a user (or entity) in your Origin. After registration, you get back an authenticated client ready to use.
+
+---
+
+**What is registration?**
+
+<ConceptCard
+  term="Registration"
+  definition="Binding an alias to an Origin, creating a permanent Identity with a URN. It's the first step for any new user. After registration, the user can authenticate using connect()."
+/>
+
+Registration is a one-time operation per user per Origin. Calling it again with the same alias will fail — use `connect()` for returning users.
+
+---
+
+**What is an Origin Key?**
+
+<ConceptCard
+  term="Origin Key"
+  definition="Your backend credential that authorizes you to register identities in your Origin. Think of it as the 'admin key' for your namespace. Never expose it on the client side."
+  example="BLOQUE_ORIGIN_KEY=ok_live_..."
+  format="code"
+/>
+
+Get your Origin Key from the [Bloque dashboard](https://app.bloque.app/settings/api).
+
+---
+
+## Register an individual
+
+```ts
+import { SDK } from '@bloque/sdk'
+
+const sdk = new SDK({
+  origin: 'your-origin',
+  auth: {
+    type: 'originKey',
+    originKey: process.env.BLOQUE_ORIGIN_KEY!,
+  },
+  mode: 'sandbox', // use 'production' when going live
+})
+
+const client = await sdk.register('@alice', {
+  type: 'individual',
+  profile: {
+    firstName: 'Alice',
+    lastName: 'Smith',
+    email: 'alice@example.com',
+    phone: '+1234567890',
+    birthdate: '1990-06-15',
+    city: 'Bogotá',
+    state: 'Cundinamarca',
+    postalCode: '110111',
+    countryOfBirthCode: 'CO',
+    countryOfResidenceCode: 'CO',
+  },
+})
+
+console.log(client.urn)         // did:bloque:your-origin:@alice
+console.log(client.accessToken) // JWT — valid for ~15 minutes
+```
+
+<Checkpoint
+  title="You should see a URN printed"
+  expected={`did:bloque:your-origin:@alice`}
+  hint="If you get a 409 error, the alias is already registered — use connect() instead."
+/>
+
+---
+
+## Register a business
+
+```ts
+const client = await sdk.register('@acme-corp', {
+  type: 'business',
+  profile: {
+    legalName: 'Acme Corp S.A.S.',
+    taxId: '900123456-7',
+    incorporationDate: '2020-01-15',
+    businessType: 'sas',
+    countryCode: 'CO',
+    address: 'Calle 100 # 8A-55',
+    city: 'Bogotá',
+    postalCode: '110221',
+    ownerFirstName: 'Carlos',
+    ownerLastName: 'Gómez',
+    ownerIdType: 'CC',
+    ownerIdNumber: '1234567890',
+  },
+})
+```
+
+---
+
+## Origin types
+
+The Origin you use determines how users authenticate. Three categories:
+
+**Built-in origins** — managed by Bloque, OTP-based:
+- `bloque-email` — sends a one-time code to the user's email
+- `bloque-whatsapp` — sends a one-time code via WhatsApp
+
+**Blockchain origins** — identity proved via wallet signature:
+- `ethereum-mainnet`, `solana-devnet`, and others
+- The alias is the wallet address (e.g., `0x742d35Cc...`)
+
+**Custom origins** — your own namespace and auth logic:
+- You define the origin name
+- Authentication uses your Origin Key (API_KEY challenge)
+- Full control over who gets registered
+
+For most backends, a custom origin is the right choice.
+
+---
+
+**What is the difference between `register()` and `connect()`?**
+
+| | `register()` | `connect()` |
+| --- | --- | --- |
+| **When** | First time — creates the identity | Returning user — opens a session |
+| **Result** | New URN + authenticated client | Authenticated client |
+| **Fails if** | Alias already exists | Alias doesn't exist |
+
+---
+
+## What's next
+
+→ [Connect](./connect) — open sessions for returning users

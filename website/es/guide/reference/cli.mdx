@@ -1,0 +1,218 @@
+# CLI y Servidor MCP
+
+Usa Bloque desde tu agente de IA. Un comando para configurar, luego solo pide.
+
+## Comenzar
+
+```bash
+npx @bloque/cli setup
+```
+
+El asistente:
+
+1. Te autentica (OTP por WhatsApp o Email)
+2. Detecta tus agentes de IA instalados
+3. Configura todo automáticamente
+
+Reinicia tu agente y listo.
+
+¿Ya tienes un JWT? Sáltate el OTP:
+
+```bash
+npx @bloque/cli setup --jwt eyJhbGciOi...
+```
+
+## Qué Puedes Pedirle a Tu Agente
+
+Una vez configurado, solo habla naturalmente:
+
+- **"Crea una tarjeta para gastos de comida, cárgale $200"**
+- **"Necesito una tarjeta desechable de $25 para este sitio web"**
+- **"Asigna mi tarjeta a amazon.com"**
+- **"¿Qué tarjeta debo usar para netflix.com?"**
+- **"Muéstrame mis saldos y transacciones recientes"**
+- **"Carga 100,000 COP de mi banco a mi cuenta"**
+- **"Congela mi tarjeta"**
+- **"Crea dos tarjetas que compartan el mismo presupuesto"**
+
+Tu agente maneja las cuentas, tarjetas, transferencias y reportes detrás de escena.
+
+## Cómo Funciona
+
+La CLI instala un [servidor MCP](https://modelcontextprotocol.io/) que le da a tu agente acceso a 40 herramientas financieras — organizadas en dos niveles:
+
+- **Workflows** (14 herramientas) — operaciones de alto nivel como "crear una tarjeta" o "buscar mi tarjeta para este sitio web." Una llamada hace todo.
+- **Primitivas** (30 herramientas) — control de bajo nivel cuando lo necesitas. Una herramienta por método del SDK.
+
+Cada tarjeta es una **tarjeta crypto**: automáticamente obtiene una cuenta virtual (guarda el saldo) y una dirección Polygon (recibe USDC). Recarga vía crypto, transferencia bancaria PSE, o transferencia interna.
+
+**Los montos siempre son legibles.** Di "$50" para $50 USD o "100000" para 100,000 COP. Sin formatos internos.
+
+**Las restricciones de gasto usan nombres amigables.** Di "food" en vez del código MCC 5411. Categorías disponibles: `food`, `transport`, `ads`, `entertainment`, `health`, `shopping`, `travel`, `subscriptions`.
+
+## Comandos
+
+| Comando | Qué hace |
+|---------|----------|
+| `bloque setup` | Asistente: login + instalar MCP en tus agentes |
+| `bloque login` | Login vía WhatsApp/Email OTP o API key |
+| `bloque logout` | Borrar tu sesión local |
+| `bloque whoami` | Ver con quién estás autenticado |
+| `bloque mcp` | Iniciar el servidor MCP (stdio) |
+| `bloque mcp --http` | Iniciar el servidor MCP por HTTP |
+
+### `bloque setup`
+
+| Opción | Descripción |
+|--------|-------------|
+| `--api-key <clave>` | Clave secreta (`sk_`) para configuración sin navegador |
+| `--web` | Autenticarse vía navegador |
+| `--jwt <token>` | Token JWT (salta el OTP) |
+| `--sandbox` | Usar sandbox en vez de producción |
+
+### `bloque login`
+
+**Modo OTP** (por defecto):
+
+```bash
+npx @bloque/cli login
+```
+
+**Modo API key** (recomendado para backend/CI):
+
+```bash
+npx @bloque/cli login --api-key sk_live_...
+```
+
+**Modo clave de origen** (heredado):
+
+```bash
+npx @bloque/cli login --origin-key tu-clave --origin tu-origen --alias @usuario
+```
+
+### `bloque mcp`
+
+```bash
+npx @bloque/cli mcp          # stdio (por defecto)
+npx @bloque/cli mcp --http   # HTTP en puerto 3100
+```
+
+## Agentes Soportados
+
+| Agente | Plataformas | Auto-Setup |
+|--------|------------|------------|
+| Cursor | macOS, Linux, Windows | Sí |
+| Claude Desktop | macOS, Linux, Windows | Sí |
+| Claude Code | macOS, Linux, Windows | Sí |
+| Antigravity (Google) | macOS, Linux, Windows | Sí |
+| Windsurf | macOS, Linux, Windows | Sí |
+| VS Code (Copilot) | macOS, Linux, Windows | Sí |
+| Zed | macOS, Linux | Sí |
+| JetBrains (AI Assistant) | macOS, Linux, Windows | Manual |
+
+## Descargar Binario (Sin Node.js)
+
+Si no tienes Node.js instalado, descarga un binario independiente desde [GitHub Releases](https://github.com/bloque-app/sdk/releases):
+
+| Plataforma | Binario |
+|------------|---------|
+| macOS (Apple Silicon) | `bloque-darwin-arm64` |
+| macOS (Intel) | `bloque-darwin-x64` |
+| Linux (x86_64) | `bloque-linux-x64` |
+| Linux (ARM) | `bloque-linux-arm64` |
+| Windows (x64) | `bloque-windows-x64.exe` |
+
+**macOS / Linux:**
+
+```bash
+# Descargar (reemplaza PLATFORM con tu plataforma, e.g. darwin-arm64)
+curl -fsSL https://github.com/bloque-app/sdk/releases/latest/download/bloque-PLATFORM -o bloque
+
+# Hacer ejecutable
+chmod +x bloque
+
+# Mover al PATH
+sudo mv bloque /usr/local/bin/bloque
+
+# Ejecutar setup
+bloque setup
+```
+
+> **macOS Gatekeeper:** Si macOS bloquea el binario, ejecuta:
+> `xattr -d com.apple.quarantine /usr/local/bin/bloque`
+
+**Windows:**
+
+Descarga `bloque-windows-x64.exe` de la página de releases, renómbralo a `bloque.exe` y agrega su directorio a tu `PATH`.
+
+Cuando ejecutas desde el binario, `bloque setup` configura automáticamente tus agentes para usar la ruta del binario en vez de `npx`.
+
+## Configuración Manual
+
+Si prefieres configurar manualmente en vez de usar `bloque setup`:
+
+1. Inicia sesión:
+
+```bash
+npx @bloque/cli login
+```
+
+2. Agrega esto al archivo de configuración MCP de tu agente:
+
+```json
+{
+  "mcpServers": {
+    "bloque": {
+      "command": "npx",
+      "args": ["-y", "@bloque/cli", "mcp"]
+    }
+  }
+}
+```
+
+3. Reinicia tu agente.
+
+## Referencia de Herramientas
+
+### Workflows (14 herramientas)
+
+Herramientas de alto nivel. Una llamada maneja operaciones de múltiples pasos.
+
+| Herramienta | Qué hace |
+|-------------|----------|
+| `get_profile` | Tu identidad y estado KYC |
+| `verify_identity` | Iniciar o verificar la verificación de identidad |
+| `create_account` | Crear un pocket + dirección Polygon |
+| `create_card` | Configuración completa con restricciones, sitios web asignados, y fondeo opcionales |
+| `create_disposable_card` | Tarjeta de un solo uso con monto exacto y sitios web opcionales |
+| `fund_card` | Recargar una tarjeta |
+| `resolve_card_for_website` | Encontrar qué tarjeta(s) usar para un sitio web dado |
+| `assign_card_to_website` | Asociar una tarjeta con uno o más dominios web |
+| `topup_via_pse` | Cargar COP vía transferencia PSE |
+| `cashout_to_bank` | Retirar USD a un banco colombiano |
+| `configure_spending_rules` | Enrutar transacciones a diferentes cuentas por tipo de comercio |
+| `add_spending_category` | Agregar una categoría de gasto a una tarjeta |
+| `wallet_overview` | Todas las cuentas, saldos y transacciones recientes |
+| `card_summary` | Todo sobre una tarjeta específica |
+
+### Primitivas (30 herramientas)
+
+Herramientas de bajo nivel. 1:1 con métodos del SDK para control total.
+
+| Dominio | Herramientas |
+|---------|-------------|
+| Cuentas | `list_accounts`, `get_account`, `get_balance`, `get_all_balances` |
+| Virtuales | `create_virtual_account`, `list_virtual_accounts` |
+| Tarjetas | `create_raw_card`, `list_cards`, `freeze_card`, `activate_card`, `disable_card`, `update_card_metadata`, `rename_card` |
+| Polygon | `create_polygon_account`, `list_polygon_accounts` |
+| US Bank | `get_us_tos_link`, `create_us_account`, `list_us_accounts` |
+| Transferencias | `transfer`, `batch_transfer` |
+| Historial | `list_transactions`, `list_account_movements` |
+| Swap | `find_rates`, `list_pse_banks`, `create_pse_order`, `create_bank_transfer_order` |
+| Claves API | `list_api_keys`, `get_api_key`, `revoke_api_key`, `rotate_api_key` |
+
+## Requisitos
+
+- **Vía npm:** Node.js 22+ o Bun 1+
+- **Vía binario:** No necesitas runtime — descarga desde [GitHub Releases](https://github.com/bloque-app/sdk/releases)
+- Una cuenta en [Bloque](https://www.bloque.app)

@@ -1,0 +1,173 @@
+---
+pageType: doc
+---
+
+import { QuestHeader, Checkpoint, ConceptCard } from '@theme';
+
+<QuestHeader
+  prereqs={["Connected SDK client", "Registered identity"]}
+  unlocks={["Organization with a URN", "Team within the org", "Invited member"]}
+  time="15 min"
+/>
+
+# Multi-user org
+
+This tutorial shows how to create an organization, add a team inside it, invite a member, and scope a financial account to the org instead of an individual user.
+
+---
+
+## When do you need an org?
+
+Organizations are for multi-user setups — a company, a platform with multiple operators, or a DAO. An org has its own URN and can own accounts independently of any individual user. Members of the org can be granted different access scopes.
+
+---
+
+## Step 1 — Connect
+
+```ts
+import { SDK } from '@bloque/sdk'
+
+const sdk = new SDK({
+  auth: { type: 'apiKey', apiKey: process.env.BLOQUE_API_KEY! },
+  mode: 'sandbox',
+})
+
+const client = await sdk.connect()
+```
+
+---
+
+## Step 2 — Create an organization
+
+<ConceptCard
+  term="Organization"
+  definition="A multi-user entity with its own URN. Can be type 'business' (company with KYB) or 'individual' (individual entity). Organizations own accounts, have teams, and manage member access."
+/>
+
+```ts
+const org = await client.orgs.create({
+  type: 'business',
+  name: 'Acme Corp',
+  slug: 'acme-corp',
+  profile: {
+    legalName: 'Acme Corp S.A.S.',
+    taxId: '900123456-7',
+    incorporationDate: '2020-01-15',
+    businessType: 'sas',
+    countryCode: 'CO',
+    address: 'Calle 100 # 8A-55',
+    city: 'Bogotá',
+    postalCode: '110221',
+  },
+})
+
+console.log('Org URN:', org.urn)
+console.log('Org status:', org.status)
+```
+
+<Checkpoint
+  title="Organization is created with a URN"
+  expected={`Org URN: did:bloque:org:acme-corp
+Org status: awaiting_compliance_verification`}
+  hint="Business orgs start in awaiting_compliance_verification. They become active after KYB review."
+/>
+
+---
+
+## Step 3 — Create a team inside the org
+
+```ts
+const team = await client.orgs.teams.create(org.urn, {
+  name: 'Engineering',
+  description: 'Engineering team',
+})
+
+console.log('Team URN:', team.urn)
+```
+
+---
+
+## Step 4 — Invite a member
+
+Members can be invited via email, SMS, WhatsApp, or by URN (if they already have a Bloque identity):
+
+```ts
+// Invite by email
+const invite = await client.orgs.invites.create(org.urn, {
+  channel: 'email',
+  destination: 'bob@example.com',
+  role: 'member', // or 'admin'
+  teamUrn: team.urn, // optional: add directly to a team
+})
+
+console.log('Invite ID:', invite.id)
+console.log('Invite status:', invite.status) // 'pending'
+```
+
+<Checkpoint
+  title="Invite is pending"
+  expected={`Invite ID: inv_...
+Invite status: pending`}
+/>
+
+---
+
+## Step 5 — Accept the invite (from the invited user's side)
+
+The invited user receives an email (or SMS) with an invite code. They accept it:
+
+```ts
+// Bob's SDK instance (after he's registered)
+const bobClient = await bobSdk.connect('@bob')
+
+await bobClient.orgs.invites.accept(inviteCode)
+// Bob is now a member of Acme Corp
+```
+
+---
+
+## Step 6 — Create an account owned by the org
+
+Use `holderUrn: org.urn` to assign ownership to the organization instead of an individual:
+
+```ts
+const orgAccount = await client.accounts.virtual.create({
+  holderUrn: org.urn, // org owns this account
+  name: 'Acme Corp Treasury',
+})
+
+console.log('Org account URN:', orgAccount.urn)
+console.log('Ledger ID:', orgAccount.ledgerId)
+```
+
+This account is now owned by the organization. Any member with the right scope can operate it.
+
+<Checkpoint
+  title="Org account created with org as holder"
+  expected={`Org account URN: did:bloque:virtual:acc_...
+Ledger ID: ldg_...`}
+/>
+
+---
+
+## Organization status lifecycle
+
+```
+awaiting_compliance_verification
+             ↓
+           active
+          ↙     ↘
+     suspended  closed
+```
+
+Business organizations go through KYB (Know Your Business) review before becoming `active`. Individual organizations may activate faster depending on your origin's configuration.
+
+---
+
+## What's next
+
+You've completed all three tutorials. Next, explore the per-account deep dives or the reference docs.
+
+→ [Virtual Accounts](../accounts/virtual) — full deep dive on the base account type
+→ [Compliance & KYC](../reference/compliance) — full reference for verification flows
+→ [Organizations](../reference/organizations) — full reference for org, team, and member management

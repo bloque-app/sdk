@@ -1,0 +1,142 @@
+---
+pageType: doc
+---
+
+import { QuestHeader, Checkpoint, ConceptCard, Callout } from '@theme';
+
+<QuestHeader
+  prereqs={["Cliente SDK conectado", "Identidad registrada"]}
+  unlocks={["Identidad verificada (KYC)", "Cuenta Bancolombia", "referenceCode para recibir pagos en COP"]}
+  time="20 min"
+/>
+
+# KYC + Bancolombia
+
+Este tutorial cubre el flujo de compliance — verificar una identidad — y luego abrir una cuenta Bancolombia, que requiere una identidad verificada.
+
+---
+
+## ¿Por qué primero el KYC?
+
+Algunos tipos de cuenta requieren verificación de identidad antes de poder abrirlos. Las cuentas Bancolombia (y US) están detrás de KYC. La verificación es asíncrona: la inicias, el usuario la completa externamente, y recibes un webhook (o haces polling) para el resultado.
+
+---
+
+## Paso 1 — Conectar
+
+```ts
+const client = await sdk.connect()
+```
+
+---
+
+## Paso 2 — Iniciar verificación KYC
+
+<ConceptCard
+  term="KYC (Know Your Customer)"
+  definition="Verificación de identidad requerida por regulación financiera. Inicias una verificación para el URN de un usuario, ellos la completan en una URL externa provista por Bloque, y recibes el resultado vía webhook o polling."
+/>
+
+```ts
+const verificacion = await client.compliance.kyc.startVerification({
+  urn: client.urn,
+  webhookUrl: 'https://tu-app.com/webhooks/kyc',
+})
+
+console.log('URL de verificación:', verificacion.url)
+console.log('Estado:', verificacion.status)
+// status = 'awaiting_compliance_verification'
+```
+
+<Checkpoint
+  title="Verificación iniciada — tienes una URL y estado"
+  expected={`URL de verificación: https://verify.bloque.app/...
+Estado: awaiting_compliance_verification`}
+/>
+
+---
+
+## Paso 3 — El usuario completa la verificación
+
+Redirige a tu usuario a `verificacion.url`. Completan la verificación allí (carga de documentos, selfie, etc.).
+
+En modo sandbox, la verificación se aprueba automáticamente después de un breve período.
+
+---
+
+## Paso 4 — Esperar el resultado (webhook o polling)
+
+**Con webhooks** (recomendado):
+
+```ts
+app.post('/webhooks/kyc', (req, res) => {
+  const { urn, status } = req.body
+  console.log(`KYC para ${urn}: ${status}`)
+  res.sendStatus(200)
+})
+```
+
+**Con polling** (para pruebas):
+
+```ts
+async function esperarKyc(urn: string): Promise<string> {
+  while (true) {
+    const verificacion = await client.compliance.kyc.getVerification({ urn })
+    if (verificacion.status !== 'awaiting_compliance_verification') {
+      return verificacion.status
+    }
+    await new Promise(r => setTimeout(r, 2000))
+  }
+}
+
+const estado = await esperarKyc(client.urn)
+console.log('Resultado KYC:', estado)
+```
+
+<Checkpoint
+  title="KYC aprobado"
+  expected={`Resultado KYC: approved`}
+/>
+
+---
+
+## Paso 5 — Crear la cuenta Bancolombia
+
+```ts
+const cuentaBancolombia = await client.accounts.bancolombia.create({
+  holderUrn: client.urn,
+  name: 'Mi Cuenta Bancolombia',
+  ledgerId: ledgerIdExistente, // opcional
+})
+
+console.log('URN Bancolombia:', cuentaBancolombia.urn)
+console.log('Código de referencia:', cuentaBancolombia.details.referenceCode)
+```
+
+<Checkpoint
+  title="Cuenta Bancolombia creada con referenceCode"
+  expected={`URN Bancolombia: did:bloque:bancolombia:acc_...
+Código de referencia: 1234567890`}
+/>
+
+---
+
+## Paso 6 — Recibir un pago en COP
+
+Comparte el `referenceCode` con quien necesite enviarte COP vía Bancolombia. Cuando llegue el pago, recibirás un webhook:
+
+```ts
+app.post('/webhooks/cuenta', (req, res) => {
+  const { account_urn, event_type, event_data } = req.body
+  if (event_type === 'account.balance_updated') {
+    console.log(`Fondos recibidos en ${account_urn}:`, event_data)
+  }
+  res.sendStatus(200)
+})
+```
+
+---
+
+## ¿Qué sigue?
+
+→ [Organización multi-usuario](./multi-org) — crea una organización, agrega equipos e invita miembros

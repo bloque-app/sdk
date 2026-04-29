@@ -1,0 +1,120 @@
+---
+pageType: doc
+---
+
+import { ProgressPath, ConceptCard } from '@theme';
+
+<ProgressPath
+  steps={[
+    { label: "Visión General", href: "/es/guide/world/overview" },
+    { label: "Origen e Identidad", href: "/es/guide/world/identity" },
+    { label: "Ledger y Balance", href: "/es/guide/world/ledger" },
+    { label: "Cuentas", href: "/es/guide/world/accounts" },
+    { label: "Swap", href: "/es/guide/world/swap" }
+  ]}
+  current="/es/guide/world/accounts"
+/>
+
+# Cuentas
+
+Una cuenta es un contenedor financiero ligado a un ledger. Cada cuenta tiene una dirección (URN), un tipo (medium), un estado y un balance — todo heredado del ledger al que pertenece.
+
+---
+
+**¿Qué es una Cuenta?**
+
+<ConceptCard
+  term="Cuenta"
+  definition="Un contenedor financiero: una dirección (URN) + un medium (tipo) + un estado + una conexión a un ledger. Las cuentas son con lo que interactúan los usuarios — tarjetas, cuentas bancarias, wallets. El dinero en sí vive en el ledger."
+/>
+
+---
+
+**¿Qué tipos de cuenta existen?**
+
+| Medium | Qué es | ¿Requiere KYC? |
+| --- | --- | --- |
+| **Virtual** | Cuenta base — crea el ledger, agrupa balance | Mínimo |
+| **Card** | Tarjeta de débito/crédito virtual (PCI-compliant) | Mínimo |
+| **Bancolombia** | Cuenta bancaria colombiana con código de referencia único | Sí |
+| **US** | Cuenta bancaria FDIC-insured en EE.UU. vía Bridge | KYC completo + TOS |
+| **Polygon** | Wallet Web3 en la red Polygon | Ninguno |
+| **BRE-B** | Llave de pago instantáneo colombiano (teléfono, email, CC, etc.) | Sí |
+
+---
+
+**¿Qué es un Medium?**
+
+<ConceptCard
+  term="Medium"
+  definition="La etiqueta del tipo de cuenta. Aparece en el URN de la cuenta y en los parámetros de la API."
+  example="did:bloque:virtual:acc_abc123
+did:bloque:card:acc_def456
+did:bloque:bancolombia:acc_ghi789"
+  format="code"
+/>
+
+---
+
+**¿Qué es un Activo y cómo se representan los montos?**
+
+Los activos usan el formato `SÍMBOLO/DECIMALES`. Los montos siempre se pasan como strings — nunca como floats — para evitar problemas de precisión de punto flotante.
+
+```ts
+// DUSD/6 tiene 6 decimales
+// Para representar $50.00: multiplica por 10^6
+const monto = '50000000' // = 50.000000 DUSD
+
+// COPM/2 tiene 2 decimales
+// Para representar $10.000 COP: multiplica por 10^2
+const montoCOP = '1000000' // = 10000.00 COP
+```
+
+---
+
+**¿Qué estados puede tener una cuenta?**
+
+```
+creation_in_progress
+       ↓
+     active
+    ↙     ↘
+frozen   disabled
+              ↓
+           deleted
+```
+
+| Estado | Significado |
+| --- | --- |
+| `creation_in_progress` | En configuración — aún no usable |
+| `active` | Estado operativo normal |
+| `frozen` | Bloqueada temporalmente — puede descongelarse |
+| `disabled` | Desactivada permanentemente |
+| `deleted` | Eliminada |
+| `creation_failed` | La creación falló — necesita recrearse |
+
+---
+
+**¿Qué es una Transferencia?**
+
+<ConceptCard
+  term="Transferencia"
+  definition="Mover fondos entre dos cuentas. Las transferencias son asíncronas — devuelven un queueId y un estado. El estado final (completado o fallido) llega vía webhook o polling."
+/>
+
+```ts
+const resultado = await client.accounts.transfer({
+  sourceUrn: cuentaVirtual.urn,
+  destinationUrn: tarjeta.urn,
+  amount: '50000000',
+  asset: 'DUSD/6',
+})
+
+// resultado.status = 'queued' | 'processing' | 'completed' | 'failed'
+```
+
+---
+
+## ¿Qué sigue?
+
+→ [Swap](./swap) — convertir activos y trabajar con rieles de pago

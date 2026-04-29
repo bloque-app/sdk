@@ -1,0 +1,89 @@
+---
+pageType: doc
+---
+
+import { ProgressPath } from '@theme';
+
+<ProgressPath
+  steps={[
+    { label: "Visión General", href: "/es/guide/world/overview" },
+    { label: "Origen e Identidad", href: "/es/guide/world/identity" },
+    { label: "Ledger y Balance", href: "/es/guide/world/ledger" },
+    { label: "Cuentas", href: "/es/guide/world/accounts" },
+    { label: "Swap", href: "/es/guide/world/swap" }
+  ]}
+  current="/es/guide/world/overview"
+/>
+
+# ¿Qué es Bloque?
+
+Antes de escribir una sola línea de código, vale la pena entender el sistema al que te estás conectando. Bloque es una plataforma de infraestructura financiera — te permite crear y gestionar cuentas financieras, emitir tarjetas, mover dinero, ejecutar KYC y conectarte a rieles de pago, todo desde un único SDK.
+
+---
+
+**¿Qué problema resuelve?**
+
+Construir productos financieros normalmente implica integrar con un proveedor diferente para cada capacidad: uno para tarjetas, otro para cuentas bancarias, otro para compliance, otro para cripto. Bloque unifica todo esto bajo un único SDK y un único modelo de identidad.
+
+---
+
+**¿Cuáles son los bloques de construcción fundamentales?**
+
+Todo en Bloque gira alrededor de cinco conceptos. Los encontrarás en toda esta documentación:
+
+| Concepto | Qué es |
+| --- | --- |
+| **Identidad** | Quién eres en el sistema — un Origen + Alias + perfil |
+| **Ledger** | Tu libro contable compartido — el núcleo de la contabilidad |
+| **Cuenta** | Un contenedor financiero ligado a un ledger — tarjeta, banco, wallet |
+| **Swap** | Convertir un activo o riel de pago en otro |
+| **Compliance** | Verificación KYC/KYB que habilita ciertas operaciones |
+
+---
+
+**¿Cómo se conecta el SDK con la API?**
+
+```
+Tu código
+    ↓
+SDK (TypeScript)
+    ↓
+API de Bloque
+    ↓
+┌──────────────────────────────────────────────────┐
+│  Identidad │  Ledger  │  Cuentas  │  Swap  │ KYC │
+└──────────────────────────────────────────────────┘
+```
+
+El SDK es un wrapper tipado sobre la API HTTP de Bloque. Toda operación pasa por un cliente autenticado que obtienes después de llamar `sdk.connect()` o `sdk.register()`.
+
+---
+
+**¿En qué plataformas funciona?**
+
+Node.js, Bun, Deno, navegador y React Native. El SDK detecta automáticamente la plataforma y ajusta la autenticación y el almacenamiento de tokens.
+
+---
+
+**¿Cuál es el orden lógico de operaciones?**
+
+```
+Registrar una Identidad
+    ↓
+(Opcional) Completar KYC
+    ↓
+Crear una Cuenta Virtual  ← esto crea tu Ledger
+    ↓
+Adjuntar más cuentas al Ledger (tarjetas, banco, wallet)
+    ↓
+Mover dinero entre cuentas / intercambiar activos
+```
+
+Ese es el recorrido. El resto de esta sección explica cada pieza.
+
+---
+
+## ¿Qué sigue?
+
+→ [Origen e Identidad](./identity) — entiende quién eres en el sistema antes de hacer cualquier cosa
+

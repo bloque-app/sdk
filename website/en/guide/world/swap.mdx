@@ -1,0 +1,190 @@
+---
+pageType: doc
+---
+
+import { ProgressPath, ConceptCard, SwapFlowDiagram } from '@theme';
+
+<ProgressPath
+  steps={[
+    { label: "Overview", href: "/en/guide/world/overview" },
+    { label: "Origin & Identity", href: "/en/guide/world/identity" },
+    { label: "Ledger & Balance", href: "/en/guide/world/ledger" },
+    { label: "Accounts", href: "/en/guide/world/accounts" },
+    { label: "Swap", href: "/en/guide/world/swap" }
+  ]}
+  current="/en/guide/world/swap"
+/>
+
+# Swap
+
+A swap is how money crosses the boundary between the outside world and the Bloque ecosystem. Every time you bring external money in — or send internal balance out — a swap is what makes it happen.
+
+<SwapFlowDiagram />
+
+Swaps are not simple internal transfers. They cross an external boundary (bank, blockchain, instant payment key) and involve real exchange rates with fees and validity windows.
+
+---
+
+**What is a Swap?**
+
+<ConceptCard
+  term="Swap"
+  definition="An exchange between an external payment rail and a Bloque account — converting assets and crossing the Bloque boundary in one operation. Direction can be either way: external → Bloque (cash-in) or Bloque → external (cash-out)."
+/>
+
+---
+
+**What is a Medium in swap context?**
+
+A Medium is the payment rail — the method used to send or receive funds across the boundary.
+
+| Medium | Direction | Description |
+| --- | --- | --- |
+| `pse` | Cash-in only | Colombian real-time bank transfer (23+ banks) |
+| `kusama` | Cash-in / Cash-out | Kusama blockchain network |
+| `breb` | Cash-in / Cash-out | BRE-B instant payment key |
+| `bankTransfer` | Cash-out only | Any Colombian bank (29 banks supported) |
+
+You specify `fromMediums` (how you're sending) and `toMediums` (where funds land) when querying rates.
+
+---
+
+## Cash-in — external money enters Bloque
+
+<SwapFlowDiagram highlight="in" />
+
+**Example: User pays COP via their bank → receives DUSD in their card account**
+
+```ts
+// Step 1: find a rate
+const { rates } = await client.swap.findRates({
+  fromAsset: 'COPM/2',   // COP (mobile, 2 decimals)
+  toAsset: 'DUSD/6',     // USD stablecoin (6 decimals)
+  fromMediums: ['pse'],  // pay via PSE bank transfer
+  toMediums: ['kusama'], // receive on Kusama network
+  amountSrc: '1000000',  // 10,000.00 COP
+})
+
+const rate = rates[0]
+// rate.sig  → signed rate (use this to create the order)
+// rate.until → expiry — create the order before this
+
+// Step 2: create the order — this locks the rate
+const order = await client.swap.pse.create({
+  rateSig: rate.sig,
+  toMedium: 'kusama',
+  amountSrc: '1000000',
+  depositInformation: {
+    urn: 'did:bloque:card:acc_...',  // destination account inside Bloque
+  },
+  args: {
+    bankCode: '1007',                // from client.swap.pse.banks()
+    userType: 0,                     // 0 = natural person
+    customerEmail: 'user@example.com',
+    userLegalIdType: 'CC',
+    userLegalId: '123456789',
+    customerData: { fullName: 'Alice Smith', phoneNumber: '3001234567' },
+  },
+})
+
+// Step 3: redirect the user to complete bank auth
+if (order.execution?.result.how?.url) {
+  window.location.href = order.execution.result.how.url
+}
+// User authorizes at their bank → swap executes → funds appear in card account
+```
+
+---
+
+## Cash-out — Bloque balance exits to external destination
+
+<SwapFlowDiagram highlight="out" />
+
+**Example: User cashes out DUSD from their Bloque account → receives COP in their bank**
+
+```ts
+// Step 1: find a cash-out rate
+const { rates } = await client.swap.findRates({
+  fromAsset: 'DUSD/6',           // source: DUSD inside Bloque
+  toAsset: 'COPM/2',             // destination: COP
+  fromMediums: ['kusama'],        // source account is on Kusama
+  toMediums: ['bancolombia'],     // receive in Bancolombia account
+  amountSrc: '50000000',          // 50.00 DUSD
+})
+
+const rate = rates[0]
+
+// Step 2: create the bank transfer order
+const order = await client.swap.bankTransfer.create({
+  rateSig: rate.sig,
+  toMedium: 'bancolombia',
+  amountSrc: '50000000',
+  depositInformation: {
+    bankAccountType: 'savings',
+    bankAccountNumber: '5740088718',
+    bankAccountHolderName: 'Alice Smith',
+    bankAccountHolderIdentificationType: 'CC',
+    bankAccountHolderIdentificationValue: '123456789',
+  },
+  args: {
+    sourceAccountUrn: 'did:bloque:card:acc_...',  // source account inside Bloque
+  },
+})
+
+// order.status = 'pending' → 'in_progress' → 'completed'
+```
+
+---
+
+**What is a Rate?**
+
+<ConceptCard
+  term="Rate"
+  definition="A time-limited exchange offer. It tells you exactly how much you'll receive, what fees apply, and for how long the offer is valid. Rates expire — you must create an order before the validity window closes."
+/>
+
+```ts
+// rates[0] shape:
+// {
+//   sig: '...',       ← use this when creating the order — it's the locked offer
+//   rate: [100, 1],   ← 100 COP = 1 DUSD (simplified)
+//   ratio: 0.01,
+//   fee: { amount: '5000', asset: 'COPM/2' },
+//   until: '2024-...' ← expiry timestamp
+// }
+```
+
+---
+
+**What is PSE?**
+
+PSE (Pagos Seguros en Línea) is Colombia's real-time bank transfer system. When a user pays via PSE, they're redirected to their bank's authentication page, authorize the transfer, and are redirected back. The swap executes once the bank confirms.
+
+Supported: Bancolombia, Banco de Bogotá, BBVA Colombia, Davivienda, Banco Popular, and 23+ more.
+
+---
+
+**What are the possible SwapOrder states?**
+
+```
+pending → in_progress → completed
+                      → failed
+                      → cancelled
+                      → expired
+```
+
+| State | Meaning |
+| --- | --- |
+| `pending` | Order created, waiting for payment confirmation |
+| `in_progress` | Payment received, swap executing |
+| `completed` | Swap successful, funds delivered |
+| `failed` | Swap failed — check `failureReason` |
+| `expired` | Rate expired before execution |
+
+---
+
+## What's next
+
+You now understand how the whole system fits together. Time to set up your environment.
+
+→ [Install the SDK](../setup/install)

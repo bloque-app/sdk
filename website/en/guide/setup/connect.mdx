@@ -1,0 +1,111 @@
+---
+pageType: doc
+---
+
+import { QuestHeader, ConceptCard, Checkpoint } from '@theme';
+
+<QuestHeader
+  prereqs={["SDK installed", "API key or Origin Key"]}
+  unlocks={["Authenticated client", "Access to accounts, compliance, orgs, swap"]}
+  time="3 min"
+/>
+
+# Connect
+
+`connect()` opens an authenticated session. It's what you call every time you need to act on behalf of a user.
+
+---
+
+## API Key — server-to-server (recommended for backends)
+
+The simplest path. Pass your `sk_` key and the SDK auto-exchanges it for a JWT.
+
+```ts
+import { SDK } from '@bloque/sdk'
+
+const sdk = new SDK({
+  auth: {
+    type: 'apiKey',
+    apiKey: process.env.BLOQUE_API_KEY!, // sk_live_... or sk_test_...
+  },
+  mode: 'production',
+})
+
+const client = await sdk.connect()
+
+console.log(client.urn)         // did:bloque:...
+console.log(client.accessToken) // short-lived JWT
+```
+
+The `client` object now has full access to all SDK capabilities:
+
+```ts
+client.accounts    // cards, virtual, bancolombia, polygon, us, breb
+client.compliance  // KYC/KYB verification
+client.identity    // profile, aliases, API keys
+client.orgs        // organizations, teams, members
+client.swap        // exchange rates, PSE, bank transfers
+```
+
+<Checkpoint
+  title="Verify: client.urn resolves to your identity"
+  expected={`did:bloque:your-origin:your-alias`}
+/>
+
+---
+
+## Origin Key — connect as a specific user
+
+When using `originKey` auth (managing user identities directly), pass the alias to connect as that user:
+
+```ts
+const sdk = new SDK({
+  origin: 'your-origin',
+  auth: { type: 'originKey', originKey: process.env.BLOQUE_ORIGIN_KEY! },
+  mode: 'production',
+})
+
+const client = await sdk.connect('@alice') // connect as @alice
+console.log(client.urn) // did:bloque:your-origin:@alice
+```
+
+The user must be registered first via `sdk.register()`. See [Register](./register).
+
+---
+
+## JWT — browser and React Native
+
+For frontend apps where users authenticate directly:
+
+```ts
+const sdk = new SDK({
+  origin: 'your-origin',
+  auth: { type: 'jwt' },
+  platform: 'browser', // or 'react-native'
+  tokenStorage: {
+    get: () => localStorage.getItem('bloque_token'),
+    set: (t) => localStorage.setItem('bloque_token', t),
+    clear: () => localStorage.removeItem('bloque_token'),
+  },
+})
+
+// After the user completes OTP flow:
+const client = await sdk.connect(origin, alias, otpCode)
+```
+
+:::warning Use secure token storage in production
+`localStorage` is vulnerable to XSS. For production browser apps, use `httpOnly` cookies. For React Native, use `expo-secure-store` or equivalent.
+:::
+
+---
+
+<ConceptCard
+  term="API Key vs Origin Key"
+  definition="An API key (sk_) is scoped to your account — it connects as you. An Origin Key is scoped to your Origin namespace — it lets you connect as any user registered in that namespace. Use API keys for your own backend operations; use Origin keys when managing identities on behalf of others."
+/>
+
+---
+
+## What's next
+
+→ [Sandbox](./sandbox) — test safely before going to production

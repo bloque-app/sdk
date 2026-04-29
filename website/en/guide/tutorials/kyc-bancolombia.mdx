@@ -1,0 +1,170 @@
+---
+pageType: doc
+---
+
+import { QuestHeader, Checkpoint, ConceptCard, Callout } from '@theme';
+
+<QuestHeader
+  prereqs={["Connected SDK client", "Registered identity"]}
+  unlocks={["Verified identity (KYC)", "Bancolombia account", "referenceCode for receiving COP payments"]}
+  time="20 min"
+/>
+
+# KYC + Bancolombia
+
+This tutorial covers the compliance flow — verifying an identity — and then opening a Bancolombia account, which requires a verified identity.
+
+---
+
+## Why KYC first?
+
+Some account types require identity verification before you can open them. Bancolombia accounts (and US accounts) are gated behind KYC. The verification is async: you start it, the user completes it externally, and you receive a webhook (or poll) for the result.
+
+---
+
+## Step 1 — Connect
+
+```ts
+import { SDK } from '@bloque/sdk'
+
+const sdk = new SDK({
+  auth: { type: 'apiKey', apiKey: process.env.BLOQUE_API_KEY! },
+  mode: 'sandbox',
+})
+
+const client = await sdk.connect()
+```
+
+---
+
+## Step 2 — Start KYC verification
+
+<ConceptCard
+  term="KYC (Know Your Customer)"
+  definition="Identity verification required by financial regulation. You start a verification for a user's URN, they complete it at an external URL (provided by Bloque), and you receive the result via webhook or polling."
+/>
+
+```ts
+const verification = await client.compliance.kyc.startVerification({
+  urn: client.urn,
+  webhookUrl: 'https://your-app.com/webhooks/kyc', // optional but recommended
+})
+
+console.log('Verification URL:', verification.url)
+console.log('Status:', verification.status)
+// status = 'awaiting_compliance_verification'
+```
+
+<Checkpoint
+  title="Verification started — you have a URL and status"
+  expected={`Verification URL: https://verify.bloque.app/...
+Status: awaiting_compliance_verification`}
+/>
+
+---
+
+## Step 3 — User completes verification
+
+Redirect your user to `verification.url`. They complete the identity check there (document upload, selfie, etc.). You don't control this step — it's handled by Bloque's compliance provider.
+
+In sandbox mode, verification auto-approves after a short delay.
+
+---
+
+## Step 4 — Wait for the result (webhook or poll)
+
+**With webhooks** (recommended):
+
+```ts
+// In your webhook handler:
+app.post('/webhooks/kyc', (req, res) => {
+  const { urn, status } = req.body
+  // status = 'approved' | 'rejected'
+  console.log(`KYC for ${urn}: ${status}`)
+  res.sendStatus(200)
+})
+```
+
+**With polling** (for testing/CLI):
+
+```ts
+async function waitForKyc(urn: string): Promise<string> {
+  while (true) {
+    const verification = await client.compliance.kyc.getVerification({ urn })
+    if (verification.status !== 'awaiting_compliance_verification') {
+      return verification.status // 'approved' or 'rejected'
+    }
+    await new Promise(r => setTimeout(r, 2000)) // poll every 2s
+  }
+}
+
+const status = await waitForKyc(client.urn)
+console.log('KYC result:', status)
+```
+
+<Checkpoint
+  title="KYC is approved"
+  expected={`KYC result: approved`}
+  hint="In sandbox, approval is automatic. In production, it depends on the user completing the verification flow."
+/>
+
+---
+
+## Step 5 — Create the Bancolombia account
+
+Once KYC is approved, you can open the Bancolombia account:
+
+```ts
+const bancolombiaAccount = await client.accounts.bancolombia.create({
+  holderUrn: client.urn,
+  name: 'My Bancolombia Account',
+  ledgerId: existingLedgerId, // optional: attach to existing ledger
+})
+
+console.log('Bancolombia URN:', bancolombiaAccount.urn)
+console.log('Reference code:', bancolombiaAccount.details.referenceCode)
+```
+
+<Checkpoint
+  title="Bancolombia account is created with a referenceCode"
+  expected={`Bancolombia URN: did:bloque:bancolombia:acc_...
+Reference code: 1234567890`}
+/>
+
+---
+
+## Step 6 — Receive a COP payment
+
+Share the `referenceCode` with anyone who needs to send you COP via Bancolombia. They use it as the payment reference when making a PSE or bank transfer. When the payment arrives, you'll receive a webhook:
+
+```ts
+app.post('/webhooks/account', (req, res) => {
+  const { account_urn, event_type, event_data } = req.body
+  if (event_type === 'account.balance_updated') {
+    console.log(`Received funds on ${account_urn}:`, event_data)
+  }
+  res.sendStatus(200)
+})
+```
+
+---
+
+## KYC status reference
+
+```
+awaiting_compliance_verification
+           ↓
+        approved
+           ↓
+rejected (if documents fail verification)
+```
+
+<Callout type="warning" title="Rejected KYC">
+If a user's KYC is rejected, they need to restart the verification with `startVerification()`. Each call creates a new verification session.
+</Callout>
+
+---
+
+## What's next
+
+→ [Multi-user org](./multi-org) — create an organization, add teams, and invite members

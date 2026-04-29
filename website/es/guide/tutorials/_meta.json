@@ -1,0 +1,5 @@
+[
+  { "type": "file", "name": "first-card", "label": "Tu primera tarjeta" },
+  { "type": "file", "name": "kyc-bancolombia", "label": "KYC + Bancolombia" },
+  { "type": "file", "name": "multi-org", "label": "Organización multi-usuario" }
+]

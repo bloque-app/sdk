@@ -1,0 +1,96 @@
+---
+pageType: doc
+---
+
+import { QuestHeader, ConceptCard, Checkpoint } from '@theme';
+
+<QuestHeader
+  prereqs={["SDK instalado", "API key u Origin Key"]}
+  unlocks={["Cliente autenticado", "Acceso a cuentas, compliance, orgs, swap"]}
+  time="3 min"
+/>
+
+# Conectar
+
+`connect()` abre una sesión autenticada. Es lo que llamas cada vez que necesitas actuar en nombre de un usuario.
+
+---
+
+## API Key — servidor a servidor (recomendado para backends)
+
+El camino más simple. Pasa tu clave `sk_` y el SDK la intercambia automáticamente por un JWT.
+
+```ts
+import { SDK } from '@bloque/sdk'
+
+const sdk = new SDK({
+  auth: {
+    type: 'apiKey',
+    apiKey: process.env.BLOQUE_API_KEY!, // sk_live_... o sk_test_...
+  },
+  mode: 'production',
+})
+
+const client = await sdk.connect()
+
+console.log(client.urn)         // did:bloque:...
+console.log(client.accessToken) // JWT de corta duración
+```
+
+El objeto `client` ahora tiene acceso completo a todas las capacidades del SDK:
+
+```ts
+client.accounts    // tarjetas, virtual, bancolombia, polygon, us, breb
+client.compliance  // verificación KYC/KYB
+client.identity    // perfil, aliases, API keys
+client.orgs        // organizaciones, equipos, miembros
+client.swap        // tasas de cambio, PSE, transferencias bancarias
+```
+
+<Checkpoint
+  title="Verificar: client.urn resuelve a tu identidad"
+  expected={`did:bloque:tu-origen:tu-alias`}
+/>
+
+---
+
+## Origin Key — conectar como un usuario específico
+
+Cuando usas auth `originKey`, pasa el alias para conectar como ese usuario:
+
+```ts
+const client = await sdk.connect('@alice')
+console.log(client.urn) // did:bloque:tu-origen:@alice
+```
+
+---
+
+## JWT — navegador y React Native
+
+```ts
+const sdk = new SDK({
+  origin: 'tu-origen',
+  auth: { type: 'jwt' },
+  platform: 'browser',
+})
+
+// Después del flujo OTP del usuario:
+const client = await sdk.connect(origin, alias, codigoOTP)
+```
+
+:::warning Usa almacenamiento seguro de tokens en producción
+`localStorage` es vulnerable a XSS. Para apps de navegador en producción, usa cookies `httpOnly`.
+:::
+
+---
+
+<ConceptCard
+  term="API Key vs Origin Key"
+  definition="Una API key (sk_) tiene scope a tu cuenta — conecta como tú. Una Origin Key tiene scope a tu namespace de Origen — te permite conectar como cualquier usuario registrado en ese namespace. Usa API keys para operaciones de tu propio backend; usa Origin keys cuando gestionas identidades en nombre de otros."
+/>
+
+---
+
+## ¿Qué sigue?
+
+→ [Sandbox](./sandbox) — prueba de forma segura antes de ir a producción

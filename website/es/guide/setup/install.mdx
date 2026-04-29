@@ -1,0 +1,95 @@
+---
+pageType: doc
+---
+
+import { QuestHeader, Checkpoint } from '@theme';
+
+<QuestHeader
+  prereqs={["Node.js 22+, Bun 1+, o Deno"]}
+  unlocks={["SDK instalado", "Imports con tipos"]}
+  time="2 min"
+/>
+
+# Instalar
+
+Agrega el SDK a tu proyecto.
+
+:::code-group
+
+```bash [bun]
+bun add @bloque/sdk
+```
+
+```bash [npm]
+npm install @bloque/sdk
+```
+
+```bash [yarn]
+yarn add @bloque/sdk
+```
+
+```bash [pnpm]
+pnpm add @bloque/sdk
+```
+
+:::
+
+<Checkpoint
+  title="Verificar: el import resuelve sin errores"
+  expected={`import { SDK } from '@bloque/sdk'
+// Sin error = listo`}
+/>
+
+---
+
+## Opciones de configuración
+
+| Opción | Tipo | Por defecto | Descripción |
+| --- | --- | --- | --- |
+| `auth` | `AuthStrategy` | — | **Requerido.** Método de auth: `apiKey`, `originKey`, o `jwt` |
+| `origin` | `string` | — | Requerido para auth `originKey` y `jwt` |
+| `mode` | `'production' \| 'sandbox'` | `'production'` | Usa `'sandbox'` para pruebas |
+| `platform` | `'node' \| 'bun' \| 'deno' \| 'browser' \| 'react-native'` | `'node'` | Entorno de ejecución |
+| `timeout` | `number` | `30000` | Timeout de solicitud en milisegundos |
+| `retry.enabled` | `boolean` | `true` | Auto-reintento en 429, 503, errores de red |
+| `retry.maxRetries` | `number` | `3` | Máximo de intentos |
+| `tokenStorage` | `TokenStorage` | `localStorage` | Almacenamiento JWT — requerido para `react-native` |
+
+---
+
+## Estrategias de auth en resumen
+
+**`apiKey`** — para servicios backend. Usa una clave secreta `sk_live_` o `sk_test_`. El SDK la intercambia automáticamente por un JWT de corta duración.
+
+```ts
+new SDK({ auth: { type: 'apiKey', apiKey: process.env.BLOQUE_API_KEY! } })
+```
+
+**`originKey`** — para backends que gestionan identidades de usuarios directamente. Registra y conecta usuarios en tu Origen.
+
+```ts
+new SDK({
+  origin: 'tu-origen',
+  auth: { type: 'originKey', originKey: process.env.BLOQUE_ORIGIN_KEY! },
+})
+```
+
+**`jwt`** — para apps de navegador y React Native donde los usuarios se autentican directamente.
+
+```ts
+new SDK({
+  origin: 'tu-origen',
+  auth: { type: 'jwt' },
+  platform: 'browser',
+})
+```
+
+:::warning Mantén las claves fuera del código cliente
+Nunca expongas valores `sk_` u `originKey` en código de navegador o React Native. Usa variables de entorno en el backend.
+:::
+
+---
+
+## ¿Qué sigue?
+
+→ [Registrar](./register) — crea identidades en tu Origen

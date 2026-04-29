@@ -1,0 +1,113 @@
+---
+pageType: doc
+---
+
+import { ProgressPath, ConceptCard } from '@theme';
+
+<ProgressPath
+  steps={[
+    { label: "Visión General", href: "/es/guide/world/overview" },
+    { label: "Origen e Identidad", href: "/es/guide/world/identity" },
+    { label: "Ledger y Balance", href: "/es/guide/world/ledger" },
+    { label: "Cuentas", href: "/es/guide/world/accounts" },
+    { label: "Swap", href: "/es/guide/world/swap" }
+  ]}
+  current="/es/guide/world/identity"
+/>
+
+# Origen e Identidad
+
+El sistema de identidad es el fundamento de todo en Bloque. Antes de tocar dinero, necesitas entender quién eres en la red.
+
+---
+
+**¿Qué es un Origen?**
+
+<ConceptCard
+  term="Origen"
+  definition="Un namespace que define dónde vive una identidad y cómo se autentica. Piénsalo como el contexto de la aplicación que gestiona a tus usuarios."
+  example="bloque-email      ← integrado, OTP por correo
+bloque-whatsapp   ← integrado, OTP por WhatsApp
+ethereum-mainnet  ← blockchain, firma de wallet
+tu-app-nombre     ← personalizado, tu lógica de auth"
+  format="code"
+/>
+
+Registras identidades *dentro de* un Origen. Cada Origen tiene su propio método de autenticación.
+
+---
+
+**¿Qué es una Identidad?**
+
+<ConceptCard
+  term="Identidad"
+  definition="Un usuario o entidad registrado bajo un Origen. Tiene un perfil (nombre, email, fecha de nacimiento, dirección), un estado KYC/KYB y una dirección permanente en la red llamada URN."
+/>
+
+Una Identidad puede ser:
+- `individual` — una persona, con campos KYC personales
+- `business` — una empresa, con campos KYB (NIT, fecha de constitución, etc.)
+
+---
+
+**¿Qué es un Alias?**
+
+<ConceptCard
+  term="Alias"
+  definition="Tu identificador único dentro de un Origen. Es lo que usas para registrarte e iniciar sesión."
+  example="@alice                ← identificador personalizado
+alice@miapp.com       ← dirección de email
+0x742d35Cc6634C0...   ← dirección de wallet Ethereum"
+  format="code"
+/>
+
+---
+
+**¿Qué es un URN?**
+
+<ConceptCard
+  term="URN (Uniform Resource Name)"
+  definition="La dirección permanente y globalmente única de una identidad en la red Bloque. Se construye a partir del Origen y el Alias y nunca cambia."
+  example="did:bloque:bloque-email:alice@miapp.com
+did:bloque:ethereum-mainnet:0x742d35Cc6634C0...
+did:bloque:tu-app-nombre:@alice"
+  format="code"
+/>
+
+Verás URNs en todas partes en el SDK — como valores de retorno, como parámetros, y como la clave que vincula cuentas con sus propietarios.
+
+---
+
+**¿Qué es un `holderUrn`?**
+
+Cuando creas una cuenta financiera, especificas quién la posee pasando un `holderUrn`. Es simplemente el URN de la identidad (u organización) a la que pertenece la cuenta.
+
+```ts
+await client.accounts.virtual.create({
+  holderUrn: client.urn, // tu propio URN
+  name: 'Cuenta principal',
+})
+```
+
+---
+
+**¿Qué es una Organización?**
+
+<ConceptCard
+  term="Organización"
+  definition="Una Identidad multi-usuario — una empresa, DAO o grupo. Al igual que las identidades individuales, las orgs tienen un URN y pueden poseer cuentas. Los miembros pueden tener diferentes roles y permisos."
+/>
+
+---
+
+**¿Qué es KYC y cuándo se requiere?**
+
+KYC (Know Your Customer) es el proceso de verificación de identidad requerido por regulación financiera. No todos los tipos de cuenta lo requieren — las cuentas virtuales y wallets Polygon tienen requisitos mínimos, mientras que las cuentas bancarias US requieren KYC completo.
+
+Ver [Compliance & KYC](../reference/compliance) para el flujo completo de verificación.
+
+---
+
+## ¿Qué sigue?
+
+→ [Ledger y Balance](./ledger) — entiende dónde vive realmente el dinero

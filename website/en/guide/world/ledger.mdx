@@ -1,0 +1,156 @@
+---
+pageType: doc
+---
+
+import { ProgressPath, ConceptCard } from '@theme';
+
+<ProgressPath
+  steps={[
+    { label: "Overview", href: "/en/guide/world/overview" },
+    { label: "Origin & Identity", href: "/en/guide/world/identity" },
+    { label: "Ledger & Balance", href: "/en/guide/world/ledger" },
+    { label: "Accounts", href: "/en/guide/world/accounts" },
+    { label: "Swap", href: "/en/guide/world/swap" }
+  ]}
+  current="/en/guide/world/ledger"
+/>
+
+# Ledger & Balance
+
+This is the most important concept to understand before touching any financial operations. Almost every issue with balances and account connections comes from not understanding what a ledger is.
+
+---
+
+**What is a Ledger?**
+
+<ConceptCard
+  term="Ledger"
+  definition="A shared balance sheet. It's the core accounting unit in Bloque. A ledger holds balances across multiple assets and can be shared by multiple accounts of different types."
+/>
+
+Think of a ledger like a bank account number that multiple cards and wallets can all draw from. The money lives in the ledger; the accounts are just ways to access it.
+
+---
+
+**How do I create a Ledger?**
+
+You don't create one directly. A ledger is created automatically when you create your first **virtual account** without specifying a `ledgerId`.
+
+```ts
+const virtualAccount = await client.accounts.virtual.create({
+  holderUrn: client.urn,
+  name: 'Main',
+})
+
+console.log(virtualAccount.ledgerId) // "ldg_..."
+```
+
+That `ledgerId` is now the ID of your ledger. Save it — you'll use it to attach other accounts.
+
+---
+
+**What is the "base account"?**
+
+<ConceptCard
+  term="Base Account"
+  definition="The virtual account that creates the ledger. It acts as the hub for your financial setup — once created, all other account types (cards, bank accounts, wallets) can be attached to the same ledger by passing its ledgerId."
+/>
+
+Every financial user or entity in your system should have one base account.
+
+---
+
+**How do I attach other accounts to the same Ledger?**
+
+Pass the `ledgerId` from your virtual account when creating any other account type:
+
+```ts
+// Create the base account (creates the ledger)
+const base = await client.accounts.virtual.create({ holderUrn: client.urn })
+
+// Attach a card to the same ledger
+const card = await client.accounts.card.create({
+  holderUrn: client.urn,
+  ledgerId: base.ledgerId,
+})
+
+// Attach a Polygon wallet to the same ledger
+const wallet = await client.accounts.polygon.create({
+  holderUrn: client.urn,
+  ledgerId: base.ledgerId,
+})
+```
+
+Now `base`, `card`, and `wallet` all share the same balance pool.
+
+---
+
+**What does "shared balance" mean in practice?**
+
+All accounts on the same ledger draw from the same pool of funds. If you fund the virtual account with 100 DUSD, that 100 DUSD is accessible from the card and the wallet too — not copies of it, the same balance.
+
+```
+Ledger ldg_abc
+  ├─ balance: { DUSD/6: 100.00 }
+  │
+  ├─ Virtual account  → can check & transfer balance
+  ├─ Card             → can spend from balance
+  └─ Polygon wallet   → can receive & send from balance
+```
+
+Transfers between accounts on the same ledger are internal — they're just bookkeeping moves, no external payment rails involved.
+
+---
+
+**What assets can a Ledger hold?**
+
+| Asset | Format | Description |
+| --- | --- | --- |
+| `DUSD/6` | 6 decimal places | USD-pegged stablecoin |
+| `COPB/6` | 6 decimal places | COP blockchain token |
+| `COPM/2` | 2 decimal places | COP mobile (traditional) |
+| `KSM/12` | 12 decimal places | Kusama token |
+
+The format is always `SYMBOL/DECIMALS`. Amounts are always strings in the SDK to preserve precision.
+
+```ts
+// "50000000" in DUSD/6 = 50.000000 DUSD = $50.00
+// "1000000" in COPM/2 = 10000.00 COP
+```
+
+---
+
+**What is a Balance?**
+
+Each asset in a ledger has four balance fields:
+
+| Field | Meaning |
+| --- | --- |
+| `current` | Confirmed available balance |
+| `pending` | Funds in flight (not yet settled) |
+| `in` | Total received (lifetime) |
+| `out` | Total sent (lifetime) |
+
+```ts
+const balance = await client.accounts.balance(virtualAccount.urn)
+// {
+//   'DUSD/6': { current: '50000000', pending: '0', in: '50000000', out: '0' }
+// }
+```
+
+---
+
+**What is the difference between a Movement and a Transaction?**
+
+| Term | Scope | Example |
+| --- | --- | --- |
+| **Movement** | Single account view | "The card received 10 DUSD" |
+| **Transaction** | Cross-account view | "10 DUSD moved from virtual to card" |
+
+Use `movements` when you want the history of one account. Use `transactions` when you want the full picture of a transfer between accounts.
+
+---
+
+## What's next
+
+→ [Accounts](./accounts) — the six account types and how to use them

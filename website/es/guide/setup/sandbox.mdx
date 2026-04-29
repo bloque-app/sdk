@@ -1,0 +1,89 @@
+---
+pageType: doc
+---
+
+import { QuestHeader, Checkpoint } from '@theme';
+
+<QuestHeader
+  prereqs={["SDK instalado", "API key u Origin Key (credenciales de prueba)"]}
+  unlocks={["Entorno de pruebas seguro", "Cuentas virtuales para testing"]}
+  time="5 min"
+/>
+
+# Sandbox
+
+El modo sandbox te permite probar el SDK completo sin tocar dinero real ni cuentas reales. Todo funciona exactamente igual que en producción — la única diferencia es que no se ejecutan operaciones financieras reales.
+
+---
+
+## Activar el modo sandbox
+
+Pasa `mode: 'sandbox'` al inicializar el SDK:
+
+```ts
+import { SDK } from '@bloque/sdk'
+
+const sdk = new SDK({
+  auth: { type: 'apiKey', apiKey: process.env.BLOQUE_TEST_KEY! }, // sk_test_...
+  mode: 'sandbox',
+})
+```
+
+Usa claves `sk_test_` (no `sk_live_`) en sandbox. Se generan por separado en el dashboard.
+
+---
+
+## Sandbox vs producción — ¿qué es diferente?
+
+| Comportamiento | Sandbox | Producción |
+| --- | --- | --- |
+| Cuentas creadas | Sí — solo datos de prueba | Sí — cuentas reales |
+| Transferencias ejecutadas | Simuladas | Dinero real se mueve |
+| KYC requerido | Mínimo o eludido | Verificación completa |
+| Webhooks disparados | Sí | Sí |
+| Rieles externos (PSE, BRE-B) | Simulados | Reales |
+
+Las formas de respuesta de la API son idénticas. El código escrito para sandbox funciona en producción sin cambios — solo cambia tu clave y el modo.
+
+---
+
+## Usar cuentas virtuales para pruebas
+
+```ts
+const client = await sdk.connect()
+
+const base = await client.accounts.virtual.create({
+  holderUrn: client.urn,
+  name: 'Cuenta base de prueba',
+})
+
+console.log(base.urn)      // did:bloque:virtual:acc_...
+console.log(base.ledgerId) // ldg_...
+console.log(base.status)   // 'active'
+```
+
+<Checkpoint
+  title="Deberías ver el URN y ledgerId de la cuenta virtual"
+  expected={`{
+  urn: 'did:bloque:virtual:acc_...',
+  ledgerId: 'ldg_...',
+  status: 'active'
+}`}
+/>
+
+---
+
+## Pasar a producción
+
+1. Reemplaza `sk_test_` con `sk_live_` en tus variables de entorno
+2. Cambia `mode: 'sandbox'` a `mode: 'production'`
+3. Completa cualquier KYC/KYB requerido para tipos de cuenta que lo necesiten
+4. Prueba con montos reales pequeños antes de escalar
+
+No se necesitan cambios de código más allá de esos dos valores.
+
+---
+
+## ¿Qué sigue?
+
+→ [Tu primera tarjeta](../tutorials/first-card) — el flujo completo desde conectar hasta tarjeta y transferencia

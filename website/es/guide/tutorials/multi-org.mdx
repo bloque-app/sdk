@@ -1,0 +1,129 @@
+---
+pageType: doc
+---
+
+import { QuestHeader, Checkpoint, ConceptCard } from '@theme';
+
+<QuestHeader
+  prereqs={["Cliente SDK conectado", "Identidad registrada"]}
+  unlocks={["Organización con URN", "Equipo dentro de la org", "Miembro invitado"]}
+  time="15 min"
+/>
+
+# Organización multi-usuario
+
+Este tutorial muestra cómo crear una organización, agregar un equipo dentro de ella, invitar a un miembro y asignar una cuenta financiera a la org en lugar de a un usuario individual.
+
+---
+
+## ¿Cuándo necesitas una org?
+
+Las organizaciones son para configuraciones multi-usuario — una empresa, una plataforma con múltiples operadores, o un DAO. Una org tiene su propio URN y puede poseer cuentas independientemente de cualquier usuario individual.
+
+---
+
+## Paso 1 — Conectar
+
+```ts
+const client = await sdk.connect()
+```
+
+---
+
+## Paso 2 — Crear una organización
+
+<ConceptCard
+  term="Organización"
+  definition="Una entidad multi-usuario con su propio URN. Puede ser de tipo 'business' (empresa con KYB) o 'individual'. Las organizaciones poseen cuentas, tienen equipos y gestionan el acceso de miembros."
+/>
+
+```ts
+const org = await client.orgs.create({
+  type: 'business',
+  name: 'Acme Corp',
+  slug: 'acme-corp',
+  profile: {
+    legalName: 'Acme Corp S.A.S.',
+    taxId: '900123456-7',
+    incorporationDate: '2020-01-15',
+    businessType: 'sas',
+    countryCode: 'CO',
+    address: 'Calle 100 # 8A-55',
+    city: 'Bogotá',
+    postalCode: '110221',
+  },
+})
+
+console.log('URN de la org:', org.urn)
+```
+
+<Checkpoint
+  title="Organización creada con URN"
+  expected={`URN de la org: did:bloque:org:acme-corp`}
+/>
+
+---
+
+## Paso 3 — Crear un equipo dentro de la org
+
+```ts
+const equipo = await client.orgs.teams.create(org.urn, {
+  name: 'Ingeniería',
+  description: 'Equipo de ingeniería',
+})
+```
+
+---
+
+## Paso 4 — Invitar a un miembro
+
+```ts
+const invitacion = await client.orgs.invites.create(org.urn, {
+  channel: 'email',
+  destination: 'bob@ejemplo.com',
+  role: 'member',
+  teamUrn: equipo.urn,
+})
+
+console.log('Estado de la invitación:', invitacion.status) // 'pending'
+```
+
+---
+
+## Paso 5 — Aceptar la invitación (desde el lado del usuario invitado)
+
+```ts
+// SDK de Bob (después de que se haya registrado)
+await bobClient.orgs.invites.accept(codigoInvitacion)
+// Bob es ahora miembro de Acme Corp
+```
+
+---
+
+## Paso 6 — Crear una cuenta propiedad de la org
+
+Usa `holderUrn: org.urn` para asignar la propiedad a la organización:
+
+```ts
+const cuentaOrg = await client.accounts.virtual.create({
+  holderUrn: org.urn, // la org posee esta cuenta
+  name: 'Tesorería Acme Corp',
+})
+
+console.log('URN cuenta org:', cuentaOrg.urn)
+console.log('Ledger ID:', cuentaOrg.ledgerId)
+```
+
+<Checkpoint
+  title="Cuenta org creada con la org como titular"
+  expected={`URN cuenta org: did:bloque:virtual:acc_...
+Ledger ID: ldg_...`}
+/>
+
+---
+
+## ¿Qué sigue?
+
+→ [Cuentas Virtuales](../accounts/virtual) — deep dive completo del tipo de cuenta base
+→ [Compliance & KYC](../reference/compliance) — referencia completa para flujos de verificación
+→ [Organizaciones](../reference/organizations) — referencia completa para gestión de orgs, equipos y miembros

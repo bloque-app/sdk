@@ -1,0 +1,237 @@
+# Máquinas de Estado
+
+Aprende sobre las máquinas de estado que gestionan el ciclo de vida de las entidades en el SDK de Bloque.
+
+## Descripción General
+
+El SDK de Bloque utiliza máquinas de estado bien definidas para gestionar el ciclo de vida de todas las entidades principales. Comprender estos estados y sus transiciones es esencial para construir integraciones robustas.
+
+## Máquinas de Estado Principales
+
+### 📋 Cuentas
+Las cuentas gestionan los fondos de los usuarios y siguen un ciclo de vida bien definido desde la creación hasta la eliminación.
+
+**Estados clave:**
+- `creation_in_progress` → `active` → `disabled`/`frozen`/`deleted`
+- Maneja errores: `creation_failed`
+
+**Documentación completa:** [Cuentas Virtuales](/sdk/guide/accounts/virtual) | [Tarjetas Virtuales](/sdk/guide/accounts/cards)
+
+### 💸 Transferencias
+Las transferencias mueven fondos entre cuentas y se procesan de forma asíncrona.
+
+**Estados clave:**
+- `queued` → `processing` → `completed`/`failed`
+
+**Documentación completa:** [Transferencias](/sdk/guide/accounts/transfers)
+
+### 🏢 Organizaciones
+Las organizaciones representan entidades legales (empresas o individuos) con requisitos de cumplimiento normativo.
+
+**Estados clave:**
+- `awaiting_compliance_verification` → `active` → `suspended`/`closed`
+
+**Documentación completa:** [Organizaciones](/sdk/guide/features/organizations)
+
+### 🔍 KYC/Compliance
+Gestiona la verificación de identidad y el proceso de cumplimiento normativo.
+
+**Estados clave:**
+- `awaiting_compliance_verification` → `approved`/`rejected`
+
+**Documentación completa:** [Cumplimiento Normativo & KYC](/sdk/guide/features/compliance)
+
+### 🔄 Swap
+Gestiona órdenes de intercambio de activos entre diferentes medios y monedas.
+
+**Estados clave:**
+- Órdenes: `pending` → `in_progress` → `completed`/`failed`
+- Ejecución: `pending` → `running` → `completed`/`failed`
+
+**Documentación completa:** [Swap](/sdk/guide/features/swap)
+
+## Patrones Comunes
+
+### 🔄 Estados Transitorios vs Finales
+
+**Estados Transitorios:**
+- `creation_in_progress`, `processing`, `pending`, `awaiting_*`
+- Requieren acción o tiempo para cambiar
+- Generalmente tienen timeouts asociados
+
+**Estados Finales:**
+- `completed`, `failed`, `deleted`, `closed`, `approved`, `rejected`
+- No cambian sin intervención externa
+- Representan el resultado de un proceso
+
+### ⏱️ Patrón de Sondeo (Polling)
+
+Para estados que se resuelven de forma asíncrona:
+
+```typescript
+async function waitForCompletion(getStatus: () => Promise<{status: string}>) {
+  let attempts = 0;
+  const maxAttempts = 30; // 30 intentos
+  
+  while (attempts < maxAttempts) {
+    const result = await getStatus();
+    
+    if (['completed', 'failed', 'approved', 'rejected'].includes(result.status)) {
+      return result; // Estado final alcanzado
+    }
+    
+    // Esperar 2 segundos entre intentos
+    await new Promise(resolve => setTimeout(resolve, 2000));
+    attempts++;
+  }
+  
+  throw new Error('Timeout esperando completación');
+}
+```
+
+### 🪝 Patrón de Webhooks
+
+Para notificaciones en tiempo real de cambios de estado, pasa un `webhookUrl` al crear entidades:
+
+```typescript
+const account = await session.accounts.virtual.create({
+  firstName: 'Juan',
+  lastName: 'Pérez',
+  webhookUrl: 'https://api.ejemplo.com/webhooks/cuentas'
+});
+
+// Manejar eventos del ciclo de vida de cuentas
+app.post('/webhooks/cuentas', (req, res) => {
+  const { account_urn, event_type, event_data } = req.body;
+
+  if (event_type === 'account.activated') {
+    console.log(`Cuenta ${account_urn} ahora está activa`);
+    console.log(`Liquidación: ${event_data.settlement_status}`);
+    updateLocalAccount(account_urn, { status: 'active' });
+  }
+
+  res.status(200).send('OK');
+});
+```
+
+**Documentación completa:** [Webhooks de Cuentas](/sdk/guide/accounts/webhooks)
+
+## Manejo de Errores por Estado
+
+### Estados de Error Comunes
+
+| Error | Estados Asociados | Solución |
+|-------|-------------------|-----------|
+| `creation_failed` | Cuentas, Tarjetas | Verificar datos, reintentar |
+| `failed` | Transferencias, Swap | Verificar fondos, validar parámetros |
+| `rejected` | KYC, Organizaciones | Contactar soporte, revisar documentación |
+| `suspended` | Organizaciones, Cuentas | Resolver problema de cumplimiento |
+
+### Estrategias de Recuperación
+
+```typescript
+async function handleFailedTransfer(sourceUrn: string, destinationUrn: string) {
+  // Verificar que las cuentas sigan existiendo y activas
+  const source = await bloque.accounts.get(sourceUrn);
+  const dest = await bloque.accounts.get(destinationUrn);
+
+  if (source.status !== 'active' || dest.status !== 'active') {
+    throw new Error('La cuenta origen o destino no está activa.');
+  }
+
+  // Verificar saldo antes de reintentar
+  const balances = await bloque.accounts.balance(sourceUrn);
+  if (!balances['DUSD/6'] || balances['DUSD/6'].current === '0') {
+    throw new Error('Fondos insuficientes. Verifica tu saldo.');
+  }
+}
+```
+
+## Mejores Prácticas
+
+### 1. **Verificar Estados Antes de Operaciones**
+
+```typescript
+// ✅ Bueno: verificar estado antes de transferir
+const account = await session.accounts.get(accountUrn);
+if (account.status !== 'active') {
+  throw new Error('La cuenta debe estar activa para transferir');
+}
+
+await session.accounts.transfer({
+  sourceUrn: accountUrn,
+  destinationUrn: destUrn,
+  amount: '1000000',
+  asset: 'DUSD/6'
+});
+```
+
+### 2. **Manejar Estados Transitorios con Timeouts**
+
+```typescript
+async function waitForActive(accountUrn: string, timeoutMs = 30000) {
+  const startTime = Date.now();
+  
+  while (Date.now() - startTime < timeoutMs) {
+    const account = await session.accounts.get(accountUrn);
+    
+    if (account.status === 'active') {
+      return account;
+    }
+    
+    if (account.status === 'creation_failed') {
+      throw new Error('Falló la creación de la cuenta');
+    }
+    
+    await new Promise(resolve => setTimeout(resolve, 1000));
+  }
+  
+  throw new Error('Timeout esperando activación de la cuenta');
+}
+```
+
+### 3. **Implementar Reintentos con Backoff Exponencial**
+
+```typescript
+async function retryOperation<T>(
+  operation: () => Promise<T>,
+  maxRetries = 3,
+  baseDelay = 1000
+): Promise<T> {
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      return await operation();
+    } catch (error) {
+      if (attempt === maxRetries) throw error;
+      
+      const delay = baseDelay * Math.pow(2, attempt - 1);
+      await new Promise(resolve => setTimeout(resolve, delay));
+    }
+  }
+  
+  throw new Error('Máximo de reintentos excedido');
+}
+```
+
+## Referencias Rápidas
+
+### Resumen de Estados
+
+| Entidad | Estados Clave | Tiempo de Resolución Típico |
+|---------|---------------|---------------------------|
+| Cuentas | 6 estados | 1-30 segundos |
+| Transferencias | 4 estados | 5-60 segundos |
+| Organizaciones | 4 estados | 1-3 días (manual) |
+| KYC | 3 estados | 5-30 minutos |
+| Swap | 5 estados (órdenes) | 1-10 minutos |
+
+### Diagramas de Flujo
+
+Para visualizar las transiciones de estado, consulta las guías específicas de entidades donde encontrarás tablas de transición detalladas y ejemplos prácticos.
+
+## Próximos Pasos
+
+- [Guía de Cuentas](/sdk/guide/accounts/overview) - Para entender los estados de las cuentas
+- [Guía de Transferencias](/sdk/guide/accounts/transfers) - Para gestionar los estados de transferencias
+- [Guía de Organizaciones](/sdk/guide/features/organizations) - Para los estados de cumplimiento
+- [Guía de Swap](/sdk/guide/features/swap) - Para los estados de swap

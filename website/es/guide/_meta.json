@@ -1,17 +1,27 @@
 [
   {
     "type": "dir-section-header",
-    "name": "start",
-    "label": "Getting Started"
+    "name": "world",
+    "label": "El Mundo"
+  },
+  {
+    "type": "dir-section-header",
+    "name": "setup",
+    "label": "Configuración"
+  },
+  {
+    "type": "dir-section-header",
+    "name": "tutorials",
+    "label": "Tutoriales"
   },
   {
     "type": "dir-section-header",
     "name": "accounts",
-    "label": "Accounts & Payments"
+    "label": "Cuentas y Pagos"
   },
   {
     "type": "dir-section-header",
-    "name": "features",
-    "label": "SDK Features"
+    "name": "reference",
+    "label": "Referencia"
   }
 ]

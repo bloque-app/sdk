@@ -5,3 +5,8 @@ export { Callout } from './components/Callout';
 export { EyebrowLabel } from './components/EyebrowLabel';
 export { CodeWindow } from './components/CodeWindow';
 export { FeatureCard } from './components/FeatureCard';
+export { QuestHeader } from './components/QuestHeader';
+export { ConceptCard } from './components/ConceptCard';
+export { Checkpoint } from './components/Checkpoint';
+export { ProgressPath } from './components/ProgressPath';
+export { SwapFlowDiagram } from './components/SwapFlowDiagram';

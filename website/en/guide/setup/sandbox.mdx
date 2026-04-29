@@ -1,0 +1,96 @@
+---
+pageType: doc
+---
+
+import { QuestHeader, Checkpoint } from '@theme';
+
+<QuestHeader
+  prereqs={["SDK installed", "API key or Origin Key (test credentials)"]}
+  unlocks={["Safe test environment", "Virtual accounts for testing"]}
+  time="5 min"
+/>
+
+# Sandbox
+
+Sandbox mode lets you test the full SDK without touching real money or real accounts. Everything works exactly like production — the only difference is that no real financial operations execute.
+
+---
+
+## Enable sandbox mode
+
+Pass `mode: 'sandbox'` when initializing the SDK:
+
+```ts
+import { SDK } from '@bloque/sdk'
+
+const sdk = new SDK({
+  auth: { type: 'apiKey', apiKey: process.env.BLOQUE_TEST_KEY! }, // sk_test_...
+  mode: 'sandbox',
+})
+```
+
+Use `sk_test_` keys (not `sk_live_`) in sandbox. They're generated separately in the dashboard.
+
+---
+
+## Sandbox vs production — what's different?
+
+| Behavior | Sandbox | Production |
+| --- | --- | --- |
+| Accounts created | Yes — test data only | Yes — real accounts |
+| Transfers executed | Simulated | Real money moves |
+| KYC required | Minimal or bypassed | Full verification |
+| Webhooks fired | Yes | Yes |
+| External rails (PSE, BRE-B) | Simulated | Real |
+
+The API response shapes are identical. Code written for sandbox works in production without changes — just swap your key and mode.
+
+---
+
+## Use virtual accounts for testing
+
+The virtual account medium is perfect for sandbox testing. It requires minimal setup and lets you simulate balance and transfers immediately.
+
+```ts
+const client = await sdk.connect()
+
+// Create a test virtual account (creates a ledger automatically)
+const base = await client.accounts.virtual.create({
+  holderUrn: client.urn,
+  name: 'Test base account',
+})
+
+console.log(base.urn)      // did:bloque:virtual:acc_...
+console.log(base.ledgerId) // ldg_...
+console.log(base.status)   // 'active' (or 'creation_in_progress' briefly)
+```
+
+<Checkpoint
+  title="You should see the virtual account URN and ledgerId"
+  expected={`{
+  urn: 'did:bloque:virtual:acc_...',
+  ledgerId: 'ldg_...',
+  status: 'active'
+}`}
+/>
+
+---
+
+## Switching to production
+
+When you're ready to go live:
+
+1. Replace `sk_test_` with `sk_live_` in your environment variables
+2. Change `mode: 'sandbox'` to `mode: 'production'`
+3. Complete any required KYC/KYB for account types that need it
+4. Test with small real amounts before scaling
+
+No code changes needed beyond those two values.
+
+---
+
+## What's next
+
+Now that your environment is set up, build something real.
+
+→ [Issue your first card](../tutorials/first-card) — the complete flow from connect to card to transfer

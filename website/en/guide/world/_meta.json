@@ -1,0 +1,7 @@
+[
+  { "type": "file", "name": "overview", "label": "Overview" },
+  { "type": "file", "name": "identity", "label": "Origin & Identity" },
+  { "type": "file", "name": "ledger", "label": "Ledger & Balance" },
+  { "type": "file", "name": "accounts", "label": "Accounts" },
+  { "type": "file", "name": "swap", "label": "Swap" }
+]

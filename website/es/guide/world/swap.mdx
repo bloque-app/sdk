@@ -1,0 +1,173 @@
+---
+pageType: doc
+---
+
+import { ProgressPath, ConceptCard, SwapFlowDiagram } from '@theme';
+
+<ProgressPath
+  steps={[
+    { label: "Visión General", href: "/es/guide/world/overview" },
+    { label: "Origen e Identidad", href: "/es/guide/world/identity" },
+    { label: "Ledger y Balance", href: "/es/guide/world/ledger" },
+    { label: "Cuentas", href: "/es/guide/world/accounts" },
+    { label: "Swap", href: "/es/guide/world/swap" }
+  ]}
+  current="/es/guide/world/swap"
+/>
+
+# Swap
+
+Un swap es cómo el dinero cruza la frontera entre el mundo externo y el ecosistema Bloque. Cada vez que traes dinero externo adentro — o sacas balance interno afuera — un swap es lo que lo hace posible.
+
+<SwapFlowDiagram />
+
+Los swaps no son simples transferencias internas. Cruzan una frontera externa (banco, blockchain, llave de pago instantáneo) e involucran tasas de cambio reales con comisiones y ventanas de validez.
+
+---
+
+**¿Qué es un Swap?**
+
+<ConceptCard
+  term="Swap"
+  definition="Un intercambio entre un riel de pago externo y una cuenta Bloque — convirtiendo activos y cruzando la frontera Bloque en una sola operación. La dirección puede ser cualquiera: externo → Bloque (cash-in) o Bloque → externo (cash-out)."
+/>
+
+---
+
+**¿Qué es un Medium en contexto de Swap?**
+
+Un Medium es el riel de pago — el método para enviar o recibir fondos a través de la frontera.
+
+| Medium | Dirección | Descripción |
+| --- | --- | --- |
+| `pse` | Solo cash-in | Transferencia bancaria en tiempo real colombiana (23+ bancos) |
+| `kusama` | Cash-in / Cash-out | Red blockchain Kusama |
+| `breb` | Cash-in / Cash-out | Llave de pago instantáneo BRE-B |
+| `bankTransfer` | Solo cash-out | Cualquier banco colombiano (29 bancos) |
+
+---
+
+## Cash-in — dinero externo entra a Bloque
+
+<SwapFlowDiagram highlight="in" />
+
+**Ejemplo: Usuario paga COP desde su banco → recibe DUSD en su cuenta de tarjeta**
+
+```ts
+// Paso 1: obtener una tasa
+const { rates } = await client.swap.findRates({
+  fromAsset: 'COPM/2',   // COP (móvil, 2 decimales)
+  toAsset: 'DUSD/6',     // Stablecoin USD (6 decimales)
+  fromMediums: ['pse'],  // pagar vía PSE
+  toMediums: ['kusama'], // recibir en red Kusama
+  amountSrc: '1000000',  // 10.000,00 COP
+})
+
+const rate = rates[0]
+
+// Paso 2: crear la orden — esto fija la tasa
+const order = await client.swap.pse.create({
+  rateSig: rate.sig,
+  toMedium: 'kusama',
+  amountSrc: '1000000',
+  depositInformation: {
+    urn: 'did:bloque:card:acc_...',  // cuenta destino dentro de Bloque
+  },
+  args: {
+    bankCode: '1007',                // de client.swap.pse.banks()
+    userType: 0,                     // 0 = persona natural
+    customerEmail: 'usuario@ejemplo.com',
+    userLegalIdType: 'CC',
+    userLegalId: '123456789',
+    customerData: { fullName: 'Alice Smith', phoneNumber: '3001234567' },
+  },
+})
+
+// Paso 3: redirigir al usuario para autorizar en su banco
+if (order.execution?.result.how?.url) {
+  window.location.href = order.execution.result.how.url
+}
+// El usuario autoriza en su banco → swap ejecuta → fondos aparecen en cuenta
+```
+
+---
+
+## Cash-out — balance Bloque sale a destino externo
+
+<SwapFlowDiagram highlight="out" />
+
+**Ejemplo: Usuario hace cash-out de DUSD desde su cuenta Bloque → recibe COP en su banco**
+
+```ts
+// Paso 1: obtener una tasa de cash-out
+const { rates } = await client.swap.findRates({
+  fromAsset: 'DUSD/6',           // origen: DUSD dentro de Bloque
+  toAsset: 'COPM/2',             // destino: COP
+  fromMediums: ['kusama'],        // cuenta origen en Kusama
+  toMediums: ['bancolombia'],     // recibir en Bancolombia
+  amountSrc: '50000000',          // 50,00 DUSD
+})
+
+const rate = rates[0]
+
+// Paso 2: crear la orden de transferencia bancaria
+const order = await client.swap.bankTransfer.create({
+  rateSig: rate.sig,
+  toMedium: 'bancolombia',
+  amountSrc: '50000000',
+  depositInformation: {
+    bankAccountType: 'savings',
+    bankAccountNumber: '5740088718',
+    bankAccountHolderName: 'Alice Smith',
+    bankAccountHolderIdentificationType: 'CC',
+    bankAccountHolderIdentificationValue: '123456789',
+  },
+  args: {
+    sourceAccountUrn: 'did:bloque:card:acc_...',  // cuenta origen dentro de Bloque
+  },
+})
+```
+
+---
+
+**¿Qué es una Rate?**
+
+<ConceptCard
+  term="Rate"
+  definition="Una oferta de intercambio con tiempo limitado. Te dice exactamente cuánto recibirás, qué comisiones aplican y por cuánto tiempo es válida. Las tasas expiran — debes crear una orden antes de que cierre la ventana."
+/>
+
+---
+
+**¿Qué es PSE?**
+
+PSE (Pagos Seguros en Línea) es el sistema de transferencia bancaria en tiempo real de Colombia. El usuario es redirigido a la página de autenticación de su banco, autoriza la transferencia y regresa. El swap ejecuta una vez que el banco confirma.
+
+Soportados: Bancolombia, Banco de Bogotá, BBVA Colombia, Davivienda, Banco Popular y 23+ más.
+
+---
+
+**¿Cuáles son los posibles estados de una SwapOrder?**
+
+```
+pending → in_progress → completed
+                      → failed
+                      → cancelled
+                      → expired
+```
+
+| Estado | Significado |
+| --- | --- |
+| `pending` | Orden creada, esperando confirmación de pago |
+| `in_progress` | Pago recibido, swap ejecutando |
+| `completed` | Swap exitoso, fondos entregados |
+| `failed` | Swap falló — revisar `failureReason` |
+| `expired` | La tasa expiró antes de la ejecución |
+
+---
+
+## ¿Qué sigue?
+
+Ya entiendes cómo encaja todo el sistema. Es momento de configurar tu entorno.
+
+→ [Instalar el SDK](../setup/install)

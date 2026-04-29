@@ -1,0 +1,89 @@
+---
+pageType: doc
+---
+
+import { ProgressPath } from '@theme';
+
+<ProgressPath
+  steps={[
+    { label: "Overview", href: "/en/guide/world/overview" },
+    { label: "Origin & Identity", href: "/en/guide/world/identity" },
+    { label: "Ledger & Balance", href: "/en/guide/world/ledger" },
+    { label: "Accounts", href: "/en/guide/world/accounts" },
+    { label: "Swap", href: "/en/guide/world/swap" }
+  ]}
+  current="/en/guide/world/overview"
+/>
+
+# What is Bloque?
+
+Before writing a single line of code, it's worth understanding the system you're plugging into. Bloque is a financial infrastructure platform — it lets you create and manage financial accounts, issue cards, move money, run KYC, and connect to payment rails, all from a single SDK.
+
+---
+
+**What problem does it solve?**
+
+Building financial products normally means integrating with a different provider for every capability: one for cards, one for bank accounts, one for compliance, one for crypto. Bloque unifies all of this under a single SDK and a single identity model.
+
+---
+
+**What are the core building blocks?**
+
+Everything in Bloque revolves around five concepts. You'll encounter all of them throughout these docs:
+
+| Concept | What it is |
+| --- | --- |
+| **Identity** | Who you are in the system — an Origin + Alias + profile |
+| **Ledger** | Your shared balance sheet — the accounting core |
+| **Account** | A financial container tied to a ledger — card, bank, wallet |
+| **Swap** | Converting one asset or payment rail to another |
+| **Compliance** | KYC/KYB verification that gates certain operations |
+
+---
+
+**How does the SDK connect to the API?**
+
+```
+Your code
+    ↓
+SDK (TypeScript)
+    ↓
+Bloque API
+    ↓
+┌──────────────────────────────────────────────────┐
+│  Identity  │  Ledger  │  Accounts  │  Swap  │ KYC │
+└──────────────────────────────────────────────────┘
+```
+
+The SDK is a thin, typed wrapper around the Bloque HTTP API. Every operation goes through an authenticated client that you get after calling `sdk.connect()` or `sdk.register()`.
+
+---
+
+**What platforms does it run on?**
+
+Node.js, Bun, Deno, browser, and React Native. The SDK auto-detects the platform and adjusts authentication and token storage accordingly.
+
+---
+
+**What's the logical order of operations?**
+
+```
+Register an Identity
+    ↓
+(Optional) Complete KYC
+    ↓
+Create a Virtual Account  ← this creates your Ledger
+    ↓
+Attach more accounts to that Ledger (cards, bank, wallet)
+    ↓
+Move money between accounts / swap assets
+```
+
+That's the journey. The rest of The World section explains each piece.
+
+---
+
+## What's next
+
+→ [Origin & Identity](./identity) — understand who you are in the system before doing anything else
+

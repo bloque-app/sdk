@@ -1,0 +1,141 @@
+---
+pageType: doc
+---
+
+import { QuestHeader, Checkpoint, Callout } from '@theme';
+
+<QuestHeader
+  prereqs={["SDK instalado", "API u Origin Key", "Modo sandbox recomendado"]}
+  unlocks={["Cuenta virtual base", "Cuenta de tarjeta", "Primera transferencia entre cuentas"]}
+  time="15 min"
+/>
+
+# Tu primera tarjeta
+
+Construirás una configuración financiera completa: conectar → crear una cuenta base (que crea el ledger) → adjuntar una tarjeta a ese ledger → verificar el balance → mover fondos.
+
+---
+
+## Paso 1 — Conectar
+
+```ts
+import { SDK } from '@bloque/sdk'
+
+const sdk = new SDK({
+  auth: { type: 'apiKey', apiKey: process.env.BLOQUE_API_KEY! },
+  mode: 'sandbox',
+})
+
+const client = await sdk.connect()
+console.log('Conectado como:', client.urn)
+```
+
+<Checkpoint
+  title="Estás conectado — client.urn está impreso"
+  expected={`Conectado como: did:bloque:tu-origen:tu-alias`}
+/>
+
+---
+
+## Paso 2 — Crear la cuenta base
+
+La cuenta virtual es tu base. Crea el ledger que todas las demás cuentas compartirán.
+
+```ts
+const base = await client.accounts.virtual.create({
+  holderUrn: client.urn,
+  name: 'Principal',
+})
+
+console.log('URN cuenta base:', base.urn)
+console.log('Ledger ID:', base.ledgerId)
+```
+
+<Checkpoint
+  title="La cuenta base está activa con un ledgerId"
+  expected={`URN cuenta base: did:bloque:virtual:acc_...
+Ledger ID: ldg_...`}
+/>
+
+---
+
+## Paso 3 — Adjuntar una tarjeta al mismo ledger
+
+Pasa `base.ledgerId` para vincular la tarjeta al mismo pool de balance que tu cuenta virtual.
+
+```ts
+const tarjeta = await client.accounts.card.create({
+  holderUrn: client.urn,
+  ledgerId: base.ledgerId,
+  name: 'Tarjeta de gastos',
+})
+
+console.log('URN tarjeta:', tarjeta.urn)
+console.log('Últimos cuatro:', tarjeta.lastFour)
+console.log('URL de detalles:', tarjeta.detailsUrl)
+```
+
+<Checkpoint
+  title="La tarjeta está creada y vinculada al mismo ledger"
+  expected={`URN tarjeta: did:bloque:card:acc_...
+Últimos cuatro: 4242
+URL de detalles: https://...`}
+/>
+
+---
+
+## Paso 4 — Verificar el balance
+
+```ts
+const balance = await client.accounts.balance(base.urn)
+console.log('Balance:', balance)
+// { 'DUSD/6': { current: '0', pending: '0', in: '0', out: '0' } }
+```
+
+---
+
+## Paso 5 — Transferir fondos entre cuentas
+
+```ts
+const transferencia = await client.accounts.transfer({
+  sourceUrn: base.urn,
+  destinationUrn: tarjeta.urn,
+  amount: '50000000', // 50.000000 DUSD = $50.00
+  asset: 'DUSD/6',
+})
+
+console.log('Estado:', transferencia.status)
+console.log('Queue ID:', transferencia.queueId)
+```
+
+<Checkpoint
+  title="La transferencia está en cola o completada"
+  expected={`Estado: queued
+Queue ID: txn_...`}
+/>
+
+---
+
+## Paso 6 — Ver el historial de movimientos
+
+```ts
+const movimientos = await client.accounts.movements({
+  urn: tarjeta.urn,
+  asset: 'DUSD/6',
+  limit: 10,
+})
+
+console.log('Movimientos de la tarjeta:', movimientos.data)
+```
+
+---
+
+<Callout type="tip" title="Pasar a producción">
+Cambia `mode: 'sandbox'` por `mode: 'production'` y usa tu clave `sk_live_`. El mismo código funciona en producción sin ningún otro cambio.
+</Callout>
+
+---
+
+## ¿Qué sigue?
+
+→ [KYC + Bancolombia](./kyc-bancolombia) — verifica una identidad y abre una cuenta bancaria colombiana

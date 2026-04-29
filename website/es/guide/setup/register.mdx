@@ -1,0 +1,129 @@
+---
+pageType: doc
+---
+
+import { QuestHeader, ConceptCard, Checkpoint } from '@theme';
+
+<QuestHeader
+  prereqs={["SDK instalado", "Origin Key del dashboard de Bloque"]}
+  unlocks={["Identidad registrada", "URN para el usuario", "Cliente autenticado"]}
+  time="5 min"
+/>
+
+# Registrar
+
+El registro crea una identidad permanente para un usuario (o entidad) en tu Origen. Después del registro, obtienes de vuelta un cliente autenticado listo para usar.
+
+---
+
+**¿Qué es el registro?**
+
+<ConceptCard
+  term="Registro"
+  definition="Vincular un alias a un Origen, creando una Identidad permanente con un URN. Es el primer paso para cualquier nuevo usuario. Después del registro, el usuario puede autenticarse con connect()."
+/>
+
+El registro es una operación de una sola vez por usuario por Origen. Llamarlo de nuevo con el mismo alias fallará — usa `connect()` para usuarios que regresan.
+
+---
+
+**¿Qué es una Origin Key?**
+
+<ConceptCard
+  term="Origin Key"
+  definition="Tu credencial backend que te autoriza a registrar identidades en tu Origen. Piénsala como la 'clave admin' de tu namespace. Nunca la expongas en el cliente."
+  example="BLOQUE_ORIGIN_KEY=ok_live_..."
+  format="code"
+/>
+
+---
+
+## Registrar un individuo
+
+```ts
+import { SDK } from '@bloque/sdk'
+
+const sdk = new SDK({
+  origin: 'tu-origen',
+  auth: {
+    type: 'originKey',
+    originKey: process.env.BLOQUE_ORIGIN_KEY!,
+  },
+  mode: 'sandbox',
+})
+
+const client = await sdk.register('@alice', {
+  type: 'individual',
+  profile: {
+    firstName: 'Alice',
+    lastName: 'Smith',
+    email: 'alice@ejemplo.com',
+    phone: '+573001234567',
+    birthdate: '1990-06-15',
+    city: 'Bogotá',
+    state: 'Cundinamarca',
+    postalCode: '110111',
+    countryOfBirthCode: 'CO',
+    countryOfResidenceCode: 'CO',
+  },
+})
+
+console.log(client.urn)         // did:bloque:tu-origen:@alice
+console.log(client.accessToken) // JWT — válido ~15 minutos
+```
+
+<Checkpoint
+  title="Deberías ver un URN impreso"
+  expected={`did:bloque:tu-origen:@alice`}
+  hint="Si obtienes error 409, el alias ya está registrado — usa connect() en su lugar."
+/>
+
+---
+
+## Registrar una empresa
+
+```ts
+const client = await sdk.register('@acme-corp', {
+  type: 'business',
+  profile: {
+    legalName: 'Acme Corp S.A.S.',
+    taxId: '900123456-7',
+    incorporationDate: '2020-01-15',
+    businessType: 'sas',
+    countryCode: 'CO',
+    address: 'Calle 100 # 8A-55',
+    city: 'Bogotá',
+    postalCode: '110221',
+    ownerFirstName: 'Carlos',
+    ownerLastName: 'Gómez',
+    ownerIdType: 'CC',
+    ownerIdNumber: '1234567890',
+  },
+})
+```
+
+---
+
+## Tipos de Origen
+
+| Tipo | Ejemplo | Autenticación |
+| --- | --- | --- |
+| **Integrados** | `bloque-email`, `bloque-whatsapp` | Código OTP |
+| **Blockchain** | `ethereum-mainnet`, `solana-devnet` | Firma de wallet |
+| **Personalizados** | `tu-app-nombre` | Tu Origin Key |
+
+---
+
+**¿Cuál es la diferencia entre `register()` y `connect()`?**
+
+| | `register()` | `connect()` |
+| --- | --- | --- |
+| **Cuándo** | Primera vez — crea la identidad | Usuario que regresa — abre sesión |
+| **Resultado** | Nuevo URN + cliente autenticado | Cliente autenticado |
+| **Falla si** | El alias ya existe | El alias no existe |
+
+---
+
+## ¿Qué sigue?
+
+→ [Conectar](./connect) — abre sesiones para usuarios que regresan

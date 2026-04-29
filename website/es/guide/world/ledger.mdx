@@ -1,0 +1,145 @@
+---
+pageType: doc
+---
+
+import { ProgressPath, ConceptCard } from '@theme';
+
+<ProgressPath
+  steps={[
+    { label: "Visión General", href: "/es/guide/world/overview" },
+    { label: "Origen e Identidad", href: "/es/guide/world/identity" },
+    { label: "Ledger y Balance", href: "/es/guide/world/ledger" },
+    { label: "Cuentas", href: "/es/guide/world/accounts" },
+    { label: "Swap", href: "/es/guide/world/swap" }
+  ]}
+  current="/es/guide/world/ledger"
+/>
+
+# Ledger y Balance
+
+Este es el concepto más importante para entender antes de tocar cualquier operación financiera. Casi todos los problemas con balances y conexiones de cuentas vienen de no entender qué es un ledger.
+
+---
+
+**¿Qué es un Ledger?**
+
+<ConceptCard
+  term="Ledger"
+  definition="Un libro contable compartido. Es la unidad de contabilidad central en Bloque. Un ledger mantiene balances de múltiples activos y puede ser compartido por múltiples cuentas de diferentes tipos."
+/>
+
+Piensa en un ledger como un número de cuenta bancaria del que pueden sacar múltiples tarjetas y wallets. El dinero vive en el ledger; las cuentas son solo formas de acceder a él.
+
+---
+
+**¿Cómo creo un Ledger?**
+
+No lo creas directamente. Un ledger se crea automáticamente cuando creas tu primera **cuenta virtual** sin especificar un `ledgerId`.
+
+```ts
+const cuentaVirtual = await client.accounts.virtual.create({
+  holderUrn: client.urn,
+  name: 'Principal',
+})
+
+console.log(cuentaVirtual.ledgerId) // "ldg_..."
+```
+
+Ese `ledgerId` es ahora el ID de tu ledger. Guárdalo — lo usarás para adjuntar otras cuentas.
+
+---
+
+**¿Qué es la "cuenta base"?**
+
+<ConceptCard
+  term="Cuenta Base"
+  definition="La cuenta virtual que crea el ledger. Actúa como el hub de tu configuración financiera — una vez creada, todos los demás tipos de cuenta (tarjetas, cuentas bancarias, wallets) pueden adjuntarse al mismo ledger pasando su ledgerId."
+/>
+
+Cada usuario o entidad financiera en tu sistema debería tener una cuenta base.
+
+---
+
+**¿Cómo adjunto otras cuentas al mismo Ledger?**
+
+Pasa el `ledgerId` de tu cuenta virtual al crear cualquier otro tipo de cuenta:
+
+```ts
+// Crear la cuenta base (crea el ledger)
+const base = await client.accounts.virtual.create({ holderUrn: client.urn })
+
+// Adjuntar una tarjeta al mismo ledger
+const tarjeta = await client.accounts.card.create({
+  holderUrn: client.urn,
+  ledgerId: base.ledgerId,
+})
+
+// Adjuntar un wallet Polygon al mismo ledger
+const wallet = await client.accounts.polygon.create({
+  holderUrn: client.urn,
+  ledgerId: base.ledgerId,
+})
+```
+
+Ahora `base`, `tarjeta` y `wallet` comparten el mismo pool de balance.
+
+---
+
+**¿Qué significa "balance compartido" en la práctica?**
+
+Todas las cuentas en el mismo ledger acceden al mismo pool de fondos. Si fondeas la cuenta virtual con 100 DUSD, esos 100 DUSD son accesibles desde la tarjeta y el wallet también — no son copias, es el mismo balance.
+
+```
+Ledger ldg_abc
+  ├─ balance: { DUSD/6: 100.00 }
+  │
+  ├─ Cuenta virtual  → puede verificar y transferir balance
+  ├─ Tarjeta         → puede gastar del balance
+  └─ Wallet Polygon  → puede recibir y enviar desde el balance
+```
+
+---
+
+**¿Qué activos puede tener un Ledger?**
+
+| Activo | Formato | Descripción |
+| --- | --- | --- |
+| `DUSD/6` | 6 decimales | Stablecoin vinculado al USD |
+| `COPB/6` | 6 decimales | Token COP blockchain |
+| `COPM/2` | 2 decimales | COP mobile (tradicional) |
+| `KSM/12` | 12 decimales | Token Kusama |
+
+El formato siempre es `SÍMBOLO/DECIMALES`. Los montos siempre son strings en el SDK para preservar precisión.
+
+```ts
+// "50000000" en DUSD/6 = 50.000000 DUSD = $50.00
+// "1000000" en COPM/2 = 10000.00 COP
+```
+
+---
+
+**¿Qué es un Balance?**
+
+Cada activo en un ledger tiene cuatro campos de balance:
+
+| Campo | Significado |
+| --- | --- |
+| `current` | Balance disponible confirmado |
+| `pending` | Fondos en tránsito (aún no liquidados) |
+| `in` | Total recibido (histórico) |
+| `out` | Total enviado (histórico) |
+
+---
+
+**¿Cuál es la diferencia entre un Movimiento y una Transacción?**
+
+| Término | Alcance | Ejemplo |
+| --- | --- | --- |
+| **Movimiento** | Vista de una sola cuenta | "La tarjeta recibió 10 DUSD" |
+| **Transacción** | Vista entre cuentas | "10 DUSD se movieron de virtual a tarjeta" |
+
+---
+
+## ¿Qué sigue?
+
+→ [Cuentas](./accounts) — los seis tipos de cuenta y cómo usarlos

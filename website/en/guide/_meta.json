@@ -1,8 +1,18 @@
 [
   {
     "type": "dir-section-header",
-    "name": "start",
-    "label": "Getting Started"
+    "name": "world",
+    "label": "The World"
+  },
+  {
+    "type": "dir-section-header",
+    "name": "setup",
+    "label": "Setup"
+  },
+  {
+    "type": "dir-section-header",
+    "name": "tutorials",
+    "label": "Tutorials"
   },
   {
     "type": "dir-section-header",
@@ -11,7 +21,7 @@
   },
   {
     "type": "dir-section-header",
-    "name": "features",
-    "label": "SDK Features"
+    "name": "reference",
+    "label": "Reference"
   }
 ]

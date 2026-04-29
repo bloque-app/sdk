@@ -1,0 +1,193 @@
+---
+pageType: doc
+---
+
+import { QuestHeader, Checkpoint, Callout } from '@theme';
+
+<QuestHeader
+  prereqs={["SDK installed", "API or Origin Key", "Sandbox mode recommended"]}
+  unlocks={["Virtual base account", "Card account", "First transfer between accounts"]}
+  time="15 min"
+/>
+
+# Issue your first card
+
+You'll build a complete financial setup: connect → create a base account (which creates the ledger) → attach a card to that ledger → check the balance → move funds.
+
+---
+
+## Step 1 — Connect
+
+```ts
+import { SDK } from '@bloque/sdk'
+
+const sdk = new SDK({
+  auth: { type: 'apiKey', apiKey: process.env.BLOQUE_API_KEY! },
+  mode: 'sandbox',
+})
+
+const client = await sdk.connect()
+console.log('Connected as:', client.urn)
+```
+
+<Checkpoint
+  title="You're connected — client.urn is printed"
+  expected={`Connected as: did:bloque:your-origin:your-alias`}
+/>
+
+---
+
+## Step 2 — Create the base account
+
+The virtual account is your base. It creates the ledger that all other accounts will share.
+
+```ts
+const base = await client.accounts.virtual.create({
+  holderUrn: client.urn,
+  name: 'Main',
+})
+
+console.log('Base account URN:', base.urn)
+console.log('Ledger ID:', base.ledgerId)
+```
+
+<Checkpoint
+  title="Base account is active with a ledgerId"
+  expected={`Base account URN: did:bloque:virtual:acc_...
+Ledger ID: ldg_...`}
+  hint="If status is 'creation_in_progress', wait a moment and poll status with client.accounts.get(base.urn)"
+/>
+
+---
+
+## Step 3 — Attach a card to the same ledger
+
+Pass `base.ledgerId` to link the card to the same balance pool as your virtual account.
+
+```ts
+const card = await client.accounts.card.create({
+  holderUrn: client.urn,
+  ledgerId: base.ledgerId, // links to the same ledger
+  name: 'Spending card',
+})
+
+console.log('Card URN:', card.urn)
+console.log('Last four:', card.lastFour)
+console.log('Details URL:', card.detailsUrl) // PCI-safe card details
+```
+
+<Checkpoint
+  title="Card is created and linked to the same ledger"
+  expected={`Card URN: did:bloque:card:acc_...
+Last four: 4242
+Details URL: https://...`}
+/>
+
+---
+
+## Step 4 — Check the balance
+
+Both the virtual account and the card share the ledger's balance. Check it from either:
+
+```ts
+const balance = await client.accounts.balance(base.urn)
+console.log('Balance:', balance)
+// { 'DUSD/6': { current: '0', pending: '0', in: '0', out: '0' } }
+
+// Or check all balances at once (aggregated across all accounts)
+const allBalances = await client.accounts.balances()
+```
+
+The balance is `0` — your sandbox account has no funds yet. Transfers in sandbox are simulated, so you can test the flow without real money.
+
+---
+
+## Step 5 — Transfer funds between accounts
+
+Move funds from the virtual account to the card. Both are on the same ledger, so this is an internal bookkeeping move.
+
+```ts
+const transfer = await client.accounts.transfer({
+  sourceUrn: base.urn,
+  destinationUrn: card.urn,
+  amount: '50000000', // 50.000000 DUSD = $50.00
+  asset: 'DUSD/6',
+})
+
+console.log('Transfer status:', transfer.status)
+console.log('Queue ID:', transfer.queueId)
+```
+
+<Checkpoint
+  title="Transfer is queued or completed"
+  expected={`Transfer status: queued
+Queue ID: txn_...`}
+  hint="Status will move from 'queued' → 'processing' → 'completed'. Poll with client.accounts.get(transfer.queueId) or use webhooks."
+/>
+
+---
+
+## Step 6 — View the movement history
+
+```ts
+const movements = await client.accounts.movements({
+  urn: card.urn,
+  asset: 'DUSD/6',
+  limit: 10,
+})
+
+console.log('Card movements:', movements.data)
+```
+
+Each movement shows the direction (`in` or `out`), amount, asset, and timestamp.
+
+---
+
+## Full example
+
+```ts
+import { SDK } from '@bloque/sdk'
+
+const sdk = new SDK({
+  auth: { type: 'apiKey', apiKey: process.env.BLOQUE_API_KEY! },
+  mode: 'sandbox',
+})
+
+async function main() {
+  const client = await sdk.connect()
+
+  const base = await client.accounts.virtual.create({
+    holderUrn: client.urn,
+    name: 'Main',
+  })
+
+  const card = await client.accounts.card.create({
+    holderUrn: client.urn,
+    ledgerId: base.ledgerId,
+    name: 'Spending card',
+  })
+
+  const transfer = await client.accounts.transfer({
+    sourceUrn: base.urn,
+    destinationUrn: card.urn,
+    amount: '50000000',
+    asset: 'DUSD/6',
+  })
+
+  console.log('Done. Transfer status:', transfer.status)
+}
+
+main()
+```
+
+---
+
+<Callout type="tip" title="Going to production">
+Swap `mode: 'sandbox'` for `mode: 'production'` and use your `sk_live_` key. The same code runs in production without any other changes.
+</Callout>
+
+---
+
+## What's next
+
+→ [KYC + Bancolombia](./kyc-bancolombia) — verify an identity and open a Colombian bank account

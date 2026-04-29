@@ -1,0 +1,131 @@
+---
+pageType: doc
+---
+
+import { ProgressPath, ConceptCard } from '@theme';
+
+<ProgressPath
+  steps={[
+    { label: "Overview", href: "/en/guide/world/overview" },
+    { label: "Origin & Identity", href: "/en/guide/world/identity" },
+    { label: "Ledger & Balance", href: "/en/guide/world/ledger" },
+    { label: "Accounts", href: "/en/guide/world/accounts" },
+    { label: "Swap", href: "/en/guide/world/swap" }
+  ]}
+  current="/en/guide/world/accounts"
+/>
+
+# Accounts
+
+An account is a financial container tied to a ledger. Every account has an address (URN), a type (medium), a state, and a balance — all inherited from the ledger it belongs to.
+
+---
+
+**What is an Account?**
+
+<ConceptCard
+  term="Account"
+  definition="A financial container: an address (URN) + a medium (type) + a state + a connection to a ledger. Accounts are what users interact with — cards, bank accounts, wallets. The money itself lives in the ledger."
+/>
+
+---
+
+**Which account types exist?**
+
+| Medium | What it is | KYC needed? |
+| --- | --- | --- |
+| **Virtual** | Base account — creates the ledger, pools balance | Minimal |
+| **Card** | Virtual debit/credit card (PCI-compliant, Visa/MC) | Minimal |
+| **Bancolombia** | Colombian bank account with a unique reference code | Yes |
+| **US** | FDIC-insured US bank account via Bridge | Full KYC + TOS |
+| **Polygon** | Web3 wallet on the Polygon network | None |
+| **BRE-B** | Colombian instant payment key (phone, email, ID, etc.) | Yes |
+
+Each account type has its own client in the SDK: `client.accounts.virtual`, `client.accounts.card`, `client.accounts.bancolombia`, and so on.
+
+---
+
+**What is a Medium?**
+
+<ConceptCard
+  term="Medium"
+  definition="The account type label. It appears in the account's URN and in API parameters. Mediums are how Bloque distinguishes one account type from another."
+  example="did:bloque:virtual:acc_abc123
+did:bloque:card:acc_def456
+did:bloque:bancolombia:acc_ghi789"
+  format="code"
+/>
+
+---
+
+**What is an Asset and how are amounts represented?**
+
+Assets use the format `SYMBOL/DECIMALS`. Amounts are always passed as strings — never as floats — to avoid floating-point precision issues.
+
+```ts
+// DUSD/6 has 6 decimal places
+// To represent $50.00: multiply by 10^6
+const amount = '50000000' // = 50.000000 DUSD
+
+// COPM/2 has 2 decimal places
+// To represent 10,000 COP: multiply by 10^2
+const copAmount = '1000000' // = 10000.00 COP
+```
+
+Always work in the smallest unit (like "cents" but for each asset's precision). Convert for display, but store and send as strings.
+
+---
+
+**What account states exist?**
+
+Every account goes through a lifecycle:
+
+```
+creation_in_progress
+       ↓
+     active
+    ↙     ↘
+frozen   disabled
+              ↓
+           deleted
+```
+
+| State | Meaning |
+| --- | --- |
+| `creation_in_progress` | Being set up — not yet usable |
+| `active` | Normal operating state |
+| `frozen` | Temporarily blocked — can be unfrozen |
+| `disabled` | Permanently deactivated — cannot be reactivated |
+| `deleted` | Removed |
+| `creation_failed` | Setup failed — needs re-creation |
+
+Some operations (like card charges or transfers) will fail if the account is not `active`. Always check state before initiating financial operations, or use webhooks to track state changes.
+
+---
+
+**What is a Transfer?**
+
+<ConceptCard
+  term="Transfer"
+  definition="Moving funds between two accounts. Transfers are asynchronous — they return a queueId and a status. The final status (completed or failed) arrives via webhook or polling."
+/>
+
+```ts
+const result = await client.accounts.transfer({
+  sourceUrn: virtualAccount.urn,
+  destinationUrn: card.urn,
+  amount: '50000000',
+  asset: 'DUSD/6',
+})
+
+// result.status = 'queued' | 'processing' | 'completed' | 'failed'
+// result.queueId = 'txn_...'
+```
+
+Transfers work between any account types — card to Bancolombia, virtual to Polygon, etc. The transfer routes through the shared ledger if both accounts share one.
+
+---
+
+## What's next
+
+→ [Swap](./swap) — converting assets and working with payment rails

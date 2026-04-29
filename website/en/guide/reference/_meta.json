@@ -1,0 +1,14 @@
+[
+  { "type": "file", "name": "compliance", "label": "Compliance & KYC" },
+  { "type": "file", "name": "organizations", "label": "Organizations" },
+  { "type": "file", "name": "swap", "label": "Swap (Payin & Payout)" },
+  { "type": "file", "name": "cli", "label": "CLI & AI Agents" },
+  { "type": "file", "name": "api-reference", "label": "API Reference" },
+  {
+    "type": "dir",
+    "name": "state-machines",
+    "label": "State Machines",
+    "collapsible": true,
+    "collapsed": true
+  }
+]

@@ -1,0 +1,102 @@
+---
+pageType: doc
+---
+
+import { QuestHeader, Checkpoint } from '@theme';
+import { PackageManagerTabs } from '@theme';
+
+<QuestHeader
+  prereqs={["Node.js 22+, Bun 1+, or Deno"]}
+  unlocks={["Installed SDK", "Type-safe imports"]}
+  time="2 min"
+/>
+
+# Install
+
+Add the SDK to your project.
+
+:::code-group
+
+```bash [bun]
+bun add @bloque/sdk
+```
+
+```bash [npm]
+npm install @bloque/sdk
+```
+
+```bash [yarn]
+yarn add @bloque/sdk
+```
+
+```bash [pnpm]
+pnpm add @bloque/sdk
+```
+
+:::
+
+<Checkpoint
+  title="Verify: import resolves without errors"
+  expected={`import { SDK } from '@bloque/sdk'
+// No error = you're good`}
+/>
+
+---
+
+## Configuration options
+
+When you create an `SDK` instance, these are all the options available:
+
+| Option | Type | Default | Description |
+| --- | --- | --- | --- |
+| `auth` | `AuthStrategy` | — | **Required.** Auth method: `apiKey`, `originKey`, or `jwt` |
+| `origin` | `string` | — | Required for `originKey` and `jwt` auth |
+| `mode` | `'production' \| 'sandbox'` | `'production'` | Use `'sandbox'` for testing |
+| `platform` | `'node' \| 'bun' \| 'deno' \| 'browser' \| 'react-native'` | `'node'` | Runtime environment |
+| `timeout` | `number` | `30000` | Request timeout in milliseconds |
+| `retry.enabled` | `boolean` | `true` | Auto-retry on 429, 503, network errors |
+| `retry.maxRetries` | `number` | `3` | Maximum retry attempts |
+| `retry.initialDelay` | `number` | `1000` | Initial backoff delay (ms) |
+| `retry.maxDelay` | `number` | `30000` | Maximum backoff delay (ms) |
+| `tokenStorage` | `TokenStorage` | `localStorage` | JWT storage — required for `react-native` |
+
+---
+
+## Auth strategies at a glance
+
+The SDK supports three auth models — pick one based on where your code runs:
+
+**`apiKey`** — for backend services. Uses a `sk_live_` or `sk_test_` secret key. The SDK auto-exchanges it for a short-lived JWT.
+
+```ts
+new SDK({ auth: { type: 'apiKey', apiKey: process.env.BLOQUE_API_KEY! } })
+```
+
+**`originKey`** — for backends that manage user identities directly. Registers and connects users into your Origin.
+
+```ts
+new SDK({
+  origin: 'your-origin',
+  auth: { type: 'originKey', originKey: process.env.BLOQUE_ORIGIN_KEY! },
+})
+```
+
+**`jwt`** — for browser and React Native apps where users authenticate directly.
+
+```ts
+new SDK({
+  origin: 'your-origin',
+  auth: { type: 'jwt' },
+  platform: 'browser',
+})
+```
+
+:::warning Keep keys out of client-side code
+Never expose `sk_` or `originKey` values in browser or React Native code. Use environment variables on the backend.
+:::
+
+---
+
+## What's next
+
+→ [Register](./register) — create identities in your Origin

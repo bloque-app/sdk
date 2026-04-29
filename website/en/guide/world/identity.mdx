@@ -1,0 +1,119 @@
+---
+pageType: doc
+---
+
+import { ProgressPath, ConceptCard } from '@theme';
+
+<ProgressPath
+  steps={[
+    { label: "Overview", href: "/en/guide/world/overview" },
+    { label: "Origin & Identity", href: "/en/guide/world/identity" },
+    { label: "Ledger & Balance", href: "/en/guide/world/ledger" },
+    { label: "Accounts", href: "/en/guide/world/accounts" },
+    { label: "Swap", href: "/en/guide/world/swap" }
+  ]}
+  current="/en/guide/world/identity"
+/>
+
+# Origin & Identity
+
+The identity system is the foundation of everything in Bloque. Before you can touch money, you need to understand who you are in the network.
+
+---
+
+**What is an Origin?**
+
+<ConceptCard
+  term="Origin"
+  definition="A namespace that defines where an identity lives and how it authenticates. Think of it as the app context that manages your users."
+  example="bloque-email   ← built-in, OTP via email
+bloque-whatsapp ← built-in, OTP via WhatsApp
+ethereum-mainnet ← blockchain, wallet signature
+your-app-name    ← custom, your own auth logic"
+  format="code"
+/>
+
+You register identities *into* an Origin. Each Origin has its own authentication method. The Origin you use determines how users prove they are who they say they are.
+
+---
+
+**What is an Identity?**
+
+<ConceptCard
+  term="Identity"
+  definition="A user or entity registered under an Origin. It has a profile (name, email, DOB, address), a KYC/KYB status, and a permanent address in the network called a URN."
+/>
+
+An Identity can be:
+- `individual` — a person, with personal KYC fields
+- `business` — a company, with KYB fields (tax ID, incorporation date, etc.)
+
+---
+
+**What is an Alias?**
+
+<ConceptCard
+  term="Alias"
+  definition="Your unique handle within an Origin. It's what you use to register and log in."
+  example="@alice              ← custom handle
+alice@myapp.com     ← email address
+0x742d35Cc6634C0...  ← Ethereum wallet address"
+  format="code"
+/>
+
+The same person can have multiple identities across different Origins — one for their email, one for their Ethereum wallet. Each combination of Origin + Alias is a separate, independent Identity.
+
+---
+
+**What is a URN?**
+
+<ConceptCard
+  term="URN (Uniform Resource Name)"
+  definition="The permanent, globally unique address of an identity in the Bloque network. It's constructed from the Origin and Alias and never changes."
+  example="did:bloque:bloque-email:alice@myapp.com
+did:bloque:ethereum-mainnet:0x742d35Cc6634C0...
+did:bloque:your-app-name:@alice"
+  format="code"
+/>
+
+You'll see URNs everywhere in the SDK — as return values, as parameters, and as the key that links accounts to their owners.
+
+---
+
+**What is a `holderUrn`?**
+
+When you create a financial account, you specify who owns it by passing a `holderUrn`. This is just the URN of the identity (or organization) that the account belongs to.
+
+```ts
+await client.accounts.virtual.create({
+  holderUrn: client.urn, // your own URN
+  name: 'Main account',
+})
+```
+
+If you're building for a platform where you manage accounts on behalf of your users, `holderUrn` is how you assign ownership.
+
+---
+
+**What is an Organization?**
+
+<ConceptCard
+  term="Organization"
+  definition="A multi-user Identity — a company, DAO, or group. Like individual identities, orgs have a URN and can own accounts. Members of the org can be granted different roles and scopes."
+/>
+
+Organizations support teams, member invitations (email, SMS, WhatsApp), and role-based access. They go through KYB (Know Your Business) compliance.
+
+---
+
+**What is KYC and when is it required?**
+
+KYC (Know Your Customer) is the identity verification process required by financial regulation. Not every account type requires it — virtual accounts and Polygon wallets have minimal requirements, while US bank accounts need full KYC.
+
+See [Compliance & KYC](../reference/compliance) for the full verification flow.
+
+---
+
+## What's next
+
+→ [Ledger & Balance](./ledger) — understand where the money actually lives
