@@ -1,0 +1,18 @@
+{
+  "gettingStarted": {
+    "en": "Getting Started",
+    "es": "Comenzando"
+  },
+  "introduction": {
+    "en": "Introduction",
+    "es": "Introducción"
+  },
+  "accounts": {
+    "en": "Accounts & Payments",
+    "es": "Cuentas y Pagos"
+  },
+  "features": {
+    "en": "SDK Features",
+    "es": "Funcionalidades del SDK"
+  }
+}

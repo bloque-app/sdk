@@ -1,0 +1,6 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "bloque-sdk-docs",
+  "compatibility_date": "2025-12-30",
+  "pages_build_output_dir": "./doc_build"
+}

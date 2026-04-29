@@ -1,0 +1,634 @@
+/* ============================================================
+   BLOQUE DESIGN SYSTEM — SDK DOCS
+   Both dark (default) and light themes wired to Rspress CSS vars.
+   All component tokens use --bloque-* so they auto-switch themes.
+   ============================================================ */
+
+/* ── Dark theme (default / :root) ────────────────────────── */
+:root,
+[data-theme='dark'] {
+  /* Canvas */
+  --rp-c-bg: #0d0c17;
+  --rp-c-bg-alt: #110f1f;
+  --rp-c-bg-soft: rgba(167, 139, 250, 0.06);
+  --rp-c-bg-mute: rgba(167, 139, 250, 0.04);
+
+  /* Text */
+  --rp-c-text-1: #f8f8ff;
+  --rp-c-text-2: #a09abf;
+  --rp-c-text-3: rgba(160, 154, 191, 0.6);
+
+  /* Accent — soft violet (text-safe on dark) */
+  --rp-c-brand: #a78bfa;
+  --rp-c-brand-1: #a78bfa;
+  --rp-c-brand-2: #c4b0fd;
+  --rp-c-brand-3: rgba(167, 139, 250, 0.16);
+  --rp-c-brand-dark: #8b6ff0;
+  --rp-c-brand-light: #c4b0fd;
+
+  /* Borders */
+  --rp-c-divider: rgba(255, 255, 255, 0.08);
+  --rp-c-border: rgba(255, 255, 255, 0.10);
+
+  /* Code */
+  --rp-code-bg: #0f0e1a;
+  --rp-code-block-bg: #0f0e1a;
+
+  /* Bloque component tokens */
+  --bloque-accent: #a78bfa;
+  --bloque-accent-tint: rgba(167, 139, 250, 0.06);
+  --bloque-accent-border: rgba(167, 139, 250, 0.25);
+  --bloque-glow: rgba(167, 139, 250, 0.07);
+  --bloque-glow-strong: rgba(167, 139, 250, 0.12);
+  --bloque-surface: rgba(167, 139, 250, 0.04);
+  --bloque-surface-hover: rgba(167, 139, 250, 0.08);
+
+  /* Callout semantic tokens */
+  --bloque-tip-border: rgba(167, 139, 250, 0.5);
+  --bloque-tip-bg: rgba(167, 139, 250, 0.06);
+  --bloque-tip-text: #c4b0fd;
+  --bloque-warning-border: rgba(251, 191, 36, 0.4);
+  --bloque-warning-bg: rgba(251, 191, 36, 0.06);
+  --bloque-warning-text: #fcd34d;
+  --bloque-danger-border: rgba(248, 113, 113, 0.4);
+  --bloque-danger-bg: rgba(248, 113, 113, 0.06);
+  --bloque-danger-text: #fca5a5;
+  --bloque-info-border: rgba(96, 165, 250, 0.4);
+  --bloque-info-bg: rgba(96, 165, 250, 0.06);
+  --bloque-info-text: #93c5fd;
+
+  /* CTA contrast text */
+  --bloque-cta-text: #0d0c17;
+}
+
+/* ── Light theme ──────────────────────────────────────────── */
+[data-theme='light'] {
+  /* Canvas */
+  --rp-c-bg: #faf9fc;
+  --rp-c-bg-alt: #f2f0f7;
+  --rp-c-bg-soft: #ebe8f1;
+  --rp-c-bg-mute: rgba(13, 12, 23, 0.03);
+
+  /* Text */
+  --rp-c-text-1: #0d0c17;
+  --rp-c-text-2: #5a5770;
+  --rp-c-text-3: #8b88a0;
+
+  /* Accent — deep violet (text-safe on light) */
+  --rp-c-brand: #7c3aed;
+  --rp-c-brand-1: #7c3aed;
+  --rp-c-brand-2: #6d28d9;
+  --rp-c-brand-3: rgba(124, 58, 237, 0.12);
+  --rp-c-brand-dark: #6d28d9;
+  --rp-c-brand-light: #8b5cf6;
+
+  /* Borders */
+  --rp-c-divider: rgba(13, 12, 23, 0.08);
+  --rp-c-border: rgba(13, 12, 23, 0.10);
+
+  /* Code */
+  --rp-code-bg: #ebe8f1;
+  --rp-code-block-bg: #ebe8f1;
+
+  /* Bloque component tokens */
+  --bloque-accent: #7c3aed;
+  --bloque-accent-tint: rgba(167, 139, 250, 0.14);
+  --bloque-accent-border: rgba(124, 58, 237, 0.25);
+  --bloque-glow: rgba(167, 139, 250, 0.18);
+  --bloque-glow-strong: rgba(167, 139, 250, 0.28);
+  --bloque-surface: rgba(13, 12, 23, 0.03);
+  --bloque-surface-hover: rgba(13, 12, 23, 0.06);
+
+  /* Callout semantic tokens */
+  --bloque-tip-border: rgba(124, 58, 237, 0.35);
+  --bloque-tip-bg: rgba(167, 139, 250, 0.10);
+  --bloque-tip-text: #6d28d9;
+  --bloque-warning-border: rgba(217, 119, 6, 0.35);
+  --bloque-warning-bg: rgba(217, 119, 6, 0.08);
+  --bloque-warning-text: #b45309;
+  --bloque-danger-border: rgba(220, 38, 38, 0.30);
+  --bloque-danger-bg: rgba(220, 38, 38, 0.06);
+  --bloque-danger-text: #b91c1c;
+  --bloque-info-border: rgba(37, 99, 235, 0.30);
+  --bloque-info-bg: rgba(37, 99, 235, 0.06);
+  --bloque-info-text: #1d4ed8;
+
+  /* CTA contrast text */
+  --bloque-cta-text: #ffffff;
+}
+
+/* ── Typography ───────────────────────────────────────────── */
+body {
+  background-color: var(--rp-c-bg);
+  color: var(--rp-c-text-2);
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  line-height: 1.7;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+h1,
+h2,
+h3,
+h4 {
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  font-weight: 700;
+  letter-spacing: -0.028em;
+  line-height: 1.08;
+  color: var(--rp-c-text-1);
+}
+
+h1 { font-size: clamp(1.75rem, 3.5vw, 2.75rem); }
+h2 { font-size: clamp(1.375rem, 2.5vw, 1.875rem); letter-spacing: -0.022em; }
+h3 { font-size: 1.125rem; letter-spacing: -0.018em; }
+h4 { font-size: 0.9375rem; font-weight: 600; letter-spacing: -0.01em; }
+
+p, li {
+  color: var(--rp-c-text-2);
+  line-height: 1.7;
+}
+
+a {
+  color: var(--bloque-accent);
+  text-decoration: none;
+  transition: opacity 0.15s ease;
+}
+
+a:hover {
+  opacity: 0.8;
+}
+
+code:not(pre code) {
+  font-family: 'Geist Mono', 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: 0.8125em;
+  background: var(--bloque-accent-tint);
+  border: 1px solid var(--bloque-accent-border);
+  border-radius: 4px;
+  padding: 0.15em 0.4em;
+  color: var(--bloque-accent);
+}
+
+/* ── Navigation bar ──────────────────────────────────────── */
+.rspress-nav {
+  background: transparent !important;
+  border-bottom: none !important;
+  backdrop-filter: none !important;
+}
+
+/* Scrolled nav: frosted glass */
+.rspress-nav.scrolled,
+.rspress-nav-sticky {
+  background: rgba(13, 12, 23, 0.85) !important;
+  backdrop-filter: blur(14px) !important;
+  -webkit-backdrop-filter: blur(14px) !important;
+}
+
+[data-theme='light'] .rspress-nav.scrolled,
+[data-theme='light'] .rspress-nav-sticky {
+  background: rgba(250, 249, 252, 0.88) !important;
+}
+
+/* Hairline divider instead of hard border */
+.rspress-nav::after {
+  content: '';
+  display: block;
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(
+    to right,
+    transparent,
+    var(--rp-c-border) 30%,
+    var(--rp-c-border) 70%,
+    transparent
+  );
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.rspress-nav.scrolled::after,
+.rspress-nav-sticky::after {
+  opacity: 1;
+}
+
+/* Nav logo text */
+.rspress-nav-logo-text {
+  font-family: 'Inter', system-ui, sans-serif;
+  font-weight: 700;
+  font-size: 1rem;
+  letter-spacing: -0.02em;
+  color: var(--rp-c-text-1) !important;
+}
+
+/* Nav links */
+.rspress-nav-menu-item {
+  font-size: 0.875rem;
+  color: var(--rp-c-text-2) !important;
+  transition: color 0.15s ease;
+}
+
+.rspress-nav-menu-item:hover {
+  color: var(--rp-c-text-1) !important;
+}
+
+/* ── Sidebar ─────────────────────────────────────────────── */
+.rspress-sidebar {
+  background: var(--rp-c-bg) !important;
+  border-right: 1px solid var(--rp-c-divider) !important;
+}
+
+.rspress-sidebar-item a,
+.rspress-sidebar-item button {
+  font-size: 0.875rem;
+  color: var(--rp-c-text-2) !important;
+  border-radius: 6px;
+  transition: color 0.15s ease, background 0.15s ease;
+}
+
+.rspress-sidebar-item a:hover,
+.rspress-sidebar-item button:hover {
+  color: var(--rp-c-text-1) !important;
+  background: var(--bloque-accent-tint) !important;
+}
+
+.rspress-sidebar-item.active > a,
+.rspress-sidebar-item.active > button {
+  color: var(--bloque-accent) !important;
+  background: var(--bloque-accent-tint) !important;
+  font-weight: 500;
+}
+
+/* Sidebar section headers */
+.rspress-sidebar-section-header {
+  font-family: 'Geist Mono', 'JetBrains Mono', monospace !important;
+  font-size: 10px !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.25em !important;
+  color: var(--rp-c-text-3) !important;
+  font-weight: 400 !important;
+  margin-top: 1.25rem;
+  margin-bottom: 0.375rem;
+  padding-left: 0.5rem;
+}
+
+/* ── Doc content area ────────────────────────────────────── */
+.rspress-doc {
+  color: var(--rp-c-text-2);
+}
+
+/* ── Code blocks ─────────────────────────────────────────── */
+.rspress-code-block,
+.rspress-pre,
+div[class*='language-'] {
+  background: var(--rp-code-block-bg) !important;
+  border: 1px solid var(--rp-c-border) !important;
+  border-radius: 12px !important;
+  overflow: hidden;
+}
+
+/* Code block title bar */
+.rspress-code-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--rp-code-block-bg) !important;
+  border-bottom: 1px solid var(--rp-c-border) !important;
+  padding: 10px 16px !important;
+  font-family: 'Geist Mono', 'JetBrains Mono', monospace !important;
+  font-size: 11px !important;
+  letter-spacing: 0.02em;
+  color: var(--rp-c-text-3) !important;
+}
+
+/* Traffic-light dots on code windows */
+.rspress-code-title::before {
+  content: '';
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.12);
+  box-shadow: 14px 0 0 rgba(255, 255, 255, 0.12), 28px 0 0 rgba(255, 255, 255, 0.12);
+  margin-right: 22px;
+  flex-shrink: 0;
+}
+
+[data-theme='light'] .rspress-code-title::before {
+  background: rgba(13, 12, 23, 0.12);
+  box-shadow: 14px 0 0 rgba(13, 12, 23, 0.12), 28px 0 0 rgba(13, 12, 23, 0.12);
+}
+
+.rspress-code-content {
+  padding: 1rem 1.25rem !important;
+  font-family: 'Geist Mono', 'JetBrains Mono', 'Fira Code', monospace !important;
+  font-size: 0.875rem !important;
+  line-height: 1.65 !important;
+}
+
+/* Copy button */
+.rspress-code-copy-btn {
+  opacity: 0 !important;
+  transition: opacity 0.15s ease !important;
+}
+
+.rspress-code-block:hover .rspress-code-copy-btn,
+div[class*='language-']:hover .rspress-code-copy-btn {
+  opacity: 1 !important;
+}
+
+/* ── Admonitions (built-in ::: blocks) ───────────────────── */
+.rspress-directive {
+  border-radius: 8px !important;
+  border-left-width: 3px !important;
+  border-left-style: solid !important;
+  padding: 0.75rem 1rem !important;
+  font-size: 0.875rem !important;
+  margin: 1.25rem 0 !important;
+}
+
+.rspress-directive-tip,
+.rspress-directive-note {
+  border-color: var(--bloque-tip-border) !important;
+  background: var(--bloque-tip-bg) !important;
+  color: var(--bloque-tip-text) !important;
+}
+
+.rspress-directive-warning,
+.rspress-directive-caution {
+  border-color: var(--bloque-warning-border) !important;
+  background: var(--bloque-warning-bg) !important;
+  color: var(--bloque-warning-text) !important;
+}
+
+.rspress-directive-danger {
+  border-color: var(--bloque-danger-border) !important;
+  background: var(--bloque-danger-bg) !important;
+  color: var(--bloque-danger-text) !important;
+}
+
+.rspress-directive-info {
+  border-color: var(--bloque-info-border) !important;
+  background: var(--bloque-info-bg) !important;
+  color: var(--bloque-info-text) !important;
+}
+
+.rspress-directive-title {
+  font-family: 'Geist Mono', monospace !important;
+  font-size: 10px !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.25em !important;
+  font-weight: 400 !important;
+  margin-bottom: 0.375rem;
+  opacity: 0.85;
+}
+
+/* ── Tables ──────────────────────────────────────────────── */
+.rspress-doc table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+  margin: 1.25rem 0;
+}
+
+.rspress-doc th {
+  font-family: 'Geist Mono', monospace;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.22em;
+  color: var(--rp-c-text-3);
+  font-weight: 400;
+  border-bottom: 1px solid var(--rp-c-border);
+  padding: 8px 12px;
+  text-align: left;
+}
+
+.rspress-doc td {
+  border-bottom: 1px solid var(--rp-c-divider);
+  padding: 8px 12px;
+  color: var(--rp-c-text-2);
+}
+
+.rspress-doc tr:last-child td {
+  border-bottom: none;
+}
+
+/* ── Home page overrides ─────────────────────────────────── */
+.rspress-home-hero {
+  position: relative;
+  overflow: hidden;
+}
+
+/* Ambient glow behind hero */
+.rspress-home-hero::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    ellipse 80% 60% at 50% -10%,
+    var(--bloque-glow-strong) 0%,
+    transparent 70%
+  );
+  pointer-events: none;
+  z-index: 0;
+}
+
+.rspress-home-hero-text,
+.rspress-home-hero-tagline,
+.rspress-home-hero-actions {
+  position: relative;
+  z-index: 1;
+}
+
+/* Hero title */
+.rspress-home-hero-text {
+  font-weight: 700 !important;
+  letter-spacing: -0.03em !important;
+  line-height: 1.05 !important;
+  color: var(--rp-c-text-1) !important;
+}
+
+/* Hero tagline */
+.rspress-home-hero-tagline {
+  color: var(--rp-c-text-2) !important;
+  max-width: 52ch;
+  line-height: 1.65;
+}
+
+/* Hero action buttons */
+.rspress-home-hero-actions .rspress-home-hero-action-brand {
+  background: var(--bloque-accent) !important;
+  color: var(--bloque-cta-text) !important;
+  border: none !important;
+  border-radius: 10px !important;
+  height: 44px !important;
+  padding: 0 20px !important;
+  font-size: 0.875rem !important;
+  font-weight: 500 !important;
+  letter-spacing: -0.005em;
+  transition: opacity 0.15s ease !important;
+  box-shadow: none !important;
+}
+
+.rspress-home-hero-actions .rspress-home-hero-action-brand:hover {
+  opacity: 0.88 !important;
+}
+
+.rspress-home-hero-actions .rspress-home-hero-action-alt {
+  background: transparent !important;
+  border: 1px solid var(--rp-c-border) !important;
+  color: var(--rp-c-text-1) !important;
+  border-radius: 10px !important;
+  height: 44px !important;
+  padding: 0 20px !important;
+  font-size: 0.875rem !important;
+  font-weight: 500 !important;
+  transition: border-color 0.15s ease, background 0.15s ease !important;
+  box-shadow: none !important;
+}
+
+.rspress-home-hero-actions .rspress-home-hero-action-alt:hover {
+  border-color: var(--bloque-accent-border) !important;
+  background: var(--bloque-accent-tint) !important;
+}
+
+/* Feature cards on home */
+.rspress-home-features .rspress-home-feature-item {
+  background: var(--bloque-surface) !important;
+  border: 1px solid var(--rp-c-border) !important;
+  border-radius: 12px !important;
+  padding: 20px !important;
+  transition: border-color 0.2s ease, background 0.2s ease !important;
+}
+
+.rspress-home-features .rspress-home-feature-item:hover {
+  background: var(--bloque-accent-tint) !important;
+  border-color: var(--bloque-accent-border) !important;
+}
+
+.rspress-home-features .rspress-home-feature-title {
+  font-size: 0.9375rem !important;
+  font-weight: 600 !important;
+  letter-spacing: -0.01em !important;
+  color: var(--rp-c-text-1) !important;
+  margin-bottom: 6px !important;
+}
+
+.rspress-home-features .rspress-home-feature-details {
+  font-size: 0.8125rem !important;
+  line-height: 1.6 !important;
+  color: var(--rp-c-text-2) !important;
+}
+
+/* Feature card icon */
+.rspress-home-features .rspress-home-feature-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  border: 1px solid var(--bloque-accent-border);
+  background: var(--bloque-accent-tint);
+  font-size: 16px;
+  margin-bottom: 12px;
+  flex-shrink: 0;
+}
+
+/* ── Footer ──────────────────────────────────────────────── */
+.rspress-footer {
+  border-top: 1px solid var(--rp-c-divider) !important;
+  background: var(--rp-c-bg) !important;
+}
+
+.rspress-footer-message {
+  font-family: 'Geist Mono', monospace;
+  font-size: 11px;
+  letter-spacing: 0.05em;
+  color: var(--rp-c-text-3) !important;
+}
+
+/* ── Package manager tabs (built-in component) ───────────── */
+.rspress-tab {
+  border-radius: 8px !important;
+  border: 1px solid var(--rp-c-border) !important;
+  overflow: hidden !important;
+}
+
+.rspress-tab-button {
+  font-family: 'Geist Mono', monospace !important;
+  font-size: 11px !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.18em !important;
+  color: var(--rp-c-text-2) !important;
+  background: transparent !important;
+  transition: color 0.15s ease, background 0.15s ease !important;
+  padding: 6px 12px !important;
+}
+
+.rspress-tab-button:hover {
+  color: var(--rp-c-text-1) !important;
+  background: var(--bloque-accent-tint) !important;
+}
+
+.rspress-tab-button.active,
+.rspress-tab-button[aria-selected='true'] {
+  color: var(--bloque-accent) !important;
+  background: var(--bloque-accent-tint) !important;
+  font-weight: 500 !important;
+}
+
+/* ── Badges / Tags ───────────────────────────────────────── */
+.rspress-badge {
+  font-family: 'Geist Mono', monospace !important;
+  font-size: 10px !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.2em !important;
+  font-weight: 400 !important;
+  border-radius: 999px !important;
+  padding: 2px 10px !important;
+}
+
+.rspress-badge-tip {
+  background: var(--bloque-tip-bg) !important;
+  border: 1px solid var(--bloque-tip-border) !important;
+  color: var(--bloque-tip-text) !important;
+}
+
+.rspress-badge-warning {
+  background: var(--bloque-warning-bg) !important;
+  border: 1px solid var(--bloque-warning-border) !important;
+  color: var(--bloque-warning-text) !important;
+}
+
+.rspress-badge-danger {
+  background: var(--bloque-danger-bg) !important;
+  border: 1px solid var(--bloque-danger-border) !important;
+  color: var(--bloque-danger-text) !important;
+}
+
+/* ── Scrollbar ───────────────────────────────────────────── */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--rp-c-border);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--bloque-accent-border);
+}
+
+/* ── Selection ───────────────────────────────────────────── */
+::selection {
+  background: var(--bloque-accent-tint);
+  color: var(--rp-c-text-1);
+}
