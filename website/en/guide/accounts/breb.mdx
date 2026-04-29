@@ -6,8 +6,8 @@ Create and resolve BRE-B payment keys through the SDK.
 
 The BRE-B client lets you:
 
-- create a BRE-B key bound to the Passport account configured in your backend
-- store the key in Bloque `mediums` as a `breb` account
+- create a BRE-B key
+- associate the key with the account for an existing ledger when `ledgerId` is provided, or create an account automatically when it is omitted
 - resolve a BRE-B key before starting a payment flow
 - pay to a resolved BRE-B key through `session.swap.breb.create()`
 - manage the key lifecycle by suspending, activating, or deleting a stored key
@@ -36,6 +36,10 @@ if (error) {
 
 ## Create Params
 
+### Create a key
+
+For more endpoint details, see: [Create a BRE-B Key](#create-a-bre-b-key).
+
 ```typescript title="types.ts"
 interface CreateBrebKeyParams {
   keyType: 'ID' | 'PHONE' | 'EMAIL' | 'ALPHA' | 'BCODE';
@@ -46,6 +50,24 @@ interface CreateBrebKeyParams {
   metadata?: Record<string, unknown>;
 }
 ```
+
+### Key types and key value
+
+In the SDK you use `keyType` and `key`. In BRE-B infrastructure those fields commonly appear as `key_type` and `key_value`.
+
+`keyType` defines the format and purpose of the key inside BRE-B, while `key` contains the key value itself. These keys enable fast and secure payments between people and businesses without sharing traditional banking details.
+
+| SDK type (`keyType`) | BRE-B reference (`key_type`) | Description | Example value (`key`) |
+| --- | --- | --- | --- |
+| `ID` | `ID` | Identification number | `7922089` |
+| `PHONE` | `MOBILE` | Mobile phone number | `+573001234567` |
+| `EMAIL` | `EMAIL` | Email address | `user@example.com` |
+| `ALPHA` | `ALPHA` | Custom alias | `@clientalias123` |
+| `BCODE` | `BCODE` | Entity commercial code | `0012345678` |
+
+:::note
+The `keyType` + `key` combination must be unique across the BRE-B infrastructure. The platform validates this uniqueness.
+:::
 
 ## Create Result
 
@@ -60,6 +82,43 @@ type BrebOperationResult<T> = {
 ```
 
 `createKey()` returns `{ data, error }`. On success, `error` is `null`. On failure, `data` is `null`.
+
+If you pass `ledgerId`, the BRE-B key is associated with the account for that ledger. If you omit it, the SDK creates an account automatically.
+
+When `createKey()` succeeds, `data` contains the created BRE-B key and its associated account:
+
+```typescript title="types.ts"
+interface BrebKeyAccount {
+  id: string;
+  urn: string;
+  ownerUrn: string;
+  medium: 'breb';
+  remoteKeyId: string;
+  accountId: string;
+  keyType: 'ID' | 'PHONE' | 'EMAIL' | 'ALPHA' | 'BCODE';
+  key: string;
+  displayName: string | null;
+  status: AccountStatus;
+  ledgerId: string;
+  webhookUrl: string | null;
+  metadata?: Record<string, unknown>;
+  details: {
+    id: string;
+    remote_key_id: string;
+    account_id: string;
+    key: {
+      key_type: 'ID' | 'PHONE' | 'EMAIL' | 'ALPHA' | 'BCODE';
+      key_value: string;
+    };
+    display_name: string | null;
+    status: string;
+    created_at: string | null;
+    updated_at: string | null;
+    raw_response: Record<string, unknown>;
+  };
+  balance?: Record<string, TokenBalance>;
+}
+```
 
 ## Resolve a BRE-B Key
 
@@ -259,13 +318,12 @@ if (error) {
 ## Notes
 
 - `holder_urn` is taken from the connected SDK session
-- key creation uses `POST /api/mediums/breb`
-- key resolution uses `POST /api/mediums/breb/resolve-key`
-- key suspension uses `PATCH /api/accounts/:accountUrn/breb/key/suspend`
-- key activation uses `PATCH /api/accounts/:accountUrn/breb/key/activate`
-- key deletion uses `DELETE /api/accounts/:accountUrn/breb/key`
+- if `ledgerId` is provided, the account is linked to that ledger
+- if `ledgerId` is omitted, a ledger is created automatically
+- key suspension updates the account with `PATCH /api/accounts/:accountUrn` and `status: 'frozen'`
+- key activation updates the account with `PATCH /api/accounts/:accountUrn` and `status: 'active'`
+- key deletion updates the account with `PATCH /api/accounts/:accountUrn` and `status: 'deleted'`
 - BRE-B payments are created through `session.swap.breb.create()`
-- Passport `customer_id` and `account_id` are configured server-side in `medium_configs`
 
 ## Next Steps
 

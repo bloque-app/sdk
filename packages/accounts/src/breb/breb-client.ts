@@ -5,15 +5,19 @@ import type {
   BrebDetails,
   CreateAccountRequest,
   CreateAccountResponse,
+  UpdateAccountRequest,
+  UpdateAccountResponse,
 } from '../internal/wire-types';
 import type {
   ActivateBrebKeyParams,
   ActivateBrebKeyResult,
+  BrebDecodedQr,
   BrebKeyAccount,
   BrebOperationError,
   BrebOperationResult,
   BrebResolvedKey,
   CreateBrebKeyParams,
+  DecodeBrebQrParams,
   DeleteBrebKeyParams,
   DeleteBrebKeyResult,
   ResolveBrebKeyParams,
@@ -43,18 +47,72 @@ type ResolveBrebKeyResponse = {
   req_id: string;
 };
 
-type DeleteBrebKeyResponse = {
-  result: DeleteBrebKeyResult;
-  req_id: string;
+type DecodeBrebQrRequest = {
+  qr_code_data: string;
 };
 
-type SuspendBrebKeyResponse = {
-  result: SuspendBrebKeyResult;
-  req_id: string;
+type DecodeBrebQrAmount = {
+  value: string;
+  currency: string;
 };
 
-type ActivateBrebKeyResponse = {
-  result: ActivateBrebKeyResult;
+type DecodeBrebQrKey = {
+  key_type: ResolveBrebKeyParams['keyType'];
+  key_value: string;
+};
+
+type DecodeBrebQrMerchant = {
+  merchant_category_code: string | null;
+  merchant_country: string | null;
+  merchant_name: string | null;
+  merchant_city: string | null;
+  merchant_post_code: string | null;
+};
+
+type DecodeBrebQrVat = {
+  vat_value: string | null;
+  vat_base_value: string | null;
+  vat_type: string | null;
+};
+
+type DecodeBrebQrInc = {
+  inc_value: string | null;
+  inc_type: string | null;
+};
+
+type DecodeBrebQrAdditionalInfo = {
+  transaction_purpose: string | null;
+  terminal_label: string | null;
+  invoice_number: string | null;
+  mobile_phone_number: string | null;
+  store_label: string | null;
+  loyalty_label: string | null;
+  reference_label: string | null;
+  customer_label: string | null;
+  customer_info: string | null;
+  channel_presentation: string | null;
+};
+
+type DecodeBrebQrWireResult = {
+  amount: DecodeBrebQrAmount | null;
+  additional_info: DecodeBrebQrAdditionalInfo | null;
+  inc: DecodeBrebQrInc | null;
+  key: DecodeBrebQrKey | null;
+  qr_code_data: string;
+  status: string | null;
+  acquirer_network_identifier: string | null;
+  merchant: DecodeBrebQrMerchant | null;
+  channel: string | null;
+  vat: DecodeBrebQrVat | null;
+  qr_code_reference: string | null;
+  type: string | null;
+  resolution_id: string | null;
+  resolution: BrebResolvedKey | null;
+  raw: Record<string, unknown>;
+};
+
+type DecodeBrebQrResponse = {
+  result: DecodeBrebQrWireResult;
   req_id: string;
 };
 
@@ -90,6 +148,49 @@ export function mapBrebAccountFromWire(
             { current: string; pending: string; in: string; out: string }
           >)
         : undefined,
+  };
+}
+
+function mapDecodedQrFromWire(result: DecodeBrebQrWireResult): BrebDecodedQr {
+  return {
+    amount: result.amount,
+    additionalInfo: result.additional_info
+      ? {
+          transactionPurpose: result.additional_info.transaction_purpose,
+          terminalLabel: result.additional_info.terminal_label,
+          invoiceNumber: result.additional_info.invoice_number,
+          mobilePhoneNumber: result.additional_info.mobile_phone_number,
+          storeLabel: result.additional_info.store_label,
+          loyaltyLabel: result.additional_info.loyalty_label,
+          referenceLabel: result.additional_info.reference_label,
+          customerLabel: result.additional_info.customer_label,
+          customerInfo: result.additional_info.customer_info,
+          channelPresentation: result.additional_info.channel_presentation,
+        }
+      : null,
+    key: result.key
+      ? {
+          keyType: result.key.key_type,
+          keyValue: result.key.key_value,
+        }
+      : null,
+    qrCodeData: result.qr_code_data,
+    status: result.status,
+    acquirerNetworkIdentifier: result.acquirer_network_identifier,
+    merchant: result.merchant
+      ? {
+          merchantCategoryCode: result.merchant.merchant_category_code,
+          merchantCountry: result.merchant.merchant_country,
+          merchantName: result.merchant.merchant_name,
+          merchantCity: result.merchant.merchant_city,
+          merchantPostCode: result.merchant.merchant_post_code,
+        }
+      : null,
+    channel: result.channel,
+    qrCodeReference: result.qr_code_reference,
+    type: result.type,
+    resolutionId: result.resolution_id,
+    resolution: result.resolution,
   };
 }
 
@@ -223,6 +324,47 @@ export class BrebClient extends BaseClient {
   }
 
   /**
+   * Decode a BRE-B QR and, for static QRs, include an immediate key resolution.
+   *
+   * @example
+   * ```ts
+   * const decoded = await bloque.accounts.breb.decodeQr({
+   *   qrCodeData: '000201010212...'
+   * });
+   * ```
+   */
+  async decodeQr(
+    params: DecodeBrebQrParams,
+  ): Promise<BrebOperationResult<BrebDecodedQr>> {
+    try {
+      if (!params.qrCodeData?.trim()) {
+        throw new Error('BRE-B QR code data is required');
+      }
+
+      const response = await this.httpClient.request<
+        DecodeBrebQrResponse,
+        DecodeBrebQrRequest
+      >({
+        method: 'POST',
+        path: '/api/mediums/breb/decode-qr',
+        body: {
+          qr_code_data: params.qrCodeData,
+        },
+      });
+
+      return {
+        data: mapDecodedQrFromWire(response.result),
+        error: null,
+      };
+    } catch (error) {
+      return {
+        data: null,
+        error: this.mapError(error),
+      };
+    }
+  }
+
+  /**
    * Delete a BRE-B key account previously created in mediums.
    *
    * @example
@@ -240,13 +382,24 @@ export class BrebClient extends BaseClient {
         throw new Error('BRE-B account URN is required');
       }
 
-      const response = await this.httpClient.request<DeleteBrebKeyResponse>({
-        method: 'DELETE',
-        path: `/api/accounts/${encodeURIComponent(params.accountUrn)}/breb/key`,
+      const response = await this.httpClient.request<
+        UpdateAccountResponse<BrebDetails>,
+        UpdateAccountRequest
+      >({
+        method: 'PATCH',
+        path: `/api/accounts/${encodeURIComponent(params.accountUrn)}`,
+        body: {
+          status: 'deleted',
+        },
       });
 
       return {
-        data: response.result,
+        data: {
+          deleted: true,
+          accountUrn: response.result.account.urn,
+          keyId: response.result.account.details.id,
+          status: 'deleted',
+        },
         error: null,
       };
     } catch (error) {
@@ -275,13 +428,24 @@ export class BrebClient extends BaseClient {
         throw new Error('BRE-B account URN is required');
       }
 
-      const response = await this.httpClient.request<SuspendBrebKeyResponse>({
+      const response = await this.httpClient.request<
+        UpdateAccountResponse<BrebDetails>,
+        UpdateAccountRequest
+      >({
         method: 'PATCH',
-        path: `/api/accounts/${encodeURIComponent(params.accountUrn)}/breb/key/suspend`,
+        path: `/api/accounts/${encodeURIComponent(params.accountUrn)}`,
+        body: {
+          status: 'frozen',
+        },
       });
 
       return {
-        data: response.result,
+        data: {
+          accountUrn: response.result.account.urn,
+          keyId: response.result.account.details.id,
+          keyStatus: response.result.account.details.status,
+          status: 'frozen',
+        },
         error: null,
       };
     } catch (error) {
@@ -310,13 +474,24 @@ export class BrebClient extends BaseClient {
         throw new Error('BRE-B account URN is required');
       }
 
-      const response = await this.httpClient.request<ActivateBrebKeyResponse>({
+      const response = await this.httpClient.request<
+        UpdateAccountResponse<BrebDetails>,
+        UpdateAccountRequest
+      >({
         method: 'PATCH',
-        path: `/api/accounts/${encodeURIComponent(params.accountUrn)}/breb/key/activate`,
+        path: `/api/accounts/${encodeURIComponent(params.accountUrn)}`,
+        body: {
+          status: 'active',
+        },
       });
 
       return {
-        data: response.result,
+        data: {
+          accountUrn: response.result.account.urn,
+          keyId: response.result.account.details.id,
+          keyStatus: response.result.account.details.status,
+          status: 'active',
+        },
         error: null,
       };
     } catch (error) {

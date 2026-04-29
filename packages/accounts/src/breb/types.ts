@@ -70,6 +70,13 @@ export interface ResolveBrebKeyParams {
   key: string;
 }
 
+export interface DecodeBrebQrParams {
+  /**
+   * Full BRE-B QR payload to decode.
+   */
+  qrCodeData: string;
+}
+
 export interface DeleteBrebKeyParams {
   /**
    * Local BRE-B account URN to delete.
@@ -164,7 +171,7 @@ export interface BrebKeyAccount {
   id: string;
 
   /**
-   * Account URN in mediums.
+   * Account URN.
    */
   urn: string;
 
@@ -179,7 +186,7 @@ export interface BrebKeyAccount {
   medium: 'breb';
 
   /**
-   * Remote BRE-B key id returned by Passport.
+   * Remote BRE-B key id returned by the source system.
    */
   remoteKeyId: string;
 
@@ -321,4 +328,50 @@ export interface BrebResolvedKey {
    * Raw BRE-B payload.
    */
   raw: Record<string, unknown>;
+}
+
+export interface BrebDecodedQrAmount {
+  value: string;
+  currency: string;
+}
+
+export interface BrebDecodedQrKey {
+  keyType: BrebKeyType;
+  keyValue: string;
+}
+
+export interface BrebDecodedQrMerchant {
+  merchantCategoryCode: string | null;
+  merchantCountry: string | null;
+  merchantName: string | null;
+  merchantCity: string | null;
+  merchantPostCode: string | null;
+}
+
+export interface BrebDecodedQrAdditionalInfo {
+  transactionPurpose: string | null;
+  terminalLabel: string | null;
+  invoiceNumber: string | null;
+  mobilePhoneNumber: string | null;
+  storeLabel: string | null;
+  loyaltyLabel: string | null;
+  referenceLabel: string | null;
+  customerLabel: string | null;
+  customerInfo: string | null;
+  channelPresentation: string | null;
+}
+
+export interface BrebDecodedQr {
+  amount: BrebDecodedQrAmount | null;
+  additionalInfo: BrebDecodedQrAdditionalInfo | null;
+  key: BrebDecodedQrKey | null;
+  qrCodeData: string;
+  status: string | null;
+  acquirerNetworkIdentifier: string | null;
+  merchant: BrebDecodedQrMerchant | null;
+  channel: string | null;
+  qrCodeReference: string | null;
+  type: string | null;
+  resolutionId: string | null;
+  resolution: BrebResolvedKey | null;
 }
