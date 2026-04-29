@@ -1,0 +1,99 @@
+import { QuestHeader } from '@theme';
+
+<QuestHeader
+  prereqs={["Mexico payment use case", "KYC/KYB-ready customer flow"]}
+  unlocks={["SPEI account plugin planning", "Sales-led activation path"]}
+  time="Sales gated"
+/>
+
+# SPEI
+
+Plan SPEI account plugin activation for Mexico.
+
+:::warning Activation required
+SPEI account plugins are available only after a sales call. Schedule activation at [calendly.com/hi-bloque/15-min](https://calendly.com/hi-bloque/15-min).
+:::
+
+## Overview
+
+SPEI is Mexico's interbank electronic payment system operated by Banco de México. It enables near-real-time transfers between bank deposit accounts.
+
+The Bloque SDK does not expose a public `accounts.spei` client yet. Treat this page as the format and activation guide for teams preparing a SPEI rollout with Bloque.
+
+## Supported Formats
+
+For SPEI payments, Banco de México describes the beneficiary account identifier as one of the following formats:
+
+| Format | Description | Example |
+| --- | --- | --- |
+| `CLABE` | Standardized 18-digit bank account code | `002010077777777771` |
+| `DEBIT_CARD` | 16-digit debit card number associated with the account | `1234567890123456` |
+| `MOBILE` | 10-digit mobile number associated with the account | `5512345678` |
+
+CLABE is the primary format to plan around for account plugins.
+
+## CLABE Structure
+
+The CLABE is an 18-digit numeric identifier:
+
+| Digits | Component | Description |
+| --- | --- | --- |
+| 1-3 | Bank code | Institution where the account is held |
+| 4-6 | Plaza code | City or region code |
+| 7-17 | Account number | Bank-specific account identifier |
+| 18 | Control digit | Check digit for structure validation |
+
+The control digit validates the CLABE structure, but it does not prove that the account exists or is active.
+
+## Activation Checklist
+
+Before scheduling the sales call, prepare:
+
+- target entity type and country configuration for Mexico
+- expected use case: receive, payout, reconciliation, or treasury movement
+- supported beneficiary identifiers: CLABE only, or CLABE plus debit card/mobile
+- webhook and receipt requirements, including CEP reconciliation needs
+- compliance status for the holders that will use the rail
+
+## Example
+
+Use this pattern to prepare the information needed for activation. The full example is available at `examples/accounts/spei/prepare-spei-plugin.ts`.
+
+```typescript title="prepare-spei-plugin.ts"
+type SpeiIdentifierType = 'CLABE' | 'DEBIT_CARD' | 'MOBILE';
+
+const activationUrl = 'https://calendly.com/hi-bloque/15-min';
+
+const request = {
+  rail: 'spei',
+  activationUrl,
+  country: 'MEX',
+  useCase: 'receive',
+  requestedIdentifierTypes: ['CLABE'] satisfies SpeiIdentifierType[],
+  sampleIdentifier: {
+    type: 'CLABE' satisfies SpeiIdentifierType,
+    value: '002010077777777771',
+  },
+  webhookUrl: 'https://api.example.com/webhooks/spei',
+};
+
+console.log('SPEI activation request:', request);
+console.log('Schedule activation:', activationUrl);
+```
+
+## Notes
+
+- This page is documentation-only; do not call `accounts.spei` in production code until a public SDK client is released.
+- SPEI payments may include a reference number and payment description, depending on the originating flow.
+
+## References
+
+- [Banco de México SPEI information](https://www.banxico.org.mx/services/interbanking-electronic-payme.html)
+- [Banco de México CLABE FAQ](https://www.banxico.org.mx/footer-es/preguntas-frecuentes-dudas-ba.html)
+- [Banco de México mobile phone account linking](https://www.banxico.org.mx/services/linking-mobile-phone-number-t.html)
+
+## Next Steps
+
+- [Accounts Overview](/sdk/guide/accounts/overview)
+- [BRE-B](/sdk/guide/accounts/breb)
+- [Account Webhooks](/sdk/guide/accounts/webhooks)

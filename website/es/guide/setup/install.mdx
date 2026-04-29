@@ -2,7 +2,7 @@
 pageType: doc
 ---
 
-import { QuestHeader, Checkpoint } from '@theme';
+import { QuestHeader, Checkpoint, PackageManagerTabs } from '@theme';
 
 <QuestHeader
   prereqs={["Node.js 22+, Bun 1+, o Deno"]}
@@ -14,25 +14,7 @@ import { QuestHeader, Checkpoint } from '@theme';
 
 Agrega el SDK a tu proyecto.
 
-:::code-group
-
-```bash [bun]
-bun add @bloque/sdk
-```
-
-```bash [npm]
-npm install @bloque/sdk
-```
-
-```bash [yarn]
-yarn add @bloque/sdk
-```
-
-```bash [pnpm]
-pnpm add @bloque/sdk
-```
-
-:::
+<PackageManagerTabs command="add @bloque/sdk" />
 
 <Checkpoint
   title="Verificar: el import resuelve sin errores"

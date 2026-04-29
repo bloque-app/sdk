@@ -42,6 +42,24 @@ Create and resolve BRE-B payment keys for real-time payment routing:
 
 [Learn more about BRE-B](/sdk/guide/accounts/breb)
 
+### PIX Account Plugin
+
+Plan Brazil PIX account plugin activation:
+- **Pix keys**: Supports planning for `CPF`, `CNPJ`, `PHONE`, `EMAIL`, and `EVP` key formats
+- **QR initiation**: Supports BR Code / PIX QR planning as a distinct input format
+- **Sales-gated activation**: Available only after a sales call
+
+[Learn more about PIX](/sdk/guide/accounts/pix)
+
+### SPEI Account Plugin
+
+Plan Mexico SPEI account plugin activation:
+- **CLABE-first**: Plan around the 18-digit CLABE as the primary account identifier
+- **Additional identifiers**: SPEI can also reference debit card and linked mobile identifiers
+- **Sales-gated activation**: Available only after a sales call
+
+[Learn more about SPEI](/sdk/guide/accounts/spei)
+
 ## Common Operations
 
 All account types support common operations:
@@ -188,5 +206,7 @@ All account types support webhook notifications for lifecycle events. Pass a `we
 - [Virtual Cards](/sdk/guide/accounts/cards) - Create and manage virtual cards
 - [Bancolombia](/sdk/guide/accounts/bancolombia) - Bancolombia account integration
 - [BRE-B](/sdk/guide/accounts/breb) - Create and resolve BRE-B keys
+- [PIX](/sdk/guide/accounts/pix) - Plan Brazil PIX account plugin activation
+- [SPEI](/sdk/guide/accounts/spei) - Plan Mexico SPEI account plugin activation
 - [Transfers](/sdk/guide/accounts/transfers) - Transfer funds between accounts
 - [Compliance](/sdk/guide/features/compliance) - KYC verification

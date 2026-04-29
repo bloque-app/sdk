@@ -42,6 +42,24 @@ Crea y resuelve llaves BRE-B para el enrutamiento de pagos en tiempo real:
 
 [Aprende más sobre BRE-B](/sdk/guide/accounts/breb)
 
+### Plugin de Cuenta PIX
+
+Planea la activación del plugin de cuenta PIX para Brasil:
+- **Llaves Pix**: Soporta planeación para formatos `CPF`, `CNPJ`, `PHONE`, `EMAIL` y `EVP`
+- **Iniciación por QR**: Soporta planeación de BR Code / PIX QR como un formato de entrada distinto
+- **Activación con ventas**: Disponible solo después de una llamada con ventas
+
+[Aprende más sobre PIX](/sdk/guide/accounts/pix)
+
+### Plugin de Cuenta SPEI
+
+Planea la activación del plugin de cuenta SPEI para México:
+- **CLABE primero**: Planea alrededor de la CLABE de 18 dígitos como identificador principal de cuenta
+- **Identificadores adicionales**: SPEI también puede usar tarjeta de débito y celular asociado
+- **Activación con ventas**: Disponible solo después de una llamada con ventas
+
+[Aprende más sobre SPEI](/sdk/guide/accounts/spei)
+
 ## Operaciones Comunes
 
 Todos los tipos de cuentas soportan operaciones comunes:
@@ -188,5 +206,7 @@ Todos los tipos de cuenta soportan notificaciones por webhook para eventos del c
 - [Tarjetas Virtuales](/sdk/guide/accounts/cards) - Crea y gestiona tarjetas virtuales
 - [Bancolombia](/sdk/guide/accounts/bancolombia) - Integración de cuentas Bancolombia
 - [BRE-B](/sdk/guide/accounts/breb) - Crear y resolver llaves BRE-B
+- [PIX](/sdk/guide/accounts/pix) - Planea la activación del plugin de cuenta PIX para Brasil
+- [SPEI](/sdk/guide/accounts/spei) - Planea la activación del plugin de cuenta SPEI para México
 - [Transferencias](/sdk/guide/accounts/transfers) - Transfiere fondos entre cuentas
 - [Cumplimiento](/sdk/guide/features/compliance) - Verificación KYC

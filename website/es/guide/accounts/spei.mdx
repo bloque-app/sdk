@@ -1,0 +1,99 @@
+import { QuestHeader } from '@theme';
+
+<QuestHeader
+  prereqs={["Caso de uso de pagos en México", "Flujo de clientes listo para KYC/KYB"]}
+  unlocks={["Planeación del plugin de cuenta SPEI", "Ruta de activación con ventas"]}
+  time="Requiere ventas"
+/>
+
+# SPEI
+
+Planea la activación del plugin de cuenta SPEI para México.
+
+:::warning Activación requerida
+Los plugins de cuenta SPEI solo están disponibles después de una llamada con ventas. Agenda la activación en [calendly.com/hi-bloque/15-min](https://calendly.com/hi-bloque/15-min).
+:::
+
+## Descripción general
+
+SPEI es el sistema de pagos electrónicos interbancarios de México operado por Banco de México. Permite transferencias casi en tiempo real entre cuentas de depósito bancarias.
+
+El SDK de Bloque todavía no expone un cliente público `accounts.spei`. Usa esta página como guía de formatos y activación para equipos que preparan un lanzamiento de SPEI con Bloque.
+
+## Formatos soportados
+
+Para pagos SPEI, Banco de México describe el identificador de la cuenta beneficiaria con los siguientes formatos:
+
+| Formato | Descripción | Ejemplo |
+| --- | --- | --- |
+| `CLABE` | Clave bancaria estandarizada de 18 dígitos | `002010077777777771` |
+| `DEBIT_CARD` | Número de tarjeta de débito de 16 dígitos asociado a la cuenta | `1234567890123456` |
+| `MOBILE` | Número celular de 10 dígitos asociado a la cuenta | `5512345678` |
+
+CLABE es el formato principal para planear plugins de cuenta.
+
+## Estructura de CLABE
+
+La CLABE es un identificador numérico de 18 dígitos:
+
+| Dígitos | Componente | Descripción |
+| --- | --- | --- |
+| 1-3 | Código de banco | Institución donde radica la cuenta |
+| 4-6 | Código de plaza | Ciudad o región |
+| 7-17 | Número de cuenta | Identificador de cuenta específico del banco |
+| 18 | Dígito de control | Dígito verificador para validar la estructura |
+
+El dígito de control valida la estructura de la CLABE, pero no prueba que la cuenta exista o esté activa.
+
+## Checklist de activación
+
+Antes de agendar la llamada con ventas, prepara:
+
+- tipo de entidad objetivo y configuración de país para México
+- caso de uso esperado: recibir, pagar, reconciliar o mover tesorería
+- identificadores de beneficiario soportados: solo CLABE, o CLABE más tarjeta de débito/celular
+- requisitos de webhooks y comprobantes, incluyendo necesidades de conciliación CEP
+- estado de cumplimiento de los holders que usarán el riel
+
+## Ejemplo
+
+Usa este patrón para preparar la información necesaria para la activación. El ejemplo completo está en `examples/accounts/spei/prepare-spei-plugin.ts`.
+
+```typescript title="prepare-spei-plugin.ts"
+type SpeiIdentifierType = 'CLABE' | 'DEBIT_CARD' | 'MOBILE';
+
+const activationUrl = 'https://calendly.com/hi-bloque/15-min';
+
+const request = {
+  rail: 'spei',
+  activationUrl,
+  country: 'MEX',
+  useCase: 'receive',
+  requestedIdentifierTypes: ['CLABE'] satisfies SpeiIdentifierType[],
+  sampleIdentifier: {
+    type: 'CLABE' satisfies SpeiIdentifierType,
+    value: '002010077777777771',
+  },
+  webhookUrl: 'https://api.example.com/webhooks/spei',
+};
+
+console.log('SPEI activation request:', request);
+console.log('Schedule activation:', activationUrl);
+```
+
+## Notas
+
+- Esta página es solo documentación; no llames `accounts.spei` en código de producción hasta que exista un cliente público en el SDK.
+- Los pagos SPEI pueden incluir número de referencia y descripción de pago, según el flujo de origen.
+
+## Referencias
+
+- [Banco de México información SPEI](https://www.banxico.org.mx/servicios/sistema-pagos-electronicos-in.html)
+- [Banco de México preguntas frecuentes sobre CLABE](https://www.banxico.org.mx/footer-es/preguntas-frecuentes-dudas-ba.html)
+- [Banco de México asociación de cuentas con número celular](https://www.banxico.org.mx/servicios/asociacion-cuentas-numero-cel.html)
+
+## Próximos pasos
+
+- [Descripción de Cuentas](/sdk/guide/accounts/overview)
+- [BRE-B](/sdk/guide/accounts/breb)
+- [Webhooks de Cuentas](/sdk/guide/accounts/webhooks)

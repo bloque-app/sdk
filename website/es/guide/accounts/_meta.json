@@ -41,6 +41,16 @@
   },
   {
     "type": "file",
+    "name": "pix",
+    "label": "PIX"
+  },
+  {
+    "type": "file",
+    "name": "spei",
+    "label": "SPEI"
+  },
+  {
+    "type": "file",
     "name": "transfers",
     "label": "Transferencias"
   }

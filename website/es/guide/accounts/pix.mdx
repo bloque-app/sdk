@@ -1,0 +1,96 @@
+import { QuestHeader } from '@theme';
+
+<QuestHeader
+  prereqs={["Caso de uso de pagos en Brasil", "Flujo de clientes listo para KYC/KYB"]}
+  unlocks={["Planeación del plugin de cuenta PIX", "Ruta de activación con ventas"]}
+  time="Requiere ventas"
+/>
+
+# PIX
+
+Planea la activación del plugin de cuenta PIX para Brasil.
+
+:::warning Activación requerida
+Los plugins de cuenta PIX solo están disponibles después de una llamada con ventas. Agenda la activación en [calendly.com/hi-bloque/15-min](https://calendly.com/hi-bloque/15-min).
+:::
+
+## Descripción general
+
+PIX es el riel de pagos instantáneos de Brasil operado por el Banco Central do Brasil. Soporta transferencias entre cuentas transaccionales usando datos de cuenta, llaves Pix e iniciación de pagos por QR.
+
+El SDK de Bloque todavía no expone un cliente público `accounts.pix`. Usa esta página como guía de formatos y activación para equipos que preparan un lanzamiento de PIX con Bloque.
+
+## Formatos soportados
+
+PIX suele identificar receptores mediante llaves Pix registradas en DICT, el directorio del Banco Central do Brasil para identificadores de cuentas transaccionales.
+
+| Formato | Descripción | Ejemplo |
+| --- | --- | --- |
+| `CPF` | Identificación fiscal de persona natural en Brasil | `12345678909` |
+| `CNPJ` | Identificación fiscal de empresa en Brasil | `12345678000195` |
+| `PHONE` | Número celular, normalmente en formato E.164 | `+5511999999999` |
+| `EMAIL` | Correo electrónico | `user@example.com` |
+| `EVP` | Llave Pix aleatoria generada por el participante | `123e4567-e89b-12d3-a456-426614174000` |
+| `BR_CODE` | Payload PIX QR / copia e cola basado en BR Code | `000201010212...` |
+
+## Iniciación por QR
+
+Los payloads QR de PIX usan el perfil BR Code de Brasil para iniciación de pagos. Para planear la implementación, mantén separados el parseo de QR y el registro de llaves:
+
+- los QR estáticos y dinámicos pueden llevar información del receptor, monto, referencias y datos del comercio
+- los payloads BR Code usan una estructura tag-length-value basada en EMV
+- el SDK no debe asumir que un payload QR es una llave Pix en texto plano
+
+## Checklist de activación
+
+Antes de agendar la llamada con ventas, prepara:
+
+- país objetivo y tipo de entidad para el origen que usará PIX
+- caso de uso esperado: recibir, pagar, cobrar con QR o reconciliar
+- formatos de llave requeridos: CPF/CNPJ, teléfono, email, EVP, QR o un subconjunto
+- requisitos de webhooks y reportes
+- estado de cumplimiento de los holders que usarán el riel
+
+## Ejemplo
+
+Usa este patrón para preparar la información necesaria para la activación. El ejemplo completo está en `examples/accounts/pix/prepare-pix-plugin.ts`.
+
+```typescript title="prepare-pix-plugin.ts"
+type PixKeyType = 'CPF' | 'CNPJ' | 'PHONE' | 'EMAIL' | 'EVP';
+
+const activationUrl = 'https://calendly.com/hi-bloque/15-min';
+
+const request = {
+  rail: 'pix',
+  activationUrl,
+  country: 'BRA',
+  useCase: 'receive',
+  requestedKeyTypes: ['CPF', 'CNPJ', 'PHONE', 'EMAIL', 'EVP'] satisfies PixKeyType[],
+  sampleKey: {
+    type: 'PHONE' satisfies PixKeyType,
+    value: '+5511999999999',
+  },
+  webhookUrl: 'https://api.example.com/webhooks/pix',
+};
+
+console.log('PIX activation request:', request);
+console.log('Schedule activation:', activationUrl);
+```
+
+## Notas
+
+- Esta página es solo documentación; no llames `accounts.pix` en código de producción hasta que exista un cliente público en el SDK.
+- Las llaves PIX deben ser únicas según las reglas de PIX/DICT y pueden estar sujetas a propiedad, reivindicación, portabilidad y restricciones antifraude.
+- Los flujos de QR PIX y llave Pix deben modelarse como entradas distintas aunque resuelvan al mismo riel de pago.
+
+## Referencias
+
+- [Banco Central do Brasil PIX](https://www.bcb.gov.br/pix)
+- [Banco Central do Brasil DICT API](https://www.bcb.gov.br/content/estabilidadefinanceira/pix/API-DICT.html)
+- [Banco Central do Brasil Manual de Padrões para Iniciação do Pix](https://www.bcb.gov.br/content/estabilidadefinanceira/pix/Regulamento_Pix/II_ManualdePadroesparaIniciacaodoPix.pdf)
+
+## Próximos pasos
+
+- [Descripción de Cuentas](/sdk/guide/accounts/overview)
+- [BRE-B](/sdk/guide/accounts/breb)
+- [Webhooks de Cuentas](/sdk/guide/accounts/webhooks)
