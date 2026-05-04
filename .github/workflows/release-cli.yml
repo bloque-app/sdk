@@ -42,6 +42,11 @@ jobs:
       - name: Install Dependencies
         run: bun install --frozen-lockfile
 
+      - name: Build SDK prerequisites for CLI typecheck
+        run: |
+          bun run build:prerequisites
+          bun run build:sdk
+
       - name: Typecheck CLI
         run: bun run --filter @bloque/cli typecheck
 
