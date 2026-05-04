@@ -51,7 +51,7 @@ export function registerApiKeyTools(
     async ({ id }) => {
       if (session?.authType === 'apiKey' && session.apiKey) {
         const keys = await clients.identity.apiKeys.list();
-        const self = keys.find((k) => k.status === 'active' && session.apiKey?.startsWith(k.keyId));
+        const self = keys.find((k: any) => k.status === 'active' && session.apiKey?.startsWith(k.keyId));
         if (self && self.id === id) {
           return {
             content: [{ type: 'text', text: 'Error: Cannot revoke the API key used by this session. This would invalidate your own authentication.' }],
@@ -79,7 +79,7 @@ export function registerApiKeyTools(
     async ({ id }) => {
       if (session?.authType === 'apiKey' && session.apiKey) {
         const keys = await clients.identity.apiKeys.list();
-        const self = keys.find((k) => k.status === 'active' && session.apiKey?.startsWith(k.keyId));
+        const self = keys.find((k: any) => k.status === 'active' && session.apiKey?.startsWith(k.keyId));
         if (self && self.id === id) {
           return {
             content: [{ type: 'text', text: 'Error: Cannot rotate the API key used by this session. This would invalidate your own authentication.' }],

@@ -1,22 +1,22 @@
 import { stdout } from 'node:process';
 
 import {
+  ASPECT,
   BOLD,
-  RESET,
-  HIDE_CURSOR,
-  SHOW_CURSOR,
-  PALETTE,
-  DIM_STAR,
-  MED_STAR,
-  MAX_RADIUS,
-  WIDTH,
-  HEIGHT,
+  clearLines,
   CX,
   CY,
-  ASPECT,
+  DIM_STAR,
   generateStarField,
+  HEIGHT,
+  HIDE_CURSOR,
+  MAX_RADIUS,
+  MED_STAR,
+  PALETTE,
+  RESET,
+  SHOW_CURSOR,
+  WIDTH,
   writeLines,
-  clearLines,
 } from './shared.ts';
 
 const FRAME_MS = 80;
@@ -54,7 +54,7 @@ function renderBeaconFrame(
             const fade = ringR / MAX_RADIUS;
             const idx = Math.round(fade * (PALETTE.length - 1));
             const reverseIdx = PALETTE.length - 1 - idx;
-            color = PALETTE[reverseIdx];
+            color = PALETTE[reverseIdx] ?? PALETTE[0] ?? '';
 
             if (ringR <= 2) {
               char = Math.random() < 0.25 ? '✧' : '◦';
@@ -66,7 +66,7 @@ function renderBeaconFrame(
         }
       }
 
-      if (char === ' ' && stars[y][x]) {
+      if (char === ' ' && (stars[y]?.[x])) {
         const twinkle = Math.random() < 0.15;
         color = twinkle ? MED_STAR : DIM_STAR;
         char = '.';

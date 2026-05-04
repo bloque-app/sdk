@@ -15,7 +15,14 @@ export function registerOverviewWorkflows(server: McpServer, clients: BloqueClie
       const rawBalances = await clients.accounts.balances();
       const txs = await clients.accounts.transactions({ limit: 10 });
 
-      const grouped: Record<string, any[]> = {
+      const grouped: {
+        cards: any[];
+        virtual: any[];
+        polygon: any[];
+        us: any[];
+        bancolombia: any[];
+        [key: string]: any[];
+      } = {
         cards: [],
         virtual: [],
         polygon: [],
@@ -46,7 +53,7 @@ export function registerOverviewWorkflows(server: McpServer, clients: BloqueClie
             break;
           default:
             if (!grouped[(account as any).medium]) grouped[(account as any).medium] = [];
-            grouped[(account as any).medium].push(humanized);
+            grouped[(account as any).medium]!.push(humanized);
         }
       }
 

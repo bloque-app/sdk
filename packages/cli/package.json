@@ -1,6 +1,6 @@
 {
   "name": "@bloque/cli",
-  "version": "0.1.5",
+  "version": "0.1.6",
   "description": "Bloque CLI — authenticate and expose SDK capabilities as an MCP server",
   "type": "module",
   "keywords": [
@@ -24,7 +24,7 @@
     "build:release": "bun run build.ts && bun run scripts/package-release.ts",
     "dev": "bun run src/bin.ts",
     "start": "node dist/bin.js",
-    "typecheck": "tsgo --noEmit"
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@bloque/sdk": "workspace:*",

@@ -40,9 +40,10 @@ export const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms))
 export function generateStarField(): boolean[][] {
   const field: boolean[][] = [];
   for (let y = 0; y < HEIGHT; y++) {
-    field[y] = [];
+    const row: boolean[] = [];
+    field[y] = row;
     for (let x = 0; x < WIDTH; x++) {
-      field[y][x] = Math.random() < 0.025;
+      row[x] = Math.random() < 0.025;
     }
   }
   return field;
