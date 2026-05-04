@@ -8,9 +8,8 @@ const binarySourceDir = './dist/bin';
 const launcherSourcePath = './bin/npm.cjs';
 const installScriptSourcePath = './npm/install.cjs';
 const resolveBinarySourcePath = './npm/resolve-binary.cjs';
-const npmReadmeSourcePath = './README.npm.md';
+const npmReadmeSourcePath = './README.md';
 const licenseSourcePath = './LICENSE';
-const templatesSourceDir = './templates';
 
 type PlatformPackage = {
   binaryFile: string;
@@ -121,9 +120,6 @@ fs.copyFileSync(
 );
 fs.copyFileSync(npmReadmeSourcePath, path.join(rootPackageDir, 'README.md'));
 fs.copyFileSync(licenseSourcePath, path.join(rootPackageDir, 'LICENSE'));
-fs.cpSync(templatesSourceDir, path.join(rootPackageDir, 'templates'), {
-  recursive: true,
-});
 
 for (const platformPackage of platformPackages) {
   const packageDir = path.join(outputDir, platformPackage.name.split('/')[1]);
@@ -153,13 +149,9 @@ for (const platformPackage of platformPackages) {
     os: platformPackage.os,
     cpu: platformPackage.cpu,
     libc: platformPackage.libc,
-    files: ['bin', 'templates'],
+    files: ['bin'],
     publishConfig: packageJson.publishConfig,
   };
-
-  fs.cpSync(templatesSourceDir, path.join(packageDir, 'templates'), {
-    recursive: true,
-  });
 
   fs.writeFileSync(
     path.join(packageDir, 'package.json'),
