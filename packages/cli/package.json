@@ -1,6 +1,6 @@
 {
   "name": "@bloque/cli",
-  "version": "0.1.10",
+  "version": "0.1.7",
   "description": "Bloque CLI — authenticate and expose SDK capabilities as an MCP server",
   "type": "module",
   "keywords": [
@@ -13,6 +13,10 @@
   "publishConfig": {
     "access": "public",
     "provenance": true
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/bloque-app/sdk"
   },
   "main": "./bin/npm.cjs",
   "files": [

@@ -83,6 +83,7 @@ const rootPackageJson = {
   version: packageJson.version,
   description: packageJson.description,
   keywords: packageJson.keywords,
+  repository: packageJson.repository,
   bin: {
     bloque: './bin/npm.cjs',
   },
@@ -146,6 +147,7 @@ for (const platformPackage of platformPackages) {
     name: platformPackage.name,
     version: packageJson.version,
     description: `${packageJson.description} (${platformPackage.binaryFile})`,
+    repository: packageJson.repository,
     os: platformPackage.os,
     cpu: platformPackage.cpu,
     libc: platformPackage.libc,
