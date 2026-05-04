@@ -11,6 +11,7 @@ const targets = [
   ['bun-linux-arm64', `${outputDir}/${binaryName}-linux-arm64`],
   ['bun-linux-x64-musl', `${outputDir}/${binaryName}-linux-x64-musl`],
   ['bun-linux-arm64-musl', `${outputDir}/${binaryName}-linux-arm64-musl`],
+  ['bun-windows-x64', `${outputDir}/${binaryName}-windows-x64.exe`],
 ] as const;
 
 await Bun.$`mkdir -p ${outputDir}`;

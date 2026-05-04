@@ -83,6 +83,7 @@ jobs:
           - cli-linux-x64
           - cli-linux-arm64-musl
           - cli-linux-x64-musl
+          - cli-windows-x64
 
     steps:
       - name: Download npm Package Workspace
@@ -170,4 +171,5 @@ jobs:
           body_path: CHANGELOG.txt
           files: |
             packages/cli/dist/release/bloque-*.tar.gz
+            packages/cli/dist/release/bloque-*.zip
             packages/cli/dist/release/checksums.txt

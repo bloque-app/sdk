@@ -37,6 +37,11 @@ const releaseArtifacts = [
     `${binaryName}-${packageJson.version}-linux-x64-musl.tar.gz`,
     'tar.gz',
   ],
+  [
+    `${binaryName}-windows-x64.exe`,
+    `${binaryName}-${packageJson.version}-windows-x64.zip`,
+    'zip',
+  ],
 ] as const;
 
 function ensureSafeStagingDir(stagingDir: string) {

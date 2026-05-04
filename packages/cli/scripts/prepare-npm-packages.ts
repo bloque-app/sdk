@@ -60,6 +60,12 @@ const platformPackages: PlatformPackage[] = [
     cpu: ['x64'],
     libc: ['musl'],
   },
+  {
+    name: '@bloque/cli-windows-x64',
+    binaryFile: 'bloque-windows-x64.exe',
+    os: ['win32'],
+    cpu: ['x64'],
+  },
 ];
 
 function ensureFileExists(filePath: string) {
