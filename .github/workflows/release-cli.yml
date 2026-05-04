@@ -1,0 +1,167 @@
+name: Release CLI
+
+on:
+  push:
+    tags:
+      - 'cli-v*'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          registry-url: https://registry.npmjs.org
+
+      - name: Validate Tag Version
+        run: |
+          PACKAGE_VERSION=$(bun -e "import pkg from './packages/cli/package.json'; console.log(pkg.version)")
+          TAG_VERSION="${GITHUB_REF_NAME#cli-v}"
+
+          if [ "$PACKAGE_VERSION" != "$TAG_VERSION" ]; then
+            echo "Tag version ($TAG_VERSION) does not match packages/cli/package.json version ($PACKAGE_VERSION)"
+            exit 1
+          fi
+
+      - name: Install Dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Typecheck CLI
+        run: bun run --filter @bloque/cli typecheck
+
+      - name: Build CLI Binary Artifacts
+        working-directory: packages/cli
+        run: bun run build:release
+
+      - name: Prepare npm Packages
+        working-directory: packages/cli
+        run: bun run scripts/prepare-npm-packages.ts
+
+      - name: Upload npm Package Workspace
+        uses: actions/upload-artifact@v4
+        with:
+          name: cli-npm-packages
+          path: packages/cli/dist/npm
+
+      - name: Upload Release Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: cli-release-artifacts
+          path: packages/cli/dist/release
+
+  publish-platform:
+    needs: build
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        package_dir:
+          - cli-darwin-arm64
+          - cli-darwin-x64
+          - cli-linux-arm64
+          - cli-linux-x64
+          - cli-linux-arm64-musl
+          - cli-linux-x64-musl
+
+    steps:
+      - name: Download npm Package Workspace
+        uses: actions/download-artifact@v4
+        with:
+          name: cli-npm-packages
+          path: dist/npm
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          registry-url: https://registry.npmjs.org
+
+      - name: Verify Platform Package
+        run: npm pack --dry-run --cache /tmp/npm-cache
+        working-directory: dist/npm/${{ matrix.package_dir }}
+
+      - name: Publish Platform Package
+        run: npm publish --access public
+        working-directory: dist/npm/${{ matrix.package_dir }}
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+  publish-root:
+    needs:
+      - build
+      - publish-platform
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Download npm Package Workspace
+        uses: actions/download-artifact@v4
+        with:
+          name: cli-npm-packages
+          path: dist/npm
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          registry-url: https://registry.npmjs.org
+
+      - name: Verify Root Package
+        run: npm pack --dry-run --cache /tmp/npm-cache
+        working-directory: dist/npm/root
+
+      - name: Publish Root Package
+        run: npm publish --access public
+        working-directory: dist/npm/root
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+  github-release:
+    needs:
+      - build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Download Release Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: cli-release-artifacts
+          path: packages/cli/dist/release
+
+      - name: Generate Changelog
+        run: |
+          PREV_TAG=$(git describe --tags --abbrev=0 ${GITHUB_REF}^ || echo "")
+          echo "Previous tag: $PREV_TAG"
+
+          if [ -z "$PREV_TAG" ]; then
+            git log --pretty=format:"- %s (%an)" > CHANGELOG.txt
+          else
+            git log $PREV_TAG..${GITHUB_REF_NAME} --pretty=format:"- %s (%an)" > CHANGELOG.txt
+          fi
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          body_path: CHANGELOG.txt
+          files: |
+            packages/cli/dist/release/bloque-*.tar.gz
+            packages/cli/dist/release/checksums.txt

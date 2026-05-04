@@ -1,9 +1,9 @@
-name: Release
+name: Release SDK
 
 on:
   push:
     tags:
-      - "v*.*.*"
+      - 'sdk-v*'
 
 permissions:
   contents: write
@@ -13,7 +13,8 @@ jobs:
   release:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
@@ -29,40 +30,8 @@ jobs:
       - name: Build code
         run: bun run build
 
-      - name: Compile CLI binaries
-        working-directory: packages/cli
-        run: bun run compile
-
-      - name: Smoke test binary
-        run: |
-          chmod +x packages/cli/dist/bloque-linux-x64
-          packages/cli/dist/bloque-linux-x64 --version
-
       - name: Publish Packages
         env:
           NPM_CONFIG_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
           bun run release
-
-      - name: Generate Changelog
-        id: changelog
-        run: |
-          PREV_TAG=$(git describe --tags --abbrev=0 ${GITHUB_REF}^ || echo "")
-          echo "Previous tag: $PREV_TAG"
-
-          if [ -z "$PREV_TAG" ]; then
-            git log --pretty=format:"- %s (%an)" > CHANGELOG.txt
-          else
-            git log $PREV_TAG..${GITHUB_REF_NAME} --pretty=format:"- %s (%an)" > CHANGELOG.txt
-          fi
-
-      - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
-        with:
-          body_path: CHANGELOG.txt
-          files: |
-            packages/cli/dist/bloque-darwin-arm64
-            packages/cli/dist/bloque-darwin-x64
-            packages/cli/dist/bloque-linux-x64
-            packages/cli/dist/bloque-linux-arm64
-            packages/cli/dist/bloque-windows-x64.exe
