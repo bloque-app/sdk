@@ -171,6 +171,7 @@ export type AccountMedium =
   | 'card'
   | 'virtual'
   | 'polygon'
+  | 'us2-account'
   | 'us-account';
 
 /**
@@ -268,6 +269,7 @@ export interface ListAccountsResult {
     | import('./polygon/types').PolygonAccount
     | import('./bancolombia/types').BancolombiaAccount
     | import('./breb/types').BrebKeyAccount
+    | import('./us2/types').Us2Account
     | import('./us/types').UsAccount
   >;
 }

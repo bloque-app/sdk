@@ -29,6 +29,7 @@ export interface Account<TDetails = unknown> {
     | 'breb'
     | 'card'
     | 'virtual'
+    | 'us2-account'
     | 'us-account'
     | 'polygon';
   details: TDetails;
@@ -215,6 +216,38 @@ export interface UsDetails {
   birth_date: string;
   account_number?: string;
   routing_number?: string;
+}
+
+/**
+ * @internal
+ * US2 account input for creation
+ */
+export interface CreateUs2AccountInput {
+  type: 'individual' | 'business';
+  email: string;
+  phone?: string;
+  proof_of_address?: string;
+  business_formation_document?: string;
+  tax_id?: string;
+  address?: {
+    street?: string;
+    city?: string;
+    state?: string;
+    postal_code?: string;
+    country?: string;
+  };
+}
+
+/**
+ * @internal
+ * US2 account details from API
+ */
+export interface Us2Details {
+  id: string;
+  user_id: string;
+  virtual_account_id: string;
+  type: string;
+  currency: string;
 }
 
 /**

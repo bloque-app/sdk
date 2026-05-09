@@ -38,6 +38,18 @@ export interface KycVerificationResponse {
    * null if verification is not yet completed
    */
   completedAt: string | null;
+
+  /**
+   * Documents download status (when document retrieval is enabled server-side).
+   *
+   * Values vary by provider; common values are "complete", "partial", "failed".
+   */
+  documentsStatus?: string;
+
+  /**
+   * Provider-specific verification payload (when available).
+   */
+  result?: unknown;
 }
 
 export interface GetKycVerificationParams {
@@ -48,4 +60,24 @@ export interface GetKycVerificationParams {
    * @example "did:bloque:user:123e4567"
    */
   urn: string;
+}
+
+export interface GetKycDocumentsParams {
+  /**
+   * URN (Uniform Resource Name) that uniquely identifies the user
+   * within the system.
+   */
+  urn: string;
+}
+
+export interface KycDocumentImage {
+  documentType: string;
+  side: string;
+  imageBase64: string;
+  imageSizeBytes: number;
+}
+
+export interface KycDocumentsResponse {
+  documentsStatus: string;
+  documents: KycDocumentImage[];
 }

@@ -29,6 +29,7 @@ import type {
   PolygonDetails,
   TransferRequest,
   TransferResponse,
+  Us2Details,
   UsDetails,
   VirtualDetails,
 } from './internal/wire-types';
@@ -53,6 +54,8 @@ import type {
 } from './types';
 import type { UsAccount } from './us/types';
 import { mapUsAccountFromWire, UsClient } from './us/us-client';
+import type { Us2Account } from './us2/types';
+import { mapUs2AccountFromWire, Us2Client } from './us2/us2-client';
 import type { VirtualAccount } from './virtual/types';
 import {
   mapVirtualAccountFromWire,
@@ -69,6 +72,7 @@ export type MappedAccount =
   | PolygonAccount
   | BancolombiaAccount
   | BrebKeyAccount
+  | Us2Account
   | UsAccount;
 
 /**
@@ -88,6 +92,7 @@ export class AccountsClient extends BaseClient {
   readonly card: CardClient;
   readonly polygon: PolygonClient;
   readonly us: UsClient;
+  readonly us2: Us2Client;
   readonly virtual: VirtualClient;
 
   constructor(httpClient: HttpClient) {
@@ -97,6 +102,7 @@ export class AccountsClient extends BaseClient {
     this.card = new CardClient(this.httpClient);
     this.polygon = new PolygonClient(this.httpClient);
     this.us = new UsClient(this.httpClient);
+    this.us2 = new Us2Client(this.httpClient);
     this.virtual = new VirtualClient(this.httpClient);
   }
 
@@ -605,6 +611,8 @@ export class AccountsClient extends BaseClient {
         );
       case 'us-account':
         return mapUsAccountFromWire(account as AccountWithBalance<UsDetails>);
+      case 'us2-account':
+        return mapUs2AccountFromWire(account as AccountWithBalance<Us2Details>);
       default:
         throw new Error(`Unknown account medium: ${account.medium}`);
     }
