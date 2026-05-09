@@ -5,6 +5,8 @@ export * from './breb/breb-client';
 export * from './breb/types';
 export * from './card/card-client';
 export * from './card/types';
+export * from './external-us-bank/external-us-bank-client';
+export * from './external-us-bank/types';
 export * from './polygon/polygon-client';
 export * from './polygon/types';
 export * from './types';

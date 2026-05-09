@@ -13,6 +13,11 @@ import { BrebClient, mapBrebAccountFromWire } from './breb/breb-client';
 import type { BrebKeyAccount } from './breb/types';
 import { CardClient, mapCardAccountFromWire } from './card/card-client';
 import type { CardAccount, ListMovementsParams } from './card/types';
+import {
+  ExternalUsBankClient,
+  mapExternalUsBankAccountFromWire,
+} from './external-us-bank/external-us-bank-client';
+import type { ExternalUsBankAccount } from './external-us-bank/types';
 import type {
   AccountWithBalance,
   BancolombiaDetails,
@@ -20,6 +25,7 @@ import type {
   BatchTransferResponse,
   BrebDetails,
   CardDetails,
+  ExternalUsBankDetails,
   GetAccountResponse,
   GetBalanceResponse,
   GetBalancesResponse,
@@ -72,6 +78,7 @@ export type MappedAccount =
   | PolygonAccount
   | BancolombiaAccount
   | BrebKeyAccount
+  | ExternalUsBankAccount
   | Us2Account
   | UsAccount;
 
@@ -90,6 +97,7 @@ export class AccountsClient extends BaseClient {
   readonly bancolombia: BancolombiaClient;
   readonly breb: BrebClient;
   readonly card: CardClient;
+  readonly externalUsBank: ExternalUsBankClient;
   readonly polygon: PolygonClient;
   readonly us: UsClient;
   readonly us2: Us2Client;
@@ -100,6 +108,7 @@ export class AccountsClient extends BaseClient {
     this.bancolombia = new BancolombiaClient(this.httpClient);
     this.breb = new BrebClient(this.httpClient);
     this.card = new CardClient(this.httpClient);
+    this.externalUsBank = new ExternalUsBankClient(this.httpClient);
     this.polygon = new PolygonClient(this.httpClient);
     this.us = new UsClient(this.httpClient);
     this.us2 = new Us2Client(this.httpClient);
@@ -608,6 +617,10 @@ export class AccountsClient extends BaseClient {
       case 'breb':
         return mapBrebAccountFromWire(
           account as AccountWithBalance<BrebDetails>,
+        );
+      case 'external-us-bank':
+        return mapExternalUsBankAccountFromWire(
+          account as AccountWithBalance<ExternalUsBankDetails>,
         );
       case 'us-account':
         return mapUsAccountFromWire(account as AccountWithBalance<UsDetails>);

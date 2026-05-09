@@ -1,0 +1,59 @@
+import { QuestHeader } from '@theme';
+
+<QuestHeader
+  prereqs={["Connected SDK client", "KYC (if enforced by your origin)", "A frontend that can run Plaid Link"]}
+  unlocks={["Link a US bank account via Plaid", "Store a stable bank URN for ACH on-ramp flows"]}
+  time="10 min"
+/>
+
+# External US Bank (Plaid)
+
+Link a US bank account using Plaid. Bloque uses Brale under the hood to create a Plaid session and exchange the resulting `publicToken` into an external bank address.
+
+## Flow
+
+This is a **two-step** flow:
+
+1. Start link → `user.accounts.externalUsBank.create()` → get `linkToken`
+2. Frontend completes Plaid Link → get `publicToken`
+3. Finish link → `user.accounts.externalUsBank.exchangePublicToken()` → linked bank account
+
+## Step 1: Start link (get `linkToken`)
+
+```typescript title="start-link.ts"
+const pending = await user.accounts.externalUsBank.create({
+  label: 'My bank',
+  ledgerId: pocket.ledgerId, // optional: attach to an existing ledger pool
+});
+
+if (!pending.details.linkToken) {
+  throw new Error('Expected Plaid linkToken');
+}
+
+// Pass this to your frontend to initialize Plaid Link
+console.log(pending.details.linkToken);
+```
+
+## Step 2: Frontend (Plaid Link → `publicToken`)
+
+Use Plaid Link with the `linkToken`. When the user completes the Plaid flow, Plaid returns a `public_token` (exact naming depends on your Plaid integration).
+
+## Step 3: Exchange `publicToken` (finish link)
+
+```typescript title="finish-link.ts"
+const linked = await user.accounts.externalUsBank.exchangePublicToken({
+  urn: pending.urn,
+  publicToken: '<PLAID_PUBLIC_TOKEN>',
+});
+
+console.log(linked.details.linkStatus); // 'active' | 'pending_link' | 'link_failed' | 'closed'
+console.log(linked.details.bankName, linked.details.bankAccountLast4);
+```
+
+## What to persist
+
+Persist `linked.urn`. Treat it as the stable identifier for the linked bank account.
+
+## Webhooks
+
+If you configured a `webhookUrl` during account creation, you can receive lifecycle and transfer events for this medium via your webhook endpoint.

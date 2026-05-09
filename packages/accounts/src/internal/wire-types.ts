@@ -28,6 +28,7 @@ export interface Account<TDetails = unknown> {
     | 'bancolombia'
     | 'breb'
     | 'card'
+    | 'external-us-bank'
     | 'virtual'
     | 'us2-account'
     | 'us-account'
@@ -248,6 +249,21 @@ export interface Us2Details {
   virtual_account_id: string;
   type: string;
   currency: string;
+}
+
+/**
+ * @internal
+ * External US bank linkage details (Brale/Plaid).
+ */
+export interface ExternalUsBankDetails {
+  id: string;
+  link_status: 'pending_link' | 'active' | 'link_failed' | 'closed';
+  brale_account_id?: string;
+  brale_address_id?: string;
+  link_token?: string;
+  bank_account_last4?: string;
+  bank_name?: string;
+  failure_reason?: string;
 }
 
 /**
