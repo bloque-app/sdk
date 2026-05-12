@@ -16,6 +16,8 @@ import type {
 
 type CreateExternalUsBankInput = {
   label?: string;
+  return_url?: string;
+  state?: string;
 };
 
 type ExchangeExternalUsBankInput = {
@@ -44,6 +46,7 @@ export function mapExternalUsBankAccountFromWire(
       linkToken: account.details.link_token,
       linkTokenExpiration: account.details.link_token_expiration,
       linkUrl: account.details.link_url,
+      jwt: account.details.jwt,
       bankAccountLast4: account.details.bank_account_last4,
       bankName: account.details.bank_name,
       failureReason: account.details.failure_reason,
@@ -74,13 +77,15 @@ export class ExternalUsBankClient extends BaseClient {
       ledger_account_id: params.ledgerId,
       input: {
         label: params.label,
+        ...(params.returnUrl !== undefined
+          ? { return_url: params.returnUrl }
+          : {}),
+        ...(params.state !== undefined ? { state: params.state } : {}),
       },
       metadata: {
         source: 'sdk-typescript',
         ...params.metadata,
       },
-      return_url: params.returnUrl,
-      state: params.state,
     };
 
     const response = await this.httpClient.request<
