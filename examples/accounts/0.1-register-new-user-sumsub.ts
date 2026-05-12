@@ -16,4 +16,3 @@ const session = await bloque.register('david', {
     sumsub_applicant_id: process.env.SUMSUB_APPLICANT_ID!,
   },
 });
-
