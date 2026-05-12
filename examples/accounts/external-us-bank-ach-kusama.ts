@@ -1,4 +1,4 @@
-import { SDK } from "../../packages/sdk/src/index";
+import { SDK } from '../../packages/sdk/src';
 
 /**
  * External US bank (Brale / Plaid) → Kusama (DUSD) — end-to-end flow the
@@ -13,27 +13,37 @@ import { SDK } from "../../packages/sdk/src/index";
  *    creates a swap order (USD/2 → DUSD/6) and runs the graph.
  * 5. Poll `swap.listOrders` or use your own webhooks to observe completion.
  */
+console.log(process.env.ORIGIN!, process.env.ORIGIN_KEY!);
 const bloque = new SDK({
   origin: process.env.ORIGIN!,
   auth: {
-    type: "originKey",
+    type: 'originKey',
     originKey: process.env.ORIGIN_KEY!,
   },
-  mode: "sandbox",
-  platform: "node",
+  mode: 'production',
+  platform: 'node',
 });
 
-const user = await bloque.connect("nestor");
+const user = await bloque.connect('nestor');
 
-const virtual = await user.accounts.virtual.create({}, { waitLedger: true });
+// const virtual = await user.accounts.virtual.create({}, { waitLedger: true });
+
+// console.log('+++++++++++++++');
+// console.log('ledgerId: ', virtual.ledgerId);
+// console.log('+++++++++++++++');
 
 const bank = await user.accounts.externalUsBank.create({
   holderUrn: user.urn,
-  ledgerId: virtual.ledgerId,
-  label: "ACH on-ramp",
+  ledgerId:
+    '0x8a3035ae6d8e9fd867694494d269e94cfa389d17491c63730ed3ee5fb150d251',
+  label: 'ACH on-ramp',
 });
 
-console.log("Plaid link_token (pass to Plaid Link):", bank.details.linkToken);
+console.log('Plaid link_token (pass to Plaid Link):', bank.details.linkToken);
+console.log('  expires at:', bank.details.linkTokenExpiration);
+console.log(
+  '  (or open hosted page instead — pass `returnUrl` at create time to receive `details.linkUrl`)',
+);
 
 // const linked = await user.accounts.externalUsBank.exchangePublicToken({
 //   urn: bank.urn,
@@ -42,17 +52,17 @@ console.log("Plaid link_token (pass to Plaid Link):", bank.details.linkToken);
 // console.log("Linked bank:", linked.details.braleAddressId);
 
 const quote = await user.swap.findRates({
-  fromAsset: "USD/2",
-  toAsset: "DUSD/6",
-  fromMediums: ["external-us-bank"],
-  toMediums: ["kusama"],
-  amountSrc: "10000",
+  fromAsset: 'USD/2',
+  toAsset: 'DUSD/6',
+  fromMediums: ['external-us-bank'],
+  toMediums: ['kusama'],
+  amountSrc: '10000',
 });
 
 console.log(
-  "Indicative rate only — the live order is opened after ACH settles:",
+  'Indicative rate only — the live order is opened after ACH settles:',
   quote.rates[0],
 );
 
-const recent = await user.swap.listOrders({ status: "pending" });
-console.log("Swap orders for this user:", recent.orders);
+const recent = await user.swap.listOrders({ status: 'pending' });
+console.log('Swap orders for this user:', recent.orders);

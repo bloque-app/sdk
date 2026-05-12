@@ -59,6 +59,18 @@ export interface CreateAccountRequest<TInput = unknown> {
   input: TInput;
   metadata?: Record<string, unknown>;
   webhook_url?: string;
+  /**
+   * URL the user is redirected to after a browser-side link flow finishes.
+   * Currently consumed only by the `external-us-bank` medium's hosted Plaid
+   * Link page. Origin must be in the server's
+   * `PLAID_LINK_RETURN_URL_ALLOWLIST`.
+   */
+  return_url?: string;
+  /**
+   * Opaque caller-provided correlator forwarded back through `return_url`
+   * (max 256 characters). Echoed as the `state` query parameter on redirect.
+   */
+  state?: string;
 }
 
 /**
@@ -261,6 +273,15 @@ export interface ExternalUsBankDetails {
   brale_account_id?: string;
   brale_address_id?: string;
   link_token?: string;
+  /** ISO 8601 expiration of `link_token`, as reported by Brale. */
+  link_token_expiration?: string;
+  /**
+   * Fully-qualified URL of the mediums-hosted Plaid Link page. Present when
+   * the server has minted a short-lived `plaid-link` JWT for this pending
+   * account. Open it in a browser to complete linking without embedding
+   * Plaid Link in the caller's frontend.
+   */
+  link_url?: string;
   bank_account_last4?: string;
   bank_name?: string;
   failure_reason?: string;
