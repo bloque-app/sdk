@@ -249,16 +249,19 @@ export class AccountsClient extends BaseClient {
    *
    * @example
    * ```typescript
-   * const transfer = await bloque.accounts.transfer({
-   *   sourceUrn: 'did:bloque:account:card:usr-123:crd-456',
-   *   destinationUrn: 'did:bloque:account:virtual:acc-67890',
-   *   amount: '1000000000000',
-   *   asset: 'KSM/12',
-   *   metadata: {
-   *     reference: 'payment-123',
-   *     note: 'Monthly subscription'
-   *   }
-   * });
+   * const transfer = await bloque.accounts.transfer(
+   *   {
+   *     sourceUrn: 'did:bloque:account:card:usr-123:crd-456',
+   *     destinationUrn: 'did:bloque:account:virtual:acc-67890',
+   *     amount: '1000000000000',
+   *     asset: 'KSM/12',
+   *     metadata: {
+   *       reference: 'payment-123',
+   *       note: 'Monthly subscription'
+   *     }
+   *   },
+   *   { idempotencyKey: 'transfer-payment-123' }
+   * );
    * ```
    */
   async transfer(
@@ -306,28 +309,31 @@ export class AccountsClient extends BaseClient {
    *
    * @example
    * ```typescript
-   * const result = await bloque.accounts.batchTransfer({
-   *   reference: 'batch-payroll-2024-01-15',
-   *   operations: [
-   *     {
-   *       fromUrn: 'did:bloque:account:virtual:acc-12345',
-   *       toUrn: 'did:bloque:account:virtual:acc-67890',
-   *       reference: 'transfer-001',
-   *       amount: '1000000000000',
-   *       asset: 'KSM/12',
-   *       metadata: { note: 'Payment for order #123' }
-   *     },
-   *     {
-   *       fromUrn: 'did:bloque:account:virtual:acc-12345',
-   *       toUrn: 'did:bloque:account:card:usr-456:crd-789',
-   *       reference: 'transfer-002',
-   *       amount: '500000000000',
-   *       asset: 'KSM/12'
-   *     }
-   *   ],
-   *   metadata: { batch_id: 'batch-2024-01-15' },
-   *   webhookUrl: 'https://api.example.com/webhooks/batch-settlement'
-   * });
+   * const result = await bloque.accounts.batchTransfer(
+   *   {
+   *     reference: 'batch-payroll-2024-01-15',
+   *     operations: [
+   *       {
+   *         fromUrn: 'did:bloque:account:virtual:acc-12345',
+   *         toUrn: 'did:bloque:account:virtual:acc-67890',
+   *         reference: 'transfer-001',
+   *         amount: '1000000000000',
+   *         asset: 'KSM/12',
+   *         metadata: { note: 'Payment for order #123' }
+   *       },
+   *       {
+   *         fromUrn: 'did:bloque:account:virtual:acc-12345',
+   *         toUrn: 'did:bloque:account:card:usr-456:crd-789',
+   *         reference: 'transfer-002',
+   *         amount: '500000000000',
+   *         asset: 'KSM/12'
+   *       }
+   *     ],
+   *     metadata: { batch_id: 'batch-2024-01-15' },
+   *     webhookUrl: 'https://api.example.com/webhooks/batch-settlement'
+   *   },
+   *   { idempotencyKey: 'batch-payroll-2024-01-15' }
+   * );
    * ```
    */
   async batchTransfer(

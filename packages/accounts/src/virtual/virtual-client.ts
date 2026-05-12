@@ -124,11 +124,14 @@ export class VirtualClient extends BaseClient {
    *   lastName: 'Doe'
    * });
    *
-   * // Create and wait for active status
+   * // Create and wait for active status with explicit idempotency key
    * const account = await bloque.accounts.virtual.create({
    *   firstName: 'John',
    *   lastName: 'Doe'
-   * }, { waitLedger: true });
+   * }, {
+   *   waitLedger: true,
+   *   idempotencyKey: 'create-virtual-john-doe'
+   * });
    * ```
    */
   async create(

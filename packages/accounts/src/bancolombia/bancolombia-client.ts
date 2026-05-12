@@ -118,10 +118,13 @@ export class BancolombiaClient extends BaseClient {
    *   name: 'Main Account'
    * });
    *
-   * // Create and wait for active status
+   * // Create and wait for active status with explicit idempotency key
    * const account = await bloque.accounts.bancolombia.create({
    *   name: 'Main Account'
-   * }, { waitLedger: true });
+   * }, {
+   *   waitLedger: true,
+   *   idempotencyKey: 'create-bancolombia-main-account'
+   * });
    * ```
    */
   async create(

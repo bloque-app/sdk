@@ -11,14 +11,17 @@ const bloque = new SDK({
 
 const user = await bloque.connect('@nestor');
 
-const virtual = await user.accounts.virtual.create({}, { waitLedger: true });
+const virtual = await user.accounts.virtual.create({}, {
+  waitLedger: true,
+  idempotencyKey: 'f7a3b89e-6d3f-4e9e-8b7f-a1c4d2e5f901',
+});
 
 // Polygon
 const polygon = await user.accounts.polygon.create(
   {
     ledgerId: virtual.ledgerId,
   },
-  { waitLedger: true },
+  { waitLedger: true, idempotencyKey: 'f7a3b89e-6d3f-4e9e-8b7f-a1c4d2e5f901' },
 );
 
 console.log('Polygon account created:', polygon.urn);

@@ -78,10 +78,13 @@ export class CardClient extends BaseClient {
    *   name: 'My Card',
    * });
    *
-   * // Create and wait for active status
+   * // Create and wait for active status with explicit idempotency key
    * const card = await bloque.accounts.card.create({
    *   name: 'My Card',
-   * }, { waitLedger: true });
+   * }, {
+   *   waitLedger: true,
+   *   idempotencyKey: 'create-card-my-card'
+   * });
    * ```
    */
   async create(

@@ -23,19 +23,22 @@ import type {
  *
  * @example
  * ```typescript
- * const result = await bloque.swap.bankTransfer.create({
- *   rateSig: rate.sig,
- *   toMedium: 'banco_de_bogota',
- *   amountSrc: '5000000',
- *   depositInformation: {
- *     bankAccountType: 'savings',
- *     bankAccountNumber: '123456789',
- *     bankAccountHolderName: 'Juan Pérez',
- *     bankAccountHolderIdentificationType: 'CC',
- *     bankAccountHolderIdentificationValue: '1234567890',
+ * const result = await bloque.swap.bankTransfer.create(
+ *   {
+ *     rateSig: rate.sig,
+ *     toMedium: 'banco_de_bogota',
+ *     amountSrc: '5000000',
+ *     depositInformation: {
+ *       bankAccountType: 'savings',
+ *       bankAccountNumber: '123456789',
+ *       bankAccountHolderName: 'Juan Pérez',
+ *       bankAccountHolderIdentificationType: 'CC',
+ *       bankAccountHolderIdentificationValue: '1234567890',
+ *     },
+ *     args: { accountUrn: 'did:bloque:card:abc123' },
  *   },
- *   args: { accountUrn: 'did:bloque:card:abc123' },
- * });
+ *   { idempotencyKey: 'bank-transfer-5000000' }
+ * );
  * ```
  */
 export class BankTransferClient extends BaseClient {

@@ -151,10 +151,13 @@ export class UsClient extends BaseClient {
    *   signedAgreementId: '0d139f8e-14b0-4540-92ba-4e66c619b533'
    * });
    *
-   * // Create and wait for active status
+   * // Create and wait for active status with explicit idempotency key
    * const account = await bloque.accounts.us.create({
    *   // ... params
-   * }, { waitLedger: true });
+   * }, {
+   *   waitLedger: true,
+   *   idempotencyKey: 'create-us-account-robert-johnson'
+   * });
    * ```
    */
   async create(

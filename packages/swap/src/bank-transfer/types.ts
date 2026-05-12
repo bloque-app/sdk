@@ -9,53 +9,62 @@
  *
  * @example Transfer to Bancolombia
  * ```typescript
- * await bloque.swap.bankTransfer.create({
- *   rateSig: rate.sig,
- *   toMedium: 'bancolombia',
- *   amountSrc: '5000000',
- *   depositInformation: {
- *     bankAccountType: 'savings',
- *     bankAccountNumber: '5740088718',
- *     bankAccountHolderName: 'Juan Pérez',
- *     bankAccountHolderIdentificationType: 'CC',
- *     bankAccountHolderIdentificationValue: '1234567890',
+ * await bloque.swap.bankTransfer.create(
+ *   {
+ *     rateSig: rate.sig,
+ *     toMedium: 'bancolombia',
+ *     amountSrc: '5000000',
+ *     depositInformation: {
+ *       bankAccountType: 'savings',
+ *       bankAccountNumber: '5740088718',
+ *       bankAccountHolderName: 'Juan Pérez',
+ *       bankAccountHolderIdentificationType: 'CC',
+ *       bankAccountHolderIdentificationValue: '1234567890',
+ *     },
+ *     args: { sourceAccountUrn: 'did:bloque:card:abc123' },
  *   },
- *   args: { sourceAccountUrn: 'did:bloque:card:abc123' },
- * });
+ *   { idempotencyKey: 'bank-transfer-bancolombia-5000000' }
+ * );
  * ```
  *
  * @example Transfer to Banco de Bogotá
  * ```typescript
- * await bloque.swap.bankTransfer.create({
- *   rateSig: rate.sig,
- *   toMedium: 'banco_de_bogota',
- *   amountSrc: '2000000',
- *   depositInformation: {
- *     bankAccountType: 'checking',
- *     bankAccountNumber: '987654321',
- *     bankAccountHolderName: 'María López',
- *     bankAccountHolderIdentificationType: 'CE',
- *     bankAccountHolderIdentificationValue: '456789',
+ * await bloque.swap.bankTransfer.create(
+ *   {
+ *     rateSig: rate.sig,
+ *     toMedium: 'banco_de_bogota',
+ *     amountSrc: '2000000',
+ *     depositInformation: {
+ *       bankAccountType: 'checking',
+ *       bankAccountNumber: '987654321',
+ *       bankAccountHolderName: 'María López',
+ *       bankAccountHolderIdentificationType: 'CE',
+ *       bankAccountHolderIdentificationValue: '456789',
+ *     },
+ *     args: { sourceAccountUrn: 'did:bloque:card:xyz789' },
  *   },
- *   args: { sourceAccountUrn: 'did:bloque:card:xyz789' },
- * });
+ *   { idempotencyKey: 'bank-transfer-bogota-2000000' }
+ * );
  * ```
  *
  * @example Transfer to BBVA Colombia
  * ```typescript
- * await bloque.swap.bankTransfer.create({
- *   rateSig: rate.sig,
- *   toMedium: 'banco_bbva_colombia',
- *   amountSrc: '10000000',
- *   depositInformation: {
- *     bankAccountType: 'savings',
- *     bankAccountNumber: '1122334455',
- *     bankAccountHolderName: 'Carlos Ruiz',
- *     bankAccountHolderIdentificationType: 'NIT',
- *     bankAccountHolderIdentificationValue: '900123456',
+ * await bloque.swap.bankTransfer.create(
+ *   {
+ *     rateSig: rate.sig,
+ *     toMedium: 'banco_bbva_colombia',
+ *     amountSrc: '10000000',
+ *     depositInformation: {
+ *       bankAccountType: 'savings',
+ *       bankAccountNumber: '1122334455',
+ *       bankAccountHolderName: 'Carlos Ruiz',
+ *       bankAccountHolderIdentificationType: 'NIT',
+ *       bankAccountHolderIdentificationValue: '900123456',
+ *     },
+ *     args: { sourceAccountUrn: 'did:bloque:card:def456' },
  *   },
- *   args: { sourceAccountUrn: 'did:bloque:card:def456' },
- * });
+ *   { idempotencyKey: 'bank-transfer-bbva-10000000' }
+ * );
  * ```
  */
 export type SupportedBank =
