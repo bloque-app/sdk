@@ -91,8 +91,23 @@ export class UsClient extends BaseClient {
       path: `/api/mediums/us-account/tos-link?${queryParams.toString()}`,
     });
 
+    let url = response.result.url;
+    try {
+      const parsedUrl = new URL(url);
+      if (!parsedUrl.searchParams.has('redirect_uri')) {
+        parsedUrl.searchParams.set('redirect_uri', params.redirectUri);
+        url = parsedUrl.toString();
+      }
+    } catch {
+      // Fallback in case a non-absolute URL is returned by the API.
+      const separator = url.includes('?') ? '&' : '?';
+      if (!/[?&]redirect_uri=/.test(url)) {
+        url = `${url}${separator}redirect_uri=${encodeURIComponent(params.redirectUri)}`;
+      }
+    }
+
     return {
-      url: response.result.url,
+      url,
     };
   }
 
@@ -189,6 +204,9 @@ export class UsClient extends BaseClient {
       method: 'POST',
       path: '/api/mediums/us-account',
       body: request,
+      headers: options?.idempotencyKey
+        ? { 'Idempotency-Key': options.idempotencyKey }
+        : undefined,
     });
 
     const account = this._mapAccountResponse(response.result.account);

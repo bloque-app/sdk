@@ -46,6 +46,7 @@ import {
 import type { PolygonAccount } from './polygon/types';
 import type {
   BatchTransferChunkResult,
+  BatchTransferOptions,
   BatchTransferParams,
   BatchTransferResult,
   GeneralTokenBalance,
@@ -55,6 +56,7 @@ import type {
   ListTransactionsParams,
   ListTransactionsResult,
   TokenBalance,
+  TransferOptions,
   TransferParams,
   TransferResult,
 } from './types';
@@ -259,7 +261,10 @@ export class AccountsClient extends BaseClient {
    * });
    * ```
    */
-  async transfer(params: TransferParams): Promise<TransferResult> {
+  async transfer(
+    params: TransferParams,
+    options?: TransferOptions,
+  ): Promise<TransferResult> {
     const asset = params.asset || 'DUSD/6';
     if (!isSupportedAsset(asset)) {
       throw new Error(
@@ -278,6 +283,9 @@ export class AccountsClient extends BaseClient {
       method: 'POST',
       path: `/api/accounts/${params.sourceUrn}/transfer`,
       body: request,
+      headers: options?.idempotencyKey
+        ? { 'Idempotency-Key': options.idempotencyKey }
+        : undefined,
     });
 
     return {
@@ -324,6 +332,7 @@ export class AccountsClient extends BaseClient {
    */
   async batchTransfer(
     params: BatchTransferParams,
+    options?: BatchTransferOptions,
   ): Promise<BatchTransferResult> {
     if (!params.operations || params.operations.length === 0) {
       throw new Error('At least one operation is required');
@@ -360,6 +369,9 @@ export class AccountsClient extends BaseClient {
       method: 'POST',
       path: '/api/accounts/batch/transfer',
       body: request,
+      headers: options?.idempotencyKey
+        ? { 'Idempotency-Key': options.idempotencyKey }
+        : undefined,
     });
 
     const chunks: BatchTransferChunkResult[] = response.result.chunks.map(

@@ -147,6 +147,9 @@ export class BancolombiaClient extends BaseClient {
       method: 'POST',
       path: '/api/mediums/bancolombia',
       body: request,
+      headers: options?.idempotencyKey
+        ? { 'Idempotency-Key': options.idempotencyKey }
+        : undefined,
     });
 
     const account = this._mapAccountResponse(response.result.account);

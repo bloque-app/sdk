@@ -24,6 +24,10 @@ export interface CreateAccountOptions {
    * @default 60000 (60 seconds)
    */
   timeout?: number;
+  /**
+   * Custom idempotency key used for account creation POST requests.
+   */
+  idempotencyKey?: string;
 }
 
 /**
@@ -55,6 +59,13 @@ export interface TransferParams {
    * @example { reference: "payment-123", note: "Monthly subscription" }
    */
   metadata?: Record<string, unknown>;
+}
+
+export interface TransferOptions {
+  /**
+   * Optional custom idempotency key sent as `Idempotency-Key` header.
+   */
+  idempotencyKey?: string;
 }
 
 /**
@@ -125,6 +136,13 @@ export interface BatchTransferParams {
    * Optional webhook URL to receive settlement notifications
    */
   webhookUrl?: string;
+}
+
+export interface BatchTransferOptions {
+  /**
+   * Optional custom idempotency key sent as `Idempotency-Key` header.
+   */
+  idempotencyKey?: string;
 }
 
 /**

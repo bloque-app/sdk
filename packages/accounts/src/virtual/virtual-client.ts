@@ -156,6 +156,9 @@ export class VirtualClient extends BaseClient {
       method: 'POST',
       path: '/api/mediums/virtual',
       body: request,
+      headers: options?.idempotencyKey
+        ? { 'Idempotency-Key': options.idempotencyKey }
+        : undefined,
     });
 
     const account = this._mapAccountResponse(response.result.account);
