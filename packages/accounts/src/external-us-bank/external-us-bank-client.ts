@@ -42,6 +42,8 @@ export function mapExternalUsBankAccountFromWire(
       braleAccountId: account.details.brale_account_id,
       braleAddressId: account.details.brale_address_id,
       linkToken: account.details.link_token,
+      linkTokenExpiration: account.details.link_token_expiration,
+      linkUrl: account.details.link_url,
       bankAccountLast4: account.details.bank_account_last4,
       bankName: account.details.bank_name,
       failureReason: account.details.failure_reason,
@@ -51,8 +53,16 @@ export function mapExternalUsBankAccountFromWire(
 
 export class ExternalUsBankClient extends BaseClient {
   /**
-   * Start the Plaid linkage flow. Returns an account whose `details.linkToken`
-   * can be used to initialize Plaid Link on the frontend.
+   * Start the Plaid linkage flow.
+   *
+   * Two ways to finish linking:
+   * - **Hosted page** — pass `returnUrl` (and optionally `state`). The
+   *   response includes `details.linkUrl`; open it in a browser and the
+   *   page exchanges the Plaid `public_token` on behalf of the user, then
+   *   redirects to `returnUrl?status=…&state=…`. Zero frontend code.
+   * - **Embedded Plaid Link** — omit `returnUrl`. Use `details.linkToken`
+   *   to drive Plaid Link in your own frontend, then call
+   *   {@link ExternalUsBankClient.exchangePublicToken} from your backend.
    */
   async create(
     params: CreateExternalUsBankAccountParams,
@@ -69,6 +79,8 @@ export class ExternalUsBankClient extends BaseClient {
         source: 'sdk-typescript',
         ...params.metadata,
       },
+      return_url: params.returnUrl,
+      state: params.state,
     };
 
     const response = await this.httpClient.request<
@@ -88,6 +100,11 @@ export class ExternalUsBankClient extends BaseClient {
 
   /**
    * Finish the Plaid linkage flow by exchanging the Plaid `public_token`.
+   *
+   * Only needed when you drove Plaid Link yourself. If the user completed
+   * linking through the hosted page (`details.linkUrl`), the server already
+   * exchanged the token on redirect — call {@link AccountsClient.get} on the
+   * URN to read the final state instead.
    */
   async exchangePublicToken(
     params: ExchangeExternalUsBankPublicTokenParams,
