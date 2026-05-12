@@ -214,6 +214,13 @@ export interface CreateBankTransferOrderParams {
   metadata?: Record<string, unknown>;
 }
 
+export interface CreateBankTransferOrderOptions {
+  /**
+   * Optional custom idempotency key sent as `Idempotency-Key` header.
+   */
+  idempotencyKey?: string;
+}
+
 /**
  * Swap order details
  */

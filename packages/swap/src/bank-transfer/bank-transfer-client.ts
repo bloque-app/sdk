@@ -8,6 +8,7 @@ import type {
 } from '../internal/wire-types';
 import type {
   BankDepositInformation,
+  CreateBankTransferOrderOptions,
   CreateBankTransferOrderParams,
   CreateBankTransferOrderResult,
   ExecutionResult,
@@ -50,6 +51,7 @@ export class BankTransferClient extends BaseClient {
    */
   async create(
     params: CreateBankTransferOrderParams,
+    options?: CreateBankTransferOrderOptions,
   ): Promise<CreateBankTransferOrderResult> {
     const takerUrn = this.httpClient.urn;
     if (!takerUrn) {
@@ -96,6 +98,9 @@ export class BankTransferClient extends BaseClient {
       method: 'PUT',
       path: '/api/order',
       body: input,
+      headers: options?.idempotencyKey
+        ? { 'Idempotency-Key': options.idempotencyKey }
+        : undefined,
     });
 
     return {

@@ -10,6 +10,7 @@ import type {
 } from '../internal/wire-types';
 import type {
   Bank,
+  CreatePseOrderOptions,
   CreatePseOrderParams,
   CreatePseOrderResult,
   DepositInformation,
@@ -97,7 +98,10 @@ export class PseClient extends BaseClient {
    * }
    * ```
    */
-  async create(params: CreatePseOrderParams): Promise<CreatePseOrderResult> {
+  async create(
+    params: CreatePseOrderParams,
+    options?: CreatePseOrderOptions,
+  ): Promise<CreatePseOrderResult> {
     const takerUrn = this.httpClient.urn;
     if (!takerUrn) {
       throw new BloqueConfigError(
@@ -153,6 +157,9 @@ export class PseClient extends BaseClient {
       method: 'PUT',
       path: '/api/order',
       body: input,
+      headers: options?.idempotencyKey
+        ? { 'Idempotency-Key': options.idempotencyKey }
+        : undefined,
     });
 
     return {

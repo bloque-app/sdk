@@ -68,6 +68,13 @@ export interface CreateBrebOrderParams {
   metadata?: Record<string, unknown>;
 }
 
+export interface CreateBrebOrderOptions {
+  /**
+   * Optional custom idempotency key sent as `Idempotency-Key` header.
+   */
+  idempotencyKey?: string;
+}
+
 export interface CreateBrebOrderResult {
   /**
    * The created order.

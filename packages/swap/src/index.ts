@@ -4,6 +4,7 @@ export { BankTransferClient } from './bank-transfer/bank-transfer-client';
 export type {
   BankAccountType,
   BankDepositInformation,
+  CreateBankTransferOrderOptions,
   CreateBankTransferOrderParams,
   CreateBankTransferOrderResult,
   ExecutionHow,
@@ -18,6 +19,7 @@ export { BrebClient } from './breb/breb-client';
 export type {
   BrebDepositInformation,
   BrebSwapArgs,
+  CreateBrebOrderOptions,
   CreateBrebOrderParams,
   CreateBrebOrderResult,
 } from './breb/types';
@@ -25,6 +27,7 @@ export { PseClient } from './pse/pse-client';
 // PSE — only unique types
 export type {
   Bank,
+  CreatePseOrderOptions,
   CreatePseOrderParams,
   CreatePseOrderResult,
   DepositInformation,
