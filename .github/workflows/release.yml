@@ -28,10 +28,10 @@ jobs:
         run: bun install
 
       - name: Build code
-        run: bun run build
+        run: bun run build:sdk-only
 
       - name: Publish Packages
         env:
           NPM_CONFIG_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
-          bun run release
+          bun run release:sdk-only

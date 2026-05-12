@@ -34,6 +34,10 @@ function getPlatformPackageName() {
     if (process.arch === 'x64') return `@bloque/cli-linux-x64${muslSuffix}`;
   }
 
+  if (process.platform === 'win32') {
+    if (process.arch === 'x64') return '@bloque/cli-windows-x64';
+  }
+
   throw new Error(
     `Unsupported platform for Bloque CLI: ${process.platform}-${process.arch}`,
   );
@@ -52,6 +56,14 @@ function getBinaryFileName() {
       ? `bloque-linux-arm64${muslSuffix}`
       : `bloque-linux-x64${muslSuffix}`;
   }
+
+  if (process.platform === 'win32') {
+    return 'bloque-windows-x64.exe';
+  }
+
+  throw new Error(
+    `Unsupported platform for Bloque CLI: ${process.platform}-${process.arch}`,
+  );
 }
 
 function getFallbackBinaryPath() {

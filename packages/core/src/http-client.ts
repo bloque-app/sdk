@@ -15,6 +15,8 @@ import type {
 } from './types';
 
 const EXCHANGE_REFRESH_BUFFER_MS = 60_000;
+const IDEMPOTENCY_HEADER = 'Idempotency-Key';
+const IDEMPOTENT_METHODS = new Set(['POST', 'PUT']);
 
 const isFrontendPlatform = (platform?: string) =>
   platform === 'browser' || platform === 'react-native';
@@ -317,6 +319,36 @@ export class HttpClient {
     return new Promise((resolve) => setTimeout(resolve, ms));
   }
 
+  private generateIdempotencyKey(): string {
+    if (
+      typeof globalThis.crypto !== 'undefined' &&
+      typeof globalThis.crypto.randomUUID === 'function'
+    ) {
+      return globalThis.crypto.randomUUID();
+    }
+
+    return `idem_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+  }
+
+  private isIdempotencyKeyError(
+    status: number,
+    errorData: { message?: string; code?: string },
+  ): boolean {
+    if (status !== 409 && status !== 400) {
+      return false;
+    }
+
+    const haystack = `${errorData.code ?? ''} ${errorData.message ?? ''}`
+      .toLowerCase()
+      .trim();
+
+    return (
+      haystack.includes('idempotency-key') ||
+      haystack.includes('idempotency key') ||
+      haystack.includes('duplicated idempotency key')
+    );
+  }
+
   /**
    * Ensures the SDK has a valid JWT from exchanging the sk_ secret key.
    * Uses promise coalescing to prevent concurrent exchange calls.
@@ -385,6 +417,9 @@ export class HttpClient {
       ...this.buildAuthHeaders(path),
       ...headers,
     };
+    if (IDEMPOTENT_METHODS.has(method.toUpperCase())) {
+      requestHeaders[IDEMPOTENCY_HEADER] = this.generateIdempotencyKey();
+    }
 
     // Determine the timeout to use (per-request timeout or default config timeout)
     const effectiveTimeout =
@@ -468,6 +503,10 @@ export class HttpClient {
                     response: responseData,
                   },
                 );
+
+          if (this.isIdempotencyKeyError(response.status, errorData)) {
+            throw apiError;
+          }
 
           // Check if this error is retryable
           if (

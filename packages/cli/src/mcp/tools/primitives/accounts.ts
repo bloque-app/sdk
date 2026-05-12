@@ -7,9 +7,9 @@ export function registerAccountTools(server: McpServer, clients: BloqueClients) 
   server.registerTool(
     'list_accounts',
     {
-      description: 'List all financial accounts (cards, virtual pockets, polygon, US bank, Bancolombia) owned by the authenticated user. Optionally filter by account type. Use this to discover what accounts exist before operating on them. Returns URN, status, medium type, and balances for each account.',
+      description: 'List all financial accounts (cards, virtual pockets, polygon, US bank, Bancolombia, BRE-B) owned by the authenticated user. Optionally filter by account type. Use this to discover what accounts exist before operating on them. Returns URN, status, medium type, and balances for each account.',
       inputSchema: {
-        medium: z.enum(['card', 'virtual', 'polygon', 'us-account', 'bancolombia']).optional(),
+        medium: z.enum(['card', 'virtual', 'polygon', 'us-account', 'bancolombia', 'breb']).optional(),
       },
     },
     async ({ medium }) => {
@@ -63,6 +63,112 @@ export function registerAccountTools(server: McpServer, clients: BloqueClients) 
       const balances = humanizeBalance(raw);
       return {
         content: [{ type: 'text', text: JSON.stringify(balances, null, 2) }],
+      };
+    },
+  );
+
+  server.registerTool(
+    'create_breb_key',
+    {
+      description: 'Create a BRE-B key account linked to the authenticated user session. Returns { data, error } where data includes the created BRE-B account URN and key metadata.',
+      inputSchema: {
+        keyType: z.enum(['ID', 'PHONE', 'EMAIL', 'ALPHA', 'BCODE']),
+        key: z.string(),
+        displayName: z.string().optional(),
+        ledgerId: z.string().optional(),
+        webhookUrl: z.string().optional(),
+        metadata: z.record(z.string(), z.unknown()).optional(),
+      },
+    },
+    async ({ keyType, key, displayName, ledgerId, webhookUrl, metadata }) => {
+      const result = await clients.accounts.breb.createKey({
+        keyType,
+        key,
+        displayName,
+        ledgerId,
+        webhookUrl,
+        metadata,
+      });
+      return {
+        content: [{ type: 'text', text: JSON.stringify(result, null, 2) }],
+      };
+    },
+  );
+
+  server.registerTool(
+    'resolve_breb_key',
+    {
+      description: 'Resolve a BRE-B key (phone/email/id/alias/barcode) to obtain recipient routing details and a resolutionId for payouts.',
+      inputSchema: {
+        keyType: z.enum(['ID', 'PHONE', 'EMAIL', 'ALPHA', 'BCODE']),
+        key: z.string(),
+      },
+    },
+    async ({ keyType, key }) => {
+      const result = await clients.accounts.breb.resolveKey({
+        keyType,
+        key,
+      });
+      return {
+        content: [{ type: 'text', text: JSON.stringify(result, null, 2) }],
+      };
+    },
+  );
+
+  server.registerTool(
+    'decode_breb_qr',
+    {
+      description: 'Decode a BRE-B QR payload and return parsed data (amount, key, merchant, resolutionId, and embedded resolution when available).',
+      inputSchema: {
+        qrCodeData: z.string(),
+      },
+    },
+    async ({ qrCodeData }) => {
+      const result = await clients.accounts.breb.decodeQr({ qrCodeData });
+      return {
+        content: [{ type: 'text', text: JSON.stringify(result, null, 2) }],
+      };
+    },
+  );
+
+  server.registerTool(
+    'suspend_breb_key',
+    {
+      description: 'Suspend (freeze) a previously created BRE-B key account by account URN.',
+      inputSchema: { accountUrn: z.string() },
+    },
+    async ({ accountUrn }) => {
+      const result = await clients.accounts.breb.suspendKey({ accountUrn });
+      return {
+        content: [{ type: 'text', text: JSON.stringify(result, null, 2) }],
+      };
+    },
+  );
+
+  server.registerTool(
+    'activate_breb_key',
+    {
+      description: 'Activate a previously suspended BRE-B key account by account URN.',
+      inputSchema: { accountUrn: z.string() },
+    },
+    async ({ accountUrn }) => {
+      const result = await clients.accounts.breb.activateKey({ accountUrn });
+      return {
+        content: [{ type: 'text', text: JSON.stringify(result, null, 2) }],
+      };
+    },
+  );
+
+  server.registerTool(
+    'delete_breb_key',
+    {
+      description: 'Delete a BRE-B key account by account URN.',
+      inputSchema: { accountUrn: z.string() },
+    },
+    async ({ accountUrn }) => {
+      const result = await clients.accounts.breb.deleteKey({ accountUrn });
+      return {
+        content: [{ type: 'text', text: JSON.stringify(result, null, 2) }],
       };
     },
   );

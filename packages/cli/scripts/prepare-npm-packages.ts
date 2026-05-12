@@ -60,6 +60,12 @@ const platformPackages: PlatformPackage[] = [
     cpu: ['x64'],
     libc: ['musl'],
   },
+  {
+    name: '@bloque/cli-windows-x64',
+    binaryFile: 'bloque-windows-x64.exe',
+    os: ['win32'],
+    cpu: ['x64'],
+  },
 ];
 
 function ensureFileExists(filePath: string) {
@@ -83,6 +89,7 @@ const rootPackageJson = {
   version: packageJson.version,
   description: packageJson.description,
   keywords: packageJson.keywords,
+  repository: packageJson.repository,
   bin: {
     bloque: './bin/npm.cjs',
   },
@@ -146,6 +153,7 @@ for (const platformPackage of platformPackages) {
     name: platformPackage.name,
     version: packageJson.version,
     description: `${packageJson.description} (${platformPackage.binaryFile})`,
+    repository: packageJson.repository,
     os: platformPackage.os,
     cpu: platformPackage.cpu,
     libc: platformPackage.libc,

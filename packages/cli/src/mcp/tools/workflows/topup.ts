@@ -151,4 +151,102 @@ export function registerTopupWorkflows(server: McpServer, clients: BloqueClients
       };
     },
   );
+
+  server.registerTool(
+    'send_to_breb_key',
+    {
+      description:
+        'Send money to a BRE-B key in one step. Resolves the key, finds exchange rates, and creates the BRE-B payout order.',
+      inputSchema: {
+        sourceAccountUrn: z.string(),
+        amount: z.string(),
+        sourceCurrency: z.string().default('COPM'),
+        targetCurrency: z.string().default('COP'),
+        sourceMedium: z.string().default('kusama'),
+        keyType: z.enum(['ID', 'PHONE', 'EMAIL', 'ALPHA', 'BCODE']),
+        key: z.string(),
+        webhookUrl: z.string().optional(),
+      },
+    },
+    async ({
+      sourceAccountUrn,
+      amount,
+      sourceCurrency,
+      targetCurrency,
+      sourceMedium,
+      keyType,
+      key,
+      webhookUrl,
+    }) => {
+      const resolution = await clients.accounts.breb.resolveKey({ keyType, key });
+      if (resolution.error || !resolution.data) {
+        return {
+          content: [{
+            type: 'text',
+            text: JSON.stringify(
+              { error: resolution.error?.message ?? 'Failed to resolve BRE-B key' },
+              null,
+              2,
+            ),
+          }],
+        };
+      }
+
+      const { amount: rawAmount, asset: fromAsset } = toRaw(amount, sourceCurrency);
+      const { asset: toAsset } = toRaw('1', targetCurrency);
+
+      const ratesResult = await clients.swap.findRates({
+        fromAsset,
+        toAsset,
+        fromMediums: [sourceMedium],
+        toMediums: ['breb'],
+        amountSrc: rawAmount,
+      });
+      const rate = ratesResult.rates[0];
+      if (!rate) {
+        return {
+          content: [{
+            type: 'text',
+            text: JSON.stringify(
+              {
+                error: `No exchange rates available for ${fromAsset} → ${toAsset} via ${sourceMedium} -> breb`,
+              },
+              null,
+              2,
+            ),
+          }],
+        };
+      }
+
+      const orderResult = await clients.swap.breb.create({
+        rateSig: rate.sig,
+        amountSrc: rawAmount,
+        webhookUrl,
+        depositInformation: {
+          resolutionId: resolution.data.resolutionId,
+        },
+        args: { sourceAccountUrn },
+      });
+
+      const result = {
+        resolution: {
+          resolutionId: resolution.data.resolutionId,
+          owner: resolution.data.owner,
+          participant: resolution.data.participant,
+          account: resolution.data.account,
+        },
+        order: {
+          id: orderResult.order.id,
+          fromAmount: orderResult.order.fromAmount,
+          toAmount: orderResult.order.toAmount,
+          status: orderResult.order.status,
+        },
+        execution: orderResult.execution,
+        rate: { ratio: rate.ratio, fee: rate.fee },
+      };
+      return {
+        content: [{ type: 'text', text: JSON.stringify(result, null, 2) }],
+      };
+    },
+  );
 }

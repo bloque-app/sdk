@@ -128,4 +128,48 @@ export function registerSwapTools(server: McpServer, clients: BloqueClients) {
       };
     },
   );
+
+  server.registerTool(
+    'create_breb_order',
+    {
+      description: "Low-level: create a BRE-B payout order using a previously resolved BRE-B key (resolutionId). Use 'send_to_breb_key' workflow for a simpler flow.",
+      inputSchema: {
+        rateSig: z.string(),
+        amountSrc: z.string().optional(),
+        amountDst: z.string().optional(),
+        type: z.enum(['src', 'dst']).optional(),
+        resolutionId: z.string(),
+        sourceAccountUrn: z.string(),
+        webhookUrl: z.string().optional(),
+        nodeId: z.string().optional(),
+        metadata: z.record(z.string(), z.unknown()).optional(),
+      },
+    },
+    async ({
+      rateSig,
+      amountSrc,
+      amountDst,
+      type,
+      resolutionId,
+      sourceAccountUrn,
+      webhookUrl,
+      nodeId,
+      metadata,
+    }) => {
+      const result = await clients.swap.breb.create({
+        rateSig,
+        amountSrc,
+        amountDst,
+        type,
+        webhookUrl,
+        nodeId,
+        metadata,
+        depositInformation: { resolutionId },
+        args: { sourceAccountUrn },
+      });
+      return {
+        content: [{ type: 'text', text: JSON.stringify(result, null, 2) }],
+      };
+    },
+  );
 }
