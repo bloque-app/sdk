@@ -59,18 +59,6 @@ export interface CreateAccountRequest<TInput = unknown> {
   input: TInput;
   metadata?: Record<string, unknown>;
   webhook_url?: string;
-  /**
-   * URL the user is redirected to after a browser-side link flow finishes.
-   * Currently consumed only by the `external-us-bank` medium's hosted Plaid
-   * Link page. Origin must be in the server's
-   * `PLAID_LINK_RETURN_URL_ALLOWLIST`.
-   */
-  return_url?: string;
-  /**
-   * Opaque caller-provided correlator forwarded back through `return_url`
-   * (max 256 characters). Echoed as the `state` query parameter on redirect.
-   */
-  state?: string;
 }
 
 /**
@@ -282,6 +270,12 @@ export interface ExternalUsBankDetails {
    * Plaid Link in the caller's frontend.
    */
   link_url?: string;
+  /**
+   * Short-lived JWT for the hosted Plaid Link page (same scope as the link
+   * flow). Only set when `link_status === 'pending_link'` and the server
+   * issues a token.
+   */
+  jwt?: string;
   bank_account_last4?: string;
   bank_name?: string;
   failure_reason?: string;

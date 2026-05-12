@@ -7,7 +7,8 @@ import { SDK } from '../../packages/sdk/src';
  * linking on a Bloque-hosted page instead of inside the caller's frontend.
  *
  * Server flow:
- *   1. Pass `returnUrl` (and optionally `state`) to `externalUsBank.create()`.
+ *   1. Pass `returnUrl` (and optionally `state`) to `externalUsBank.create()` —
+ *      serialized as `input.return_url` / `input.state` on the mediums API.
  *   2. The server mints a short-lived `plaid-link` JWT, builds a hosted URL,
  *      and returns it as `details.linkUrl`.
  *   3. Send the user to `details.linkUrl` (redirect, email, deep link...).
@@ -21,12 +22,27 @@ import { SDK } from '../../packages/sdk/src';
 
 const bloque = new SDK({
   origin: process.env.ORIGIN!,
-  auth: { type: 'originKey', originKey: process.env.ORIGIN_KEY! },
-  mode: 'production',
+  auth: {
+    type: 'originKey',
+    originKey: process.env.ORIGIN_KEY!,
+  },
+  mode: 'sandbox',
   platform: 'node',
 });
 
-const user = await bloque.connect('nestor');
+const user = await bloque.register('@nestor4', {
+  type: 'individual',
+  profile: {
+    email: 'nestor@example.com',
+  },
+  extraContext: {
+    sumsub_applicant_id: process.env.SUMSUB_APPLICANT_ID!,
+  },
+});
+
+console.log({
+  profile: await user.identity.get(user.urn!),
+});
 
 const bank = await user.accounts.externalUsBank.create({
   holderUrn: user.urn,

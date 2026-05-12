@@ -27,6 +27,11 @@ export interface ExternalUsBankAccountDetails {
    * issued one (typically when `returnUrl` was supplied at create time).
    */
   linkUrl?: string;
+  /**
+   * Short-lived JWT for the hosted Plaid Link page, when the server returns it
+   * alongside `linkUrl` (same TTL as the link session).
+   */
+  jwt?: string;
   bankAccountLast4?: string;
   bankName?: string;
   failureReason?: string;

@@ -21,7 +21,7 @@ Pick one when you call `create()`:
 
 ## Flow A — Hosted page (recommended)
 
-Pass `returnUrl`. The server mints a short-lived session token, builds a hosted URL, and returns it as `details.linkUrl`.
+Pass `returnUrl` on `create()` (the SDK sends it in the medium `input` body). The server mints a short-lived session token, builds a hosted URL, and returns it as `details.linkUrl` (and may include `details.jwt`).
 
 ```typescript title="start-link.ts"
 const pending = await user.accounts.externalUsBank.create({
@@ -101,6 +101,7 @@ console.log(linked.details.bankName, linked.details.bankAccountLast4);
 | `linkToken` | `string` | both flows (use it for embedded Plaid Link) |
 | `linkTokenExpiration` | `string` (ISO 8601) | both flows |
 | `linkUrl` | `string` | hosted page flow only (`returnUrl` supplied at create) |
+| `jwt` | `string` | optional; short-lived token for the hosted page when the server issues one |
 | `braleAccountId` | `string` | once Brale has provisioned the account |
 | `braleAddressId` | `string` | after `public_token` is exchanged |
 | `bankName` | `string` | after `public_token` is exchanged |
