@@ -1,5 +1,12 @@
 # @bloque/sdk-accounts
 
+## 0.1.10
+
+### Patch Changes
+
+- Added new feat external account
+  - @bloque/sdk-core@0.1.10
+
 ## 0.1.2
 
 ### Patch Changes
