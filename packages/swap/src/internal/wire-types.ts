@@ -199,3 +199,17 @@ export interface CreateOrderResponse {
   };
   req_id: string;
 }
+
+/**
+ * @internal
+ * Cancel subscription response from API.
+ */
+export interface CancelSubscriptionResponse {
+  result: {
+    status: 'cancellation_pending' | 'already_cancelled' | 'graph_done';
+    cursor: number | null;
+    order_id: string;
+    graph_id: string;
+  };
+  req_id: string;
+}

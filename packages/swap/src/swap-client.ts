@@ -4,6 +4,7 @@ import { BankTransferClient } from './bank-transfer/bank-transfer-client';
 import type { SwapOrder } from './bank-transfer/types';
 import { BrebClient } from './breb/breb-client';
 import type {
+  CancelSubscriptionResponse,
   FindRatesResponse,
   ListOrdersResponse,
   OrderResponse,
@@ -11,6 +12,8 @@ import type {
 } from './internal/wire-types';
 import { PseClient } from './pse/pse-client';
 import type {
+  CancelSubscriptionParams,
+  CancelSubscriptionResult,
   FindRatesParams,
   FindRatesResult,
   ListOrdersParams,
@@ -150,6 +153,28 @@ export class SwapClient extends BaseClient {
 
     return {
       orders: response.orders.map((order) => this._mapOrderResponse(order)),
+    };
+  }
+
+  /**
+   * Cancel a recurring subscription created via recurring-card graphs.
+   *
+   * This sets a cancellation flag on the underlying instruction graph so future
+   * occurrences stop. In-flight occurrences are not interrupted.
+   */
+  async cancelSubscription(
+    params: CancelSubscriptionParams,
+  ): Promise<CancelSubscriptionResult> {
+    const response = await this.httpClient.request<CancelSubscriptionResponse>({
+      method: 'POST',
+      path: `/api/order/${params.orderId}/cancel-subscription`,
+    });
+
+    return {
+      status: response.result.status,
+      cursor: response.result.cursor,
+      orderId: response.result.order_id,
+      graphId: response.result.graph_id,
     };
   }
 

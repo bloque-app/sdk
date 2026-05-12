@@ -1,0 +1,112 @@
+import { QuestHeader } from '@theme';
+
+<QuestHeader
+  prereqs={["Connected SDK client", "KYC (if enforced by your origin)", "A browser to open the hosted Plaid Link page — or a frontend that can run Plaid Link"]}
+  unlocks={["Link a US bank account via Plaid", "Store a stable bank URN for ACH on-ramp flows"]}
+  time="10 min"
+/>
+
+# External US Bank (Plaid)
+
+Link a US bank account using Plaid. Bloque uses Brale under the hood to create a Plaid session and turn the resulting `public_token` into an external bank address.
+
+## Two flows
+
+Pick one when you call `create()`:
+
+| Flow | When | What you write |
+|------|------|----------------|
+| **Hosted page** | Default. Web, mobile webview, email. | Backend only. Open `details.linkUrl` in a browser. Bloque runs Plaid Link and exchanges the token on redirect. |
+| **Embedded Plaid Link** | You need full UI control inside your own app. | Backend + frontend. Drive Plaid Link with `details.linkToken`, then exchange the `public_token` from your backend. |
+
+## Flow A — Hosted page (recommended)
+
+Pass `returnUrl`. The server mints a short-lived session token, builds a hosted URL, and returns it as `details.linkUrl`.
+
+```typescript title="start-link.ts"
+const pending = await user.accounts.externalUsBank.create({
+  label: 'My bank',
+  ledgerId: pocket.ledgerId,
+  returnUrl: 'https://app.example.com/wallet/plaid-return',
+  state: 'user-session-xyz', // optional opaque correlator
+});
+
+if (!pending.details.linkUrl) {
+  throw new Error('Expected linkUrl — check returnUrl origin allowlist');
+}
+
+// Send the user to the hosted page (redirect, email, deep link…)
+redirectTo(pending.details.linkUrl);
+```
+
+The hosted page handles Plaid Link, exchanges the `public_token`, then redirects to:
+
+```
+https://app.example.com/wallet/plaid-return?status=success&state=user-session-xyz
+```
+
+`status` is `success`, `cancelled`, or `error`. When the user returns, read final state:
+
+```typescript title="handle-return.ts"
+const linked = await user.accounts.get(pending.urn);
+
+console.log(linked.details.linkStatus);          // 'active' | 'pending_link' | 'link_failed' | 'closed'
+console.log(linked.details.bankName);
+console.log(linked.details.bankAccountLast4);
+```
+
+:::info `returnUrl` origin must be allowlisted
+The server validates the origin of `returnUrl` against `PLAID_LINK_RETURN_URL_ALLOWLIST`. If it isn't allowlisted, the create call fails before any link token is minted.
+:::
+
+## Flow B — Embedded Plaid Link
+
+Omit `returnUrl`. Use `details.linkToken` to run Plaid Link inside your own frontend, then call `exchangePublicToken()` from your backend.
+
+```typescript title="start-link.ts"
+const pending = await user.accounts.externalUsBank.create({
+  label: 'My bank',
+  ledgerId: pocket.ledgerId, // optional: attach to an existing ledger pool
+});
+
+if (!pending.details.linkToken) {
+  throw new Error('Expected Plaid linkToken');
+}
+
+// pending.details.linkToken           → pass to Plaid Link on the frontend
+// pending.details.linkTokenExpiration → ISO 8601 expiry
+```
+
+Run Plaid Link with the `linkToken`. Plaid returns a `public_token` when the user completes the flow. Exchange it:
+
+```typescript title="finish-link.ts"
+const linked = await user.accounts.externalUsBank.exchangePublicToken({
+  urn: pending.urn,
+  publicToken: '<PLAID_PUBLIC_TOKEN>',
+});
+
+console.log(linked.details.linkStatus); // 'active' | 'pending_link' | 'link_failed' | 'closed'
+console.log(linked.details.bankName, linked.details.bankAccountLast4);
+```
+
+## What to persist
+
+`pending.urn`. Treat it as the stable identifier for the linked bank account in both flows.
+
+## Field reference (response `details`)
+
+| Field | Type | When present |
+|-------|------|--------------|
+| `linkStatus` | `'pending_link' \| 'active' \| 'link_failed' \| 'closed'` | always |
+| `linkToken` | `string` | both flows (use it for embedded Plaid Link) |
+| `linkTokenExpiration` | `string` (ISO 8601) | both flows |
+| `linkUrl` | `string` | hosted page flow only (`returnUrl` supplied at create) |
+| `braleAccountId` | `string` | once Brale has provisioned the account |
+| `braleAddressId` | `string` | after `public_token` is exchanged |
+| `bankName` | `string` | after `public_token` is exchanged |
+| `bankAccountLast4` | `string` | after `public_token` is exchanged |
+| `failureReason` | `string` | when `linkStatus === 'link_failed'` |
+
+## Webhooks
+
+If you configured a `webhookUrl` during account creation, you can receive lifecycle and transfer events for this medium via your webhook endpoint.

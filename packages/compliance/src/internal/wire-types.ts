@@ -19,7 +19,6 @@ export interface StartKycVerificationRequest {
   urn: string;
   type: 'kyc' | 'kyb';
   accompliceType: AccompliceType;
-  webhookUrl?: string;
 }
 
 /**
@@ -45,4 +44,26 @@ export interface GetKycVerificationResponse {
   status: 'awaiting_compliance_verification' | 'approved' | 'rejected';
   verification_url: string;
   completed_at: string | null;
+  result?: unknown;
+  documents_status?: string;
+}
+
+/**
+ * @internal
+ * Document image returned by the documents endpoint.
+ */
+export interface ComplianceDocumentImage {
+  document_type: string;
+  side: string;
+  image_base64: string;
+  image_size_bytes: number;
+}
+
+/**
+ * @internal
+ * Get compliance documents response.
+ */
+export interface GetKycDocumentsResponse {
+  documents_status: string;
+  documents: ComplianceDocumentImage[];
 }

@@ -185,3 +185,22 @@ export interface ListOrdersParams {
 export interface ListOrdersResult {
   orders: import('./bank-transfer/types').SwapOrder[];
 }
+
+export interface CancelSubscriptionParams {
+  /**
+   * Order signature (`order_sig`) of the recurring subscription.
+   */
+  orderId: string;
+}
+
+export type CancelSubscriptionStatus =
+  | 'cancellation_pending'
+  | 'already_cancelled'
+  | 'graph_done';
+
+export interface CancelSubscriptionResult {
+  status: CancelSubscriptionStatus;
+  cursor: number | null;
+  orderId: string;
+  graphId: string;
+}

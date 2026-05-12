@@ -28,7 +28,9 @@ export interface Account<TDetails = unknown> {
     | 'bancolombia'
     | 'breb'
     | 'card'
+    | 'external-us-bank'
     | 'virtual'
+    | 'us2-account'
     | 'us-account'
     | 'polygon';
   details: TDetails;
@@ -57,6 +59,18 @@ export interface CreateAccountRequest<TInput = unknown> {
   input: TInput;
   metadata?: Record<string, unknown>;
   webhook_url?: string;
+  /**
+   * URL the user is redirected to after a browser-side link flow finishes.
+   * Currently consumed only by the `external-us-bank` medium's hosted Plaid
+   * Link page. Origin must be in the server's
+   * `PLAID_LINK_RETURN_URL_ALLOWLIST`.
+   */
+  return_url?: string;
+  /**
+   * Opaque caller-provided correlator forwarded back through `return_url`
+   * (max 256 characters). Echoed as the `state` query parameter on redirect.
+   */
+  state?: string;
 }
 
 /**
@@ -215,6 +229,62 @@ export interface UsDetails {
   birth_date: string;
   account_number?: string;
   routing_number?: string;
+}
+
+/**
+ * @internal
+ * US2 account input for creation
+ */
+export interface CreateUs2AccountInput {
+  type: 'individual' | 'business';
+  email: string;
+  phone?: string;
+  proof_of_address?: string;
+  business_formation_document?: string;
+  tax_id?: string;
+  address?: {
+    street?: string;
+    city?: string;
+    state?: string;
+    postal_code?: string;
+    country?: string;
+  };
+}
+
+/**
+ * @internal
+ * US2 account details from API
+ */
+export interface Us2Details {
+  id: string;
+  user_id: string;
+  virtual_account_id: string;
+  type: string;
+  currency: string;
+}
+
+/**
+ * @internal
+ * External US bank linkage details (Brale/Plaid).
+ */
+export interface ExternalUsBankDetails {
+  id: string;
+  link_status: 'pending_link' | 'active' | 'link_failed' | 'closed';
+  brale_account_id?: string;
+  brale_address_id?: string;
+  link_token?: string;
+  /** ISO 8601 expiration of `link_token`, as reported by Brale. */
+  link_token_expiration?: string;
+  /**
+   * Fully-qualified URL of the mediums-hosted Plaid Link page. Present when
+   * the server has minted a short-lived `plaid-link` JWT for this pending
+   * account. Open it in a browser to complete linking without embedding
+   * Plaid Link in the caller's frontend.
+   */
+  link_url?: string;
+  bank_account_last4?: string;
+  bank_name?: string;
+  failure_reason?: string;
 }
 
 /**

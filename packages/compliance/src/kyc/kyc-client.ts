@@ -1,11 +1,14 @@
 import { BaseClient } from '@bloque/sdk-core';
 import type {
+  GetKycDocumentsResponse,
   GetKycVerificationResponse,
   StartKycVerificationRequest,
   StartKycVerificationResponse,
 } from '../internal/wire-types';
 import type {
+  GetKycDocumentsParams,
   GetKycVerificationParams,
+  KycDocumentsResponse,
   KycVerificationParams,
   KycVerificationResponse,
 } from './types';
@@ -24,7 +27,6 @@ export class KycClient extends BaseClient {
         urn: params.urn,
         type: 'kyc',
         accompliceType: 'person',
-        ...(params.webhookUrl && { webhookUrl: params.webhookUrl }),
       },
     });
     return {
@@ -45,6 +47,27 @@ export class KycClient extends BaseClient {
       status: response.status,
       url: response.verification_url,
       completedAt: response.completed_at,
+      result: response.result,
+      documentsStatus: response.documents_status,
+    };
+  }
+
+  async getDocuments(
+    params: GetKycDocumentsParams,
+  ): Promise<KycDocumentsResponse> {
+    const response = await this.httpClient.request<GetKycDocumentsResponse>({
+      method: 'GET',
+      path: `/api/compliance/${params.urn}/documents`,
+    });
+
+    return {
+      documentsStatus: response.documents_status,
+      documents: response.documents.map((doc) => ({
+        documentType: doc.document_type,
+        side: doc.side,
+        imageBase64: doc.image_base64,
+        imageSizeBytes: doc.image_size_bytes,
+      })),
     };
   }
 }
