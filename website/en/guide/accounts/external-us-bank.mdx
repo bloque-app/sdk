@@ -2,13 +2,13 @@ import { QuestHeader } from '@theme';
 
 <QuestHeader
   prereqs={["Connected SDK client", "KYC (if enforced by your origin)", "A browser to open the hosted Plaid Link page — or a frontend that can run Plaid Link"]}
-  unlocks={["Link a US bank account via Plaid", "Store a stable bank URN for ACH on-ramp flows"]}
+  unlocks={["Link a US bank account via Plaid", "Pull funds via ACH directly into DUSD on Kusama", "Store a stable bank URN for repeat on-ramps"]}
   time="10 min"
 />
 
 # External US Bank (Plaid)
 
-Link a US bank account using Plaid. Bloque uses Brale under the hood to create a Plaid session and turn the resulting `public_token` into an external bank address.
+Link a US bank account using Plaid, then debit it on demand via Brale ACH. The proceeds land as DUSD on Kusama Asset Hub and are teleported straight to the Kreivo ledger account associated with the bank URN — one call, one swap order, no escrow hop.
 
 ## Two flows
 
@@ -107,6 +107,99 @@ console.log(linked.details.bankName, linked.details.bankAccountLast4);
 | `bankName` | `string` | after `public_token` is exchanged |
 | `bankAccountLast4` | `string` | after `public_token` is exchanged |
 | `failureReason` | `string` | when `linkStatus === 'link_failed'` |
+
+## Pull funds (ACH debit → DUSD on Kusama)
+
+Once `linkStatus === 'active'`, call `pull()` to debit the bank via Brale ACH and swap the proceeds to DUSD on Kusama. The DUSD is teleported directly to the Kreivo ledger account associated with the bank URN — no intermediate escrow.
+
+```typescript title="pull.ts"
+const order = await user.accounts.externalUsBank.pull({
+  urn: linked.urn,     // active external-us-bank account URN
+  amount: '100.00',    // USD as a decimal STRING — never a number
+});
+
+console.log(order.orderSig);  // "0x…" — correlate webhooks (swap.order.*)
+console.log(order.status);    // "pending"
+console.log(order.graphId);   // instruction graph executing the swap
+```
+
+### Parameters
+
+| Name | Type | Required | Description |
+|------|------|----------|-------------|
+| `urn` | `string` | yes | URN of the linked bank. Must be on the `external-us-bank` medium and owned by the caller. Bank must be in `linkStatus === 'active'`. |
+| `amount` | `string` | yes | USD amount to debit, as a decimal string (e.g. `"100.00"`). Always pass as a string to avoid float precision loss. Must be positive. |
+| `idempotencyKey` | `string` | no | Caller hint. Informational — the server keys idempotency on the swap signature internally. |
+
+### Response
+
+```typescript
+interface PullExternalUsBankResult {
+  orderSig?: string;   // stable handle for the swap order — use for webhook correlation
+  graphId?: string;    // instruction graph executing the swap
+  status?: string;     // initial swap status ("pending", "running", …)
+  execution?: unknown; // raw swap.take execution payload (opaque)
+  requestId?: string;  // mediums service request id (for support tickets)
+}
+```
+
+### Error handling
+
+| `BloqueAPIError` status | Cause | Resolution |
+|------|---------|----|
+| `400` | `amount` is not a positive decimal string, or `urn` is malformed/wrong medium | Validate input on the client. |
+| `401` | Caller is not authenticated | Refresh the user session. |
+| `403` | URN belongs to a different user | The bank account is not owned by the caller — fetch the correct URN with `user.accounts.list()`. |
+| `404` | No address mapping for the URN, or the account has no ledger | Plaid Link hasn't completed; check `linkStatus === 'active'` and `details.braleAddressId` is populated. |
+| `503` | No swap rate available for `external-us-bank → kusama` | Transient. Retry after a short backoff. |
+
+```typescript title="with-error-handling.ts"
+import { BloqueAPIError } from '@bloque/sdk-core';
+
+try {
+  const order = await user.accounts.externalUsBank.pull({
+    urn: linked.urn,
+    amount: '100.00',
+  });
+  console.log('Order created:', order.orderSig);
+} catch (err) {
+  if (err instanceof BloqueAPIError) {
+    if (err.status === 404) {
+      console.error('Bank not linked yet — finish Plaid Link first.');
+    } else if (err.status === 503) {
+      console.error('No rate right now. Retry in a few seconds.');
+    } else {
+      console.error('Pull failed:', err.status, err.message);
+    }
+  }
+  throw err;
+}
+```
+
+### Pre-flight check
+
+```typescript title="check-ready.ts"
+const account = await user.accounts.get(linked.urn);
+
+if (
+  account.details.linkStatus !== 'active' ||
+  !account.details.braleAddressId
+) {
+  throw new Error('Bank not ready for ACH pull — finish Plaid Link first.');
+}
+
+const order = await user.accounts.externalUsBank.pull({
+  urn: linked.urn,
+  amount: '100.00',
+});
+```
+
+### Tracking the swap to completion
+
+The pull endpoint returns immediately after `swap.take` auto-executes the first node of the instruction graph (which resolves the Brale account/address). The actual ACH settlement and Kusama teleport happen asynchronously. Two ways to observe progress:
+
+- **Webhooks** — subscribe to `swap.order.*` and `transfer.*` events; match on `order.orderSig`.
+- **Polling** — query the swap service for the order by `orderSig`.
 
 ## Webhooks
 

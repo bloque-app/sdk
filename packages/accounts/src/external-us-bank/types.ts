@@ -82,3 +82,62 @@ export interface ExchangeExternalUsBankPublicTokenParams {
   urn: string;
   publicToken: string;
 }
+
+/**
+ * Parameters for {@link ExternalUsBankClient.pull}.
+ *
+ * Initiates a Brale ACH debit from the user's linked bank and swaps the
+ * proceeds to DUSD on Kusama, teleporting them to the caller's Kreivo ledger
+ * account associated with the linked-bank account URN.
+ */
+export interface PullExternalUsBankParams {
+  /**
+   * URN of the linked external US bank account to debit.
+   *
+   * Must be on the `external-us-bank` medium and owned by the authenticated
+   * caller. The bank must be in `linkStatus === 'active'` (Plaid Link
+   * finished and `public_token` exchanged).
+   *
+   * @example "did:bloque:account:external-us-bank:abc-123"
+   */
+  urn: string;
+
+  /**
+   * USD amount to pull from the linked bank, as a decimal string.
+   *
+   * Always pass as a string to avoid floating-point precision loss
+   * (e.g. `"100.00"`, `"250.50"`). Must be positive.
+   *
+   * @example "100.00"
+   */
+  amount: string;
+
+  /**
+   * Optional caller-supplied idempotency hint. Currently informational
+   * (server-side idempotency is keyed on the swap signature).
+   */
+  idempotencyKey?: string;
+}
+
+/**
+ * Snapshot of the swap order created by {@link ExternalUsBankClient.pull}.
+ *
+ * Use `orderSig` to correlate webhooks (`swap.order.*`) and to fetch the
+ * order from `@bloque/sdk-swap` if you need to poll for status.
+ */
+export interface PullExternalUsBankResult {
+  /** Signature of the swap order. Stable identifier for webhook correlation. */
+  orderSig?: string;
+  /** Instruction graph identifier executing the swap. */
+  graphId?: string;
+  /** Initial status of the swap order (e.g. `"pending"`, `"running"`). */
+  status?: string;
+  /**
+   * Raw execution payload from the swap service. Shape mirrors the
+   * `swap.take` response and may evolve — treat as opaque unless you
+   * specifically need to introspect the first auto-executed node.
+   */
+  execution?: unknown;
+  /** Request id assigned by the mediums service (useful for support). */
+  requestId?: string;
+}
