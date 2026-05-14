@@ -18,7 +18,10 @@ const bloque = new SDK({
 const user = await bloque.connect('@nestor');
 
 // Step 1: Create a pocket (virtual account) to hold funds
-const pocket = await user.accounts.virtual.create({}, { waitLedger: true });
+const pocket = await user.accounts.virtual.create({}, {
+  waitLedger: true,
+  idempotencyKey: 'f7a3b89e-6d3f-4e9e-8b7f-a1c4d2e5f901',
+});
 console.log('Pocket created:', pocket.urn);
 
 // Step 2: Create a card linked to the pocket
@@ -34,7 +37,7 @@ const card = await user.accounts.card.create(
       default_asset: 'DUSD/6',
     },
   },
-  { waitLedger: true },
+  { waitLedger: true, idempotencyKey: 'f7a3b89e-6d3f-4e9e-8b7f-a1c4d2e5f901' },
 );
 
 console.log('Card created:', card.urn);

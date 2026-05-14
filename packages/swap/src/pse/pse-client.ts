@@ -10,6 +10,7 @@ import type {
 } from '../internal/wire-types';
 import type {
   Bank,
+  CreatePseOrderOptions,
   CreatePseOrderParams,
   CreatePseOrderResult,
   DepositInformation,
@@ -72,24 +73,27 @@ export class PseClient extends BaseClient {
    * });
    *
    * // Create order with auto-execution
-   * const result = await bloque.swap.pse.create({
-   *   rateSig: rates.rates[0].sig,
-   *   toMedium: 'kusama',
-   *   amountSrc: '10000000',
-   *   depositInformation: {
-   *     urn: 'did:bloque:account:card:usr-xxx:crd-xxx'
-   *   },
-   *   args: {
-   *     bankCode: '1',
-   *     userType: 'natural',
-   *     customerEmail: 'user@example.com',
-   *     userLegalIdType: 'CC',
-   *     userLegalId: '1234567890',
-   *     customerData: {
-   *       fullName: 'John Doe'
+   * const result = await bloque.swap.pse.create(
+   *   {
+   *     rateSig: rates.rates[0].sig,
+   *     toMedium: 'kusama',
+   *     amountSrc: '10000000',
+   *     depositInformation: {
+   *       urn: 'did:bloque:account:card:usr-xxx:crd-xxx'
+   *     },
+   *     args: {
+   *       bankCode: '1',
+   *       userType: 'natural',
+   *       customerEmail: 'user@example.com',
+   *       userLegalIdType: 'CC',
+   *       userLegalId: '1234567890',
+   *       customerData: {
+   *         fullName: 'John Doe'
+   *       }
    *     }
-   *   }
-   * });
+   *   },
+   *   { idempotencyKey: 'pse-order-10000000' }
+   * );
    *
    * // If execution returned a checkout URL, redirect user
    * if (result.execution?.result.checkoutUrl) {
@@ -97,7 +101,10 @@ export class PseClient extends BaseClient {
    * }
    * ```
    */
-  async create(params: CreatePseOrderParams): Promise<CreatePseOrderResult> {
+  async create(
+    params: CreatePseOrderParams,
+    options?: CreatePseOrderOptions,
+  ): Promise<CreatePseOrderResult> {
     const takerUrn = this.httpClient.urn;
     if (!takerUrn) {
       throw new BloqueConfigError(
@@ -153,6 +160,9 @@ export class PseClient extends BaseClient {
       method: 'PUT',
       path: '/api/order',
       body: input,
+      headers: options?.idempotencyKey
+        ? { 'Idempotency-Key': options.idempotencyKey }
+        : undefined,
     });
 
     return {

@@ -8,6 +8,7 @@ import type {
 } from '../internal/wire-types';
 import type {
   BankDepositInformation,
+  CreateBankTransferOrderOptions,
   CreateBankTransferOrderParams,
   CreateBankTransferOrderResult,
   ExecutionResult,
@@ -22,19 +23,22 @@ import type {
  *
  * @example
  * ```typescript
- * const result = await bloque.swap.bankTransfer.create({
- *   rateSig: rate.sig,
- *   toMedium: 'banco_de_bogota',
- *   amountSrc: '5000000',
- *   depositInformation: {
- *     bankAccountType: 'savings',
- *     bankAccountNumber: '123456789',
- *     bankAccountHolderName: 'Juan Pérez',
- *     bankAccountHolderIdentificationType: 'CC',
- *     bankAccountHolderIdentificationValue: '1234567890',
+ * const result = await bloque.swap.bankTransfer.create(
+ *   {
+ *     rateSig: rate.sig,
+ *     toMedium: 'banco_de_bogota',
+ *     amountSrc: '5000000',
+ *     depositInformation: {
+ *       bankAccountType: 'savings',
+ *       bankAccountNumber: '123456789',
+ *       bankAccountHolderName: 'Juan Pérez',
+ *       bankAccountHolderIdentificationType: 'CC',
+ *       bankAccountHolderIdentificationValue: '1234567890',
+ *     },
+ *     args: { accountUrn: 'did:bloque:card:abc123' },
  *   },
- *   args: { accountUrn: 'did:bloque:card:abc123' },
- * });
+ *   { idempotencyKey: 'bank-transfer-5000000' }
+ * );
  * ```
  */
 export class BankTransferClient extends BaseClient {
@@ -50,6 +54,7 @@ export class BankTransferClient extends BaseClient {
    */
   async create(
     params: CreateBankTransferOrderParams,
+    options?: CreateBankTransferOrderOptions,
   ): Promise<CreateBankTransferOrderResult> {
     const takerUrn = this.httpClient.urn;
     if (!takerUrn) {
@@ -96,6 +101,9 @@ export class BankTransferClient extends BaseClient {
       method: 'PUT',
       path: '/api/order',
       body: input,
+      headers: options?.idempotencyKey
+        ? { 'Idempotency-Key': options.idempotencyKey }
+        : undefined,
     });
 
     return {

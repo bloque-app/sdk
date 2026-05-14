@@ -125,6 +125,13 @@ export interface CreatePseOrderParams {
   metadata?: Record<string, unknown>;
 }
 
+export interface CreatePseOrderOptions {
+  /**
+   * Optional custom idempotency key sent as `Idempotency-Key` header.
+   */
+  idempotencyKey?: string;
+}
+
 /**
  * Result of creating a PSE swap order
  */

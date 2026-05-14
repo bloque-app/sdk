@@ -40,16 +40,19 @@ if (rates.rates.length === 0) {
   );
 }
 
-const result = await user.swap.breb.create({
-  rateSig: rates.rates[0].sig,
-  amountSrc,
-  depositInformation: {
-    resolutionId: resolution.data.resolutionId,
+const result = await user.swap.breb.create(
+  {
+    rateSig: rates.rates[0].sig,
+    amountSrc,
+    depositInformation: {
+      resolutionId: resolution.data.resolutionId,
+    },
+    args: {
+      sourceAccountUrn,
+    },
   },
-  args: {
-    sourceAccountUrn,
-  },
-});
+  { idempotencyKey: 'f7a3b89e-6d3f-4e9e-8b7f-a1c4d2e5f901' },
+);
 
 console.log('BREB payment created:', {
   requestId: result.requestId,

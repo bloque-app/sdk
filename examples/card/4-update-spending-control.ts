@@ -25,12 +25,12 @@ const CARD_URN = 'urn:bloque:account:card:your-card-id';
 // First, create the pockets you want to route to
 const foodPocket = await user.accounts.virtual.create(
   { name: 'Food' },
-  { waitLedger: true },
+  { waitLedger: true, idempotencyKey: 'f7a3b89e-6d3f-4e9e-8b7f-a1c4d2e5f901' },
 );
 
 const mainWallet = await user.accounts.virtual.create(
   { name: 'Main Wallet' },
-  { waitLedger: true },
+  { waitLedger: true, idempotencyKey: 'f7a3b89e-6d3f-4e9e-8b7f-a1c4d2e5f901' },
 );
 
 // Now flip the card to smart mode
@@ -52,7 +52,7 @@ console.log('Upgraded to smart spending:', upgraded.urn);
 // Create a new pocket for entertainment
 const entertainmentPocket = await user.accounts.virtual.create(
   { name: 'Entertainment' },
-  { waitLedger: true },
+  { waitLedger: true, idempotencyKey: 'f7a3b89e-6d3f-4e9e-8b7f-a1c4d2e5f901' },
 );
 
 // Update the card to include the new pocket

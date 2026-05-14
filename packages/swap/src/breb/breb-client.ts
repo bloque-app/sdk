@@ -7,6 +7,7 @@ import type {
   ExecutionResult as WireExecutionResult,
 } from '../internal/wire-types';
 import type {
+  CreateBrebOrderOptions,
   CreateBrebOrderParams,
   CreateBrebOrderResult,
   ExecutionResult,
@@ -14,7 +15,10 @@ import type {
 } from './types';
 
 export class BrebClient extends BaseClient {
-  async create(params: CreateBrebOrderParams): Promise<CreateBrebOrderResult> {
+  async create(
+    params: CreateBrebOrderParams,
+    options?: CreateBrebOrderOptions,
+  ): Promise<CreateBrebOrderResult> {
     const takerUrn = this.httpClient.urn;
     if (!takerUrn) {
       throw new BloqueConfigError(
@@ -57,6 +61,9 @@ export class BrebClient extends BaseClient {
       method: 'PUT',
       path: '/api/order',
       body: input,
+      headers: options?.idempotencyKey
+        ? { 'Idempotency-Key': options.idempotencyKey }
+        : undefined,
     });
 
     return {

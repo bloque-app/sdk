@@ -23,25 +23,28 @@ const user = await bloque.connect('@nestor');
 // Setup: create two pockets to move money between
 const savings = await user.accounts.virtual.create(
   { name: 'Savings' },
-  { waitLedger: true },
+  { waitLedger: true, idempotencyKey: 'f7a3b89e-6d3f-4e9e-8b7f-a1c4d2e5f901' },
 );
 
 const spending = await user.accounts.virtual.create(
   { name: 'Spending' },
-  { waitLedger: true },
+  { waitLedger: true, idempotencyKey: 'f7a3b89e-6d3f-4e9e-8b7f-a1c4d2e5f901' },
 );
 
 // Transfer 50 DUSD from savings to spending
 // 50 DUSD = 50 * 10^6 = "50000000"
-const result = await user.accounts.transfer({
-  sourceUrn: savings.urn,
-  destinationUrn: spending.urn,
-  amount: '50000000',
-  asset: 'DUSD/6',
-  metadata: {
-    note: 'Weekly allowance',
+const result = await user.accounts.transfer(
+  {
+    sourceUrn: savings.urn,
+    destinationUrn: spending.urn,
+    amount: '50000000',
+    asset: 'DUSD/6',
+    metadata: {
+      note: 'Weekly allowance',
+    },
   },
-});
+  { idempotencyKey: 'f7a3b89e-6d3f-4e9e-8b7f-a1c4d2e5f901' },
+);
 
 console.log('Transfer queued:', result.queueId);
 console.log('Status:', result.status);
@@ -53,17 +56,20 @@ const card = await user.accounts.card.create(
     name: 'My Card',
     ledgerId: spending.ledgerId,
   },
-  { waitLedger: true },
+  { waitLedger: true, idempotencyKey: 'f7a3b89e-6d3f-4e9e-8b7f-a1c4d2e5f901' },
 );
 
-const topUp = await user.accounts.transfer({
-  sourceUrn: savings.urn,
-  destinationUrn: card.urn,
-  amount: '25000000', // 25 DUSD
-  asset: 'DUSD/6',
-  metadata: {
-    note: 'Card top-up',
+const topUp = await user.accounts.transfer(
+  {
+    sourceUrn: savings.urn,
+    destinationUrn: card.urn,
+    amount: '25000000', // 25 DUSD
+    asset: 'DUSD/6',
+    metadata: {
+      note: 'Card top-up',
+    },
   },
-});
+  { idempotencyKey: 'f7a3b89e-6d3f-4e9e-8b7f-a1c4d2e5f901' },
+);
 
 console.log('Card top-up queued:', topUp.queueId);

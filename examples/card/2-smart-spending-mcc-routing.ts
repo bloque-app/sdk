@@ -27,14 +27,14 @@ const user = await bloque.connect('@nestor');
 // Step 1: Create a food pocket — only for groceries and restaurants
 const foodPocket = await user.accounts.virtual.create(
   { name: 'Food Budget' },
-  { waitLedger: true },
+  { waitLedger: true, idempotencyKey: 'f7a3b89e-6d3f-4e9e-8b7f-a1c4d2e5f901' },
 );
 console.log('Food pocket:', foodPocket.urn);
 
 // Step 2: Create a main wallet — catches everything else
 const mainWallet = await user.accounts.virtual.create(
   { name: 'Main Wallet' },
-  { waitLedger: true },
+  { waitLedger: true, idempotencyKey: 'f7a3b89e-6d3f-4e9e-8b7f-a1c4d2e5f901' },
 );
 console.log('Main wallet:', mainWallet.urn);
 
@@ -65,7 +65,7 @@ const card = await user.accounts.card.create(
       priority_mcc: [foodPocket.urn, mainWallet.urn],
     },
   },
-  { waitLedger: true },
+  { waitLedger: true, idempotencyKey: 'f7a3b89e-6d3f-4e9e-8b7f-a1c4d2e5f901' },
 );
 
 console.log('Smart card created:', card.urn);

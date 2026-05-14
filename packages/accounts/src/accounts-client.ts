@@ -46,6 +46,7 @@ import {
 import type { PolygonAccount } from './polygon/types';
 import type {
   BatchTransferChunkResult,
+  BatchTransferOptions,
   BatchTransferParams,
   BatchTransferResult,
   GeneralTokenBalance,
@@ -55,6 +56,7 @@ import type {
   ListTransactionsParams,
   ListTransactionsResult,
   TokenBalance,
+  TransferOptions,
   TransferParams,
   TransferResult,
 } from './types';
@@ -247,19 +249,25 @@ export class AccountsClient extends BaseClient {
    *
    * @example
    * ```typescript
-   * const transfer = await bloque.accounts.transfer({
-   *   sourceUrn: 'did:bloque:account:card:usr-123:crd-456',
-   *   destinationUrn: 'did:bloque:account:virtual:acc-67890',
-   *   amount: '1000000000000',
-   *   asset: 'KSM/12',
-   *   metadata: {
-   *     reference: 'payment-123',
-   *     note: 'Monthly subscription'
-   *   }
-   * });
+   * const transfer = await bloque.accounts.transfer(
+   *   {
+   *     sourceUrn: 'did:bloque:account:card:usr-123:crd-456',
+   *     destinationUrn: 'did:bloque:account:virtual:acc-67890',
+   *     amount: '1000000000000',
+   *     asset: 'KSM/12',
+   *     metadata: {
+   *       reference: 'payment-123',
+   *       note: 'Monthly subscription'
+   *     }
+   *   },
+   *   { idempotencyKey: 'transfer-payment-123' }
+   * );
    * ```
    */
-  async transfer(params: TransferParams): Promise<TransferResult> {
+  async transfer(
+    params: TransferParams,
+    options?: TransferOptions,
+  ): Promise<TransferResult> {
     const asset = params.asset || 'DUSD/6';
     if (!isSupportedAsset(asset)) {
       throw new Error(
@@ -278,6 +286,9 @@ export class AccountsClient extends BaseClient {
       method: 'POST',
       path: `/api/accounts/${params.sourceUrn}/transfer`,
       body: request,
+      headers: options?.idempotencyKey
+        ? { 'Idempotency-Key': options.idempotencyKey }
+        : undefined,
     });
 
     return {
@@ -298,32 +309,36 @@ export class AccountsClient extends BaseClient {
    *
    * @example
    * ```typescript
-   * const result = await bloque.accounts.batchTransfer({
-   *   reference: 'batch-payroll-2024-01-15',
-   *   operations: [
-   *     {
-   *       fromUrn: 'did:bloque:account:virtual:acc-12345',
-   *       toUrn: 'did:bloque:account:virtual:acc-67890',
-   *       reference: 'transfer-001',
-   *       amount: '1000000000000',
-   *       asset: 'KSM/12',
-   *       metadata: { note: 'Payment for order #123' }
-   *     },
-   *     {
-   *       fromUrn: 'did:bloque:account:virtual:acc-12345',
-   *       toUrn: 'did:bloque:account:card:usr-456:crd-789',
-   *       reference: 'transfer-002',
-   *       amount: '500000000000',
-   *       asset: 'KSM/12'
-   *     }
-   *   ],
-   *   metadata: { batch_id: 'batch-2024-01-15' },
-   *   webhookUrl: 'https://api.example.com/webhooks/batch-settlement'
-   * });
+   * const result = await bloque.accounts.batchTransfer(
+   *   {
+   *     reference: 'batch-payroll-2024-01-15',
+   *     operations: [
+   *       {
+   *         fromUrn: 'did:bloque:account:virtual:acc-12345',
+   *         toUrn: 'did:bloque:account:virtual:acc-67890',
+   *         reference: 'transfer-001',
+   *         amount: '1000000000000',
+   *         asset: 'KSM/12',
+   *         metadata: { note: 'Payment for order #123' }
+   *       },
+   *       {
+   *         fromUrn: 'did:bloque:account:virtual:acc-12345',
+   *         toUrn: 'did:bloque:account:card:usr-456:crd-789',
+   *         reference: 'transfer-002',
+   *         amount: '500000000000',
+   *         asset: 'KSM/12'
+   *       }
+   *     ],
+   *     metadata: { batch_id: 'batch-2024-01-15' },
+   *     webhookUrl: 'https://api.example.com/webhooks/batch-settlement'
+   *   },
+   *   { idempotencyKey: 'batch-payroll-2024-01-15' }
+   * );
    * ```
    */
   async batchTransfer(
     params: BatchTransferParams,
+    options?: BatchTransferOptions,
   ): Promise<BatchTransferResult> {
     if (!params.operations || params.operations.length === 0) {
       throw new Error('At least one operation is required');
@@ -360,6 +375,9 @@ export class AccountsClient extends BaseClient {
       method: 'POST',
       path: '/api/accounts/batch/transfer',
       body: request,
+      headers: options?.idempotencyKey
+        ? { 'Idempotency-Key': options.idempotencyKey }
+        : undefined,
     });
 
     const chunks: BatchTransferChunkResult[] = response.result.chunks.map(

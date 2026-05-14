@@ -32,19 +32,19 @@ const user = await bloque.connect('@nestor');
 // Create category pockets
 const foodPocket = await user.accounts.virtual.create(
   { name: 'Food' },
-  { waitLedger: true },
+  { waitLedger: true, idempotencyKey: 'f7a3b89e-6d3f-4e9e-8b7f-a1c4d2e5f901' },
 );
 
 const transportPocket = await user.accounts.virtual.create(
   { name: 'Transport' },
-  { waitLedger: true },
+  { waitLedger: true, idempotencyKey: 'f7a3b89e-6d3f-4e9e-8b7f-a1c4d2e5f901' },
 );
 
 // The general pocket has NO whitelist entry — it accepts any MCC.
 // Think of it as the "everything else" bucket.
 const generalPocket = await user.accounts.virtual.create(
   { name: 'General' },
-  { waitLedger: true },
+  { waitLedger: true, idempotencyKey: 'f7a3b89e-6d3f-4e9e-8b7f-a1c4d2e5f901' },
 );
 
 // Create the card with multi-category routing
@@ -83,7 +83,7 @@ const card = await user.accounts.card.create(
       ],
     },
   },
-  { waitLedger: true },
+  { waitLedger: true, idempotencyKey: 'f7a3b89e-6d3f-4e9e-8b7f-a1c4d2e5f901' },
 );
 
 console.log('Card created:', card.urn);

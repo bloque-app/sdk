@@ -418,7 +418,8 @@ export class HttpClient {
       ...headers,
     };
     if (IDEMPOTENT_METHODS.has(method.toUpperCase())) {
-      requestHeaders[IDEMPOTENCY_HEADER] = this.generateIdempotencyKey();
+      requestHeaders[IDEMPOTENCY_HEADER] =
+        requestHeaders[IDEMPOTENCY_HEADER] || this.generateIdempotencyKey();
     }
 
     // Determine the timeout to use (per-request timeout or default config timeout)

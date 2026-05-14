@@ -121,8 +121,11 @@ export class PolygonClient extends BaseClient {
    * // Create without waiting
    * const account = await bloque.accounts.polygon.create();
    *
-   * // Create and wait for active status
-   * const account = await bloque.accounts.polygon.create({}, { waitLedger: true });
+   * // Create and wait for active status with explicit idempotency key
+   * const account = await bloque.accounts.polygon.create({}, {
+   *   waitLedger: true,
+   *   idempotencyKey: 'create-polygon-main-wallet'
+   * });
    * ```
    */
   async create(
@@ -150,6 +153,9 @@ export class PolygonClient extends BaseClient {
       method: 'POST',
       path: '/api/mediums/polygon',
       body: request,
+      headers: options?.idempotencyKey
+        ? { 'Idempotency-Key': options.idempotencyKey }
+        : undefined,
     });
 
     const account = this._mapAccountResponse(response.result.account);
