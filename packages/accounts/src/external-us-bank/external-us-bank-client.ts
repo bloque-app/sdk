@@ -12,6 +12,8 @@ import type {
   CreateExternalUsBankAccountParams,
   ExchangeExternalUsBankPublicTokenParams,
   ExternalUsBankAccount,
+  PullExternalUsBankParams,
+  PullExternalUsBankResult,
 } from './types';
 
 type CreateExternalUsBankInput = {
@@ -22,6 +24,21 @@ type CreateExternalUsBankInput = {
 
 type ExchangeExternalUsBankInput = {
   public_token: string;
+};
+
+type PullExternalUsBankRequest = {
+  amount: string;
+  idempotency_key?: string;
+};
+
+type PullExternalUsBankResponse = {
+  result: {
+    order_sig?: string;
+    graph_id?: string;
+    status?: string;
+    execution?: unknown;
+  };
+  req_id?: string;
 };
 
 export function mapExternalUsBankAccountFromWire(
@@ -133,5 +150,80 @@ export class ExternalUsBankClient extends BaseClient {
       response.result
         .account as unknown as AccountWithBalance<ExternalUsBankDetails>,
     );
+  }
+
+  /**
+   * Pull funds from a linked US bank via Brale ACH debit.
+   *
+   * Proactively initiates an ACH debit from the user's linked bank account
+   * and swaps the proceeds to DUSD on Kusama, teleporting them directly to
+   * the caller's Kreivo ledger account that is associated with the linked
+   * bank URN.
+   *
+   * The account must already be in `linkStatus === 'active'` — i.e. Plaid
+   * Link has finished and the `public_token` has been exchanged (either via
+   * the hosted page redirect or {@link ExternalUsBankClient.exchangePublicToken}).
+   *
+   * The returned `orderSig` is the stable handle for the swap; use it to
+   * correlate webhook events (`swap.order.*`) and to poll the swap service
+   * for status.
+   *
+   * @param params - Pull parameters (URN of the linked bank, USD amount)
+   * @returns Snapshot of the created swap order
+   *
+   * @example
+   * ```typescript
+   * const order = await user.accounts.externalUsBank.pull({
+   *   urn: linked.urn,         // active external-us-bank account
+   *   amount: '100.00',        // USD as a decimal string
+   * });
+   *
+   * console.log(order.orderSig);  // "0x…"
+   * console.log(order.status);    // "pending"
+   * ```
+   *
+   * @throws BloqueAPIError 400 — invalid amount or `urn`.
+   * @throws BloqueAPIError 401 — unauthenticated.
+   * @throws BloqueAPIError 403 — the caller does not own the linked bank account.
+   * @throws BloqueAPIError 404 — the bank URN has no address mapping yet
+   *   (`linkStatus !== 'active'`), or the account has no ledger.
+   * @throws BloqueAPIError 503 — no swap rate available for
+   *   `external-us-bank → kusama`.
+   */
+  async pull(
+    params: PullExternalUsBankParams,
+  ): Promise<PullExternalUsBankResult> {
+    if (!params?.urn?.trim()) {
+      throw new Error('Bank account URN is required');
+    }
+    if (typeof params.amount !== 'string' || params.amount.trim() === '') {
+      throw new Error(
+        'Amount is required and must be a string (e.g. "100.00")',
+      );
+    }
+
+    const body: PullExternalUsBankRequest = {
+      amount: params.amount,
+      ...(params.idempotencyKey !== undefined
+        ? { idempotency_key: params.idempotencyKey }
+        : {}),
+    };
+
+    const response = await this.httpClient.request<
+      PullExternalUsBankResponse,
+      PullExternalUsBankRequest
+    >({
+      method: 'POST',
+      path: `/api/mediums/external-us-bank/${encodeURIComponent(params.urn)}/pull`,
+      body,
+    });
+
+    return {
+      orderSig: response.result?.order_sig,
+      graphId: response.result?.graph_id,
+      status: response.result?.status,
+      execution: response.result?.execution,
+      requestId: response.req_id,
+    };
   }
 }
