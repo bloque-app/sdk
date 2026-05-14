@@ -22,26 +22,16 @@ const bloque = new SDK({
     type: 'originKey',
     originKey: process.env.ORIGIN_KEY!,
   },
-  mode: 'production',
+  mode: 'sandbox',
   platform: 'node',
 });
 
-const user = await bloque.connect('nestor');
+const user = await bloque.connect('@usuario2');
 
 // Step 1: create the linkable bank account.
 // In production attach to an existing pocket via `ledgerId`.
-const bank = await user.accounts.externalUsBank.create({
-  holderUrn: user.urn,
-  ledgerId:
-    '0x8a3035ae6d8e9fd867694494d269e94cfa389d17491c63730ed3ee5fb150d251',
-  label: 'ACH on-ramp',
-});
-
-console.log('Plaid link_token (pass to Plaid Link):', bank.details.linkToken);
-console.log('  expires at:', bank.details.linkTokenExpiration);
-console.log(
-  '  (or open hosted page instead — pass `returnUrl` at create time to receive `details.linkUrl`)',
-);
+const bank_urn =
+  'did:bloque:account:external-us-bank:49b9b8bd-0eb5-43ee-b86c-21bc60a9a49c';
 
 // Step 2 (out of band): drive Plaid Link with `bank.details.linkToken`
 // in your frontend, then exchange the resulting `public_token`:
@@ -61,16 +51,13 @@ console.log(
 // to access external-us-bank fields. For brevity, the example uses the
 // typed `bank` reference straight from `create()` and assumes Plaid has
 // already finished.
-if (
-  bank.details.linkStatus !== 'active' ||
-  !bank.details.braleAddressId
-) {
-  console.log(
-    'Bank not active yet — current linkStatus:',
-    bank.details.linkStatus,
-  );
-  process.exit(0);
-}
+// if (bank.details.linkStatus !== 'active' || !bank.details.braleAddressId) {
+//   console.log(
+//     'Bank not active yet — current linkStatus:',
+//     bank.details.linkStatus,
+//   );
+//   process.exit(0);
+// }
 
 // Optional: peek at a quote first to show the user an indicative amount.
 const quote = await user.swap.findRates({
@@ -82,23 +69,25 @@ const quote = await user.swap.findRates({
 });
 console.log('Indicative rate:', quote.rates[0]);
 
-// Step 4: initiate the ACH pull. Amount is a USD decimal STRING (never a
-// number) — e.g. "100.00" not 100. The server scales it to USD/2 cents.
+// // Step 4: initiate the ACH pull. Amount is a USD decimal STRING (never a
+// // number) — e.g. "100.00" not 100. The server scales it to USD/2 cents.
 const order = await user.accounts.externalUsBank.pull({
-  urn: bank.urn,
-  amount: '100.00',
+  urn: bank_urn,
+  amount: '10',
 });
 
-console.log('Swap order created:');
-console.log('  orderSig :', order.orderSig);
-console.log('  graphId  :', order.graphId);
-console.log('  status   :', order.status);
-console.log('  requestId:', order.requestId);
+console.log(JSON.stringify(order, null, 2));
 
-// Step 5: track to completion. Subscribe to `swap.order.*` webhooks and
-// match on order.orderSig — or poll:
-const recent = await user.swap.listOrders({ status: 'pending' });
-console.log(
-  'Pending swap orders for this user:',
-  recent.orders.map((o) => o.orderSig),
-);
+// console.log('Swap order created:');
+// console.log('  orderSig :', order.orderSig);
+// console.log('  graphId  :', order.graphId);
+// console.log('  status   :', order.status);
+// console.log('  requestId:', order.requestId);
+
+// // Step 5: track to completion. Subscribe to `swap.order.*` webhooks and
+// // match on order.orderSig — or poll:
+// const recent = await user.swap.listOrders({ status: 'pending' });
+// console.log(
+//   'Pending swap orders for this user:',
+//   recent.orders.map((o) => o.orderSig),
+// );

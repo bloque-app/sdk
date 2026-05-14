@@ -30,15 +30,7 @@ const bloque = new SDK({
   platform: 'node',
 });
 
-const user = await bloque.register('@nestor4', {
-  type: 'individual',
-  profile: {
-    email: 'nestor@example.com',
-  },
-  extraContext: {
-    sumsub_applicant_id: process.env.SUMSUB_APPLICANT_ID!,
-  },
-});
+const user = await bloque.connect('@nestor4');
 
 console.log({
   profile: await user.identity.get(user.urn!),
