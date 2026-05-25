@@ -4,6 +4,14 @@
 
 ### Patch Changes
 
+- Added External US Account
+- Updated dependencies
+  - @bloque/sdk-core@0.1.10
+
+## 0.1.10
+
+### Patch Changes
+
 - @bloque/sdk-core@0.1.10
 
 ## 0.1.2

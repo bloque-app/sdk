@@ -2,6 +2,12 @@
 
 ## 0.1.10
 
+### Patch Changes
+
+- Added External US Account
+
+## 0.1.10
+
 ## 0.1.2
 
 ### Patch Changes
