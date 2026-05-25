@@ -4,6 +4,19 @@
 
 ### Patch Changes
 
+- Added External US Account
+- Updated dependencies
+  - @bloque/sdk-compliance@0.1.10
+  - @bloque/sdk-accounts@0.1.10
+  - @bloque/sdk-identity@0.1.10
+  - @bloque/sdk-core@0.1.10
+  - @bloque/sdk-orgs@0.1.10
+  - @bloque/sdk-swap@0.1.10
+
+## 0.1.10
+
+### Patch Changes
+
 - Updated dependencies
   - @bloque/sdk-accounts@0.1.10
   - @bloque/sdk-core@0.1.10
