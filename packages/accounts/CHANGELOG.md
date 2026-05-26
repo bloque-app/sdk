@@ -1,5 +1,13 @@
 # @bloque/sdk-accounts
 
+## 0.1.11
+
+### Patch Changes
+
+- be8cbcb: Upgrade new fields for us-external accounts
+- Updated dependencies [be8cbcb]
+  - @bloque/sdk-core@0.1.11
+
 ## 0.1.10
 
 ### Patch Changes
