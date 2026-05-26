@@ -255,6 +255,21 @@ export interface Us2Details {
  * @internal
  * External US bank linkage details (Brale/Plaid).
  */
+/**
+ * @internal
+ * Postal address on a Brale offchain bank address. Mirrors the
+ * `ExternalUsBankBankAddress` shape on the mediums service. Strings may be
+ * empty when Brale has not yet populated the field server-side.
+ */
+export interface ExternalUsBankBankAddressWire {
+  street_line_1: string;
+  street_line_2?: string;
+  city: string;
+  state: string;
+  zip: string;
+  country?: string;
+}
+
 export interface ExternalUsBankDetails {
   id: string;
   link_status: 'pending_link' | 'active' | 'link_failed' | 'closed';
@@ -279,6 +294,26 @@ export interface ExternalUsBankDetails {
   bank_account_last4?: string;
   bank_name?: string;
   failure_reason?: string;
+
+  // ── Brale address enrichment (populated post-link via GET addresses) ──────
+  /** Beneficiary / account holder name on the Brale address. */
+  owner?: string;
+  /** ABA routing number for the linked bank. */
+  routing_number?: string;
+  /** Account number (masked by Brale for Plaid-linked addresses). */
+  account_number?: string;
+  /** Bank account type. */
+  account_type?: 'checking' | 'savings';
+  /** Bank's mailing address. */
+  bank_address?: ExternalUsBankBankAddressWire;
+  /** Beneficiary's mailing address. */
+  beneficiary_address?: ExternalUsBankBankAddressWire;
+  /** Transfer rails enabled on this Brale address (e.g. `ach_debit`, `rtp_credit`). */
+  transfer_types?: string[];
+  /** Whether the linked Plaid item needs re-authentication. */
+  needs_update?: boolean;
+  /** ISO 8601 timestamp of the last Brale-side update. */
+  last_updated?: string;
 }
 
 /**

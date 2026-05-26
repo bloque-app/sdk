@@ -6,6 +6,35 @@ export type ExternalUsBankLinkStatus =
   | 'link_failed'
   | 'closed';
 
+/** Type of bank account behind the linked Plaid item. */
+export type ExternalUsBankAccountType = 'checking' | 'savings';
+
+/**
+ * Postal address persisted on the linked Brale bank address.
+ *
+ * Returned by Brale on `GET /accounts/{id}/addresses/{id}` and surfaced for
+ * both the bank itself (`bankAddress`) and the beneficiary
+ * (`beneficiaryAddress`) on {@link ExternalUsBankAccountDetails}.
+ *
+ * All fields are strings; fields may be empty when Brale has not yet
+ * populated them server-side. Whole addresses are absent (rather than
+ * present with empty fields) when Brale returned no address data.
+ */
+export interface ExternalUsBankBankAddress {
+  /** First line of the street address (e.g. `"123 Main St"`). */
+  streetLine1: string;
+  /** Optional second line (apt, suite, unit). */
+  streetLine2?: string;
+  /** City. */
+  city: string;
+  /** State / region code (e.g. `"CA"`). */
+  state: string;
+  /** Postal / ZIP code. */
+  zip: string;
+  /** Country code, when Brale returns one. */
+  country?: string;
+}
+
 export interface ExternalUsBankAccountDetails {
   id: string;
   linkStatus: ExternalUsBankLinkStatus;
@@ -35,6 +64,53 @@ export interface ExternalUsBankAccountDetails {
   bankAccountLast4?: string;
   bankName?: string;
   failureReason?: string;
+
+  // ── Brale address enrichment ──────────────────────────────────────────────
+  //
+  // The following fields are populated after the Plaid `public_token` is
+  // exchanged (either via the hosted page or
+  // {@link ExternalUsBankClient.exchangePublicToken}) and refreshed on
+  // `accounts.get()` calls and on Brale `address.updated` webhooks.
+  //
+  // They are best-effort: a transient Brale outage or a not-yet-populated
+  // field leaves the previously-known value (or `undefined`) in place
+  // rather than blanking the field. Treat them as optional even on
+  // `linkStatus === 'active'` accounts.
+
+  /** Beneficiary / account holder name as recorded on the Brale address. */
+  owner?: string;
+  /** ABA routing number for the linked bank. */
+  routingNumber?: string;
+  /**
+   * Account number returned by Brale.
+   *
+   * For Plaid-linked addresses this is **masked** by Brale (it is not the
+   * full account number). Use {@link bankAccountLast4} when you only need
+   * the last four digits.
+   */
+  accountNumber?: string;
+  /** Bank account type, when Brale reports it. */
+  accountType?: ExternalUsBankAccountType;
+  /** Mailing address of the linked bank. */
+  bankAddress?: ExternalUsBankBankAddress;
+  /** Mailing address of the beneficiary (account holder). */
+  beneficiaryAddress?: ExternalUsBankBankAddress;
+  /**
+   * Transfer rails enabled on this Brale address (e.g. `"ach_debit"`,
+   * `"ach_credit"`, `"rtp_credit"`). Defaults to debit + credit + RTP
+   * when the medium config did not override it.
+   */
+  transferTypes?: string[];
+  /**
+   * Whether the linked Plaid item needs re-authentication.
+   *
+   * When `true`, the user must redo Plaid Link before this bank can be
+   * debited again — create a new pending link via
+   * {@link ExternalUsBankClient.create} and walk the user through it.
+   */
+  needsUpdate?: boolean;
+  /** ISO 8601 timestamp of the last Brale-side update of this address. */
+  lastUpdated?: string;
 }
 
 export interface ExternalUsBankAccount {

@@ -57,4 +57,22 @@ console.log('linkToken expires at:  ', bank.details.linkTokenExpiration);
 
 // After the user returns to returnUrl?status=success&state=user-session-xyz:
 //   const linked = await user.accounts.get(bank.urn);
-//   console.log(linked.details.linkStatus); // 'active' | 'pending_link' | ...
+//
+//   // Narrow the MappedAccount union to the external-us-bank shape:
+//   if (!('linkStatus' in linked.details)) {
+//     throw new Error('Not an external-us-bank account');
+//   }
+//
+//   console.log(linked.details.linkStatus);         // 'active' | 'pending_link' | ...
+//   console.log(linked.details.bankName);           // Plaid-reported institution
+//   console.log(linked.details.bankAccountLast4);   // last 4 digits
+//
+//   // ── Brale address enrichment (best-effort, populated post-link) ──
+//   console.log(linked.details.owner);              // beneficiary name on file
+//   console.log(linked.details.routingNumber);      // ABA routing number
+//   console.log(linked.details.accountType);        // 'checking' | 'savings'
+//   console.log(linked.details.transferTypes);      // ['ach_debit', 'rtp_credit', ...]
+//   console.log(linked.details.needsUpdate);        // true → user must redo Plaid Link
+//   console.log(linked.details.lastUpdated);        // ISO 8601 from Brale
+//   console.log(linked.details.bankAddress);        // { streetLine1, city, state, zip, ... }
+//   console.log(linked.details.beneficiaryAddress); // { streetLine1, city, state, zip, ... }
