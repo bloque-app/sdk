@@ -95,6 +95,8 @@ console.log(linked.details.bankName, linked.details.bankAccountLast4);
 
 ## Field reference (response `details`)
 
+Lifecycle fields are returned up front. **Enrichment fields** (the second block below) are populated best-effort once Brale has the linked address — typically right after the `public_token` is exchanged, and refreshed on every `accounts.get()` and on Brale `address.updated` webhooks. They are always optional, even on `linkStatus === 'active'` accounts.
+
 | Field | Type | When present |
 |-------|------|--------------|
 | `linkStatus` | `'pending_link' \| 'active' \| 'link_failed' \| 'closed'` | always |
@@ -107,6 +109,68 @@ console.log(linked.details.bankName, linked.details.bankAccountLast4);
 | `bankName` | `string` | after `public_token` is exchanged |
 | `bankAccountLast4` | `string` | after `public_token` is exchanged |
 | `failureReason` | `string` | when `linkStatus === 'link_failed'` |
+| `owner` | `string` | enrichment — beneficiary / account holder name on file at Brale |
+| `routingNumber` | `string` | enrichment — ABA routing number |
+| `accountNumber` | `string` | enrichment — **masked** by Brale for Plaid-linked addresses; use `bankAccountLast4` for the last four digits |
+| `accountType` | `'checking' \| 'savings'` | enrichment |
+| `bankAddress` | `ExternalUsBankBankAddress` | enrichment — mailing address of the bank |
+| `beneficiaryAddress` | `ExternalUsBankBankAddress` | enrichment — mailing address of the account holder |
+| `transferTypes` | `string[]` | enrichment — rails enabled on the address (e.g. `'ach_debit'`, `'ach_credit'`, `'rtp_credit'`) |
+| `needsUpdate` | `boolean` | enrichment — `true` when the Plaid item needs re-authentication |
+| `lastUpdated` | `string` (ISO 8601) | enrichment — last Brale-side refresh |
+
+`ExternalUsBankBankAddress`:
+
+```typescript
+interface ExternalUsBankBankAddress {
+  streetLine1: string;
+  streetLine2?: string;
+  city: string;
+  state: string;
+  zip: string;
+  country?: string;
+}
+```
+
+### Reading enrichment fields
+
+After Plaid Link completes, refresh and read the bank record. Narrow the `MappedAccount` union to the external-us-bank shape before reading bank-specific fields:
+
+```typescript title="read-bank.ts"
+const account = await user.accounts.get(linked.urn);
+
+if (!('linkStatus' in account.details)) {
+  throw new Error('Not an external-us-bank account');
+}
+
+const d = account.details;
+
+console.log(d.owner);              // "John Doe"
+console.log(d.routingNumber);      // "021000021"
+console.log(d.accountType);        // 'checking' | 'savings'
+console.log(d.transferTypes);      // ['ach_debit', 'ach_credit', 'rtp_credit']
+console.log(d.bankAddress);        // { streetLine1, city, state, zip, ... }
+console.log(d.beneficiaryAddress); // { streetLine1, city, state, zip, ... }
+console.log(d.lastUpdated);        // "2026-05-24T19:48:11Z"
+```
+
+### Detecting re-authentication (`needsUpdate`)
+
+Brale flags a linked Plaid item with `needsUpdate: true` when the user's bank credentials have expired (password change, MFA refresh, etc.). The next `pull()` will fail until the user redoes Plaid Link.
+
+```typescript title="check-needs-update.ts"
+const account = await user.accounts.get(linked.urn);
+
+if ('linkStatus' in account.details && account.details.needsUpdate) {
+  // Start a new link flow and walk the user through Plaid Link again.
+  const refreshed = await user.accounts.externalUsBank.create({
+    label: account.details.bankName ?? 'My bank',
+    ledgerId: account.ledgerId,
+    returnUrl: 'https://app.example.com/wallet/plaid-return',
+  });
+  redirectTo(refreshed.details.linkUrl!);
+}
+```
 
 ## Pull funds (ACH debit → DUSD on Kusama)
 

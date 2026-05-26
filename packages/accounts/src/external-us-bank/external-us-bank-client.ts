@@ -3,6 +3,7 @@ import type {
   AccountWithBalance,
   CreateAccountRequest,
   CreateAccountResponse,
+  ExternalUsBankBankAddressWire,
   ExternalUsBankDetails,
   UpdateAccountRequest,
   UpdateAccountResponse,
@@ -12,9 +13,26 @@ import type {
   CreateExternalUsBankAccountParams,
   ExchangeExternalUsBankPublicTokenParams,
   ExternalUsBankAccount,
+  ExternalUsBankBankAddress,
   PullExternalUsBankParams,
   PullExternalUsBankResult,
 } from './types';
+
+function mapBankAddressFromWire(
+  raw: ExternalUsBankBankAddressWire | null | undefined,
+): ExternalUsBankBankAddress | undefined {
+  if (!raw) return undefined;
+  return {
+    streetLine1: raw.street_line_1,
+    ...(raw.street_line_2 !== undefined
+      ? { streetLine2: raw.street_line_2 }
+      : {}),
+    city: raw.city,
+    state: raw.state,
+    zip: raw.zip,
+    ...(raw.country !== undefined ? { country: raw.country } : {}),
+  };
+}
 
 type CreateExternalUsBankInput = {
   label?: string;
@@ -67,6 +85,17 @@ export function mapExternalUsBankAccountFromWire(
       bankAccountLast4: account.details.bank_account_last4,
       bankName: account.details.bank_name,
       failureReason: account.details.failure_reason,
+      owner: account.details.owner,
+      routingNumber: account.details.routing_number,
+      accountNumber: account.details.account_number,
+      accountType: account.details.account_type,
+      bankAddress: mapBankAddressFromWire(account.details.bank_address),
+      beneficiaryAddress: mapBankAddressFromWire(
+        account.details.beneficiary_address,
+      ),
+      transferTypes: account.details.transfer_types,
+      needsUpdate: account.details.needs_update,
+      lastUpdated: account.details.last_updated,
     },
   };
 }
