@@ -62,7 +62,7 @@ export interface ResolveBrebKeyParams {
   /**
    * Type of key to resolve.
    */
-  keyType: BrebKeyType;
+  keyType?: BrebKeyType;
 
   /**
    * Key value to resolve.

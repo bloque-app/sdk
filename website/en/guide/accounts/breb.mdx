@@ -131,8 +131,14 @@ interface BrebKeyAccount {
 ## Resolve a BRE-B Key
 
 ```typescript title="resolve-breb-key.ts"
+// with explicit key type
 const { data, error } = await session.accounts.breb.resolveKey({
   keyType: 'PHONE',
+  key: '3015550127',
+});
+
+// keyType omitted — BRE-B infers it from the key value
+const { data, error } = await session.accounts.breb.resolveKey({
   key: '3015550127',
 });
 
@@ -144,6 +150,17 @@ if (error) {
   console.log(data?.account?.accountNumber);
 }
 ```
+
+## Resolve Params
+
+```typescript title="types.ts"
+interface ResolveBrebKeyParams {
+  keyType?: 'ID' | 'PHONE' | 'EMAIL' | 'ALPHA' | 'BCODE';
+  key: string;
+}
+```
+
+`keyType` is optional. When omitted, the BRE-B infrastructure infers the key type automatically from the value of `key`.
 
 ## Resolve Response
 

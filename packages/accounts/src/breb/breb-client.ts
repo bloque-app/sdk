@@ -13,6 +13,7 @@ import type {
   ActivateBrebKeyResult,
   BrebDecodedQr,
   BrebKeyAccount,
+  BrebKeyType,
   BrebOperationError,
   BrebOperationResult,
   BrebResolvedKey,
@@ -38,7 +39,7 @@ type CreateBrebKeyRequest = {
 };
 
 type ResolveBrebKeyRequest = {
-  key_type: ResolveBrebKeyParams['keyType'];
+  key_type?: ResolveBrebKeyParams['keyType'];
   key: string;
 };
 
@@ -57,7 +58,7 @@ type DecodeBrebQrAmount = {
 };
 
 type DecodeBrebQrKey = {
-  key_type: ResolveBrebKeyParams['keyType'];
+  key_type: BrebKeyType;
   key_value: string;
 };
 
@@ -306,7 +307,7 @@ export class BrebClient extends BaseClient {
         method: 'POST',
         path: '/api/mediums/breb/resolve-key',
         body: {
-          key_type: params.keyType,
+          ...(params.keyType && { key_type: params.keyType }),
           key: params.key,
         },
       });

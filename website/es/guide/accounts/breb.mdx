@@ -131,8 +131,14 @@ interface BrebKeyAccount {
 ## Resolver una llave BRE-B
 
 ```typescript title="resolver-llave-breb.ts"
+// con tipo de llave explícito
 const { data, error } = await session.accounts.breb.resolveKey({
   keyType: 'PHONE',
+  key: '3015550127',
+});
+
+// sin keyType — BRE-B lo infiere a partir del valor de la llave
+const { data, error } = await session.accounts.breb.resolveKey({
   key: '3015550127',
 });
 
@@ -144,6 +150,17 @@ if (error) {
   console.log(data?.account?.accountNumber);
 }
 ```
+
+## Parámetros de resolución
+
+```typescript title="tipos.ts"
+interface ResolveBrebKeyParams {
+  keyType?: 'ID' | 'PHONE' | 'EMAIL' | 'ALPHA' | 'BCODE';
+  key: string;
+}
+```
+
+`keyType` es opcional. Cuando se omite, la infraestructura BRE-B infiere el tipo de llave automáticamente a partir del valor de `key`.
 
 ## Respuesta de resolución
 
