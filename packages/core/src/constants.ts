@@ -1,7 +1,7 @@
 import type { Mode } from './types';
 
 export const API_BASE_URLS: Record<Mode, string> = {
-  sandbox: 'https://dev.bloque.app',
+  sandbox: 'https://api.dev-bloque.app',
   production: 'https://api.bloque.app',
 };
 
