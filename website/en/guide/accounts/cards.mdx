@@ -679,6 +679,7 @@ interface CardWebhookPayload {
   medium?: TransactionMedium;
   fee_breakdown?: FeeBreakdown;
   reason?: string;             // Present on rejection events
+  required_usd?: number;       // @deprecated alias of local_amount (rejection events)
 }
 ```
 
@@ -687,7 +688,7 @@ interface CardWebhookPayload {
 | Event | Type | Direction | Description |
 |-------|------|-----------|-------------|
 | `purchase` | `authorization` | `debit` | Card purchase authorized and debited. |
-| `rejected_insufficient_funds` | `authorization` | `debit` | Purchase rejected — insufficient balance. |
+| `rejected_insufficient_funds` | `authorization` | `debit` | Purchase rejected — insufficient balance. Includes `merchant`, `local_amount`, and `local_currency`. |
 | `rejected_credit` | `authorization` | `credit` | Credit authorization rejected (not supported). |
 | `rejected_currency` | `authorization` | `debit` | Purchase rejected — unsupported currency. |
 | `credit_adjustment` | `adjustment` | `credit` | Refund or credit adjustment processed. |
@@ -753,6 +754,8 @@ interface CardWebhookPayload {
 
 ### Rejection Event Example
 
+A rejected purchase carries the same `merchant`, `local_amount`, `local_currency`, and `medium` context as a successful `purchase` event (but no `fee_breakdown`, since no fees were charged), so you can identify the declined transaction and notify the cardholder. `required_usd` is a deprecated alias of `local_amount`.
+
 ```json title="rejection-webhook.json"
 {
   "account_urn": "did:bloque:account:card:usr-abc:crd-123",
@@ -760,7 +763,21 @@ interface CardWebhookPayload {
   "type": "authorization",
   "direction": "debit",
   "event": "rejected_insufficient_funds",
-  "required_usd": 150.0,
+  "local_amount": 150000.0,
+  "local_currency": "COP",
+  "merchant": {
+    "name": "Almacenes Exito",
+    "mcc": "5411",
+    "city": "Bogota",
+    "country": "COL"
+  },
+  "medium": {
+    "entry_mode": "CHIP",
+    "point_type": "POS",
+    "origin": "DOMESTIC",
+    "network": "VISA"
+  },
+  "required_usd": 150000.0,
   "reason": "Insufficient funds"
 }
 ```
@@ -796,6 +813,7 @@ app.post('/webhooks/cards', express.json(), (req, res) => {
 
     case 'rejected_insufficient_funds':
       console.log(`Rejected: ${payload.reason}`);
+      console.log(`Attempted: ${payload.local_amount} ${payload.local_currency} at ${payload.merchant?.name}`);
       // Notify user of failed transaction
       break;
 
