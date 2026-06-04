@@ -1,4 +1,5 @@
 import type { TokenBalance, UsAccountType } from '../internal/wire-types';
+import type { ListAccountsFilterParams } from '../types';
 
 /**
  * Address information for US account creation
@@ -146,19 +147,8 @@ export interface TosLinkResult {
 /**
  * Parameters for listing US accounts
  */
-export interface ListUsAccountsParams {
-  /**
-   * URN of the account holder (user or organization) to filter by
-   * @example "did:bloque:bloque-root:nestor"
-   */
-  holderUrn?: string;
-
-  /**
-   * URN of a specific US account to retrieve
-   * @example "did:bloque:account:us-account:usr-123:us-456"
-   */
-  urn?: string;
-}
+export interface ListUsAccountsParams
+  extends Omit<ListAccountsFilterParams, 'medium'> {}
 
 /**
  * Result of listing US accounts

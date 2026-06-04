@@ -18,6 +18,7 @@ import {
   mapExternalUsBankAccountFromWire,
 } from './external-us-bank/external-us-bank-client';
 import type { ExternalUsBankAccount } from './external-us-bank/types';
+import { buildAccountListQuery } from './internal/build-account-list-query';
 import type {
   AccountWithBalance,
   BancolombiaDetails,
@@ -93,6 +94,7 @@ export type MappedAccount =
  * - bancolombia: Bancolombia accounts
  * - breb: BRE-B key accounts
  * - us: US bank accounts
+ * - externalUsBank: External US bank accounts (Plaid / Brale linkage)
  * - polygon: Polygon wallets
  */
 export class AccountsClient extends BaseClient {
@@ -221,14 +223,10 @@ export class AccountsClient extends BaseClient {
    * ```
    */
   async list(params?: ListAccountsParams): Promise<ListAccountsResult> {
-    const holderUrn = params?.holderUrn || this.httpClient.urn;
-
-    const queryParams = new URLSearchParams();
-    if (holderUrn) {
-      queryParams.append('holder_urn', holderUrn);
-    }
-
-    const queryString = queryParams.toString();
+    const queryString = buildAccountListQuery({
+      ...params,
+      holderUrn: params?.holderUrn || this.httpClient.urn,
+    });
     const path = queryString ? `/api/accounts?${queryString}` : '/api/accounts';
 
     const response = await this.httpClient.request<ListAccountsResponse>({

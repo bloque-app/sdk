@@ -117,6 +117,10 @@ Origins (`identity.origins`):
 - `whatsapp.assert(alias)`
 - `email.assert(alias)`
 
+`register(alias, origin, params)` supports:
+- `type: 'individual'` with **basic profile** (at least `email` or `phone`) or full profile.
+- `type: 'business'` with KYB fields (`name`, `type`, `legalName`, `taxId`, `incorporationDate`, `country`, `state`, `addressLine1`, `city`, `postalCode`, etc.).
+
 ## Organizations
 
 Top-level (`orgs`):

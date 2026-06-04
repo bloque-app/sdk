@@ -83,10 +83,28 @@ export class OriginsClient extends BaseClient {
    *
    * @example
    * ```typescript
-   * // Register individual user with blockchain signature (KYC)
-   * const individual = await bloque.identity.origins.register('ethereum-mainnet', {
+   * // Register with minimal basic profile (supported by Origins API)
+   * const basic = await bloque.identity.origins.register('john@example.com', 'bloque-email', {
    *   assertionResult: {
-   *     alias: '0x742d35Cc6634C0532925a3b8D4C9db96C4b4d8b6',
+   *     alias: 'john@example.com',
+   *     challengeType: 'OTP',
+   *     value: { signature: '123456', alias: 'john@example.com' },
+   *   },
+   *   extraContext: {},
+   *   type: 'individual',
+   *   profile: {
+   *     email: 'john@example.com',
+   *     firstName: 'John',
+   *   }
+   * });
+   *
+   * // Register individual user with blockchain signature (KYC)
+   * const individual = await bloque.identity.origins.register(
+   *   '0x742d35Cc6634C0532925a3b8D4C9db96C4b4d8b6',
+   *   'ethereum-mainnet',
+   *   {
+   *   assertionResult: {
+   *       alias: '0x742d35Cc6634C0532925a3b8D4C9db96C4b4d8b6',
    *     challengeType: 'SIGNING_CHALLENGE',
    *     value: {
    *       signature: '0x1234567890abcdef...',
@@ -97,23 +115,25 @@ export class OriginsClient extends BaseClient {
    *       timestamp: 1640995200
    *     }
    *   },
-   *   type: 'individual',
-   *   profile: {
-   *     firstName: 'John',
-   *     lastName: 'Doe',
-   *     email: 'john.doe@example.com',
-   *     phone: '+1234567890',
-   *     birthdate: '1990-01-15',
-   *     city: 'New York',
-   *     state: 'NY',
-   *     postalCode: '10001',
-   *     countryOfBirthCode: 'USA',
-   *     countryOfResidenceCode: 'USA'
+   *     },
+   *     type: 'individual',
+   *     profile: {
+   *       firstName: 'John',
+   *       lastName: 'Doe',
+   *       email: 'john.doe@example.com',
+   *       phone: '+1234567890',
+   *       birthdate: '1990-01-15',
+   *       city: 'New York',
+   *       state: 'NY',
+   *       postalCode: '10001',
+   *       countryOfBirthCode: 'USA',
+   *       countryOfResidenceCode: 'USA'
+   *     }
    *   }
-   * });
+   * );
    *
    * // Register business with API key (KYB)
-   * const business = await bloque.identity.origins.register('bloque-api', {
+   * const business = await bloque.identity.origins.register('business-123', 'bloque-api', {
    *   assertionResult: {
    *     alias: 'business-123',
    *     challengeType: 'API_KEY',
@@ -133,7 +153,7 @@ export class OriginsClient extends BaseClient {
    *     city: 'New York',
    *     state: 'NY',
    *     postalCode: '10001',
-   *     country: 'United States',
+   *     country: 'USA',
    *     email: 'contact@acme.com',
    *     phone: '+1-555-0123',
    *     ownerName: 'Jane Smith',

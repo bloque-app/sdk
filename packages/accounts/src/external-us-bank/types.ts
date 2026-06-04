@@ -35,48 +35,16 @@ export interface ExternalUsBankBankAddress {
   country?: string;
 }
 
-export interface ExternalUsBankAccountDetails {
+interface ExternalUsBankAccountDetailsBase {
   id: string;
   linkStatus: ExternalUsBankLinkStatus;
   braleAccountId?: string;
   braleAddressId?: string;
-  /**
-   * Short-lived Plaid `link_token`. Embed Plaid Link with this token to drive
-   * the browser-side flow yourself, or open `linkUrl` to use the Bloque-hosted
-   * page instead.
-   */
-  linkToken?: string;
-  /** ISO 8601 expiration of `linkToken`, as reported by Brale. */
-  linkTokenExpiration?: string;
-  /**
-   * Fully-qualified URL of the Bloque-hosted Plaid Link page for this pending
-   * account. Open it in a browser (or redirect the user to it) to complete
-   * linking without embedding Plaid Link yourself. Carries a short-lived
-   * `plaid-link` JWT bound to this account URN; only present when the server
-   * issued one (typically when `returnUrl` was supplied at create time).
-   */
-  linkUrl?: string;
-  /**
-   * Short-lived JWT for the hosted Plaid Link page, when the server returns it
-   * alongside `linkUrl` (same TTL as the link session).
-   */
-  jwt?: string;
   bankAccountLast4?: string;
   bankName?: string;
-  failureReason?: string;
+}
 
-  // ── Brale address enrichment ──────────────────────────────────────────────
-  //
-  // The following fields are populated after the Plaid `public_token` is
-  // exchanged (either via the hosted page or
-  // {@link ExternalUsBankClient.exchangePublicToken}) and refreshed on
-  // `accounts.get()` calls and on Brale `address.updated` webhooks.
-  //
-  // They are best-effort: a transient Brale outage or a not-yet-populated
-  // field leaves the previously-known value (or `undefined`) in place
-  // rather than blanking the field. Treat them as optional even on
-  // `linkStatus === 'active'` accounts.
-
+interface ExternalUsBankEnrichedDetails {
   /** Beneficiary / account holder name as recorded on the Brale address. */
   owner?: string;
   /** ABA routing number for the linked bank. */
@@ -85,7 +53,7 @@ export interface ExternalUsBankAccountDetails {
    * Account number returned by Brale.
    *
    * For Plaid-linked addresses this is **masked** by Brale (it is not the
-   * full account number). Use {@link bankAccountLast4} when you only need
+   * full account number). Use `bankAccountLast4` when you only need
    * the last four digits.
    */
   accountNumber?: string;
@@ -112,6 +80,94 @@ export interface ExternalUsBankAccountDetails {
   /** ISO 8601 timestamp of the last Brale-side update of this address. */
   lastUpdated?: string;
 }
+
+export interface ExternalUsBankPendingLinkDetails
+  extends ExternalUsBankAccountDetailsBase {
+  linkStatus: 'pending_link';
+  /**
+   * Short-lived Plaid `link_token`. Embed Plaid Link with this token to drive
+   * the browser-side flow yourself, or open `linkUrl` to use the Bloque-hosted
+   * page instead.
+   *
+   * Returned while `linkStatus === 'pending_link'` (including right after
+   * {@link ExternalUsBankClient.create}).
+   */
+  linkToken?: string;
+  /**
+   * ISO 8601 expiration of `linkToken`, as reported by Brale.
+   */
+  linkTokenExpiration?: string;
+  /**
+   * Fully-qualified URL of the Bloque-hosted Plaid Link page for this pending
+   * account. Open it in a browser (or redirect the user to it) to complete
+   * linking without embedding Plaid Link yourself. Carries a short-lived
+   * `plaid-link` JWT bound to this account URN.
+   *
+   * Populated when `returnUrl` was supplied at create time.
+   */
+  linkUrl?: string;
+  /**
+   * Short-lived JWT for the hosted Plaid Link page (same TTL as the link
+   * session).
+   */
+  jwt?: string;
+  failureReason?: never;
+}
+
+export interface ExternalUsBankActiveDetails
+  extends ExternalUsBankAccountDetailsBase,
+    ExternalUsBankEnrichedDetails {
+  linkStatus: 'active';
+  linkToken?: never;
+  linkTokenExpiration?: never;
+  linkUrl?: never;
+  jwt?: never;
+  failureReason?: never;
+}
+
+export interface ExternalUsBankLinkFailedDetails
+  extends ExternalUsBankAccountDetailsBase {
+  linkStatus: 'link_failed';
+  linkToken?: never;
+  linkTokenExpiration?: never;
+  linkUrl?: never;
+  jwt?: never;
+  failureReason?: string;
+  owner?: never;
+  routingNumber?: never;
+  accountNumber?: never;
+  accountType?: never;
+  bankAddress?: never;
+  beneficiaryAddress?: never;
+  transferTypes?: never;
+  needsUpdate?: never;
+  lastUpdated?: never;
+}
+
+export interface ExternalUsBankClosedDetails
+  extends ExternalUsBankAccountDetailsBase {
+  linkStatus: 'closed';
+  linkToken?: never;
+  linkTokenExpiration?: never;
+  linkUrl?: never;
+  jwt?: never;
+  failureReason?: never;
+  owner?: never;
+  routingNumber?: never;
+  accountNumber?: never;
+  accountType?: never;
+  bankAddress?: never;
+  beneficiaryAddress?: never;
+  transferTypes?: never;
+  needsUpdate?: never;
+  lastUpdated?: never;
+}
+
+export type ExternalUsBankAccountDetails =
+  | ExternalUsBankPendingLinkDetails
+  | ExternalUsBankActiveDetails
+  | ExternalUsBankLinkFailedDetails
+  | ExternalUsBankClosedDetails;
 
 export interface ExternalUsBankAccount {
   urn: string;

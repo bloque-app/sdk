@@ -256,7 +256,12 @@ export interface Account<TDetails = unknown> {
 /**
  * Parameters for listing accounts
  */
-export interface ListAccountsParams {
+export interface ListAccountsParams extends ListAccountsFilterParams {}
+
+/**
+ * Shared filter parameters for account listing endpoints.
+ */
+export interface ListAccountsFilterParams {
   /**
    * URN of the account holder (user or organization) to filter by
    * @example "did:bloque:bloque-root:nestor"
@@ -270,9 +275,79 @@ export interface ListAccountsParams {
   urn?: string;
 
   /**
-   * Account medium/type to filter by
+   * List of account URNs to filter by.
+   */
+  urns?: string[];
+
+  /**
+   * Account medium/type to filter by.
    */
   medium?: AccountMedium;
+
+  /**
+   * Account status filter (single value or multiple values).
+   */
+  status?: AccountStatus | AccountStatus[];
+
+  /**
+   * Created-at lower bound in ISO 8601 format.
+   */
+  createdAfter?: string;
+
+  /**
+   * Created-at upper bound in ISO 8601 format.
+   */
+  createdBefore?: string;
+
+  /**
+   * @deprecated Use createdAfter (ISO 8601)
+   */
+  from?: number;
+
+  /**
+   * @deprecated Use createdBefore (ISO 8601)
+   */
+  to?: number;
+
+  /**
+   * Text search query.
+   */
+  q?: string;
+
+  /**
+   * Custom account identifier (maps to account details.id).
+   */
+  customId?: string;
+
+  /**
+   * Ledger account ID filter.
+   */
+  ledgerAccountId?: string;
+
+  /**
+   * Multiple ledger account IDs filter.
+   */
+  ledgerAccountIds?: string[];
+
+  /**
+   * Metadata key/value filter.
+   */
+  metadata?: Record<string, string>;
+
+  /**
+   * Maximum number of records to return.
+   */
+  limit?: number;
+
+  /**
+   * Number of records to skip.
+   */
+  offset?: number;
+
+  /**
+   * Result ordering by created_at.
+   */
+  order?: 'ASC' | 'DESC';
 }
 
 /**

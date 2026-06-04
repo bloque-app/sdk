@@ -1,4 +1,5 @@
 import { BaseClient } from '@bloque/sdk-core';
+import { buildAccountListQuery } from '../internal/build-account-list-query';
 import type {
   AccountStatus,
   AccountWithBalance,
@@ -74,26 +75,16 @@ export class BancolombiaClient extends BaseClient {
   async list(
     params?: ListBancolombiaAccountsParams,
   ): Promise<ListBancolombiaAccountsResult> {
-    const holderUrn = params?.holderUrn || this.httpClient.urn;
-
-    const queryParams = new URLSearchParams();
-    queryParams.append('medium', 'bancolombia');
-
-    if (holderUrn) {
-      queryParams.append('holder_urn', holderUrn);
-    }
-
-    if (params?.urn) {
-      queryParams.append('urn', params.urn);
-    }
-
-    const path = `/api/accounts?${queryParams.toString()}`;
+    const queryString = buildAccountListQuery(
+      { ...params, holderUrn: params?.holderUrn || this.httpClient.urn },
+      'bancolombia',
+    );
 
     const response = await this.httpClient.request<
       ListAccountsResponse<BancolombiaDetails>
     >({
       method: 'GET',
-      path,
+      path: `/api/accounts?${queryString}`,
     });
 
     return {

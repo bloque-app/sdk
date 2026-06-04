@@ -98,6 +98,23 @@ cards.accounts.forEach((card) => {
   console.log('Card:', card.metadata?.name);
   console.log('Balance:', card.balance);
 });
+
+// Filtered list across mediums
+const filtered = await userSession.accounts.list({
+  medium: 'card',
+  status: ['active', 'creation_in_progress'],
+  createdAfter: '2026-01-01T00:00:00.000Z',
+  limit: 50,
+  order: 'DESC',
+});
+console.log(`Filtered accounts: ${filtered.accounts.length}`);
+
+// Medium-specific list with the same filters
+const activeCards = await userSession.accounts.card.list({
+  status: 'active',
+  createdAfter: '2026-01-01T00:00:00.000Z',
+});
+console.log(`Active cards: ${activeCards.accounts.length}`);
 ```
 
 ### Get Account by URN

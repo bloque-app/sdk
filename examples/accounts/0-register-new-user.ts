@@ -12,15 +12,8 @@ const bloque = new SDK({
 await bloque.register('@nestor', {
   type: 'individual',
   profile: {
-    firstName: 'Nestor',
-    lastName: 'Nestor',
+    // Basic profile is supported: at least one of email or phone.
     email: 'nestor@example.com',
-    phone: '+1234567890',
-    birthdate: '1990-01-01',
-    city: 'Mexico City',
-    state: 'Mexico',
-    postalCode: '10001',
-    countryOfBirthCode: 'MX',
-    countryOfResidenceCode: 'MX',
+    firstName: 'Nestor',
   },
 });

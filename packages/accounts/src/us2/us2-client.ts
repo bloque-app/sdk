@@ -1,4 +1,5 @@
 import { BaseClient } from '@bloque/sdk-core';
+import { buildAccountListQuery } from '../internal/build-account-list-query';
 import type {
   AccountWithBalance,
   CreateAccountRequest,
@@ -90,19 +91,16 @@ export class Us2Client extends BaseClient {
   async list(
     params: ListUs2AccountsParams = {},
   ): Promise<ListUs2AccountsResult> {
-    const holderUrn = params.holderUrn || this.httpClient.urn;
-
-    const queryParams = new URLSearchParams();
-    queryParams.append('medium', 'us2-account');
-
-    if (holderUrn) queryParams.append('holder_urn', holderUrn);
-    if (params.urn) queryParams.append('urn', params.urn);
+    const queryString = buildAccountListQuery(
+      { ...params, holderUrn: params.holderUrn || this.httpClient.urn },
+      'us2-account',
+    );
 
     const response = await this.httpClient.request<
       ListAccountsResponse<Us2Details>
     >({
       method: 'GET',
-      path: `/api/accounts?${queryParams.toString()}`,
+      path: `/api/accounts?${queryString}`,
     });
 
     return {

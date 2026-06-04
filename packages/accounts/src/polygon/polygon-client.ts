@@ -1,4 +1,5 @@
 import { BaseClient } from '@bloque/sdk-core';
+import { buildAccountListQuery } from '../internal/build-account-list-query';
 import type {
   AccountStatus,
   AccountWithBalance,
@@ -76,26 +77,16 @@ export class PolygonClient extends BaseClient {
   async list(
     params?: ListPolygonAccountsParams,
   ): Promise<ListPolygonAccountsResult> {
-    const holderUrn = params?.holderUrn || this.httpClient.urn;
-
-    const queryParams = new URLSearchParams();
-    queryParams.append('medium', 'polygon');
-
-    if (holderUrn) {
-      queryParams.append('holder_urn', holderUrn);
-    }
-
-    if (params?.urn) {
-      queryParams.append('urn', params.urn);
-    }
-
-    const path = `/api/accounts?${queryParams.toString()}`;
+    const queryString = buildAccountListQuery(
+      { ...params, holderUrn: params?.holderUrn || this.httpClient.urn },
+      'polygon',
+    );
 
     const response = await this.httpClient.request<
       ListAccountsResponse<PolygonDetails>
     >({
       method: 'GET',
-      path,
+      path: `/api/accounts?${queryString}`,
     });
 
     return {

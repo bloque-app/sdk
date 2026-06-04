@@ -1,19 +1,10 @@
+import type { ListAccountsFilterParams } from '../types';
+
 /**
  * Parameters for listing Bancolombia accounts
  */
-export interface ListBancolombiaAccountsParams {
-  /**
-   * URN of the account holder (user or organization) to filter by
-   * @example "did:bloque:bloque-root:nestor"
-   */
-  holderUrn?: string;
-
-  /**
-   * URN of a specific Bancolombia account to retrieve
-   * @example "did:bloque:account:bancolombia:abc-123"
-   */
-  urn?: string;
-}
+export interface ListBancolombiaAccountsParams
+  extends Omit<ListAccountsFilterParams, 'medium'> {}
 
 /**
  * Result of listing Bancolombia accounts
