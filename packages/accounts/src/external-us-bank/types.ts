@@ -44,21 +44,34 @@ export interface ExternalUsBankAccountDetails {
    * Short-lived Plaid `link_token`. Embed Plaid Link with this token to drive
    * the browser-side flow yourself, or open `linkUrl` to use the Bloque-hosted
    * page instead.
+   *
+   * Only returned while `linkStatus === 'pending_link'` (including right after
+   * {@link ExternalUsBankClient.create}). Omitted on `active` accounts after
+   * `accounts.get()` / sync — persist `urn` and re-call `create()` to re-link.
    */
   linkToken?: string;
-  /** ISO 8601 expiration of `linkToken`, as reported by Brale. */
+  /**
+   * ISO 8601 expiration of `linkToken`, as reported by Brale.
+   *
+   * Only present while `linkStatus === 'pending_link'`.
+   */
   linkTokenExpiration?: string;
   /**
    * Fully-qualified URL of the Bloque-hosted Plaid Link page for this pending
    * account. Open it in a browser (or redirect the user to it) to complete
    * linking without embedding Plaid Link yourself. Carries a short-lived
-   * `plaid-link` JWT bound to this account URN; only present when the server
-   * issued one (typically when `returnUrl` was supplied at create time).
+   * `plaid-link` JWT bound to this account URN.
+   *
+   * Only populated when `linkStatus === 'pending_link'` and `returnUrl` was
+   * supplied at create time.
    */
   linkUrl?: string;
   /**
-   * Short-lived JWT for the hosted Plaid Link page, when the server returns it
-   * alongside `linkUrl` (same TTL as the link session).
+   * Short-lived JWT for the hosted Plaid Link page (same TTL as the link
+   * session).
+   *
+   * Only present when `linkStatus === 'pending_link'` and the server issued a
+   * hosted-page session alongside `linkUrl`.
    */
   jwt?: string;
   bankAccountLast4?: string;

@@ -93,6 +93,7 @@ export type MappedAccount =
  * - bancolombia: Bancolombia accounts
  * - breb: BRE-B key accounts
  * - us: US bank accounts
+ * - externalUsBank: External US bank accounts (Plaid / Brale linkage)
  * - polygon: Polygon wallets
  */
 export class AccountsClient extends BaseClient {
