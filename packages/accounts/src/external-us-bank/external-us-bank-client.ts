@@ -13,6 +13,7 @@ import type {
   CreateExternalUsBankAccountParams,
   ExchangeExternalUsBankPublicTokenParams,
   ExternalUsBankAccount,
+  ExternalUsBankAccountDetails,
   ExternalUsBankBankAddress,
   PullExternalUsBankParams,
   PullExternalUsBankResult,
@@ -59,6 +60,55 @@ type PullExternalUsBankResponse = {
   req_id?: string;
 };
 
+function mapExternalUsBankDetailsFromWire(
+  details: ExternalUsBankDetails,
+): ExternalUsBankAccountDetails {
+  const common = {
+    id: details.id,
+    braleAccountId: details.brale_account_id,
+    braleAddressId: details.brale_address_id,
+    bankAccountLast4: details.bank_account_last4,
+    bankName: details.bank_name,
+  };
+
+  switch (details.link_status) {
+    case 'pending_link':
+      return {
+        ...common,
+        linkStatus: 'pending_link',
+        linkToken: details.link_token,
+        linkTokenExpiration: details.link_token_expiration,
+        linkUrl: details.link_url,
+        jwt: details.jwt,
+      };
+    case 'active':
+      return {
+        ...common,
+        linkStatus: 'active',
+        owner: details.owner,
+        routingNumber: details.routing_number,
+        accountNumber: details.account_number,
+        accountType: details.account_type,
+        bankAddress: mapBankAddressFromWire(details.bank_address),
+        beneficiaryAddress: mapBankAddressFromWire(details.beneficiary_address),
+        transferTypes: details.transfer_types,
+        needsUpdate: details.needs_update,
+        lastUpdated: details.last_updated,
+      };
+    case 'link_failed':
+      return {
+        ...common,
+        linkStatus: 'link_failed',
+        failureReason: details.failure_reason,
+      };
+    case 'closed':
+      return {
+        ...common,
+        linkStatus: 'closed',
+      };
+  }
+}
+
 export function mapExternalUsBankAccountFromWire(
   account: AccountWithBalance<ExternalUsBankDetails>,
 ): ExternalUsBankAccount {
@@ -73,30 +123,7 @@ export function mapExternalUsBankAccountFromWire(
     createdAt: account.created_at,
     updatedAt: account.updated_at,
     balance: account.balance,
-    details: {
-      id: account.details.id,
-      linkStatus: account.details.link_status,
-      braleAccountId: account.details.brale_account_id,
-      braleAddressId: account.details.brale_address_id,
-      linkToken: account.details.link_token,
-      linkTokenExpiration: account.details.link_token_expiration,
-      linkUrl: account.details.link_url,
-      jwt: account.details.jwt,
-      bankAccountLast4: account.details.bank_account_last4,
-      bankName: account.details.bank_name,
-      failureReason: account.details.failure_reason,
-      owner: account.details.owner,
-      routingNumber: account.details.routing_number,
-      accountNumber: account.details.account_number,
-      accountType: account.details.account_type,
-      bankAddress: mapBankAddressFromWire(account.details.bank_address),
-      beneficiaryAddress: mapBankAddressFromWire(
-        account.details.beneficiary_address,
-      ),
-      transferTypes: account.details.transfer_types,
-      needsUpdate: account.details.needs_update,
-      lastUpdated: account.details.last_updated,
-    },
+    details: mapExternalUsBankDetailsFromWire(account.details),
   };
 }
 
