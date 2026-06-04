@@ -72,6 +72,20 @@ console.log(client.urn)         // did:bloque:tu-origen:@alice
 console.log(client.accessToken) // JWT — válido ~15 minutos
 ```
 
+### Perfil básico (mínimo)
+
+Para `individual`, Origins acepta un perfil básico con al menos un canal de contacto (`email` o `phone`).
+
+```ts
+const client = await sdk.register('@alice', {
+  type: 'individual',
+  profile: {
+    email: 'alice@ejemplo.com',
+    firstName: 'Alice',
+  },
+})
+```
+
 <Checkpoint
   title="Deberías ver un URN impreso"
   expected={`did:bloque:tu-origen:@alice`}
@@ -86,16 +100,18 @@ console.log(client.accessToken) // JWT — válido ~15 minutos
 const client = await sdk.register('@acme-corp', {
   type: 'business',
   profile: {
+    name: 'Acme Corp',
+    type: 'LLC',
     legalName: 'Acme Corp S.A.S.',
     taxId: '900123456-7',
     incorporationDate: '2020-01-15',
-    businessType: 'sas',
-    countryCode: 'CO',
-    address: 'Calle 100 # 8A-55',
+    country: 'USA',
+    state: 'CA',
+    addressLine1: 'Calle 100 # 8A-55',
     city: 'Bogotá',
     postalCode: '110221',
-    ownerFirstName: 'Carlos',
-    ownerLastName: 'Gómez',
+    countryCode: 'USA',
+    ownerName: 'Carlos Gómez',
     ownerIdType: 'CC',
     ownerIdNumber: '1234567890',
   },

@@ -66,6 +66,18 @@ interface UserProfile {
   personalIdNumber?: string;
 }
 
+/**
+ * Minimal profile for basic individual registration.
+ *
+ * At least one contact channel must be provided: `email` or `phone`.
+ * Names are optional but recommended for better user-facing records.
+ */
+export type BasicIndividualProfile =
+  | ({ email: string; phone?: string } & Partial<UserProfile>)
+  | ({ email?: string; phone: string } & Partial<UserProfile>);
+
+export type IndividualProfile = UserProfile | BasicIndividualProfile;
+
 interface BusinessProfile {
   /**
    * Primary business address (street address)
@@ -181,7 +193,7 @@ export interface IndividualRegisterParams {
   /**
    * User profile information
    */
-  profile: UserProfile;
+  profile: IndividualProfile;
 }
 
 export interface BusinessRegisterParams {
