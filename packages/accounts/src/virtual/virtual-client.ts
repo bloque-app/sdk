@@ -1,4 +1,5 @@
 import { BaseClient } from '@bloque/sdk-core';
+import { buildAccountListQuery } from '../internal/build-account-list-query';
 import type {
   AccountStatus,
   AccountWithBalance,
@@ -76,26 +77,16 @@ export class VirtualClient extends BaseClient {
   async list(
     params?: ListVirtualAccountsParams,
   ): Promise<ListVirtualAccountsResult> {
-    const holderUrn = params?.holderUrn || this.httpClient.urn;
-
-    const queryParams = new URLSearchParams();
-    queryParams.append('medium', 'virtual');
-
-    if (holderUrn) {
-      queryParams.append('holder_urn', holderUrn);
-    }
-
-    if (params?.urn) {
-      queryParams.append('urn', params.urn);
-    }
-
-    const path = `/api/accounts?${queryParams.toString()}`;
+    const queryString = buildAccountListQuery(
+      { ...params, holderUrn: params?.holderUrn || this.httpClient.urn },
+      'virtual',
+    );
 
     const response = await this.httpClient.request<
       ListAccountsResponse<VirtualDetails>
     >({
       method: 'GET',
-      path,
+      path: `/api/accounts?${queryString}`,
     });
 
     return {

@@ -3,6 +3,7 @@ import {
   isSupportedAsset,
   SUPPORTED_ASSETS,
 } from '@bloque/sdk-core';
+import { buildAccountListQuery } from '../internal/build-account-list-query';
 import type {
   AccountStatus,
   AccountWithBalance,
@@ -189,26 +190,16 @@ export class CardClient extends BaseClient {
    * ```
    */
   async list(params?: ListCardAccountsParams): Promise<ListCardAccountsResult> {
-    const holderUrn = params?.holderUrn || this.httpClient.urn;
-
-    const queryParams = new URLSearchParams();
-    queryParams.append('medium', 'card');
-
-    if (holderUrn) {
-      queryParams.append('holder_urn', holderUrn);
-    }
-
-    if (params?.urn) {
-      queryParams.append('urn', params.urn);
-    }
-
-    const path = `/api/accounts?${queryParams.toString()}`;
+    const queryString = buildAccountListQuery(
+      { ...params, holderUrn: params?.holderUrn || this.httpClient.urn },
+      'card',
+    );
 
     const response = await this.httpClient.request<
       ListAccountsResponse<CardDetails>
     >({
       method: 'GET',
-      path,
+      path: `/api/accounts?${queryString}`,
     });
 
     return {

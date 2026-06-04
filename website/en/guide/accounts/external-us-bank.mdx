@@ -95,15 +95,17 @@ console.log(linked.details.bankName, linked.details.bankAccountLast4);
 
 ## Field reference (response `details`)
 
-Lifecycle fields are returned up front. **Enrichment fields** (the second block below) are populated best-effort once Brale has the linked address — typically right after the `public_token` is exchanged, and refreshed on every `accounts.get()` and on Brale `address.updated` webhooks. They are always optional, even on `linkStatus === 'active'` accounts.
+**Link-session fields** (`linkToken`, `linkTokenExpiration`, `linkUrl`, `jwt`) are returned only while `linkStatus === 'pending_link'` — including immediately after `create()`. Once linkage completes and the account is `active`, the API omits them on `accounts.get()` and sync responses. Persist `urn`; do not cache link tokens for long-lived reads.
+
+**Enrichment fields** (the block below) are populated best-effort once Brale has the linked address — typically right after the `public_token` is exchanged, and refreshed on every `accounts.get()` and on Brale `address.updated` webhooks. They are always optional, even on `linkStatus === 'active'` accounts.
 
 | Field | Type | When present |
 |-------|------|--------------|
 | `linkStatus` | `'pending_link' \| 'active' \| 'link_failed' \| 'closed'` | always |
-| `linkToken` | `string` | both flows (use it for embedded Plaid Link) |
-| `linkTokenExpiration` | `string` (ISO 8601) | both flows |
-| `linkUrl` | `string` | hosted page flow only (`returnUrl` supplied at create) |
-| `jwt` | `string` | optional; short-lived token for the hosted page when the server issues one |
+| `linkToken` | `string` | `linkStatus === 'pending_link'` (embedded Plaid Link flow) |
+| `linkTokenExpiration` | `string` (ISO 8601) | `linkStatus === 'pending_link'` |
+| `linkUrl` | `string` | `linkStatus === 'pending_link'` and `returnUrl` was supplied at create |
+| `jwt` | `string` | `linkStatus === 'pending_link'` when the server issued a hosted-page session |
 | `braleAccountId` | `string` | once Brale has provisioned the account |
 | `braleAddressId` | `string` | after `public_token` is exchanged |
 | `bankName` | `string` | after `public_token` is exchanged |

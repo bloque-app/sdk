@@ -1,19 +1,10 @@
+import type { ListAccountsFilterParams } from '../types';
+
 /**
  * Parameters for listing polygon accounts
  */
-export interface ListPolygonAccountsParams {
-  /**
-   * URN of the account holder (user or organization) to filter by
-   * @example "did:bloque:bloque-root:nestor"
-   */
-  holderUrn?: string;
-
-  /**
-   * URN of a specific polygon account to retrieve
-   * @example "did:bloque:account:polygon:0x05B10c9B6241b73fc8c906fB7979eFc7764AB731"
-   */
-  urn?: string;
-}
+export interface ListPolygonAccountsParams
+  extends Omit<ListAccountsFilterParams, 'medium'> {}
 
 /**
  * Result of listing polygon accounts

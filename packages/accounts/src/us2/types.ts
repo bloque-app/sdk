@@ -1,4 +1,8 @@
-import type { AccountStatus, TokenBalance } from '../types';
+import type {
+  AccountStatus,
+  ListAccountsFilterParams,
+  TokenBalance,
+} from '../types';
 
 export interface Us2AccountDetails {
   id: string;
@@ -45,10 +49,8 @@ export interface CreateUs2AccountParams {
   address?: CreateUs2AccountAddress;
 }
 
-export interface ListUs2AccountsParams {
-  holderUrn?: string;
-  urn?: string;
-}
+export interface ListUs2AccountsParams
+  extends Omit<ListAccountsFilterParams, 'medium'> {}
 
 export interface ListUs2AccountsResult {
   accounts: Us2Account[];
