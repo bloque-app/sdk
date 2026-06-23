@@ -12,6 +12,7 @@ import { SwapClient } from '@bloque/sdk-swap';
 export class SDK {
   private readonly httpClient: HttpClient;
   private readonly identity: IdentityClient;
+  private token?: string;
 
   constructor(config: BloqueSDKConfig) {
     this.httpClient = new HttpClient(config);
@@ -132,6 +133,7 @@ export class SDK {
     });
 
     this.httpClient.setAccessToken(response.accessToken);
+    this.token = response.accessToken;
     this.httpClient.setUrn(urn);
 
     return this.buildClients(response.accessToken);
@@ -236,5 +238,9 @@ export class SDK {
     this.httpClient.setUrn(urn);
 
     return this.buildClients(response.result.access_token);
+  }
+
+  async getToken() {
+    return this.token;
   }
 }

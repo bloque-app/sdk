@@ -231,11 +231,16 @@ export class ExternalUsBankClient extends BaseClient {
       );
     }
 
+    const idempotencyKey =
+      params.idempotencyKey ??
+      (typeof globalThis.crypto !== 'undefined' &&
+      typeof globalThis.crypto.randomUUID === 'function'
+        ? globalThis.crypto.randomUUID()
+        : `idem_${Date.now()}_${Math.random().toString(36).slice(2)}`);
+
     const body: PullExternalUsBankRequest = {
       amount: params.amount,
-      ...(params.idempotencyKey !== undefined
-        ? { idempotency_key: params.idempotencyKey }
-        : {}),
+      idempotency_key: idempotencyKey,
     };
 
     const response = await this.httpClient.request<
@@ -245,6 +250,7 @@ export class ExternalUsBankClient extends BaseClient {
       method: 'POST',
       path: `/api/mediums/external-us-bank/${encodeURIComponent(params.urn)}/pull`,
       body,
+      headers: { 'Idempotency-Key': idempotencyKey },
     });
 
     return {
