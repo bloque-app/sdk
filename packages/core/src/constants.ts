@@ -3,8 +3,6 @@ import type { Mode } from './types';
 export const API_BASE_URLS: Record<Mode, string> = {
   sandbox: 'https://api.dev-bloque.app',
   production: 'https://api.bloque.app',
-  // sandbox: 'http://localhost:3000',
-  // production: 'http://localhost:3000',
 };
 
 export const DEFAULT_HEADERS = {
