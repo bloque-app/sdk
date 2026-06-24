@@ -265,8 +265,23 @@ const result = await session.swap.breb.createDeposit({
 const how = result.execution?.result.how;
 if (how?.type === 'BREB_DEPOSIT') {
   console.log('Enviar COP a llave BRE-B:', how.keyType, how.keyValue);
+  console.log('Monto:', how.expectedAmount ?? how.amount, how.currency);
 }
 ```
+
+### Pagos parciales
+
+Si el pagador envía menos del monto de la orden, el grafo sigue pausado en la **misma** llave. Varias transferencias BRE-B se suman. `how.depositStatus` pasa a `'partial'` y `remainingAmount` indica cuánto COP falta:
+
+```typescript title="deposito-breb-parcial.ts"
+if (how?.type === 'BREB_DEPOSIT' && how.depositStatus === 'partial') {
+  console.log('Recibido:', how.receivedAmount);
+  console.log('Falta:', how.remainingAmount);
+  console.log('Complementar en la misma llave:', how.keyValue);
+}
+```
+
+Consulta `user.swap.listOrders({ graphId: result.order.graphId })` o usa webhooks `swap.order.*` para detectar pagos parciales — la respuesta de `createDeposit` no se actualiza de forma asíncrona.
 
 ## Suspender una llave BRE-B
 

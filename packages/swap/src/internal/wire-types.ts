@@ -198,6 +198,14 @@ export interface ExecutionHowBrebDeposit {
   currency: 'COP';
   reference: string;
   deposit_account_urn: string;
+  /** Scaled COP required for the order (same as amount on first pause). */
+  expected_amount?: string;
+  /** Scaled COP received so far (partial payments). */
+  received_amount?: string;
+  /** Scaled COP still required (derived: expected − received). */
+  remaining_amount?: string;
+  /** `awaiting` on first pause; `partial` after an underpayment. */
+  deposit_status?: 'awaiting' | 'partial';
 }
 
 /**

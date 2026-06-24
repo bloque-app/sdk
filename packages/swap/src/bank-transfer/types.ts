@@ -306,6 +306,14 @@ export interface ExecutionHowBrebDeposit {
   reference: string;
   /** Temporary deposit account URN */
   depositAccountUrn: string;
+  /** Scaled COP required for the order (same as amount on first pause). */
+  expectedAmount?: string;
+  /** Scaled COP received so far when multiple transfers top up the same key. */
+  receivedAmount?: string;
+  /** Scaled COP still required (derived: expectedAmount − receivedAmount). */
+  remainingAmount?: string;
+  /** `awaiting` on first pause; `partial` after an underpayment. */
+  depositStatus?: 'awaiting' | 'partial';
 }
 
 /**

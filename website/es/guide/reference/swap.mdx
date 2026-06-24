@@ -626,6 +626,10 @@ interface ExecutionHowBrebDeposit {
   currency: 'COP';
   reference: string;
   depositAccountUrn: string;
+  expectedAmount?: string;
+  receivedAmount?: string;
+  remainingAmount?: string;
+  depositStatus?: 'awaiting' | 'partial';
 }
 ```
 
@@ -652,10 +656,39 @@ const result = await userSession.swap.breb.createDeposit({
 const how = result.execution?.result.how;
 if (how?.type === 'BREB_DEPOSIT') {
   console.log('Pagar vía BRE-B:', how.keyType, how.keyValue);
+  console.log('Requerido:', how.expectedAmount ?? how.amount, 'COP (escalado)');
 }
 ```
 
 **Errores:** `E_INVALID_DEPOSIT_INFORMATION` cuando falta `urn`.
+
+El grafo se reanuda automáticamente cuando el webhook de entrada se liquida (`payment.inbound.settled`).
+
+### Pagos parciales (subpago)
+
+Si el pagador envía **menos** que `order.fromAmount`, el grafo **sigue pausado** en la **misma** `keyValue` y `callbackToken`. Varias transferencias BRE-B a esa llave se **suman**. Tras cada pago, `how` se actualiza:
+
+| Campo | Primera pausa | Tras pago parcial |
+| --- | --- | --- |
+| `depositStatus` | `'awaiting'` | `'partial'` |
+| `receivedAmount` | `'0'` | COP escalado recibido hasta ahora |
+| `remainingAmount` | igual a `expectedAmount` | COP escalado aún requerido |
+| `keyValue` | llave de un solo uso | **sin cambios** — envía complementos a la misma llave |
+
+```typescript
+if (how?.type === 'BREB_DEPOSIT' && how.depositStatus === 'partial') {
+  console.log(`Recibido ${how.receivedAmount}, faltan ${how.remainingAmount}`);
+  console.log('Complementar en la misma llave:', how.keyValue);
+}
+```
+
+**Seguimiento:** el servidor acumula `received_total_scaled` en el estado de la instrucción. `remainingAmount` siempre se deriva (`expectedAmount − receivedAmount`).
+
+**Polling:** suscríbete a webhooks `swap.order.*` o consulta `user.swap.listOrders({ graphId: result.order.graphId })`. La respuesta inicial de `createDeposit` no se actualiza cuando llega un pago parcial posterior.
+
+### Sobrepago
+
+Si el pagador envía **más** de lo requerido, el swap entrega el `order.toAmount` DUSD **cotizado**. El exceso en COP se marca para reembolso manual; no se convierte en DUSD extra.
 
 ## Pago RTP (Kusama → Banco US)
 
