@@ -684,6 +684,10 @@ interface ExecutionHowBrebDeposit {
   currency: 'COP';
   reference: string;
   depositAccountUrn: string;
+  expectedAmount?: string;   // scaled COP required (same as amount on first pause)
+  receivedAmount?: string;   // scaled COP received so far
+  remainingAmount?: string;  // scaled COP still required
+  depositStatus?: 'awaiting' | 'partial';
 }
 ```
 
@@ -710,6 +714,7 @@ const result = await userSession.swap.breb.createDeposit({
 const how = result.execution?.result.how;
 if (how?.type === 'BREB_DEPOSIT') {
   console.log('Pay via BRE-B:', how.keyType, how.keyValue);
+  console.log('Required:', how.expectedAmount ?? how.amount, 'COP (scaled)');
 }
 ```
 
@@ -723,6 +728,33 @@ if (how?.type === 'BREB_DEPOSIT') {
 **Errors:** `E_INVALID_DEPOSIT_INFORMATION` when `urn` is missing.
 
 The graph resumes automatically when the inbound webhook settles (`payment.inbound.settled`).
+
+### Partial payments (underpaid)
+
+If the payer sends **less** than `order.fromAmount`, the graph **stays paused** on the **same** `keyValue` and `callbackToken`. Multiple BRE-B transfers to that key are **summed**. After each inbound payment, `how` updates:
+
+| Field | First pause | After partial payment |
+| --- | --- | --- |
+| `depositStatus` | `'awaiting'` | `'partial'` |
+| `receivedAmount` | `'0'` | scaled COP received so far |
+| `remainingAmount` | same as `expectedAmount` | scaled COP still required |
+| `keyValue` | one-time key | **unchanged** — send top-ups to the same key |
+
+```typescript
+// Example: order requires 200,000.00 COP (scaled "20000000"); payer sends 100,000 + 100,000
+if (how?.type === 'BREB_DEPOSIT' && how.depositStatus === 'partial') {
+  console.log(`Received ${how.receivedAmount}, still need ${how.remainingAmount}`);
+  console.log('Top up to the same key:', how.keyValue);
+}
+```
+
+**Tracking:** the server accumulates `received_total_scaled` in instruction state. `remainingAmount` is always derived (`expectedAmount − receivedAmount`), never stored separately.
+
+**Polling:** subscribe to `swap.order.*` webhooks for completion, or poll `user.swap.listOrders({ graphId: result.order.graphId })` and inspect order status. The initial `createDeposit` response does not update when a later partial payment lands — refresh execution/`how` from the order or webhook payload.
+
+### Overpayment
+
+If the payer sends **more** than required, the swap still delivers the **quoted** `order.toAmount` DUSD. Excess COP is flagged to operators for manual refund; it is not converted into extra DUSD.
 
 ## RTP Payout (Kusama → US Bank)
 
