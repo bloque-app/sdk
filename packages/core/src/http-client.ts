@@ -133,6 +133,14 @@ export class HttpClient {
     this._config.origin = origin;
   }
 
+  /**
+   * Create an isolated copy with its own session state (accessToken, urn, origin).
+   * Used to encapsulate per-identity sessions without mutating the root client.
+   */
+  fork(): HttpClient {
+    return new HttpClient({ ...this._config } as BloqueSDKConfig);
+  }
+
   private validateConfig(config: BloqueInternalConfig): void {
     config.mode ??= 'production';
     config.platform ??= 'node';

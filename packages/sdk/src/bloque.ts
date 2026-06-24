@@ -12,21 +12,20 @@ import { SwapClient } from '@bloque/sdk-swap';
 export class SDK {
   private readonly httpClient: HttpClient;
   private readonly identity: IdentityClient;
-  private token?: string;
 
   constructor(config: BloqueSDKConfig) {
     this.httpClient = new HttpClient(config);
     this.identity = new IdentityClient(this.httpClient);
   }
 
-  private buildClients(accessToken: string) {
+  private buildClients(httpClient: HttpClient, accessToken: string) {
     return {
-      accounts: new AccountsClient(this.httpClient),
-      compliance: new ComplianceClient(this.httpClient),
-      identity: this.identity,
-      orgs: new OrgsClient(this.httpClient),
-      swap: new SwapClient(this.httpClient),
-      urn: this.httpClient.urn,
+      accounts: new AccountsClient(httpClient),
+      compliance: new ComplianceClient(httpClient),
+      identity: new IdentityClient(httpClient),
+      orgs: new OrgsClient(httpClient),
+      swap: new SwapClient(httpClient),
+      urn: httpClient.urn,
       get accessToken(): string {
         return accessToken;
       },
@@ -102,7 +101,10 @@ export class SDK {
     this.httpClient.setOrigin(response.origin);
     this.httpClient.setUrn(response.urn);
 
-    return this.buildClients(this.httpClient.getJwtToken() ?? '');
+    return this.buildClients(
+      this.httpClient,
+      this.httpClient.getJwtToken() ?? '',
+    );
   }
 
   async me(): Promise<IdentityMe> {
@@ -132,11 +134,11 @@ export class SDK {
       ...params,
     });
 
-    this.httpClient.setAccessToken(response.accessToken);
-    this.token = response.accessToken;
-    this.httpClient.setUrn(urn);
+    const session = this.httpClient.fork();
+    session.setAccessToken(response.accessToken);
+    session.setUrn(urn);
 
-    return this.buildClients(response.accessToken);
+    return this.buildClients(session, response.accessToken);
   }
 
   async connect(): Promise<ReturnType<SDK['buildClients']>>;
@@ -166,11 +168,12 @@ export class SDK {
 
       await this.httpClient.ensureExchanged();
 
-      const me = await this.identity.me();
-      this.httpClient.setOrigin(me.origin);
-      this.httpClient.setUrn(me.urn);
+      const session = this.httpClient.fork();
+      const me = await new IdentityClient(session).me();
+      session.setOrigin(me.origin);
+      session.setUrn(me.urn);
 
-      return this.buildClients(this.httpClient.accessToken ?? '');
+      return this.buildClients(session, session.accessToken ?? '');
     }
 
     // --- originKey: legacy API_KEY challenge connect(alias) ---
@@ -200,10 +203,11 @@ export class SDK {
         },
       });
 
-      this.httpClient.setAccessToken(response.result.access_token);
-      this.httpClient.setUrn(urn);
+      const session = this.httpClient.fork();
+      session.setAccessToken(response.result.access_token);
+      session.setUrn(urn);
 
-      return this.buildClients(response.result.access_token);
+      return this.buildClients(session, response.result.access_token);
     }
 
     // --- jwt: OTP connect(origin, alias, code) ---
@@ -233,14 +237,11 @@ export class SDK {
     });
 
     const urn = `did:bloque:${origin}:${alias}`;
-    this.httpClient.setJwtToken(response.result.access_token);
-    this.httpClient.setOrigin(origin);
-    this.httpClient.setUrn(urn);
+    const session = this.httpClient.fork();
+    session.setJwtToken(response.result.access_token);
+    session.setOrigin(origin);
+    session.setUrn(urn);
 
-    return this.buildClients(response.result.access_token);
-  }
-
-  async getToken() {
-    return this.token;
+    return this.buildClients(session, response.result.access_token);
   }
 }
