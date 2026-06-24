@@ -279,14 +279,39 @@ export interface SwapOrder {
 }
 
 /**
- * Redirect instructions for completing the payment
+ * Redirect instructions for completing the payment (PSE, card, etc.)
  */
-export interface ExecutionHow {
+export interface ExecutionHowRedirect {
   /** Type of action required (e.g., "REDIRECT") */
   type: string;
   /** URL to redirect the user to complete the payment */
   url: string;
 }
+
+/**
+ * BRE-B on-ramp deposit instructions returned when the graph pauses.
+ * Show `keyType` / `keyValue` so the payer can send COP via their bank's BRE-B app.
+ */
+export interface ExecutionHowBrebDeposit {
+  type: 'BREB_DEPOSIT';
+  medium: 'breb';
+  /** BRE-B key type (e.g. "ALPHA") */
+  keyType: string;
+  /** One-time BRE-B key the payer must use */
+  keyValue: string;
+  /** Scaled COP amount (same precision as order.fromAmount, typically COP/2) */
+  amount: string;
+  currency: 'COP';
+  /** Order reference for reconciliation */
+  reference: string;
+  /** Temporary deposit account URN */
+  depositAccountUrn: string;
+}
+
+/**
+ * Instructions for completing a paused execution step
+ */
+export type ExecutionHow = ExecutionHowRedirect | ExecutionHowBrebDeposit;
 
 /**
  * Execution result from auto-execution

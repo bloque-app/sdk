@@ -16,5 +16,8 @@ export {
 export type * from '@bloque/sdk-identity';
 export type * from '@bloque/sdk-orgs';
 export type * from '@bloque/sdk-swap';
-export type { BrebClient as SwapBrebClient } from '@bloque/sdk-swap';
+export type {
+  BrebClient as SwapBrebClient,
+  ExternalUsBankSwapClient,
+} from '@bloque/sdk-swap';
 export { SDK } from './bloque';

@@ -14,6 +14,8 @@ The swap module is the boundary between external payment rails and Bloque accoun
 | `pse` | `fromMediums` (cash-in only) | Colombian real-time bank transfer (23+ banks) |
 | `kusama` | `fromMediums` or `toMediums` | Kusama blockchain network |
 | `breb` | `fromMediums` or `toMediums` | BRE-B instant payment key |
+| `rtp` | `toMediums` (cash-out only) | US instant bank payout via RTP |
+| `external-us-bank` | `fromMediums` (cash-in only) | US bank ACH on-ramp |
 | `bankTransfer` | `toMediums` (cash-out only) | Any Colombian bank (29 banks) |
 | `bancolombia` | `toMediums` (cash-out only) | Bancolombia bank account |
 
@@ -661,5 +663,137 @@ performBancolombiaSwap();
 - **`dst`**: User specifies the exact amount to receive. Source amount is calculated from the rate.
   - Example: "I want to receive exactly 5 DUSD, I'll pay whatever COP is needed"
 
+### ExecutionHow Type
+
+When a swap order pauses for user action, `execution.result.how` describes what to do next:
+
+```typescript
+type ExecutionHow = ExecutionHowRedirect | ExecutionHowBrebDeposit;
+
+interface ExecutionHowRedirect {
+  type: string;   // e.g. "REDIRECT"
+  url: string;    // PSE checkout URL
+}
+
+interface ExecutionHowBrebDeposit {
+  type: 'BREB_DEPOSIT';
+  medium: 'breb';
+  keyType: string;           // e.g. "ALPHA"
+  keyValue: string;          // one-time BRE-B key
+  amount: string;            // scaled COP amount
+  currency: 'COP';
+  reference: string;
+  depositAccountUrn: string;
+}
+```
+
+## BRE-B On-Ramp Deposit (COP → Kusama)
+
+Deposit COP via a one-time BRE-B key; the escrow pays out DUSD on Kusama.
+
+```typescript
+const rates = await userSession.swap.findRates({
+  fromAsset: 'COP/2',
+  toAsset: 'DUSD/6',
+  fromMediums: ['breb'],
+  toMediums: ['kusama'],
+  amountSrc: '20000000',
+});
+
+const result = await userSession.swap.breb.createDeposit({
+  rateSig: rates.rates[0].sig,
+  amountSrc: '20000000',
+  depositInformation: { urn: card.urn },
+  args: {}, // triggers auto-exec; server fills deposit node args
+});
+
+const how = result.execution?.result.how;
+if (how?.type === 'BREB_DEPOSIT') {
+  console.log('Pay via BRE-B:', how.keyType, how.keyValue);
+}
+```
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `rateSig` | `string` | Yes | Rate signature from `findRates` |
+| `amountSrc` | `string` | Conditional | Source amount (required if `type` is `'src'`) |
+| `depositInformation.urn` | `string` | Yes | Destination account URN to credit on Kusama |
+| `args` | `Record<string, unknown>` | No | Pass `{}` to auto-execute and receive the BRE-B key |
+
+**Errors:** `E_INVALID_DEPOSIT_INFORMATION` when `urn` is missing.
+
+The graph resumes automatically when the inbound webhook settles (`payment.inbound.settled`).
+
+## RTP Payout (Kusama → US Bank)
+
+Cash out DUSD on Kusama to a US bank account via RTP.
+
+```typescript
+const rates = await userSession.swap.findRates({
+  fromAsset: 'DUSD/6',
+  toAsset: 'USD/2',
+  fromMediums: ['kusama'],
+  toMediums: ['rtp'],
+  amountSrc: '100000000',
+});
+
+const result = await userSession.swap.rtp.create({
+  rateSig: rates.rates[0].sig,
+  amountSrc: '100000000',
+  depositInformation: {
+    owner: 'Jane Doe',
+    accountNumber: '1234567890',
+    routingNumber: '063108680',
+    accountType: 'checking',
+    bankName: 'Example Bank',
+  },
+});
+```
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `rateSig` | `string` | Yes | Rate signature from `findRates` |
+| `amountSrc` | `string` | Conditional | Source DUSD amount (required if `type` is `'src'`) |
+| `depositInformation.owner` | `string` | Yes | Account holder name |
+| `depositInformation.accountNumber` | `string` | Yes | Bank account number |
+| `depositInformation.routingNumber` | `string` | Yes | ABA routing number |
+| `depositInformation.accountType` | `'checking' \| 'savings'` | Yes | Account type |
+| `depositInformation.bankName` | `string` | No | Bank name |
+
+**Errors:** `E_INVALID_DEPOSIT_INFORMATION` when required bank fields are missing or `accountType` is invalid.
+
+## External US Bank On-Ramp (ACH → Kusama)
+
+Pull USD from a linked US bank account via ACH; funds teleport to Kusama as DUSD.
+
+```typescript
+const rates = await userSession.swap.findRates({
+  fromAsset: 'USD/2',
+  toAsset: 'DUSD/6',
+  fromMediums: ['external-us-bank'],
+  toMediums: ['kusama'],
+  amountSrc: '10000',
+});
+
+const result = await userSession.swap.externalUsBank.create({
+  rateSig: rates.rates[0].sig,
+  amountSrc: '10000',
+  depositInformation: { ledgerAccountId: 'ledger-user-001' },
+  args: { sourceAccountUrn: 'did:bloque:account:external-us-bank:abc123' },
+});
+```
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `rateSig` | `string` | Yes | Rate signature from `findRates` |
+| `amountSrc` | `string` | Conditional | Source USD amount in cents (required if `type` is `'src'`) |
+| `depositInformation.ledgerAccountId` | `string` | Yes | Kusama ledger account id to credit |
+| `args.sourceAccountUrn` | `string` | Yes | Linked external US bank account URN to pull from |
+
+**Errors:** `E_INVALID_DEPOSIT_INFORMATION` when `ledgerAccountId` is missing.
+
+## Next Steps
+
 - [Accounts Guide](/sdk/guide/accounts/overview) - Create and manage accounts for swap operations
+- [BRE-B Guide](/sdk/guide/accounts/breb) - BRE-B keys and on-ramp deposits
 - [Organizations Guide](/sdk/guide/features/organizations) - Manage entities that can perform swaps

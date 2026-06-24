@@ -18,6 +18,7 @@ The BRE-B client lets you:
 - associate the key with the account for an existing ledger when `ledgerId` is provided, or create an account automatically when it is omitted
 - resolve a BRE-B key before starting a payment flow
 - pay to a resolved BRE-B key through `session.swap.breb.create()`
+- deposit COP via BRE-B on-ramp through `session.swap.breb.createDeposit()`
 - manage the key lifecycle by suspending, activating, or deleting a stored key
 
 ## Create a BRE-B Key
@@ -241,6 +242,63 @@ const result = await session.swap.breb.create({
 console.log(result.order.id, result.order.status);
 ```
 
+## Deposit COP via BRE-B (On-Ramp)
+
+Deposit COP through a one-time BRE-B key; the escrow pays out DUSD on Kusama to your account.
+
+```typescript title="breb-deposit-onramp.ts"
+const rates = await session.swap.findRates({
+  fromAsset: 'COP/2',
+  toAsset: 'DUSD/6',
+  fromMediums: ['breb'],
+  toMediums: ['kusama'],
+  amountSrc: '20000000',
+});
+
+const result = await session.swap.breb.createDeposit({
+  rateSig: rates.rates[0].sig,
+  amountSrc: '20000000',
+  depositInformation: {
+    urn: 'did:bloque:account:breb-user-001',
+  },
+  args: {},
+});
+
+const how = result.execution?.result.how;
+if (how?.type === 'BREB_DEPOSIT') {
+  console.log('Send COP to BRE-B key:', how.keyType, how.keyValue);
+  console.log('Amount:', how.amount, how.currency);
+}
+```
+
+### CreateBrebDepositParams
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `rateSig` | `string` | Yes | Rate signature from `findRates` |
+| `amountSrc` | `string` | Conditional | Source COP amount (required if `type` is `'src'`) |
+| `depositInformation.urn` | `string` | Yes | Account URN to credit with DUSD on Kusama |
+| `args` | `Record<string, unknown>` | No | Pass `{}` to auto-execute and receive the BRE-B key |
+
+### ExecutionHowBrebDeposit
+
+When `args` is provided, the order pauses with a `BREB_DEPOSIT` payload:
+
+```typescript title="types.ts"
+interface ExecutionHowBrebDeposit {
+  type: 'BREB_DEPOSIT';
+  medium: 'breb';
+  keyType: string;
+  keyValue: string;
+  amount: string;
+  currency: 'COP';
+  reference: string;
+  depositAccountUrn: string;
+}
+```
+
+Show `keyType` and `keyValue` so the payer can send COP via their bank's BRE-B app. The swap graph resumes automatically when the inbound payment settles.
+
 ## Suspend a BRE-B Key
 
 ```typescript title="suspend-breb-key.ts"
@@ -348,7 +406,8 @@ if (error) {
 - key suspension updates the account with `PATCH /api/accounts/:accountUrn` and `status: 'frozen'`
 - key activation updates the account with `PATCH /api/accounts/:accountUrn` and `status: 'active'`
 - key deletion updates the account with `PATCH /api/accounts/:accountUrn` and `status: 'deleted'`
-- BRE-B payments are created through `session.swap.breb.create()`
+- BRE-B payouts are created through `session.swap.breb.create()`
+- BRE-B on-ramp deposits are created through `session.swap.breb.createDeposit()`
 
 ## Next Steps
 

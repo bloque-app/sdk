@@ -8,24 +8,49 @@ import type {
   ExecutionResult as WireExecutionResult,
 } from '../internal/wire-types';
 import type {
-  CreateBrebDepositOptions,
-  CreateBrebDepositParams,
-  CreateBrebDepositResult,
-  CreateBrebOrderOptions,
-  CreateBrebOrderParams,
-  CreateBrebOrderResult,
+  CreateExternalUsBankOrderOptions,
+  CreateExternalUsBankOrderParams,
+  CreateExternalUsBankOrderResult,
   ExecutionResult,
   SwapOrder,
 } from './types';
 
-export class BrebClient extends BaseClient {
+/**
+ * External US bank client for ACH on-ramp (US bank → Kusama DUSD).
+ */
+export class ExternalUsBankSwapClient extends BaseClient {
   /**
-   * Create a BRE-B payout order (Kusama → BRE-B COP cash-out).
+   * Create an external US bank on-ramp order (ACH pull → DUSD on Kusama).
+   *
+   * @param params - Order parameters including ledger account and linked bank
+   * @returns Promise resolving to the created order
+   *
+   * @example
+   * ```typescript
+   * const rates = await bloque.swap.findRates({
+   *   fromAsset: 'USD/2',
+   *   toAsset: 'DUSD/6',
+   *   fromMediums: ['external-us-bank'],
+   *   toMediums: ['kusama'],
+   *   amountSrc: '10000',
+   * });
+   *
+   * const result = await bloque.swap.externalUsBank.create({
+   *   rateSig: rates.rates[0].sig,
+   *   amountSrc: '10000',
+   *   depositInformation: {
+   *     ledgerAccountId: 'ledger-user-001',
+   *   },
+   *   args: {
+   *     sourceAccountUrn: 'did:bloque:account:external-us-bank:abc123',
+   *   },
+   * });
+   * ```
    */
   async create(
-    params: CreateBrebOrderParams,
-    options?: CreateBrebOrderOptions,
-  ): Promise<CreateBrebOrderResult> {
+    params: CreateExternalUsBankOrderParams,
+    options?: CreateExternalUsBankOrderOptions,
+  ): Promise<CreateExternalUsBankOrderResult> {
     const takerUrn = this.httpClient.urn;
     if (!takerUrn) {
       throw new BloqueConfigError(
@@ -39,12 +64,12 @@ export class BrebClient extends BaseClient {
       taker_urn: takerUrn,
       type: orderType,
       rate_sig: params.rateSig,
-      from_medium: 'kusama',
-      to_medium: 'breb',
+      from_medium: 'external-us-bank',
+      to_medium: 'kusama',
       webhook_url: params.webhookUrl,
-      deposit_information: this._mapPayoutDepositInformationToWire(
-        params.depositInformation,
-      ),
+      deposit_information: {
+        ledger_account_id: params.depositInformation.ledgerAccountId,
+      },
       args: {
         account_urn: params.args.sourceAccountUrn,
       },
@@ -82,81 +107,6 @@ export class BrebClient extends BaseClient {
     };
   }
 
-  /**
-   * Create a BRE-B on-ramp deposit order (COP via BRE-B → Kusama).
-   *
-   * When `args` is provided (even `{}`), the first node auto-executes and the
-   * response pauses with a one-time BRE-B key in `execution.result.how`.
-   */
-  async createDeposit(
-    params: CreateBrebDepositParams,
-    options?: CreateBrebDepositOptions,
-  ): Promise<CreateBrebDepositResult> {
-    const takerUrn = this.httpClient.urn;
-    if (!takerUrn) {
-      throw new BloqueConfigError(
-        'User URN is not available. Please connect to a session first.',
-      );
-    }
-
-    const orderType = params.type ?? 'src';
-
-    const input: CreateOrderInput = {
-      taker_urn: takerUrn,
-      type: orderType,
-      rate_sig: params.rateSig,
-      from_medium: 'breb',
-      to_medium: 'kusama',
-      webhook_url: params.webhookUrl,
-      deposit_information: {
-        urn: params.depositInformation.urn,
-      },
-    };
-
-    if (orderType === 'src' && params.amountSrc) {
-      input.amount_src = params.amountSrc;
-    } else if (orderType === 'dst' && params.amountDst) {
-      input.amount_dst = params.amountDst;
-    }
-
-    if (params.args !== undefined) {
-      input.args = params.args;
-    }
-
-    if (params.nodeId) {
-      input.node_id = params.nodeId;
-    }
-
-    if (params.metadata) {
-      input.metadata = params.metadata;
-    }
-
-    const response = await this.httpClient.request<CreateOrderResponse>({
-      method: 'PUT',
-      path: '/api/order',
-      body: input,
-      headers: options?.idempotencyKey
-        ? { 'Idempotency-Key': options.idempotencyKey }
-        : undefined,
-    });
-
-    return {
-      order: this._mapOrderResponse(response.result.order),
-      execution: response.result.execution
-        ? this._mapExecutionResult(response.result.execution)
-        : undefined,
-      requestId: response.req_id,
-    };
-  }
-
-  private _mapPayoutDepositInformationToWire(
-    depositInfo: CreateBrebOrderParams['depositInformation'],
-  ): WireDepositInformation {
-    return {
-      resolution_id: depositInfo.resolutionId,
-    };
-  }
-
   private _mapOrderResponse(order: OrderResponse): SwapOrder {
     return {
       id: order.id,
@@ -175,6 +125,9 @@ export class BrebClient extends BaseClient {
       graphId: order.graph_id,
       status: order.status,
       metadata: order.metadata,
+      webhookUrl: order.webhook_url,
+      failureReason: order.failure_reason,
+      failureDetails: order.failure_details,
       createdAt: order.created_at,
       updatedAt: order.updated_at,
     };

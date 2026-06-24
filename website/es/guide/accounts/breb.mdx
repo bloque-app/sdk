@@ -18,6 +18,7 @@ El cliente de BRE-B te permite:
 - asociar la llave a la cuenta de un ledger existente cuando envías `ledgerId`, o crear una cuenta automáticamente cuando no lo envías
 - resolver una llave BRE-B antes de iniciar un flujo de pago
 - pagar a una llave BRE-B resuelta a través de `session.swap.breb.create()`
+- depositar COP vía on-ramp BRE-B con `session.swap.breb.createDeposit()`
 - gestionar el ciclo de vida de la llave suspendiendo, activando o eliminando una llave guardada
 
 ## Crear una llave BRE-B
@@ -241,6 +242,32 @@ const result = await session.swap.breb.create({
 console.log(result.order.id, result.order.status);
 ```
 
+## Depositar COP vía BRE-B (On-Ramp)
+
+Deposita COP mediante una llave BRE-B de un solo uso; el escrow paga DUSD en Kusama.
+
+```typescript title="deposito-breb-onramp.ts"
+const rates = await session.swap.findRates({
+  fromAsset: 'COP/2',
+  toAsset: 'DUSD/6',
+  fromMediums: ['breb'],
+  toMediums: ['kusama'],
+  amountSrc: '20000000',
+});
+
+const result = await session.swap.breb.createDeposit({
+  rateSig: rates.rates[0].sig,
+  amountSrc: '20000000',
+  depositInformation: { urn: 'did:bloque:account:breb-user-001' },
+  args: {},
+});
+
+const how = result.execution?.result.how;
+if (how?.type === 'BREB_DEPOSIT') {
+  console.log('Enviar COP a llave BRE-B:', how.keyType, how.keyValue);
+}
+```
+
 ## Suspender una llave BRE-B
 
 ```typescript title="suspender-llave-breb.ts"
@@ -349,6 +376,7 @@ if (error) {
 - la activación actualiza la cuenta con `PATCH /api/accounts/:accountUrn` y `status: 'active'`
 - la eliminación actualiza la cuenta con `PATCH /api/accounts/:accountUrn` y `status: 'deleted'`
 - los pagos BRE-B se crean con `session.swap.breb.create()`
+- los depósitos on-ramp BRE-B se crean con `session.swap.breb.createDeposit()`
 
 ## Próximos pasos
 

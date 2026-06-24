@@ -14,6 +14,8 @@ El módulo swap es la frontera entre los rieles de pago externos y las cuentas B
 | `pse` | `fromMediums` (solo cash-in) | Transferencia bancaria en tiempo real colombiana (23+ bancos) |
 | `kusama` | `fromMediums` o `toMediums` | Red blockchain Kusama |
 | `breb` | `fromMediums` o `toMediums` | Llave de pago instantáneo BRE-B |
+| `rtp` | `toMediums` (solo cash-out) | Pago instantáneo a banco US vía RTP |
+| `external-us-bank` | `fromMediums` (solo cash-in) | On-ramp ACH desde banco US |
 | `bankTransfer` | `toMediums` (solo cash-out) | Cualquier banco colombiano (29 bancos) |
 | `bancolombia` | `toMediums` (solo cash-out) | Cuenta bancaria Bancolombia |
 
@@ -602,3 +604,93 @@ stateDiagram-v2
     failed --> [*]
     timeout --> [*]
 ```
+
+### Tipo ExecutionHow
+
+Cuando una orden de swap se pausa para acción del usuario, `execution.result.how` describe qué hacer:
+
+```typescript
+type ExecutionHow = ExecutionHowRedirect | ExecutionHowBrebDeposit;
+
+interface ExecutionHowRedirect {
+  type: string;   // ej. "REDIRECT"
+  url: string;    // URL de checkout PSE
+}
+
+interface ExecutionHowBrebDeposit {
+  type: 'BREB_DEPOSIT';
+  medium: 'breb';
+  keyType: string;
+  keyValue: string;
+  amount: string;
+  currency: 'COP';
+  reference: string;
+  depositAccountUrn: string;
+}
+```
+
+## Depósito BRE-B On-Ramp (COP → Kusama)
+
+Deposita COP mediante una llave BRE-B de un solo uso; el escrow paga DUSD en Kusama.
+
+```typescript
+const rates = await userSession.swap.findRates({
+  fromAsset: 'COP/2',
+  toAsset: 'DUSD/6',
+  fromMediums: ['breb'],
+  toMediums: ['kusama'],
+  amountSrc: '20000000',
+});
+
+const result = await userSession.swap.breb.createDeposit({
+  rateSig: rates.rates[0].sig,
+  amountSrc: '20000000',
+  depositInformation: { urn: card.urn },
+  args: {},
+});
+
+const how = result.execution?.result.how;
+if (how?.type === 'BREB_DEPOSIT') {
+  console.log('Pagar vía BRE-B:', how.keyType, how.keyValue);
+}
+```
+
+**Errores:** `E_INVALID_DEPOSIT_INFORMATION` cuando falta `urn`.
+
+## Pago RTP (Kusama → Banco US)
+
+Retira DUSD en Kusama a una cuenta bancaria US vía RTP.
+
+```typescript
+const result = await userSession.swap.rtp.create({
+  rateSig: rates.rates[0].sig,
+  amountSrc: '100000000',
+  depositInformation: {
+    owner: 'Jane Doe',
+    accountNumber: '1234567890',
+    routingNumber: '063108680',
+    accountType: 'checking',
+  },
+});
+```
+
+**Errores:** `E_INVALID_DEPOSIT_INFORMATION` cuando faltan campos bancarios requeridos.
+
+## On-Ramp Banco US Externo (ACH → Kusama)
+
+Extrae USD de una cuenta bancaria US vinculada vía ACH; los fondos se teleportan a Kusama como DUSD.
+
+```typescript
+const result = await userSession.swap.externalUsBank.create({
+  rateSig: rates.rates[0].sig,
+  amountSrc: '10000',
+  depositInformation: { ledgerAccountId: 'ledger-user-001' },
+  args: { sourceAccountUrn: 'did:bloque:account:external-us-bank:abc123' },
+});
+```
+
+## Próximos Pasos
+
+- [Guía de Cuentas](/sdk/guide/accounts/overview)
+- [Guía BRE-B](/sdk/guide/accounts/breb)
+- [Guía de Organizaciones](/sdk/guide/features/organizations)
