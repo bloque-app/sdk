@@ -89,10 +89,22 @@ export type OrderType = 'src' | 'dst';
  * Deposit information for swap orders
  */
 export interface DepositInformation {
-  /** PSE deposit URN */
+  /** PSE / BRE-B on-ramp deposit URN */
   urn?: string;
   /** BRE-B payout resolution id */
   resolution_id?: string;
+  /** External US bank on-ramp: destination Kusama ledger account id */
+  ledger_account_id?: string;
+  /** RTP payout: account holder name */
+  owner?: string;
+  /** RTP payout: bank account number */
+  account_number?: string;
+  /** RTP payout: ABA routing number */
+  routing_number?: string;
+  /** RTP payout: account type */
+  account_type?: 'checking' | 'savings';
+  /** RTP payout: optional bank name */
+  bank_name?: string;
   /** Bancolombia deposit information */
   bancolombia?: BancolombiaDepositInformation;
 }
@@ -166,12 +178,33 @@ export interface ListOrdersResponse {
 
 /**
  * @internal
- * Execution redirect instructions
+ * Execution redirect instructions (PSE, card, etc.)
  */
-export interface ExecutionHow {
+export interface ExecutionHowRedirect {
   type: string;
-  url: string;
+  url?: string;
 }
+
+/**
+ * @internal
+ * BRE-B on-ramp deposit instructions returned when the graph pauses
+ */
+export interface ExecutionHowBrebDeposit {
+  type: 'BREB_DEPOSIT';
+  medium: 'breb';
+  key_type: string;
+  key_value: string;
+  amount: string;
+  currency: 'COP';
+  reference: string;
+  deposit_account_urn: string;
+}
+
+/**
+ * @internal
+ * Discriminated union of execution instructions
+ */
+export type ExecutionHow = ExecutionHowRedirect | ExecutionHowBrebDeposit;
 
 /**
  * @internal

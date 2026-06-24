@@ -8,6 +8,8 @@ export type {
   CreateBankTransferOrderParams,
   CreateBankTransferOrderResult,
   ExecutionHow,
+  ExecutionHowBrebDeposit,
+  ExecutionHowRedirect,
   ExecutionResult,
   IdentificationType,
   KusamaAccountArgs,
@@ -18,11 +20,23 @@ export type {
 export { BrebClient } from './breb/breb-client';
 export type {
   BrebDepositInformation,
+  BrebDepositOnRampInformation,
   BrebSwapArgs,
+  CreateBrebDepositOptions,
+  CreateBrebDepositParams,
+  CreateBrebDepositResult,
   CreateBrebOrderOptions,
   CreateBrebOrderParams,
   CreateBrebOrderResult,
 } from './breb/types';
+export { ExternalUsBankSwapClient } from './external-us-bank/external-us-bank-client';
+export type {
+  CreateExternalUsBankOrderOptions,
+  CreateExternalUsBankOrderParams,
+  CreateExternalUsBankOrderResult,
+  ExternalUsBankArgs,
+  ExternalUsBankDepositInformation,
+} from './external-us-bank/types';
 export { PseClient } from './pse/pse-client';
 // PSE — only unique types
 export type {
@@ -35,6 +49,13 @@ export type {
   PseCustomerData,
   PsePaymentArgs,
 } from './pse/types';
+export { RtpClient } from './rtp/rtp-client';
+export type {
+  CreateRtpOrderOptions,
+  CreateRtpOrderParams,
+  CreateRtpOrderResult,
+  RtpDepositInformation,
+} from './rtp/types';
 
 // Swap client + top-level types
 export { SwapClient } from './swap-client';

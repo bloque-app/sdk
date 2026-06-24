@@ -1,4 +1,5 @@
 import { BaseClient, BloqueConfigError } from '@bloque/sdk-core';
+import { mapExecutionHow } from '../internal/map-execution';
 import type {
   CreateOrderInput,
   CreateOrderResponse,
@@ -174,7 +175,9 @@ export class BankTransferClient extends BaseClient {
         status: execution.result.status,
         name: execution.result.name,
         description: execution.result.description,
-        how: execution.result.how,
+        how: execution.result.how
+          ? mapExecutionHow(execution.result.how)
+          : undefined,
         callbackToken: execution.result.callback_token,
       },
     };

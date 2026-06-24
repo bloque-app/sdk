@@ -3,6 +3,7 @@ import { BaseClient, BloqueConfigError } from '@bloque/sdk-core';
 import { BankTransferClient } from './bank-transfer/bank-transfer-client';
 import type { SwapOrder } from './bank-transfer/types';
 import { BrebClient } from './breb/breb-client';
+import { ExternalUsBankSwapClient } from './external-us-bank/external-us-bank-client';
 import type {
   CancelSubscriptionResponse,
   FindRatesResponse,
@@ -11,6 +12,7 @@ import type {
   Rate,
 } from './internal/wire-types';
 import { PseClient } from './pse/pse-client';
+import { RtpClient } from './rtp/rtp-client';
 import type {
   CancelSubscriptionParams,
   CancelSubscriptionResult,
@@ -27,18 +29,24 @@ import type {
  * Provides access to exchange rate discovery and swapping functionality.
  * - pse: PSE utilities (bank listing, etc.)
  * - bankTransfer: Generic bank transfer cash-out (supports all Colombian banks)
- * - breb: BRE-B cash-out via a resolved recipient key
+ * - breb: BRE-B cash-out via a resolved recipient key, and BRE-B on-ramp deposit
+ * - rtp: US instant bank payout (Kusama → US bank via RTP)
+ * - externalUsBank: US bank ACH on-ramp (external US bank → Kusama)
  */
 export class SwapClient extends BaseClient {
   readonly pse: PseClient;
   readonly bankTransfer: BankTransferClient;
   readonly breb: BrebClient;
+  readonly rtp: RtpClient;
+  readonly externalUsBank: ExternalUsBankSwapClient;
 
   constructor(httpClient: HttpClient) {
     super(httpClient);
     this.pse = new PseClient(this.httpClient);
     this.bankTransfer = new BankTransferClient(this.httpClient);
     this.breb = new BrebClient(this.httpClient);
+    this.rtp = new RtpClient(this.httpClient);
+    this.externalUsBank = new ExternalUsBankSwapClient(this.httpClient);
   }
   /**
    * Find available exchange rates
