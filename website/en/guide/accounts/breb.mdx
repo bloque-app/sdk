@@ -267,9 +267,23 @@ const result = await session.swap.breb.createDeposit({
 const how = result.execution?.result.how;
 if (how?.type === 'BREB_DEPOSIT') {
   console.log('Send COP to BRE-B key:', how.keyType, how.keyValue);
-  console.log('Amount:', how.amount, how.currency);
+  console.log('Amount:', how.expectedAmount ?? how.amount, how.currency);
 }
 ```
+
+### Partial payments
+
+If the payer sends less than the order amount, the graph stays paused on the **same** key. Multiple BRE-B transfers are summed. `how.depositStatus` becomes `'partial'` and `remainingAmount` shows how much COP is still required:
+
+```typescript title="breb-deposit-partial.ts"
+if (how?.type === 'BREB_DEPOSIT' && how.depositStatus === 'partial') {
+  console.log('Received:', how.receivedAmount);
+  console.log('Still need:', how.remainingAmount);
+  console.log('Top up to same key:', how.keyValue);
+}
+```
+
+Poll `user.swap.listOrders({ graphId: result.order.graphId })` or use `swap.order.*` webhooks to detect when a partial payment lands — the `createDeposit` response does not update asynchronously.
 
 ### CreateBrebDepositParams
 
@@ -294,10 +308,14 @@ interface ExecutionHowBrebDeposit {
   currency: 'COP';
   reference: string;
   depositAccountUrn: string;
+  expectedAmount?: string;
+  receivedAmount?: string;
+  remainingAmount?: string;
+  depositStatus?: 'awaiting' | 'partial';
 }
 ```
 
-Show `keyType` and `keyValue` so the payer can send COP via their bank's BRE-B app. The swap graph resumes automatically when the inbound payment settles.
+Show `keyType` and `keyValue` so the payer can send COP via their bank's BRE-B app. The swap graph resumes automatically when inbound payments settle. Underpayments keep the same key — send the `remainingAmount` to `keyValue` until `receivedAmount >= expectedAmount`.
 
 ## Suspend a BRE-B Key
 

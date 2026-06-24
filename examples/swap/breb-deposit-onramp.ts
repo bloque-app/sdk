@@ -8,6 +8,9 @@ import { SDK } from "../../packages/sdk/src/index";
  *
  * After createDeposit with args, the order pauses with how.type === 'BREB_DEPOSIT'.
  * Show keyType/keyValue so the payer can send COP from their bank's BRE-B app.
+ *
+ * Partial payments: multiple transfers to the same key are summed. When
+ * depositStatus === 'partial', show remainingAmount and keep the same keyValue.
  */
 
 const bloque = new SDK({
@@ -51,13 +54,18 @@ const result = await user.swap.breb.createDeposit(
 );
 
 console.log("Order:", result.order.id, result.order.status);
+console.log("Graph ID:", result.order.graphId);
 
 const how = result.execution?.result.how;
 if (how?.type === "BREB_DEPOSIT") {
   console.log("Send COP via BRE-B:");
   console.log("  key:", how.keyType, how.keyValue);
-  console.log("  amount:", how.amount, how.currency);
+  console.log("  required:", how.expectedAmount ?? how.amount, how.currency);
   console.log("  reference:", how.reference);
+  if (how.depositStatus === "partial") {
+    console.log("  received:", how.receivedAmount);
+    console.log("  remaining:", how.remainingAmount);
+  }
 } else {
   console.log("Execution:", result.execution);
 }

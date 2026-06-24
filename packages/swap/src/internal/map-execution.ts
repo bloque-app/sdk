@@ -25,6 +25,10 @@ export function mapExecutionHow(how: WireExecutionHow): PublicExecutionHow {
       currency: how.currency,
       reference: how.reference,
       depositAccountUrn: how.deposit_account_urn,
+      expectedAmount: how.expected_amount,
+      receivedAmount: how.received_amount,
+      remainingAmount: how.remaining_amount,
+      depositStatus: how.deposit_status,
     };
   }
 
