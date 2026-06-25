@@ -4,6 +4,7 @@ import { SDK } from "../../packages/sdk/src/index";
  * BRE-B on-ramp: deposit COP via a one-time BRE-B key → receive DUSD on Kusama.
  *
  * Edge: breb:kusama[cop:dusd]
+ * Template: brebDepositKusama
  *
  * After createDeposit with args, the order pauses with how.type === 'BREB_DEPOSIT'.
  * Show keyType/keyValue so the payer can send COP from their bank's BRE-B app.
@@ -39,6 +40,8 @@ const rates = await user.swap.findRates({
 if (rates.rates.length === 0) {
   throw new Error("No BRE-B on-ramp rates available.");
 }
+
+console.log("Best rate:", rates.rates[0]);
 
 const result = await user.swap.breb.createDeposit(
   {

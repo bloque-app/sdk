@@ -779,6 +779,7 @@ const result = await userSession.swap.rtp.create({
     accountType: 'checking',
     bankName: 'Example Bank',
   },
+  args: { sourceAccountUrn: 'did:bloque:account:kusama-user-001' },
 });
 ```
 
@@ -791,8 +792,9 @@ const result = await userSession.swap.rtp.create({
 | `depositInformation.routingNumber` | `string` | Yes | ABA routing number |
 | `depositInformation.accountType` | `'checking' \| 'savings'` | Yes | Account type |
 | `depositInformation.bankName` | `string` | No | Bank name |
+| `args.sourceAccountUrn` | `string` | Yes | Kusama account URN to debit DUSD from |
 
-**Errors:** `E_INVALID_DEPOSIT_INFORMATION` when required bank fields are missing or `accountType` is invalid.
+**Errors:** `E_INVALID_DEPOSIT_INFORMATION` when required bank fields are missing or `accountType` is invalid. `E_RTP_SOURCE_ACCOUNT_REQUIRED` when `args.sourceAccountUrn` is missing.
 
 ## External US Bank On-Ramp (ACH → Kusama)
 

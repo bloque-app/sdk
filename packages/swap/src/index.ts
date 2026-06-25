@@ -55,6 +55,7 @@ export type {
   CreateRtpOrderParams,
   CreateRtpOrderResult,
   RtpDepositInformation,
+  RtpSwapArgs,
 } from './rtp/types';
 
 // Swap client + top-level types
