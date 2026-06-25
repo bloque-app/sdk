@@ -23,6 +23,13 @@ export interface RtpDepositInformation {
   bankName?: string;
 }
 
+export interface RtpSwapArgs {
+  /**
+   * Kusama account URN where DUSD will be debited.
+   */
+  sourceAccountUrn: string;
+}
+
 /**
  * Parameters for creating an RTP payout swap order.
  */
@@ -56,6 +63,11 @@ export interface CreateRtpOrderParams {
    * Destination US bank account details.
    */
   depositInformation: RtpDepositInformation;
+
+  /**
+   * Source Kusama account for the debit leg.
+   */
+  args: RtpSwapArgs;
 
   /**
    * Specific node ID to execute (defaults to first node).

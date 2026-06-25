@@ -45,6 +45,7 @@ export class RtpClient extends BaseClient {
    *     routingNumber: '063108680',
    *     accountType: 'checking',
    *   },
+   *   args: { sourceAccountUrn: 'did:bloque:account:kusama-user-001' },
    * });
    * ```
    */
@@ -71,6 +72,9 @@ export class RtpClient extends BaseClient {
       deposit_information: this._mapDepositInformationToWire(
         params.depositInformation,
       ),
+      args: {
+        account_urn: params.args.sourceAccountUrn,
+      },
     };
 
     if (orderType === 'src' && params.amountSrc) {

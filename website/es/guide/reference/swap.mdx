@@ -703,11 +703,17 @@ const result = await userSession.swap.rtp.create({
     accountNumber: '1234567890',
     routingNumber: '063108680',
     accountType: 'checking',
+    bankName: 'Example Bank',
   },
+  args: { sourceAccountUrn: 'did:bloque:account:kusama-user-001' },
 });
 ```
 
-**Errores:** `E_INVALID_DEPOSIT_INFORMATION` cuando faltan campos bancarios requeridos.
+| Campo | Tipo | Requerido | Descripción |
+| --- | --- | --- | --- |
+| `args.sourceAccountUrn` | `string` | Sí | URN de la cuenta Kusama de donde se debita DUSD |
+
+**Errores:** `E_INVALID_DEPOSIT_INFORMATION` cuando faltan campos bancarios requeridos. `E_RTP_SOURCE_ACCOUNT_REQUIRED` cuando falta `args.sourceAccountUrn`.
 
 ## On-Ramp Banco US Externo (ACH → Kusama)
 

@@ -7,7 +7,7 @@ import { SDK } from "../../packages/sdk/src/index";
  * Template: KusamaRtp
  *
  * depositInformation carries the destination US bank details (owner, account,
- * routing, account type). No args required — the graph reads from deposit info.
+ * routing, account type). args.sourceAccountUrn is the Kusama account debited.
  */
 
 const bloque = new SDK({
@@ -38,6 +38,9 @@ if (rates.rates.length === 0) {
 
 console.log("Best rate:", rates.rates[0]);
 
+const sourceAccountUrn =
+  process.env.SOURCE_ACCOUNT_URN ?? "did:bloque:account:kusama-user-001";
+
 const result = await user.swap.rtp.create(
   {
     rateSig: rates.rates[0]!.sig,
@@ -50,6 +53,7 @@ const result = await user.swap.rtp.create(
         (process.env.RTP_ACCOUNT_TYPE as "checking" | "savings") ?? "checking",
       bankName: process.env.RTP_BANK_NAME ?? "Example Bank",
     },
+    args: { sourceAccountUrn },
   },
   { idempotencyKey: `rtp-payout-${amountSrc}` },
 );
