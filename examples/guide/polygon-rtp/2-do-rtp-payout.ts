@@ -7,6 +7,10 @@ import { SDK } from '../../../packages/sdk/src/index';
  * DUSD on Kusama → USD to a US bank account.
  *
  * Edge: kusama:rtp[dusd:usd]
+ *
+ * Prerequisites:
+ * - ORIGIN, ORIGIN_KEY, USER_HANDLE env vars (see examples/accounts/.env.example)
+ * - SOURCE_ACCOUNT_URN: Kusama account URN to debit DUSD from
  */
 
 const bloque = new SDK({
@@ -15,7 +19,7 @@ const bloque = new SDK({
     type: 'originKey',
     originKey: process.env.ORIGIN_KEY!,
   },
-  mode: process.env.MODE as 'production' | 'sandbox',
+  mode: (process.env.MODE as 'production' | 'sandbox') ?? 'sandbox',
   platform: 'node',
 });
 
@@ -26,7 +30,7 @@ const user = await bloque.connect(handle);
 console.log('Connected as:', user.urn);
 
 // RTP cash-out: DUSD on Kusama → USD to a US bank account.
-const amountSrc = process.env.AMOUNT_SRC ?? '100000000';
+const amountSrc = process.env.AMOUNT_SRC ?? '20000000';
 
 const rates = await user.swap.findRates({
   fromAsset: 'DUSD/6',

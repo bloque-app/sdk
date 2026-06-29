@@ -9,4 +9,5 @@ node_modules
 dist/
 
 .env
+.envrc
 .github/copilot-mcp.json
