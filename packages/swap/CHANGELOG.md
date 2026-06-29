@@ -1,5 +1,13 @@
 # @bloque/sdk-orgs
 
+## 0.2.2
+
+### Patch Changes
+
+- ea6e6a6: Require `args.sourceAccountUrn` for RTP payout swap orders. Add Polygon→RTP and treasury guide examples. Update EN/ES swap reference docs.
+- Updated dependencies [ea6e6a6]
+  - @bloque/sdk-core@0.2.2
+
 ## 0.1.11
 
 ### Patch Changes
