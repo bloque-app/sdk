@@ -20,4 +20,5 @@ export type {
   BrebClient as SwapBrebClient,
   ExternalUsBankSwapClient,
 } from '@bloque/sdk-swap';
+export type { BloqueClients } from './bloque';
 export { SDK } from './bloque';

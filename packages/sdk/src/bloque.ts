@@ -9,6 +9,16 @@ import {
 import { OrgsClient } from '@bloque/sdk-orgs';
 import { SwapClient } from '@bloque/sdk-swap';
 
+export interface BloqueClients {
+  accounts: AccountsClient;
+  compliance: ComplianceClient;
+  identity: IdentityClient;
+  orgs: OrgsClient;
+  swap: SwapClient;
+  urn: string | undefined;
+  readonly accessToken: string;
+}
+
 export class SDK {
   private readonly httpClient: HttpClient;
   private readonly identity: IdentityClient;
@@ -18,7 +28,10 @@ export class SDK {
     this.identity = new IdentityClient(this.httpClient);
   }
 
-  private buildClients(httpClient: HttpClient, accessToken: string) {
+  private buildClients(
+    httpClient: HttpClient,
+    accessToken: string,
+  ): BloqueClients {
     return {
       accounts: new AccountsClient(httpClient),
       compliance: new ComplianceClient(httpClient),
@@ -141,21 +154,19 @@ export class SDK {
     return this.buildClients(session, response.accessToken);
   }
 
-  async connect(): Promise<ReturnType<SDK['buildClients']>>;
-  async connect(options: {
-    scopes?: string[];
-  }): Promise<ReturnType<SDK['buildClients']>>;
-  async connect(alias: string): Promise<ReturnType<SDK['buildClients']>>;
+  async connect(): Promise<BloqueClients>;
+  async connect(options: { scopes?: string[] }): Promise<BloqueClients>;
+  async connect(alias: string): Promise<BloqueClients>;
   async connect(
     origin: string,
     alias: string,
     code: string,
-  ): Promise<ReturnType<SDK['buildClients']>>;
+  ): Promise<BloqueClients>;
   async connect(
     arg1?: string | { scopes?: string[] },
     arg2?: string,
     arg3?: string,
-  ): Promise<ReturnType<SDK['buildClients']>> {
+  ): Promise<BloqueClients> {
     const authType = this.httpClient.auth.type;
 
     // --- apiKey: exchange sk_ key for JWT, resolve identity via /me ---

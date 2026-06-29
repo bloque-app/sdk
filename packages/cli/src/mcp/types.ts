@@ -1,3 +1,1 @@
-import type { SDK } from '@bloque/sdk';
-
-export type BloqueClients = Awaited<ReturnType<SDK['connect']>>;
+export type { BloqueClients } from '@bloque/sdk';
