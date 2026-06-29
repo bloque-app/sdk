@@ -1,6 +1,6 @@
 {
   "name": "@bloque/sdk",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "description": "Official Bloque SDK",
   "type": "module",
   "keywords": [
