@@ -187,6 +187,7 @@ export type AccountMedium =
   | 'bancolombia'
   | 'breb'
   | 'card'
+  | `card-${string}`
   | 'external-us-bank'
   | 'virtual'
   | 'polygon'

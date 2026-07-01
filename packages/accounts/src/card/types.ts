@@ -20,6 +20,13 @@ export interface ListCardAccountsParams {
    * @example "did:bloque:account:card:usr-123:crd-456"
    */
   urn?: string;
+
+  /**
+   * Card medium/program name to filter by.
+   * @default "card"
+   * @example "card-ktg"
+   */
+  program?: string;
 }
 
 /**
@@ -138,6 +145,12 @@ export interface CreateCardParams {
    */
   ledgerId?: string;
   /**
+   * Card medium/program name to create the account on.
+   * @default "card"
+   * @example "card-ktg"
+   */
+  program?: string;
+  /**
    * Custom metadata to associate with the card
    */
   metadata?: Record<string, unknown>;
@@ -220,6 +233,11 @@ export interface CardAccount {
    * Card account ID
    */
   id: string;
+  /**
+   * Card medium/program name this account belongs to.
+   * @example "card" | "card-ktg"
+   */
+  program: string;
   /**
    * Last four digits of the card
    */
