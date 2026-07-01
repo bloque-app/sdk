@@ -48,6 +48,7 @@ export function mapCardAccountFromWire(
   return {
     urn: account.urn,
     id: account.id,
+    program: account.medium,
     lastFour: account.details.card_last_four,
     productType: account.details.card_product_type,
     status: account.status,
@@ -91,6 +92,7 @@ export class CardClient extends BaseClient {
     params: CreateCardParams = {},
     options?: CreateAccountOptions,
   ): Promise<CardAccount> {
+    const program = params.program || 'card';
     const request: CreateAccountRequest<CreateCardAccountInput> = {
       holder_urn: params?.holderUrn || this.httpClient.urn || '',
       webhook_url: params.webhookUrl,
@@ -112,7 +114,7 @@ export class CardClient extends BaseClient {
       CreateAccountRequest<CreateCardAccountInput>
     >({
       method: 'POST',
-      path: '/api/mediums/card',
+      path: `/api/mediums/${program}`,
       body: request,
       headers: options?.idempotencyKey
         ? { 'Idempotency-Key': options.idempotencyKey }
@@ -122,7 +124,11 @@ export class CardClient extends BaseClient {
     const account = this._mapAccountResponse(response.result.account);
 
     if (options?.waitLedger) {
-      return this._waitForActiveStatus(account.urn, options.timeout || 60000);
+      return this._waitForActiveStatus(
+        account.urn,
+        options.timeout || 60000,
+        program,
+      );
     }
 
     return account;
@@ -134,6 +140,7 @@ export class CardClient extends BaseClient {
   private async _waitForActiveStatus(
     urn: string,
     timeout: number,
+    program: string,
   ): Promise<CardAccount> {
     const startTime = Date.now();
     const pollingInterval = 2000; // 2 second
@@ -145,7 +152,7 @@ export class CardClient extends BaseClient {
         );
       }
 
-      const result = await this.list({ urn });
+      const result = await this.list({ urn, program });
       const account = result.accounts[0];
 
       if (!account) {
@@ -190,9 +197,10 @@ export class CardClient extends BaseClient {
    */
   async list(params?: ListCardAccountsParams): Promise<ListCardAccountsResult> {
     const holderUrn = params?.holderUrn || this.httpClient.urn;
+    const program = params?.program || 'card';
 
     const queryParams = new URLSearchParams();
-    queryParams.append('medium', 'card');
+    queryParams.append('medium', program);
 
     if (holderUrn) {
       queryParams.append('holder_urn', holderUrn);
@@ -215,6 +223,7 @@ export class CardClient extends BaseClient {
       accounts: response.accounts.map((account) => ({
         urn: account.urn,
         id: account.id,
+        program: account.medium,
         lastFour: account.details.card_last_four,
         productType: account.details.card_product_type,
         status: account.status,

@@ -28,6 +28,7 @@ export interface Account<TDetails = unknown> {
     | 'bancolombia'
     | 'breb'
     | 'card'
+    | `card-${string}`
     | 'external-us-bank'
     | 'virtual'
     | 'us2-account'

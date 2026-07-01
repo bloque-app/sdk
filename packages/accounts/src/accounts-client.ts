@@ -615,11 +615,11 @@ export class AccountsClient extends BaseClient {
   private _mapByMedium(
     account: ListAccountsResponse['accounts'][0],
   ): MappedAccount {
-    switch (account.medium) {
-      case 'card':
-        return mapCardAccountFromWire(
-          account as AccountWithBalance<CardDetails>,
-        );
+    const medium = account.medium;
+    if (medium === 'card' || medium.startsWith('card-')) {
+      return mapCardAccountFromWire(account as AccountWithBalance<CardDetails>);
+    }
+    switch (medium) {
       case 'virtual':
         return mapVirtualAccountFromWire(
           account as AccountWithBalance<VirtualDetails>,
