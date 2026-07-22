@@ -664,12 +664,36 @@ Cuando proporcionas un `webhookUrl` durante la creación de la tarjeta, tu endpo
 Todos los eventos de tarjeta comparten esta estructura:
 
 ```typescript title="types.ts"
+type LifecycleStatus =
+  | 'pending_authorization'
+  | 'captured'
+  | 'authorization_reversed'
+  | 'refunded'
+  | 'payment_reversed'
+  | 'refund_reversed';
+
+type TransactionType =
+  | 'PURCHASE'
+  | 'WITHDRAWAL'
+  | 'EXTRACASH'
+  | 'BALANCE_INQUIRY'
+  | 'PAYMENT'
+  | 'REFUND'
+  | 'REVERSAL_PURCHASE'
+  | 'REVERSAL_WITHDRAWAL'
+  | 'REVERSAL_EXTRACASH'
+  | 'REVERSAL_BALANCE_INQUIRY'
+  | 'REVERSAL_REFUND'
+  | 'REVERSAL_PAYMENT';
+
 interface CardWebhookPayload {
   account_urn: string;         // URN de la cuenta de tarjeta
   transaction_id: string;      // Identificador único de la transacción
   type: 'authorization' | 'adjustment';
   direction: 'debit' | 'credit';
   event: CardEventType;
+  lifecycle_status?: LifecycleStatus;  // Etapa inequívoca del ciclo de vida — ver abajo
+  transaction_type?: TransactionType;  // Tipo de transacción crudo que determina lifecycle_status
   amount?: string;             // Monto escalado como string BigInt
   asset?: string;              // Activo utilizado (ej. "DUSD/6")
   local_amount?: number;       // Monto en la moneda local del comercio
@@ -687,11 +711,29 @@ interface CardWebhookPayload {
 | Evento | Tipo | Dirección | Descripción |
 |--------|------|-----------|-------------|
 | `purchase` | `authorization` | `debit` | Compra con tarjeta autorizada y debitada. |
+| `cashback_surcharge` | `authorization` | `debit` | Recargo de cashback aplicado, enviado junto con `purchase`. |
 | `rejected_insufficient_funds` | `authorization` | `debit` | Compra rechazada — saldo insuficiente. |
 | `rejected_credit` | `authorization` | `credit` | Autorización de crédito rechazada (no soportada). |
 | `rejected_currency` | `authorization` | `debit` | Compra rechazada — moneda no soportada. |
 | `credit_adjustment` | `adjustment` | `credit` | Reembolso o ajuste de crédito procesado. |
 | `debit_adjustment` | `adjustment` | `debit` | Ajuste de débito procesado. |
+
+### Estado del Ciclo de Vida (Lifecycle Status)
+
+Los eventos `purchase` siempre llegan con `type: 'authorization'` — una retención temporal (ej. un pre-auth de un viaje) y el cobro final inmediato de un comercio se ven idénticos en el payload. `lifecycle_status` y `transaction_type` desambiguan en qué etapa del ciclo de vida está cada evento, para que puedas decidir con seguridad si retener, capturar o liberar fondos:
+
+| `type` | `transaction_type` | `lifecycle_status` | Significado |
+|--------|--------------------|--------------------|-------------|
+| `authorization` | cualquiera | `pending_authorization` | Fondos retenidos; aún no liquidados. |
+| `adjustment` | `PURCHASE`, `WITHDRAWAL`, `EXTRACASH`, `BALANCE_INQUIRY`, `PAYMENT` | `captured` | Captura/liquidación final — los fondos se mueven definitivamente. |
+| `adjustment` | `REFUND` | `refunded` | Dinero devuelto sobre un cobro ya liquidado. |
+| `adjustment` | `REVERSAL_PURCHASE`, `REVERSAL_WITHDRAWAL`, `REVERSAL_EXTRACASH`, `REVERSAL_BALANCE_INQUIRY` | `authorization_reversed` | Retención cancelada/liberada antes de capturarse — nunca se movieron fondos. |
+| `adjustment` | `REVERSAL_PAYMENT` | `payment_reversed` | Un pago completado fue revertido. |
+| `adjustment` | `REVERSAL_REFUND` | `refund_reversed` | Un reembolso previamente emitido fue revertido. |
+
+:::warning No presente en rechazos
+`lifecycle_status` y `transaction_type` solo se envían en eventos `purchase`, `cashback_surcharge`, `credit_adjustment` y `debit_adjustment` — los eventos de rechazo (`rejected_*`) no los incluyen.
+:::
 
 ### Ejemplo de Evento de Compra
 
@@ -702,6 +744,8 @@ interface CardWebhookPayload {
   "type": "authorization",
   "direction": "debit",
   "event": "purchase",
+  "lifecycle_status": "pending_authorization",
+  "transaction_type": "PURCHASE",
   "amount": "50000000",
   "asset": "DUSD/6",
   "local_amount": 50.0,
@@ -731,6 +775,8 @@ interface CardWebhookPayload {
   "type": "adjustment",
   "direction": "credit",
   "event": "credit_adjustment",
+  "lifecycle_status": "refunded",
+  "transaction_type": "REFUND",
   "amount": "25000000",
   "asset": "DUSD/6",
   "local_amount": 25.0,
@@ -747,6 +793,32 @@ interface CardWebhookPayload {
     "fees": [
       { "fee_name": "interchange", "amount": "360000", "rate": 0.0144 }
     ]
+  }
+}
+```
+
+### Ejemplo de Evento de Retención Cancelada
+
+También se entrega como `credit_adjustment` — pero `transaction_type: "REVERSAL_PURCHASE"` y `lifecycle_status: "authorization_reversed"` dejan claro que es una retención cancelada/liberada, no un reembolso de fondos ya liquidados. No se devuelven comisiones porque nunca se cobraron:
+
+```json title="hold-cancelled-webhook.json"
+{
+  "account_urn": "did:bloque:account:card:usr-abc:crd-123",
+  "transaction_id": "ctx-adj-789",
+  "type": "adjustment",
+  "direction": "credit",
+  "event": "credit_adjustment",
+  "lifecycle_status": "authorization_reversed",
+  "transaction_type": "REVERSAL_PURCHASE",
+  "amount": "50000000",
+  "asset": "DUSD/6",
+  "local_amount": 50.0,
+  "local_currency": "USD",
+  "merchant": {
+    "name": "LYFT",
+    "mcc": "4121",
+    "city": "San Francisco",
+    "country": "USA"
   }
 }
 ```
@@ -813,7 +885,7 @@ app.post('/webhooks/cards', express.json(), (req, res) => {
 ```
 
 :::warning Idempotencia
-La entrega de webhooks usa claves de idempotencia basadas en `${type}-${transaction_id}`. Tu handler debe ser idempotente — procesar el mismo evento dos veces debe producir el mismo resultado.
+La entrega de webhooks usa claves de idempotencia basadas en `${type}-${event}-${transaction_id}`. Tu handler debe ser idempotente — procesar el mismo evento dos veces debe producir el mismo resultado.
 :::
 
 :::tip Notificaciones de WhatsApp
@@ -1032,6 +1104,8 @@ Cuando los programas de cashback estan activos, un evento `cashback_surcharge` s
   "type": "authorization",
   "direction": "debit",
   "event": "cashback_surcharge",
+  "lifecycle_status": "pending_authorization",
+  "transaction_type": "PURCHASE",
   "surcharge_total": 1.341,
   "programs": [
     { "name": "auto_ahorro", "type": "extra_savings", "amount": 1.041 },

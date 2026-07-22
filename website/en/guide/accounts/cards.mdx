@@ -664,12 +664,36 @@ When you provide a `webhookUrl` during card creation, your endpoint receives rea
 All card events share this structure:
 
 ```typescript title="types.ts"
+type LifecycleStatus =
+  | 'pending_authorization'
+  | 'captured'
+  | 'authorization_reversed'
+  | 'refunded'
+  | 'payment_reversed'
+  | 'refund_reversed';
+
+type TransactionType =
+  | 'PURCHASE'
+  | 'WITHDRAWAL'
+  | 'EXTRACASH'
+  | 'BALANCE_INQUIRY'
+  | 'PAYMENT'
+  | 'REFUND'
+  | 'REVERSAL_PURCHASE'
+  | 'REVERSAL_WITHDRAWAL'
+  | 'REVERSAL_EXTRACASH'
+  | 'REVERSAL_BALANCE_INQUIRY'
+  | 'REVERSAL_REFUND'
+  | 'REVERSAL_PAYMENT';
+
 interface CardWebhookPayload {
   account_urn: string;         // Card account URN
   transaction_id: string;      // Unique transaction identifier
   type: 'authorization' | 'adjustment';
   direction: 'debit' | 'credit';
   event: CardEventType;
+  lifecycle_status?: LifecycleStatus;  // Unambiguous lifecycle stage — see below
+  transaction_type?: TransactionType;  // Raw transaction type backing lifecycle_status
   amount?: string;             // Scaled amount as BigInt string
   asset?: string;              // Asset used (e.g., "DUSD/6")
   local_amount?: number;       // Amount in the merchant's local currency
@@ -687,11 +711,29 @@ interface CardWebhookPayload {
 | Event | Type | Direction | Description |
 |-------|------|-----------|-------------|
 | `purchase` | `authorization` | `debit` | Card purchase authorized and debited. |
+| `cashback_surcharge` | `authorization` | `debit` | Cashback surcharge applied, sent alongside `purchase`. |
 | `rejected_insufficient_funds` | `authorization` | `debit` | Purchase rejected — insufficient balance. |
 | `rejected_credit` | `authorization` | `credit` | Credit authorization rejected (not supported). |
 | `rejected_currency` | `authorization` | `debit` | Purchase rejected — unsupported currency. |
 | `credit_adjustment` | `adjustment` | `credit` | Refund or credit adjustment processed. |
 | `debit_adjustment` | `adjustment` | `debit` | Debit adjustment processed. |
+
+### Lifecycle Status
+
+`purchase` events always carry `type: 'authorization'` — a temporary hold (e.g. a ride-share pre-auth) and a merchant's immediate final charge otherwise look identical on the wire. `lifecycle_status` and `transaction_type` disambiguate what stage of the transaction lifecycle each event represents, so you can safely decide whether to hold, capture, or release funds on your side:
+
+| `type` | `transaction_type` | `lifecycle_status` | Meaning |
+|--------|--------------------|--------------------|---------|
+| `authorization` | any | `pending_authorization` | Funds held; not yet settled. |
+| `adjustment` | `PURCHASE`, `WITHDRAWAL`, `EXTRACASH`, `BALANCE_INQUIRY`, `PAYMENT` | `captured` | Final capture/settlement — funds move for good. |
+| `adjustment` | `REFUND` | `refunded` | Money returned on a previously settled charge. |
+| `adjustment` | `REVERSAL_PURCHASE`, `REVERSAL_WITHDRAWAL`, `REVERSAL_EXTRACASH`, `REVERSAL_BALANCE_INQUIRY` | `authorization_reversed` | Hold cancelled/released before capture — no funds ever moved. |
+| `adjustment` | `REVERSAL_PAYMENT` | `payment_reversed` | A completed payment was reversed. |
+| `adjustment` | `REVERSAL_REFUND` | `refund_reversed` | A previously issued refund was itself reversed. |
+
+:::warning Not present on rejections
+`lifecycle_status` and `transaction_type` are only sent on `purchase`, `cashback_surcharge`, `credit_adjustment`, and `debit_adjustment` events — rejection events (`rejected_*`) do not include them.
+:::
 
 ### Purchase Event Example
 
@@ -702,6 +744,8 @@ interface CardWebhookPayload {
   "type": "authorization",
   "direction": "debit",
   "event": "purchase",
+  "lifecycle_status": "pending_authorization",
+  "transaction_type": "PURCHASE",
   "amount": "50000000",
   "asset": "DUSD/6",
   "local_amount": 50.0,
@@ -731,6 +775,8 @@ interface CardWebhookPayload {
   "type": "adjustment",
   "direction": "credit",
   "event": "credit_adjustment",
+  "lifecycle_status": "refunded",
+  "transaction_type": "REFUND",
   "amount": "25000000",
   "asset": "DUSD/6",
   "local_amount": 25.0,
@@ -747,6 +793,32 @@ interface CardWebhookPayload {
     "fees": [
       { "fee_name": "interchange", "amount": "360000", "rate": 0.0144 }
     ]
+  }
+}
+```
+
+### Hold Cancelled Event Example
+
+Also delivered as `credit_adjustment` — but `transaction_type: "REVERSAL_PURCHASE"` and `lifecycle_status: "authorization_reversed"` make clear this is a cancelled/released hold, not a refund of settled funds. No fees are returned because none were ever charged:
+
+```json title="hold-cancelled-webhook.json"
+{
+  "account_urn": "did:bloque:account:card:usr-abc:crd-123",
+  "transaction_id": "ctx-adj-789",
+  "type": "adjustment",
+  "direction": "credit",
+  "event": "credit_adjustment",
+  "lifecycle_status": "authorization_reversed",
+  "transaction_type": "REVERSAL_PURCHASE",
+  "amount": "50000000",
+  "asset": "DUSD/6",
+  "local_amount": 50.0,
+  "local_currency": "USD",
+  "merchant": {
+    "name": "LYFT",
+    "mcc": "4121",
+    "city": "San Francisco",
+    "country": "USA"
   }
 }
 ```
@@ -813,7 +885,7 @@ app.post('/webhooks/cards', express.json(), (req, res) => {
 ```
 
 :::warning Idempotency
-Webhook delivery uses idempotency keys based on `${type}-${transaction_id}`. Your handler should be idempotent — processing the same event twice must produce the same result.
+Webhook delivery uses idempotency keys based on `${type}-${event}-${transaction_id}`. Your handler should be idempotent — processing the same event twice must produce the same result.
 :::
 
 :::tip WhatsApp Notifications
@@ -1032,6 +1104,8 @@ When cashback programs are active, a `cashback_surcharge` event is delivered alo
   "type": "authorization",
   "direction": "debit",
   "event": "cashback_surcharge",
+  "lifecycle_status": "pending_authorization",
+  "transaction_type": "PURCHASE",
   "surcharge_total": 1.341,
   "programs": [
     { "name": "auto_save", "type": "extra_savings", "amount": 1.041 },
