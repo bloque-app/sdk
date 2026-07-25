@@ -1,7 +1,8 @@
-import { z } from 'zod/v4';
+import type { SupportedAsset } from '@bloque/sdk';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import { z } from 'zod/v4';
+import { toHuman, toRaw } from '../../currency.ts';
 import type { BloqueClients } from '../../types.ts';
-import { toRaw, toHuman } from '../../currency.ts';
 
 export function registerTransferTools(server: McpServer, clients: BloqueClients) {
   server.registerTool(
@@ -22,7 +23,7 @@ export function registerTransferTools(server: McpServer, clients: BloqueClients)
         sourceUrn,
         destinationUrn,
         amount: rawAmount,
-        asset,
+        asset: asset as SupportedAsset,
         metadata,
       });
       const humanized = {
@@ -64,7 +65,7 @@ export function registerTransferTools(server: McpServer, clients: BloqueClients)
           toUrn: op.toUrn,
           reference: op.reference,
           amount,
-          asset,
+          asset: asset as SupportedAsset,
           metadata: op.metadata,
         };
       });

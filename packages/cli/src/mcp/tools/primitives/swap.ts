@@ -1,5 +1,6 @@
-import { z } from 'zod/v4';
+import type { SupportedBank } from '@bloque/sdk';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import { z } from 'zod/v4';
 import type { BloqueClients } from '../../types.ts';
 
 export function registerSwapTools(server: McpServer, clients: BloqueClients) {
@@ -110,7 +111,7 @@ export function registerSwapTools(server: McpServer, clients: BloqueClients) {
     }) => {
       const result = await clients.swap.bankTransfer.create({
         rateSig,
-        toMedium,
+        toMedium: toMedium as SupportedBank,
         webhookUrl,
         amountSrc,
         amountDst,

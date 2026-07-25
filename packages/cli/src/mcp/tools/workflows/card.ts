@@ -1,3 +1,4 @@
+import type { SupportedAsset } from '@bloque/sdk';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod/v4';
 import { logAndFormatToolError } from '../../bloque-error-mcp.ts';
@@ -139,7 +140,7 @@ export function registerCardWorkflows(
           } as any);
           const match = polygonList.accounts.find(
             (a: any) => a.ledgerId === ledgerId,
-          );
+          ) as { urn: string; address: string; network: string } | undefined;
           polygon = match
             ? { urn: match.urn, address: match.address, network: match.network }
             : { urn: '', address: '', network: '' };
@@ -193,7 +194,7 @@ export function registerCardWorkflows(
             sourceUrn: fundFromUrn,
             destinationUrn: virtualAccount.urn,
             amount: rawAmount,
-            asset,
+            asset: asset as SupportedAsset,
           });
         }
 
@@ -292,7 +293,7 @@ export function registerCardWorkflows(
           sourceUrn,
           destinationUrn: pocket.urn,
           amount: rawAmount,
-          asset,
+          asset: asset as SupportedAsset,
         });
 
         const mccs = resolveMccs(allowedCategories, allowedMccs);
