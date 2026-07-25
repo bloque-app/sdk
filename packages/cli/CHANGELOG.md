@@ -1,5 +1,12 @@
 # @bloque/cli
 
+## 0.2.7
+
+### Patch Changes
+
+- Fix `@bloque/cli` typecheck drift against tightened `SupportedAsset`/`SupportedBank` types in `@bloque/sdk-core`/`@bloque/sdk-swap`. No behavior change — casts and type narrowing only, backed by the SDK's existing runtime validation. This unblocks the `cli-v0.2.6` release, which failed before publishing anything.
+  - @bloque/sdk@0.2.7
+
 ## 0.2.6
 
 ### Patch Changes
