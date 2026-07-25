@@ -1,7 +1,8 @@
-import { z } from 'zod/v4';
+import type { SupportedAsset } from '@bloque/sdk';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import type { BloqueClients } from '../../types.ts';
+import { z } from 'zod/v4';
 import { toRaw } from '../../currency.ts';
+import type { BloqueClients } from '../../types.ts';
 
 export function registerAccountWorkflows(server: McpServer, clients: BloqueClients) {
   server.registerTool(
@@ -27,7 +28,7 @@ export function registerAccountWorkflows(server: McpServer, clients: BloqueClien
           sourceUrn: fundFromUrn,
           destinationUrn: pocket.urn,
           amount: rawAmount,
-          asset,
+          asset: asset as SupportedAsset,
         });
       }
 

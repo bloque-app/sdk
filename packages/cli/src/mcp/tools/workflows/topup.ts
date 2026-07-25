@@ -1,7 +1,8 @@
-import { z } from 'zod/v4';
+import type { SupportedBank } from '@bloque/sdk';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import type { BloqueClients } from '../../types.ts';
+import { z } from 'zod/v4';
 import { toRaw } from '../../currency.ts';
+import type { BloqueClients } from '../../types.ts';
 
 export function registerTopupWorkflows(server: McpServer, clients: BloqueClients) {
   server.registerTool(
@@ -61,7 +62,8 @@ export function registerTopupWorkflows(server: McpServer, clients: BloqueClients
         },
       });
 
-      const checkoutUrl = orderResult.execution?.result?.how?.url;
+      const how = orderResult.execution?.result?.how;
+      const checkoutUrl = how && 'url' in how ? how.url : undefined;
       const result = {
         order: {
           id: orderResult.order.id,
@@ -124,7 +126,7 @@ export function registerTopupWorkflows(server: McpServer, clients: BloqueClients
 
       const orderResult = await clients.swap.bankTransfer.create({
         rateSig: rate.sig,
-        toMedium: bankName,
+        toMedium: bankName as SupportedBank,
         amountSrc: rawAmount,
         webhookUrl,
         depositInformation: {
