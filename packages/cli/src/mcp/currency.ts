@@ -1,12 +1,14 @@
 const ASSET_MAP: Record<string, { asset: string; decimals: number }> = {
   USD: { asset: 'DUSD/6', decimals: 6 },
   COP: { asset: 'COP/2', decimals: 2 },
+  COPM: { asset: 'COPM/2', decimals: 2 },
 };
 
 const REVERSE_ASSET_MAP: Record<string, { currency: string; decimals: number }> = {
   'DUSD/6': { currency: 'USD', decimals: 6 },
   'COP/2': { currency: 'COP', decimals: 2 },
   'COPB/6': { currency: 'COP', decimals: 6 },
+  'COPM/2': { currency: 'COPM', decimals: 2 },
   'KSM/12': { currency: 'KSM', decimals: 12 },
 };
 
