@@ -1,5 +1,12 @@
 # @bloque/cli
 
+## 0.2.6
+
+### Patch Changes
+
+- Fix `send_to_breb_key` MCP tool sending a malformed `COPM` asset ticker (missing the `/2` precision suffix) to `findRates`, which caused every COPM BRE-B cash-out to fail with "No exchange rates available" before an order was ever created.
+  - @bloque/sdk@0.2.6
+
 ## 0.2.2
 
 ### Patch Changes
