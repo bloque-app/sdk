@@ -2,6 +2,7 @@ import type { SupportedAsset } from '@bloque/sdk';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod/v4';
 import { humanizeBalance, toRaw } from '../../currency.ts';
+import { deterministicIdempotencyKey } from '../../idempotency.ts';
 import type { BloqueClients } from '../../types.ts';
 
 export function registerFundCardWorkflows(server: McpServer, clients: BloqueClients) {
@@ -15,9 +16,10 @@ export function registerFundCardWorkflows(server: McpServer, clients: BloqueClie
         sourceUrn: z.string(),
         amount: z.string(),
         currency: z.string().optional().default('USD'),
+        idempotencyKey: z.string().optional(),
       },
     },
-    async ({ cardUrn, sourceUrn, amount, currency }) => {
+    async ({ cardUrn, sourceUrn, amount, currency, idempotencyKey }) => {
       const cardAccount = await clients.accounts.get(cardUrn);
       const { ledgerId } = cardAccount;
       const { accounts: virtualAccounts } = await clients.accounts.list({ medium: 'virtual' } as any);
@@ -36,12 +38,24 @@ export function registerFundCardWorkflows(server: McpServer, clients: BloqueClie
       }
 
       const { amount: rawAmount, asset } = toRaw(amount, currency);
-      const transferResult = await clients.accounts.transfer({
-        sourceUrn,
-        destinationUrn: pocket.urn,
-        amount: rawAmount,
-        asset: asset as SupportedAsset,
-      });
+      const transferResult = await clients.accounts.transfer(
+        {
+          sourceUrn,
+          destinationUrn: pocket.urn,
+          amount: rawAmount,
+          asset: asset as SupportedAsset,
+        },
+        {
+          idempotencyKey:
+            idempotencyKey ??
+            deterministicIdempotencyKey('fund_card', {
+              sourceUrn,
+              destinationUrn: pocket.urn,
+              amount: rawAmount,
+              asset,
+            }),
+        },
+      );
       const balance = await clients.accounts.balance(pocket.urn);
       const result = {
         transferResult,

@@ -1,6 +1,7 @@
 import type { SupportedBank } from '@bloque/sdk';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod/v4';
+import { deterministicIdempotencyKey } from '../../idempotency.ts';
 import type { BloqueClients } from '../../types.ts';
 
 export function registerSwapTools(server: McpServer, clients: BloqueClients) {
@@ -56,29 +57,46 @@ export function registerSwapTools(server: McpServer, clients: BloqueClients) {
         fullName: z.string(),
         phoneNumber: z.string().optional(),
         webhookUrl: z.string().optional(),
+        idempotencyKey: z.string().optional(),
       },
     },
     async ({
       rateSig, toMedium, amountSrc, amountDst, depositUrn,
       bankCode, userType, customerEmail, userLegalIdType,
-      userLegalId, fullName, phoneNumber, webhookUrl,
+      userLegalId, fullName, phoneNumber, webhookUrl, idempotencyKey,
     }) => {
-      const result = await clients.swap.pse.create({
-        rateSig,
-        toMedium,
-        webhookUrl,
-        amountSrc,
-        amountDst,
-        depositInformation: { urn: depositUrn },
-        args: {
-          bankCode,
-          userType,
-          customerEmail,
-          userLegalIdType,
-          userLegalId,
-          customerData: { fullName, phoneNumber: phoneNumber ?? '' },
+      const result = await clients.swap.pse.create(
+        {
+          rateSig,
+          toMedium,
+          webhookUrl,
+          amountSrc,
+          amountDst,
+          depositInformation: { urn: depositUrn },
+          args: {
+            bankCode,
+            userType,
+            customerEmail,
+            userLegalIdType,
+            userLegalId,
+            customerData: { fullName, phoneNumber: phoneNumber ?? '' },
+          },
         },
-      });
+        {
+          idempotencyKey:
+            idempotencyKey ??
+            deterministicIdempotencyKey('create_pse_order', {
+              rateSig,
+              toMedium,
+              amountSrc,
+              amountDst,
+              depositUrn,
+              bankCode,
+              userType,
+              customerEmail,
+            }),
+        },
+      );
       return {
         content: [{ type: 'text', text: JSON.stringify(result, null, 2) }],
       };
@@ -101,29 +119,44 @@ export function registerSwapTools(server: McpServer, clients: BloqueClients) {
         bankAccountHolderIdentificationType: z.enum(['CC', 'CE', 'NIT', 'PP']),
         bankAccountHolderIdentificationValue: z.string(),
         webhookUrl: z.string().optional(),
+        idempotencyKey: z.string().optional(),
       },
     },
     async ({
       rateSig, toMedium, amountSrc, amountDst, sourceAccountUrn,
       bankAccountType, bankAccountNumber, bankAccountHolderName,
       bankAccountHolderIdentificationType, bankAccountHolderIdentificationValue,
-      webhookUrl,
+      webhookUrl, idempotencyKey,
     }) => {
-      const result = await clients.swap.bankTransfer.create({
-        rateSig,
-        toMedium: toMedium as SupportedBank,
-        webhookUrl,
-        amountSrc,
-        amountDst,
-        depositInformation: {
-          bankAccountType,
-          bankAccountNumber,
-          bankAccountHolderName,
-          bankAccountHolderIdentificationType,
-          bankAccountHolderIdentificationValue,
+      const result = await clients.swap.bankTransfer.create(
+        {
+          rateSig,
+          toMedium: toMedium as SupportedBank,
+          webhookUrl,
+          amountSrc,
+          amountDst,
+          depositInformation: {
+            bankAccountType,
+            bankAccountNumber,
+            bankAccountHolderName,
+            bankAccountHolderIdentificationType,
+            bankAccountHolderIdentificationValue,
+          },
+          args: { sourceAccountUrn },
         },
-        args: { sourceAccountUrn },
-      });
+        {
+          idempotencyKey:
+            idempotencyKey ??
+            deterministicIdempotencyKey('create_bank_transfer_order', {
+              rateSig,
+              toMedium,
+              amountSrc,
+              amountDst,
+              sourceAccountUrn,
+              bankAccountNumber,
+            }),
+        },
+      );
       return {
         content: [{ type: 'text', text: JSON.stringify(result, null, 2) }],
       };
@@ -144,6 +177,7 @@ export function registerSwapTools(server: McpServer, clients: BloqueClients) {
         webhookUrl: z.string().optional(),
         nodeId: z.string().optional(),
         metadata: z.record(z.string(), z.unknown()).optional(),
+        idempotencyKey: z.string().optional(),
       },
     },
     async ({
@@ -156,18 +190,32 @@ export function registerSwapTools(server: McpServer, clients: BloqueClients) {
       webhookUrl,
       nodeId,
       metadata,
+      idempotencyKey,
     }) => {
-      const result = await clients.swap.breb.create({
-        rateSig,
-        amountSrc,
-        amountDst,
-        type,
-        webhookUrl,
-        nodeId,
-        metadata,
-        depositInformation: { resolutionId },
-        args: { sourceAccountUrn },
-      });
+      const result = await clients.swap.breb.create(
+        {
+          rateSig,
+          amountSrc,
+          amountDst,
+          type,
+          webhookUrl,
+          nodeId,
+          metadata,
+          depositInformation: { resolutionId },
+          args: { sourceAccountUrn },
+        },
+        {
+          idempotencyKey:
+            idempotencyKey ??
+            deterministicIdempotencyKey('create_breb_order', {
+              rateSig,
+              amountSrc,
+              amountDst,
+              resolutionId,
+              sourceAccountUrn,
+            }),
+        },
+      );
       return {
         content: [{ type: 'text', text: JSON.stringify(result, null, 2) }],
       };

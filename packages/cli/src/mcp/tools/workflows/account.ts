@@ -2,6 +2,7 @@ import type { SupportedAsset } from '@bloque/sdk';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod/v4';
 import { toRaw } from '../../currency.ts';
+import { deterministicIdempotencyKey } from '../../idempotency.ts';
 import type { BloqueClients } from '../../types.ts';
 
 export function registerAccountWorkflows(server: McpServer, clients: BloqueClients) {
@@ -15,21 +16,34 @@ export function registerAccountWorkflows(server: McpServer, clients: BloqueClien
         fundFromUrn: z.string().optional(),
         fundAmount: z.string().optional(),
         currency: z.string().optional().default('USD'),
+        idempotencyKey: z.string().optional(),
       },
     },
-    async ({ name, fundFromUrn, fundAmount, currency }) => {
+    async ({ name, fundFromUrn, fundAmount, currency, idempotencyKey }) => {
       const pocket = await clients.accounts.virtual.create({ name });
       const polygon = await clients.accounts.polygon.create({ ledgerId: pocket.ledgerId, name });
 
       let transferResult;
       if (fundFromUrn && fundAmount) {
         const { amount: rawAmount, asset } = toRaw(fundAmount, currency);
-        transferResult = await clients.accounts.transfer({
-          sourceUrn: fundFromUrn,
-          destinationUrn: pocket.urn,
-          amount: rawAmount,
-          asset: asset as SupportedAsset,
-        });
+        transferResult = await clients.accounts.transfer(
+          {
+            sourceUrn: fundFromUrn,
+            destinationUrn: pocket.urn,
+            amount: rawAmount,
+            asset: asset as SupportedAsset,
+          },
+          {
+            idempotencyKey:
+              idempotencyKey ??
+              deterministicIdempotencyKey('create_account.fund', {
+                sourceUrn: fundFromUrn,
+                destinationUrn: pocket.urn,
+                amount: rawAmount,
+                asset,
+              }),
+          },
+        );
       }
 
       const result = {

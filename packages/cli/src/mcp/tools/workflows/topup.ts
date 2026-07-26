@@ -2,6 +2,7 @@ import type { SupportedBank } from '@bloque/sdk';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod/v4';
 import { toRaw } from '../../currency.ts';
+import { deterministicIdempotencyKey } from '../../idempotency.ts';
 import type { BloqueClients } from '../../types.ts';
 
 export function registerTopupWorkflows(server: McpServer, clients: BloqueClients) {
@@ -21,12 +22,13 @@ export function registerTopupWorkflows(server: McpServer, clients: BloqueClients
         fullName: z.string(),
         phoneNumber: z.string().optional(),
         webhookUrl: z.string().optional(),
+        idempotencyKey: z.string().optional(),
       },
     },
     async ({
       accountUrn, amount, bankCode, userType,
       customerEmail, userLegalIdType, userLegalId,
-      fullName, phoneNumber, webhookUrl,
+      fullName, phoneNumber, webhookUrl, idempotencyKey,
     }) => {
       const { amount: rawAmount } = toRaw(amount, 'COP');
       const ratesResult = await clients.swap.findRates({
@@ -46,21 +48,34 @@ export function registerTopupWorkflows(server: McpServer, clients: BloqueClients
         };
       }
 
-      const orderResult = await clients.swap.pse.create({
-        rateSig: rate.sig,
-        toMedium: 'kusama',
-        amountSrc: rawAmount,
-        webhookUrl,
-        depositInformation: { urn: accountUrn },
-        args: {
-          bankCode,
-          userType,
-          customerEmail,
-          userLegalIdType,
-          userLegalId,
-          customerData: { fullName, phoneNumber: phoneNumber ?? '' },
+      const orderResult = await clients.swap.pse.create(
+        {
+          rateSig: rate.sig,
+          toMedium: 'kusama',
+          amountSrc: rawAmount,
+          webhookUrl,
+          depositInformation: { urn: accountUrn },
+          args: {
+            bankCode,
+            userType,
+            customerEmail,
+            userLegalIdType,
+            userLegalId,
+            customerData: { fullName, phoneNumber: phoneNumber ?? '' },
+          },
         },
-      });
+        {
+          idempotencyKey:
+            idempotencyKey ??
+            deterministicIdempotencyKey('topup_via_pse', {
+              accountUrn,
+              rateSig: rate.sig,
+              amountSrc: rawAmount,
+              bankCode,
+              customerEmail,
+            }),
+        },
+      );
 
       const how = orderResult.execution?.result?.how;
       const checkoutUrl = how && 'url' in how ? how.url : undefined;
@@ -96,12 +111,13 @@ export function registerTopupWorkflows(server: McpServer, clients: BloqueClients
         idType: z.enum(['CC', 'CE', 'NIT', 'PP']),
         idNumber: z.string(),
         webhookUrl: z.string().optional(),
+        idempotencyKey: z.string().optional(),
       },
     },
     async ({
       sourceAccountUrn, amount, currency, bankName,
       bankAccountType, bankAccountNumber, bankAccountHolderName,
-      idType, idNumber, webhookUrl,
+      idType, idNumber, webhookUrl, idempotencyKey,
     }) => {
       const { amount: rawAmount } = toRaw(amount, currency);
       const ratesResult = await clients.swap.findRates({
@@ -124,20 +140,33 @@ export function registerTopupWorkflows(server: McpServer, clients: BloqueClients
         };
       }
 
-      const orderResult = await clients.swap.bankTransfer.create({
-        rateSig: rate.sig,
-        toMedium: bankName as SupportedBank,
-        amountSrc: rawAmount,
-        webhookUrl,
-        depositInformation: {
-          bankAccountType,
-          bankAccountNumber,
-          bankAccountHolderName,
-          bankAccountHolderIdentificationType: idType,
-          bankAccountHolderIdentificationValue: idNumber,
+      const orderResult = await clients.swap.bankTransfer.create(
+        {
+          rateSig: rate.sig,
+          toMedium: bankName as SupportedBank,
+          amountSrc: rawAmount,
+          webhookUrl,
+          depositInformation: {
+            bankAccountType,
+            bankAccountNumber,
+            bankAccountHolderName,
+            bankAccountHolderIdentificationType: idType,
+            bankAccountHolderIdentificationValue: idNumber,
+          },
+          args: { sourceAccountUrn },
         },
-        args: { sourceAccountUrn },
-      });
+        {
+          idempotencyKey:
+            idempotencyKey ??
+            deterministicIdempotencyKey('cashout_to_bank', {
+              sourceAccountUrn,
+              rateSig: rate.sig,
+              amountSrc: rawAmount,
+              bankName,
+              bankAccountNumber,
+            }),
+        },
+      );
 
       const result = {
         order: {
@@ -168,6 +197,7 @@ export function registerTopupWorkflows(server: McpServer, clients: BloqueClients
         keyType: z.enum(['ID', 'PHONE', 'EMAIL', 'ALPHA', 'BCODE']),
         key: z.string(),
         webhookUrl: z.string().optional(),
+        idempotencyKey: z.string().optional(),
       },
     },
     async ({
@@ -179,6 +209,7 @@ export function registerTopupWorkflows(server: McpServer, clients: BloqueClients
       keyType,
       key,
       webhookUrl,
+      idempotencyKey,
     }) => {
       const resolution = await clients.accounts.breb.resolveKey({ keyType, key });
       if (resolution.error || !resolution.data) {
@@ -220,15 +251,27 @@ export function registerTopupWorkflows(server: McpServer, clients: BloqueClients
         };
       }
 
-      const orderResult = await clients.swap.breb.create({
-        rateSig: rate.sig,
-        amountSrc: rawAmount,
-        webhookUrl,
-        depositInformation: {
-          resolutionId: resolution.data.resolutionId,
+      const orderResult = await clients.swap.breb.create(
+        {
+          rateSig: rate.sig,
+          amountSrc: rawAmount,
+          webhookUrl,
+          depositInformation: {
+            resolutionId: resolution.data.resolutionId,
+          },
+          args: { sourceAccountUrn },
         },
-        args: { sourceAccountUrn },
-      });
+        {
+          idempotencyKey:
+            idempotencyKey ??
+            deterministicIdempotencyKey('send_to_breb_key', {
+              sourceAccountUrn,
+              rateSig: rate.sig,
+              amountSrc: rawAmount,
+              resolutionId: resolution.data.resolutionId,
+            }),
+        },
+      );
 
       const result = {
         resolution: {
