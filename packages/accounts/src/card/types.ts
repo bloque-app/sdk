@@ -151,6 +151,13 @@ export interface CreateCardParams {
    */
   program?: string;
   /**
+   * Primary asset the card settles transactions against (e.g. `"DUSD/6"`).
+   * Stored as `metadata.default_asset` — see the Default Spending Control
+   * docs. Takes precedence over a `default_asset` key passed via `metadata`.
+   * @example "DUSD/6"
+   */
+  defaultAsset?: SupportedAsset;
+  /**
    * Custom metadata to associate with the card
    */
   metadata?: Record<string, unknown>;
@@ -177,9 +184,17 @@ export interface UpdateCardMetadataParams {
    */
   urn: string;
   /**
-   * Metadata to update (name and source are reserved fields and cannot be modified)
+   * Primary asset the card settles transactions against (e.g. `"DUSD/6"`).
+   * Stored as `metadata.default_asset`. Takes precedence over a
+   * `default_asset` key passed via `metadata`.
+   * @example "DUSD/6"
    */
-  metadata: Record<string, unknown> & {
+  defaultAsset?: SupportedAsset;
+  /**
+   * Metadata to update (name and source are reserved fields and cannot be modified).
+   * Optional when `defaultAsset` is provided on its own.
+   */
+  metadata?: Record<string, unknown> & {
     name?: never;
     source?: never;
   };
@@ -281,6 +296,12 @@ export interface CardAccount {
    * Custom metadata
    */
   metadata?: Record<string, unknown>;
+  /**
+   * Primary asset the card settles transactions against, read back from
+   * `metadata.default_asset` for convenience.
+   * @example "DUSD/6"
+   */
+  defaultAsset?: SupportedAsset;
   /**
    * Creation timestamp
    */

@@ -56,13 +56,18 @@ console.log('Details URL:', card.detailsUrl);
 
 ```typescript title="types.ts"
 interface CreateCardParams {
-  holderUrn?: string;   // Optional user URN
-  name?: string;        // Optional card name
-  webhookUrl?: string;  // Optional webhook for events
-  ledgerId?: string;    // Optional ledger account ID
+  holderUrn?: string;      // Optional user URN
+  name?: string;           // Optional card name
+  webhookUrl?: string;     // Optional webhook for events
+  ledgerId?: string;       // Optional ledger account ID
+  defaultAsset?: SupportedAsset; // Primary settlement asset, e.g. "DUSD/6"
   metadata?: Record<string, unknown>; // Custom metadata
 }
 ```
+
+:::tip Typed `defaultAsset`
+`defaultAsset` is the typed, canonical way to set a card's primary settlement asset — it's written to `metadata.default_asset` for you. Prefer it over passing `default_asset` inside a raw `metadata` object.
+:::
 
 ### Response
 
@@ -79,6 +84,7 @@ interface CardAccount {
   ledgerId: string;
   webhookUrl: string | null;
   metadata?: Record<string, unknown>;
+  defaultAsset?: SupportedAsset;  // Read back from metadata.default_asset
   createdAt: string;
   updatedAt: string;
   balance?: Record<string, TokenBalance>; // Only in list responses
@@ -238,6 +244,19 @@ const updatedCard = await bloque.accounts.card.updateMetadata({
 });
 
 console.log('Card name updated:', updatedCard.metadata?.name);
+```
+
+### Change the Primary Settlement Asset
+
+`defaultAsset` can be set on its own — `metadata` is optional when you're only changing the asset:
+
+```typescript title="update-default-asset.ts"
+const updatedCard = await bloque.accounts.card.updateMetadata({
+  urn: 'did:bloque:account:card:usr-123:crd-456',
+  defaultAsset: 'DUSD/6',
+});
+
+console.log('Default asset:', updatedCard.defaultAsset);
 ```
 
 ### Card States
@@ -415,9 +434,9 @@ The default mode debits a single card account. It supports automatic currency co
 const card = await userSession.accounts.card.create({
   urn: userUrn,
   name: 'Standard Card',
+  defaultAsset: 'DUSD/6',             // Primary asset for the card (typed, recommended)
   metadata: {
     spending_control: 'default',      // Optional, this is the default
-    default_asset: 'DUSD/6',          // Primary asset for the card
     fallback_asset: 'KSM/12',         // Used when default asset is unavailable
     currency_asset_map: {             // Maps transaction currencies to preferred assets
       USD: ['DUSD/6'],
@@ -428,10 +447,14 @@ const card = await userSession.accounts.card.create({
 });
 ```
 
+:::info
+`defaultAsset` and `metadata.default_asset` write to the same place — `defaultAsset` just gives you type-checking and validates against `SupportedAsset`. If both are set, `defaultAsset` wins.
+:::
+
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | `spending_control` | `string` | No | Set to `"default"` (or omit). |
-| `default_asset` | `string` | No | Primary asset (e.g. `"DUSD/6"`). Defaults to `"DUSD/6"`. |
+| `default_asset` (or top-level `defaultAsset`) | `string` | No | Primary asset (e.g. `"DUSD/6"`). Defaults to `"DUSD/6"`. Prefer the typed `defaultAsset` param on `create`/`updateMetadata`. |
 | `fallback_asset` | `string` | No | Fallback asset when the default is unavailable. |
 | `currency_asset_map` | `object` | No | Maps ISO 4217 currency codes to an array of asset identifiers. |
 | `whatsapp_notification` | `boolean` | No | Enable WhatsApp purchase notifications. Defaults to `true`. |
@@ -444,6 +467,7 @@ Smart spending enables **multi-pocket routing** based on Merchant Category Codes
 const card = await userSession.accounts.card.create({
   urn: userUrn,
   name: 'Smart Card',
+  defaultAsset: 'DUSD/6',
   metadata: {
     spending_control: 'smart',
     priority_mcc: [
@@ -456,7 +480,6 @@ const card = await userSession.accounts.card.create({
       'did:bloque:account:card:usr-xxx:pocket-transport': ['4111', '4121', '4131'],
       // No whitelist for pocket-main = general purpose (accepts any MCC)
     },
-    default_asset: 'DUSD/6',
     fallback_asset: 'KSM/12',
   },
 });
@@ -467,7 +490,7 @@ const card = await userSession.accounts.card.create({
 | `spending_control` | `string` | Yes | Must be `"smart"`. |
 | `priority_mcc` | `string[]` | Yes | Pocket URNs in priority order. Higher-priority pockets are debited first. |
 | `mcc_whitelist` | `object` | Yes | Maps pocket URN to an array of allowed MCC codes, or a URL that returns the array. Pockets without an entry accept any MCC. |
-| `default_asset` | `string` | No | Primary asset. Defaults to `"DUSD/6"`. |
+| `default_asset` (or top-level `defaultAsset`) | `string` | No | Primary asset. Defaults to `"DUSD/6"`. |
 | `fallback_asset` | `string` | No | Fallback asset when the default is unavailable. |
 | `currency_asset_map` | `object` | No | Maps currency codes to preferred assets. |
 
