@@ -45,6 +45,8 @@ import type {
 export function mapCardAccountFromWire(
   account: AccountWithBalance<CardDetails>,
 ): CardAccount {
+  const defaultAsset = account.metadata?.default_asset;
+
   return {
     urn: account.urn,
     id: account.id,
@@ -58,6 +60,10 @@ export function mapCardAccountFromWire(
     ledgerId: account.ledger_account_id,
     webhookUrl: account.webhook_url,
     metadata: account.metadata,
+    defaultAsset:
+      typeof defaultAsset === 'string' && isSupportedAsset(defaultAsset)
+        ? defaultAsset
+        : undefined,
     createdAt: account.created_at,
     updatedAt: account.updated_at,
     balance: account.balance,
@@ -92,6 +98,12 @@ export class CardClient extends BaseClient {
     params: CreateCardParams = {},
     options?: CreateAccountOptions,
   ): Promise<CardAccount> {
+    if (params.defaultAsset && !isSupportedAsset(params.defaultAsset)) {
+      throw new Error(
+        `Invalid asset type "${params.defaultAsset}". Supported assets: ${SUPPORTED_ASSETS.join(', ')}`,
+      );
+    }
+
     const program = params.program || 'card';
     const request: CreateAccountRequest<CreateCardAccountInput> = {
       holder_urn: params?.holderUrn || this.httpClient.urn || '',
@@ -106,6 +118,7 @@ export class CardClient extends BaseClient {
         source: 'sdk-typescript',
         name: params.name,
         ...params.metadata,
+        ...(params.defaultAsset && { default_asset: params.defaultAsset }),
       },
     };
 
@@ -220,23 +233,7 @@ export class CardClient extends BaseClient {
     });
 
     return {
-      accounts: response.accounts.map((account) => ({
-        urn: account.urn,
-        id: account.id,
-        program: account.medium,
-        lastFour: account.details.card_last_four,
-        productType: account.details.card_product_type,
-        status: account.status,
-        cardType: account.details.card_type,
-        detailsUrl: account.details.card_url_details,
-        ownerUrn: account.owner_urn,
-        ledgerId: account.ledger_account_id,
-        webhookUrl: account.webhook_url,
-        metadata: account.metadata,
-        createdAt: account.created_at,
-        updatedAt: account.updated_at,
-        balance: account.balance,
-      })),
+      accounts: response.accounts.map(mapCardAccountFromWire),
     };
   }
 
@@ -421,8 +418,23 @@ export class CardClient extends BaseClient {
    * ```
    */
   async updateMetadata(params: UpdateCardMetadataParams): Promise<CardAccount> {
+    if (params.defaultAsset && !isSupportedAsset(params.defaultAsset)) {
+      throw new Error(
+        `Invalid asset type "${params.defaultAsset}". Supported assets: ${SUPPORTED_ASSETS.join(', ')}`,
+      );
+    }
+
+    if (!params.metadata && !params.defaultAsset) {
+      throw new Error(
+        'updateMetadata requires either `metadata` or `defaultAsset`',
+      );
+    }
+
     const request: UpdateAccountRequest = {
-      metadata: params.metadata,
+      metadata: {
+        ...params.metadata,
+        ...(params.defaultAsset && { default_asset: params.defaultAsset }),
+      },
     };
 
     const response = await this.httpClient.request<

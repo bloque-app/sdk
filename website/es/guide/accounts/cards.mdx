@@ -56,13 +56,18 @@ console.log('URL de detalles:', card.detailsUrl);
 
 ```typescript title="tipos.ts"
 interface CreateCardParams {
-  holderUrn?: string;   // Optional user URN
-  name?: string;        // Optional card name
-  webhookUrl?: string;  // Optional webhook for events
-  ledgerId?: string;    // Optional ledger account ID
+  holderUrn?: string;      // Optional user URN
+  name?: string;           // Optional card name
+  webhookUrl?: string;     // Optional webhook for events
+  ledgerId?: string;       // Optional ledger account ID
+  defaultAsset?: SupportedAsset; // Activo principal de liquidación, ej. "DUSD/6"
   metadata?: Record<string, unknown>; // Custom metadata
 }
 ```
+
+:::tip `defaultAsset` tipado
+`defaultAsset` es la forma tipada y canónica de definir el activo principal de liquidación de una tarjeta — se escribe en `metadata.default_asset` automáticamente. Prefiérelo sobre pasar `default_asset` dentro de un objeto `metadata` sin tipar.
+:::
 
 ### Respuesta
 
@@ -79,6 +84,7 @@ interface CardAccount {
   ledgerId: string;
   webhookUrl: string | null;
   metadata?: Record<string, unknown>;
+  defaultAsset?: SupportedAsset;  // Leído desde metadata.default_asset
   createdAt: string;
   updatedAt: string;
   balance?: Record<string, TokenBalance>; // Only in list responses
@@ -238,6 +244,19 @@ const updatedCard = await bloque.accounts.card.updateMetadata({
 });
 
 console.log('Card name updated:', updatedCard.metadata?.name);
+```
+
+### Cambiar el Activo Principal de Liquidación
+
+`defaultAsset` puede definirse solo — `metadata` es opcional cuando únicamente estás cambiando el activo:
+
+```typescript title="update-default-asset.ts"
+const updatedCard = await bloque.accounts.card.updateMetadata({
+  urn: 'did:bloque:account:card:usr-123:crd-456',
+  defaultAsset: 'DUSD/6',
+});
+
+console.log('Activo principal:', updatedCard.defaultAsset);
 ```
 
 ### Estados de Tarjeta
@@ -415,9 +434,9 @@ El modo por defecto debita una única cuenta de tarjeta. Soporta conversión aut
 const card = await userSession.accounts.card.create({
   urn: userUrn,
   name: 'Tarjeta Estándar',
+  defaultAsset: 'DUSD/6',             // Activo principal de la tarjeta (tipado, recomendado)
   metadata: {
     spending_control: 'default',      // Opcional, es el valor por defecto
-    default_asset: 'DUSD/6',          // Activo principal de la tarjeta
     fallback_asset: 'KSM/12',         // Usado cuando el activo principal no está disponible
     currency_asset_map: {             // Mapea monedas de transacción a activos preferidos
       USD: ['DUSD/6'],
@@ -428,10 +447,14 @@ const card = await userSession.accounts.card.create({
 });
 ```
 
+:::info
+`defaultAsset` y `metadata.default_asset` escriben en el mismo lugar — `defaultAsset` solo añade validación de tipos contra `SupportedAsset`. Si ambos están definidos, `defaultAsset` tiene prioridad.
+:::
+
 | Campo | Tipo | Requerido | Descripción |
 |-------|------|-----------|-------------|
 | `spending_control` | `string` | No | Establecer como `"default"` (o no incluir). |
-| `default_asset` | `string` | No | Activo principal (ej. `"DUSD/6"`). Por defecto `"DUSD/6"`. |
+| `default_asset` (o `defaultAsset` de nivel superior) | `string` | No | Activo principal (ej. `"DUSD/6"`). Por defecto `"DUSD/6"`. Prefiere el parámetro tipado `defaultAsset` en `create`/`updateMetadata`. |
 | `fallback_asset` | `string` | No | Activo de respaldo cuando el principal no está disponible. |
 | `currency_asset_map` | `object` | No | Mapea códigos de moneda ISO 4217 a un array de identificadores de activos. |
 | `whatsapp_notification` | `boolean` | No | Habilitar notificaciones de compra por WhatsApp. Por defecto `true`. |
@@ -444,6 +467,7 @@ El gasto inteligente permite **enrutamiento multi-bolsillo** basado en Códigos 
 const card = await userSession.accounts.card.create({
   urn: userUrn,
   name: 'Tarjeta Inteligente',
+  defaultAsset: 'DUSD/6',
   metadata: {
     spending_control: 'smart',
     priority_mcc: [
@@ -456,7 +480,6 @@ const card = await userSession.accounts.card.create({
       'did:bloque:account:card:usr-xxx:pocket-transport': ['4111', '4121', '4131'],
       // Sin whitelist para pocket-main = propósito general (acepta cualquier MCC)
     },
-    default_asset: 'DUSD/6',
     fallback_asset: 'KSM/12',
   },
 });
@@ -467,7 +490,7 @@ const card = await userSession.accounts.card.create({
 | `spending_control` | `string` | Sí | Debe ser `"smart"`. |
 | `priority_mcc` | `string[]` | Sí | URNs de bolsillos en orden de prioridad. Los bolsillos de mayor prioridad se debitan primero. |
 | `mcc_whitelist` | `object` | Sí | Mapea URN de bolsillo a un array de códigos MCC permitidos, o una URL que retorna el array. Bolsillos sin entrada aceptan cualquier MCC. |
-| `default_asset` | `string` | No | Activo principal. Por defecto `"DUSD/6"`. |
+| `default_asset` (o `defaultAsset` de nivel superior) | `string` | No | Activo principal. Por defecto `"DUSD/6"`. |
 | `fallback_asset` | `string` | No | Activo de respaldo cuando el principal no está disponible. |
 | `currency_asset_map` | `object` | No | Mapea códigos de moneda a activos preferidos. |
 

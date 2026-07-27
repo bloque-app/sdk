@@ -28,10 +28,7 @@ const polygon = await user.accounts.polygon.create(
 const card = await user.accounts.card.create(
   {
     ledgerId: virtual.ledgerId,
-    metadata: {
-      preferred_asset: 'DUSD/6',
-      default_asset: 'DUSD/6',
-    },
+    defaultAsset: 'DUSD/6',
   },
   { waitLedger: true, idempotencyKey: 'f7a3b89e-6d3f-4e9e-8b7f-a1c4d2e5f901' },
 );
