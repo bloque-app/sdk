@@ -423,6 +423,19 @@ export interface RequestOptions<U = unknown> {
   timeout?: number;
   /** @internal Bypass the auto-exchange guard to prevent recursion. */
   _skipExchange?: boolean;
+  /**
+   * Overrides the SDK's configured auth strategy for this single request,
+   * sending this value verbatim as the `Authorization` header instead of
+   * whatever `apiKey`/`originKey`/`jwt` would normally produce.
+   *
+   * Used for capability-token-authenticated hosted-gate endpoints (the TOS
+   * gate and verification gate's `/init`, `/accept`, `/submit`), which
+   * authenticate solely via a short-lived bearer token minted by their own
+   * `/start` endpoint — never the SDK's own session.
+   *
+   * @example `Bearer ${startResult.token}`
+   */
+  authorizationOverride?: string;
 }
 
 export interface BloqueResponse<T> {

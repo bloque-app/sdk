@@ -10,8 +10,11 @@ export {
   BloqueNetworkError,
   BloqueNotFoundError,
   BloqueRateLimitError,
+  BloqueTierLimitExceededError,
   BloqueTimeoutError,
   BloqueValidationError,
+  BloqueVerificationPendingError,
+  BloqueVerificationRequiredError,
 } from '@bloque/sdk-core';
 export type * from '@bloque/sdk-identity';
 export type * from '@bloque/sdk-orgs';

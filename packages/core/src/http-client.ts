@@ -417,12 +417,21 @@ export class HttpClient {
       await this.ensureExchanged();
     }
 
-    const { method, path, body, headers = {}, timeout } = options;
+    const {
+      method,
+      path,
+      body,
+      headers = {},
+      timeout,
+      authorizationOverride,
+    } = options;
     const url = `${this.baseUrl}${path}`;
 
     const requestHeaders: Record<string, string> = {
       ...DEFAULT_HEADERS,
-      ...this.buildAuthHeaders(path),
+      ...(authorizationOverride
+        ? { Authorization: authorizationOverride }
+        : this.buildAuthHeaders(path)),
       ...headers,
     };
     if (IDEMPOTENT_METHODS.has(method.toUpperCase())) {
@@ -487,31 +496,26 @@ export class HttpClient {
 
           const retryAfterHeader = response.headers.get('Retry-After');
 
-          // Create appropriate error type
-          const apiError =
-            response.status === 429
-              ? new BloqueRateLimitError(
-                  errorData.message || 'Rate limit exceeded',
-                  {
-                    status: response.status,
-                    code: errorData.code,
-                    requestId,
-                    response: responseData,
-                    retryAfter: retryAfterHeader
-                      ? Number.parseInt(retryAfterHeader, 10)
-                      : undefined,
-                  },
-                )
-              : createBloqueError(
-                  errorData.message ||
-                    `HTTP ${response.status}: ${response.statusText}`,
-                  {
-                    status: response.status,
-                    code: errorData.code,
-                    requestId,
-                    response: responseData,
-                  },
-                );
+          // Create appropriate error type. Routed through createBloqueError
+          // uniformly (including 429s) so error codes like
+          // E_TIER_LIMIT_EXCEEDED are mapped to their specific class instead
+          // of always falling back to the generic BloqueRateLimitError.
+          const apiError = createBloqueError(
+            errorData.message ||
+              (response.status === 429
+                ? 'Rate limit exceeded'
+                : `HTTP ${response.status}: ${response.statusText}`),
+            {
+              status: response.status,
+              code: errorData.code,
+              requestId,
+              response: responseData,
+              retryAfter: retryAfterHeader
+                ? Number.parseInt(retryAfterHeader, 10)
+                : undefined,
+              httpClient: this,
+            },
+          );
 
           if (this.isIdempotencyKeyError(response.status, errorData)) {
             throw apiError;
