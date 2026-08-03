@@ -5,9 +5,28 @@ import {
   type CreateIdentityParams,
   IdentityClient,
   type IdentityMe,
+  type OriginMetadataPatch,
+  type UpdateOriginMetadataResult,
 } from '@bloque/sdk-identity';
 import { OrgsClient } from '@bloque/sdk-orgs';
 import { SwapClient } from '@bloque/sdk-swap';
+
+export interface UpdateOriginMetadataOptions {
+  /**
+   * Origin namespace to patch. Defaults to the SDK's configured `origin` —
+   * only pass this to target a *different* origin than the one this SDK
+   * instance is otherwise configured for.
+   */
+  originName?: string;
+  /**
+   * The origin's own provisioned secret key. Defaults to the configured
+   * `apiKey`/`originKey` auth credential — only pass this if `originName`
+   * is overridden too, or your own credential differs from the origin
+   * being patched.
+   */
+  apiKey?: string;
+  metadata: OriginMetadataPatch;
+}
 
 export interface BloqueClients {
   accounts: AccountsClient;
@@ -254,5 +273,67 @@ export class SDK {
     session.setUrn(urn);
 
     return this.buildClients(session, response.result.access_token);
+  }
+
+  /**
+   * Self-service origin configuration, authenticated purely by the origin's
+   * own key — no connected session required. Sibling to `connect()`/
+   * `register()`, but for configuring the origin itself rather than one of
+   * its identities.
+   */
+  get origin() {
+    return {
+      /**
+       * Patch this origin's own presentation metadata (`company`,
+       * `tosGateShowHome`, `gateAccentColor`,
+       * `verificationGateReturnUrlAllowlist`). `originName`/`apiKey` default
+       * to this SDK instance's own config, so with `apiKey`/`originKey` auth
+       * you typically only pass `metadata`:
+       *
+       * ```typescript
+       * await bloque.origin.metadata({
+       *   metadata: { gateAccentColor: '#1a73e8' },
+       * });
+       * ```
+       *
+       * This is a one-time/deploy-script call, not something you run
+       * per-request or per-user.
+       */
+      metadata: (
+        options: UpdateOriginMetadataOptions,
+      ): Promise<UpdateOriginMetadataResult> =>
+        this.updateOriginMetadata(options),
+    };
+  }
+
+  private async updateOriginMetadata(
+    options: UpdateOriginMetadataOptions,
+  ): Promise<UpdateOriginMetadataResult> {
+    const originName = options.originName ?? this.httpClient.origin;
+    if (!originName) {
+      throw new Error(
+        'origin.metadata() requires originName (or configure the SDK with an origin)',
+      );
+    }
+
+    const apiKey = options.apiKey ?? this.resolveOwnApiKey();
+    if (!apiKey) {
+      throw new Error(
+        'origin.metadata() requires apiKey (or configure the SDK with apiKey/originKey auth)',
+      );
+    }
+
+    return this.identity.origins.updateMetadata({
+      originName,
+      apiKey,
+      metadata: options.metadata,
+    });
+  }
+
+  private resolveOwnApiKey(): string | undefined {
+    const { auth } = this.httpClient;
+    if (auth.type === 'apiKey') return auth.apiKey;
+    if (auth.type === 'originKey') return auth.originKey;
+    return undefined;
   }
 }

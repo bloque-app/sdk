@@ -1,5 +1,38 @@
 # @bloque/sdk
 
+## 0.6.0
+
+### Minor Changes
+
+- Add self-service origin metadata update, closing the parity gap with the
+  Kotlin SDK (`ApiKeysClient.updateOriginMetadata()`, v0.0.29+):
+
+  - `identity.origins.updateMetadata({ originName, apiKey, metadata })` —
+    patches an API-key origin's own presentation metadata (`company`,
+    `tosGateShowHome`, `gateAccentColor`,
+    `verificationGateReturnUrlAllowlist`), authenticated purely by the
+    origin's own key in the request body. No session/JWT required, and it
+    works even before you've ever called `connect()`/`register()`.
+  - `bloque.origin.metadata({ metadata })` — a root-level convenience over the
+    same call, sibling to `connect()`/`register()`, that defaults
+    `originName`/`apiKey` to the SDK instance's own config.
+
+  Both hit the new, more idiomatic `PATCH /api/origins/:origin_name/metadata`.
+  The previous `PATCH /api/api-keys/origins/:origin_name/metadata` remains
+  live, unchanged, on the server — it's what the already-published Kotlin SDK
+  wraps — but new TypeScript callers should use one of the two methods above
+  instead of calling either path directly.
+
+### Patch Changes
+
+- Updated dependencies
+  - @bloque/sdk-core@0.6.0
+  - @bloque/sdk-identity@0.6.0
+  - @bloque/sdk-accounts@0.6.0
+  - @bloque/sdk-compliance@0.6.0
+  - @bloque/sdk-orgs@0.6.0
+  - @bloque/sdk-swap@0.6.0
+
 ## 0.5.0
 
 ### Minor Changes
