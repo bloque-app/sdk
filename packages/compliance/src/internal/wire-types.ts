@@ -74,14 +74,37 @@ export interface GetKycDocumentsResponse {
 
 /**
  * @internal
+ * A display label in both languages the hosted gates render in.
+ */
+export interface LocalizedTextWire {
+  en: string;
+  es: string;
+}
+
+/**
+ * @internal
+ * A `select` field option with a stored `value` distinct from its
+ * localized display `label`.
+ */
+export interface RequirementFieldOptionWire {
+  value: string;
+  label: LocalizedTextWire;
+}
+
+/**
+ * @internal
  * A form field a `document`/`manual_review` requirement may ask for.
  */
 export interface RequirementFieldWire {
   key: string;
   label: string;
+  description?: string;
   type: 'text' | 'number' | 'date' | 'select' | 'boolean';
   required?: boolean;
-  options?: string[];
+  /** Legacy plain strings still appear alongside the newer localized
+   * option shape — both must be accepted. */
+  options?: (string | RequirementFieldOptionWire)[];
+  locale?: 'en' | 'es';
 }
 
 /**
@@ -98,7 +121,9 @@ export interface TierRequirementStatusWire {
     | 'revoked'
     | 'pending_review';
   description?: string;
+  title?: string;
   fields?: RequirementFieldWire[];
+  requires_upload?: boolean;
   submitted_at?: string;
 }
 
@@ -197,6 +222,7 @@ export interface TosGateInitResponse {
   csrf_token: string;
   return_url: string;
   show_home: boolean;
+  accent_color?: string;
 }
 
 /**
@@ -255,6 +281,7 @@ export interface VerificationRequirementWire {
   key: string;
   kind: string;
   description?: string;
+  title?: string;
   fields?: RequirementFieldWire[];
   uploadable: boolean;
   upload_intents?: VerificationUploadIntentWire[];
@@ -267,6 +294,7 @@ export interface VerificationRequirementWire {
 export interface PendingVerificationRequirementWire {
   key: string;
   description?: string;
+  title?: string;
   submitted_at?: string;
 }
 
@@ -275,6 +303,7 @@ export interface VerificationGateInitResponse {
   pending_requirements?: PendingVerificationRequirementWire[];
   csrf_token: string;
   return_url: string;
+  accent_color?: string;
 }
 
 /**

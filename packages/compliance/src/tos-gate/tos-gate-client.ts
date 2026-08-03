@@ -87,6 +87,7 @@ export class TosGateClient extends BaseClient {
       csrfToken: response.csrf_token,
       returnUrl: response.return_url,
       showHome: response.show_home,
+      accentColor: response.accent_color,
     };
   }
 
