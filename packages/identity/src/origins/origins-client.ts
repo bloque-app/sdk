@@ -40,6 +40,11 @@ export class OriginsClient extends BaseClient {
    * Origins are the entry points for user identities and represent organizations,
    * startups, chains, or any entity that can hold a set of identities.
    *
+   * This endpoint is public/unauthenticated, so `metadata` is always
+   * returned as `{}` regardless of what's actually stored on the origin —
+   * don't rely on it for origin presentation data (company name,
+   * branding, feature flags, ...).
+   *
    * @returns Promise resolving to an array of origins
    *
    * @example
