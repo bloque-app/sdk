@@ -222,13 +222,20 @@ export class BrebClient extends BaseClient {
   /**
    * Create a BRE-B key account by calling the BRE-B key creation endpoint.
    *
+   * For `keyType: 'ALPHA'`, `key` is free choice (e.g. your own phone number
+   * as an alphanumeric key), but with the active provider (Cobre) it's
+   * validated against your own verified name, last name, phone, or email —
+   * a value that isn't derived from your own data is rejected. Other key
+   * types aren't checked this way (see {@link CreateBrebKeyParams.key}).
+   * `displayName` is Passport-only and ignored with Cobre; the displayed
+   * name is always your own verified name.
+   *
    * @example
    * ```ts
    * const key = await bloque.accounts.breb.createKey({
-   *   keyType: 'BCODE',
-   *   key: '0016027228',
+   *   keyType: 'ALPHA',
+   *   key: '3124581131', // the caller's own verified phone number
    *   ledgerId: 'ledger-account-breb-001',
-   *   displayName: 'Pepito Silva',
    *   metadata: { channel: 'sdk-typescript' },
    * });
    * ```

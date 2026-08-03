@@ -26,9 +26,8 @@ The BRE-B client lets you:
 ```typescript title="create-breb-key.ts"
 const { data, error } = await session.accounts.breb.createKey({
   ledgerId: 'ledger-account-id',
-  keyType: 'PHONE',
-  key: '3015550184',
-  displayName: 'Camila Ortega',
+  keyType: 'ALPHA',
+  key: '3124581131', // the caller's own verified phone number
   webhookUrl: 'https://api.example.com/webhooks/breb',
   metadata: {
     source: 'checkout',
@@ -71,11 +70,15 @@ In the SDK you use `keyType` and `key`. In BRE-B infrastructure those fields com
 | `ID` | `ID` | Identification number | `7922089` |
 | `PHONE` | `MOBILE` | Mobile phone number | `+573001234567` |
 | `EMAIL` | `EMAIL` | Email address | `user@example.com` |
-| `ALPHA` | `ALPHA` | Custom alias | `@clientalias123` |
+| `ALPHA` | `ALPHA` | Custom alias — must be derived from your own verified name/phone/email | `3124581131` |
 | `BCODE` | `BCODE` | Entity commercial code | `0012345678` |
 
 :::note
 The `keyType` + `key` combination must be unique across the BRE-B infrastructure. The platform validates this uniqueness.
+:::
+
+:::warning Identity verification required
+Creating a BRE-B key requires a KYC-verified identity — otherwise `createKey()` fails with `E_BREB_IDENTITY_NOT_KYC_VERIFIED`. For `keyType: 'ALPHA'` specifically, `key` must also be a verified combination of your own name, last name, phone, or email (normalized) — a value that isn't derived from your own data, like a bank or business name, fails with `E_BREB_KEY_VALUE_NOT_VERIFIED`. This doesn't apply to `ID`/`PHONE`/`EMAIL`/`BCODE`, which either are your own rail-verified identifier or (for `BCODE`) not personal data at all. `displayName` is Passport-only and ignored with the active provider (Cobre) — the displayed name is always your own verified name, not a value you supply.
 :::
 
 ## Create Result
@@ -423,6 +426,13 @@ if (error) {
   console.error(error.message);
 }
 ```
+
+`createKey()` can also fail before it ever reaches the provider:
+
+| `error.code` | Meaning |
+| --- | --- |
+| `E_BREB_IDENTITY_NOT_KYC_VERIFIED` | The caller identity isn't KYC-verified. |
+| `E_BREB_KEY_VALUE_NOT_VERIFIED` | `keyType: 'ALPHA'` only: `key` isn't a verified combination of your own name/last name/phone/email. |
 
 ## Notes
 

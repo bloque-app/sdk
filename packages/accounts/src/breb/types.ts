@@ -33,12 +33,21 @@ export interface CreateBrebKeyParams {
   keyType: BrebKeyType;
 
   /**
-   * Value to register for the selected key type.
+   * Value to register for the selected key type. For `keyType: 'ALPHA'`
+   * (free-form alias, e.g. your own phone number as an alphanumeric key)
+   * the backend validates it against your own verified name, last name,
+   * phone, or email — a value that isn't derived from your own data (e.g.
+   * a bank or business name) is rejected. `ID`/`PHONE`/`EMAIL` are your own
+   * rail-verified identifiers (BRE-B itself enforces that ownership) and
+   * `BCODE` is an entity commercial code, not personal data — neither is
+   * checked against your profile.
    */
   key: string;
 
   /**
-   * Friendly name shown during key resolution.
+   * Passport-only: a friendly name shown during key resolution. Ignored
+   * with the active provider (Cobre) — the key's registered/displayed name
+   * is always your own verified name, not this field.
    */
   displayName?: string;
 

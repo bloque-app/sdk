@@ -26,9 +26,8 @@ El cliente de BRE-B te permite:
 ```typescript title="crear-llave-breb.ts"
 const { data, error } = await session.accounts.breb.createKey({
   ledgerId: 'ledger-account-id',
-  keyType: 'PHONE',
-  key: '3015550184',
-  displayName: 'Camila Ortega',
+  keyType: 'ALPHA',
+  key: '3124581131', // el teléfono verificado del propio usuario
   webhookUrl: 'https://api.example.com/webhooks/breb',
   metadata: {
     source: 'checkout',
@@ -71,11 +70,15 @@ En el SDK usas `keyType` y `key`. En la infraestructura BRE-B esos campos suelen
 | `ID` | `ID` | Número de documento | `7922089` |
 | `PHONE` | `MOBILE` | Número de celular | `+573001234567` |
 | `EMAIL` | `EMAIL` | Correo electrónico | `user@example.com` |
-| `ALPHA` | `ALPHA` | Alias personalizado | `@clientalias123` |
+| `ALPHA` | `ALPHA` | Alias personalizado — debe derivarse de tu propio nombre/teléfono/correo verificado | `3124581131` |
 | `BCODE` | `BCODE` | Código comercial de la entidad | `0012345678` |
 
 :::note
 La combinación de `keyType` + `key` debe ser única en toda la infraestructura BRE-B. La plataforma valida esta unicidad.
+:::
+
+:::warning Se requiere identidad verificada
+Crear una llave BRE-B requiere una identidad con KYC verificado — si no, `createKey()` falla con `E_BREB_IDENTITY_NOT_KYC_VERIFIED`. Específicamente para `keyType: 'ALPHA'`, `key` también debe ser una combinación verificada de tu propio nombre, apellido, teléfono o correo (normalizado) — un valor que no se derive de tus propios datos, como el nombre de un banco o una empresa, falla con `E_BREB_KEY_VALUE_NOT_VERIFIED`. Esto no aplica a `ID`/`PHONE`/`EMAIL`/`BCODE`, que son tu propio identificador verificado por el riel BRE-B o (en el caso de `BCODE`) no son datos personales en absoluto. `displayName` es exclusivo de Passport y se ignora con el proveedor activo (Cobre) — el nombre mostrado siempre es tu propio nombre verificado, no un valor que tú envíes.
 :::
 
 ## Resultado de creación
@@ -389,6 +392,13 @@ if (error) {
   console.error(error.message);
 }
 ```
+
+`createKey()` también puede fallar antes de llegar al proveedor:
+
+| `error.code` | Significado |
+| --- | --- |
+| `E_BREB_IDENTITY_NOT_KYC_VERIFIED` | La identidad del caller no tiene KYC verificado. |
+| `E_BREB_KEY_VALUE_NOT_VERIFIED` | Solo `keyType: 'ALPHA'`: `key` no es una combinación verificada de tu propio nombre/apellido/teléfono/correo. |
 
 ## Notas
 
