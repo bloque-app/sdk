@@ -19,7 +19,7 @@ The BRE-B client lets you:
 - resolve a BRE-B key before starting a payment flow
 - pay to a resolved BRE-B key through `session.swap.breb.create()`
 - deposit COP via BRE-B on-ramp through `session.swap.breb.createDeposit()`
-- manage the key lifecycle by suspending, activating, or deleting a stored key
+- delete a stored key, and — on accounts still backed by the deprecated Passport provider — suspend or activate it
 
 ## Create a BRE-B Key
 
@@ -319,6 +319,10 @@ Show `keyType` and `keyValue` so the payer can send COP via their bank's BRE-B a
 
 ## Suspend a BRE-B Key
 
+:::warning Not supported on Cobre-backed accounts
+`suspendKey` fails with a hard error (`501`) on BRE-B accounts backed by Cobre, Bloque's active provider — Cobre's key-freeze feature is in beta and unavailable in production. There is no way to freeze a Cobre-backed key while keeping it able to be reactivated; the only available operation is `deleteKey`, which is terminal. Only accounts still backed by the deprecated Passport provider support suspend/activate.
+:::
+
 ```typescript title="suspend-breb-key.ts"
 const { data, error } = await session.accounts.breb.suspendKey({
   accountUrn: 'did:bloque:account:breb:demo-account-id',
@@ -332,6 +336,10 @@ if (error) {
 ```
 
 ## Activate a BRE-B Key
+
+:::warning Not supported on Cobre-backed accounts
+Same limitation as `suspendKey` above: `activateKey` fails with a hard error (`501`) on Cobre-backed accounts. Only accounts still backed by the deprecated Passport provider support this call.
+:::
 
 ```typescript title="activate-breb-key.ts"
 const { data, error } = await session.accounts.breb.activateKey({
@@ -421,9 +429,9 @@ if (error) {
 - `holder_urn` is taken from the connected SDK session
 - if `ledgerId` is provided, the account is linked to that ledger
 - if `ledgerId` is omitted, a ledger is created automatically
-- key suspension updates the account with `PATCH /api/accounts/:accountUrn` and `status: 'frozen'`
-- key activation updates the account with `PATCH /api/accounts/:accountUrn` and `status: 'active'`
-- key deletion updates the account with `PATCH /api/accounts/:accountUrn` and `status: 'deleted'`
+- key suspension updates the account with `PATCH /api/accounts/:accountUrn` and `status: 'frozen'` — Passport-backed accounts only, fails with `501` on Cobre-backed accounts
+- key activation updates the account with `PATCH /api/accounts/:accountUrn` and `status: 'active'` — Passport-backed accounts only, fails with `501` on Cobre-backed accounts
+- key deletion updates the account with `PATCH /api/accounts/:accountUrn` and `status: 'deleted'` — supported on both providers, but terminal on Cobre-backed accounts (no way back to `active` short of creating a new key)
 - BRE-B payouts are created through `session.swap.breb.create()`
 - BRE-B on-ramp deposits are created through `session.swap.breb.createDeposit()`
 

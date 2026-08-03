@@ -414,6 +414,12 @@ export class BrebClient extends BaseClient {
   /**
    * Suspend a BRE-B key account.
    *
+   * @remarks
+   * Not supported on accounts backed by Cobre, Bloque's active BRE-B provider —
+   * Cobre's key-freeze feature is in beta and unavailable in production. Calling
+   * this on a Cobre-backed account fails with a `501` error. Only accounts still
+   * backed by the deprecated Passport provider support this call.
+   *
    * @example
    * ```ts
    * const result = await bloque.accounts.breb.suspendKey({
@@ -459,6 +465,11 @@ export class BrebClient extends BaseClient {
 
   /**
    * Activate a previously suspended BRE-B key account.
+   *
+   * @remarks
+   * Same limitation as {@link suspendKey}: not supported on accounts backed by
+   * Cobre — fails with a `501` error. Only accounts still backed by the
+   * deprecated Passport provider support this call.
    *
    * @example
    * ```ts

@@ -19,7 +19,7 @@ El cliente de BRE-B te permite:
 - resolver una llave BRE-B antes de iniciar un flujo de pago
 - pagar a una llave BRE-B resuelta a través de `session.swap.breb.create()`
 - depositar COP vía on-ramp BRE-B con `session.swap.breb.createDeposit()`
-- gestionar el ciclo de vida de la llave suspendiendo, activando o eliminando una llave guardada
+- eliminar una llave guardada, y — en cuentas todavía respaldadas por el proveedor Passport (deprecado) — suspenderla o activarla
 
 ## Crear una llave BRE-B
 
@@ -285,6 +285,10 @@ Consulta `user.swap.listOrders({ graphId: result.order.graphId })` o usa webhook
 
 ## Suspender una llave BRE-B
 
+:::warning No soportado en cuentas respaldadas por Cobre
+`suspendKey` falla con un error duro (`501`) en cuentas BRE-B respaldadas por Cobre, el proveedor activo de Bloque — la función de congelar llaves de Cobre está en beta y no disponible en producción. No hay forma de congelar una llave respaldada por Cobre manteniendo la posibilidad de reactivarla; la única operación disponible es `deleteKey`, que es terminal. Solo las cuentas todavía respaldadas por el proveedor Passport (deprecado) soportan suspender/activar.
+:::
+
 ```typescript title="suspender-llave-breb.ts"
 const { data, error } = await session.accounts.breb.suspendKey({
   accountUrn: 'did:bloque:account:breb:demo-account-id',
@@ -298,6 +302,10 @@ if (error) {
 ```
 
 ## Activar una llave BRE-B
+
+:::warning No soportado en cuentas respaldadas por Cobre
+Misma limitación que `suspendKey` arriba: `activateKey` falla con un error duro (`501`) en cuentas respaldadas por Cobre. Solo las cuentas todavía respaldadas por el proveedor Passport (deprecado) soportan esta llamada.
+:::
 
 ```typescript title="activar-llave-breb.ts"
 const { data, error } = await session.accounts.breb.activateKey({
@@ -387,9 +395,9 @@ if (error) {
 - `holder_urn` se toma de la sesión conectada del SDK
 - si envías `ledgerId`, la cuenta se asocia a ese ledger
 - si no envías `ledgerId`, se crea un ledger automáticamente
-- la suspensión actualiza la cuenta con `PATCH /api/accounts/:accountUrn` y `status: 'frozen'`
-- la activación actualiza la cuenta con `PATCH /api/accounts/:accountUrn` y `status: 'active'`
-- la eliminación actualiza la cuenta con `PATCH /api/accounts/:accountUrn` y `status: 'deleted'`
+- la suspensión actualiza la cuenta con `PATCH /api/accounts/:accountUrn` y `status: 'frozen'` — solo en cuentas respaldadas por Passport, falla con `501` en cuentas respaldadas por Cobre
+- la activación actualiza la cuenta con `PATCH /api/accounts/:accountUrn` y `status: 'active'` — solo en cuentas respaldadas por Passport, falla con `501` en cuentas respaldadas por Cobre
+- la eliminación actualiza la cuenta con `PATCH /api/accounts/:accountUrn` y `status: 'deleted'` — soportada en ambos proveedores, pero terminal en cuentas respaldadas por Cobre (no hay vuelta a `active` salvo creando una llave nueva)
 - los pagos BRE-B se crean con `session.swap.breb.create()`
 - los depósitos on-ramp BRE-B se crean con `session.swap.breb.createDeposit()`
 
