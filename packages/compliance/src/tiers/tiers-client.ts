@@ -1,6 +1,7 @@
 import { BaseClient } from '@bloque/sdk-core';
 import type {
   GetTierStatusResponse,
+  RequirementFieldOptionWire,
   RequirementFieldWire,
   TierRequirementStatusWire,
   VerificationFlowHandoffWire,
@@ -8,10 +9,23 @@ import type {
 import type {
   GetTierStatusParams,
   RequirementField,
+  RequirementFieldOption,
   TierRequirementStatus,
   TierStatus,
   VerificationFlowHandoff,
 } from './types';
+
+/** @internal Shared by tiers-client.ts and verification-gate-client.ts's
+ * field-option mapping — a plain string passes through unlocalized. */
+function mapRequirementFieldOption(
+  option: string | RequirementFieldOptionWire,
+): string | RequirementFieldOption {
+  if (typeof option === 'string') return option;
+  return {
+    value: option.value,
+    label: { en: option.label.en, es: option.label.es },
+  };
+}
 
 /** @internal Shared by verification-gate-client.ts, which surfaces the same field descriptors. */
 export function mapRequirementField(
@@ -20,9 +34,11 @@ export function mapRequirementField(
   return {
     key: field.key,
     label: field.label,
+    description: field.description,
     type: field.type,
     required: field.required,
-    options: field.options,
+    options: field.options?.map(mapRequirementFieldOption),
+    locale: field.locale,
   };
 }
 
@@ -34,7 +50,9 @@ function mapRequirementStatus(
     kind: requirement.kind,
     status: requirement.status,
     description: requirement.description,
+    title: requirement.title,
     fields: requirement.fields?.map(mapRequirementField),
+    requiresUpload: requirement.requires_upload,
     submittedAt: requirement.submitted_at,
   };
 }

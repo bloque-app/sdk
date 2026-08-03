@@ -8,13 +8,38 @@ export interface GetTierStatusParams {
   urn: string;
 }
 
+/** A display label in both languages the hosted gates render in. */
+export interface LocalizedText {
+  en: string;
+  es: string;
+}
+
+/** A `select` field option with a stored `value` distinct from its
+ * localized display `label`. See {@link RequirementField.options}. */
+export interface RequirementFieldOption {
+  value: string;
+  label: LocalizedText;
+}
+
 export interface RequirementField {
   key: string;
   label: string;
+  /** Short help text rendered under the label, clarifying what's being asked. */
+  description?: string;
   type: 'text' | 'number' | 'date' | 'select' | 'boolean';
   required?: boolean;
-  /** Only meaningful for `type: 'select'`. */
-  options?: string[];
+  /** Only meaningful for `type: 'select'`. Supports legacy plain strings
+   * (rendered as-is, unlocalized — still emitted by older policy entries)
+   * or `{ value, label: { en, es } }` for a display label localized
+   * independently of the stored value. */
+  options?: (string | RequirementFieldOption)[];
+  /** Pins which side of a localized option's `label` to display,
+   * overriding the caller's own locale/language detection. Set on fields
+   * whose surrounding `label`/`description` are themselves authored in a
+   * single fixed language rather than localized, so the option list
+   * doesn't mix languages mid-form. Omit for a field whose label and
+   * options should track the same per-visitor language. */
+  locale?: 'en' | 'es';
 }
 
 export interface TierRequirementStatus {
@@ -31,8 +56,17 @@ export interface TierRequirementStatus {
     | 'pending_review';
   /** What this requirement means, for display without hardcoding key strings. */
   description?: string;
+  /** Human-readable title for the requirement's card, distinct from
+   * `description`. Falls back to a humanized version of `key` client-side
+   * when absent — older policy entries may not set it. */
+  title?: string;
   /** Only present for requirements that collect form answers. */
   fields?: RequirementField[];
+  /** When explicitly `false`, this requirement is form-only and must
+   * never be treated as uploadable regardless of `kind` (e.g. a
+   * form-only `manual_review` like a one-off questionnaire). Omitted or
+   * `true` means the usual kind-based uploadable default applies. */
+  requiresUpload?: boolean;
   /** ISO-8601 timestamp of the submission behind a `'pending_review'`
    * status, for a "submitted on X" line. */
   submittedAt?: string;

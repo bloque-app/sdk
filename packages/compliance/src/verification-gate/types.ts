@@ -40,8 +40,20 @@ export interface VerificationRequirement {
   /** e.g. `'document'` or `'manual_review'` — TOS/KYC never appear here (they have no upload/form). */
   kind: string;
   description?: string;
+  /** Human-readable title for the requirement's card, distinct from
+   * `description`. Falls back to a humanized version of `key` client-side
+   * when absent. */
+  title?: string;
   /** Only present for requirements that collect form answers. */
   fields?: RequirementField[];
+  /**
+   * Whether this requirement should collect a document upload. Already
+   * accounts for the policy's `requiresUpload` opt-out server-side — it's
+   * `false` for a `kind` that would otherwise default to uploadable but
+   * is actually form-only (e.g. a one-off questionnaire `manual_review`
+   * with no document to attach), so you don't need to hardcode which
+   * `kind`s are uploadable yourself.
+   */
   uploadable: boolean;
   /** One presigned upload URL per allowed content type, only when `uploadable`. */
   uploadIntents?: VerificationUploadIntent[];
@@ -53,6 +65,10 @@ export interface VerificationRequirement {
 export interface PendingVerificationRequirement {
   key: string;
   description?: string;
+  /** Human-readable title for the requirement's card, distinct from
+   * `description`. Falls back to a humanized version of `key` client-side
+   * when absent. */
+  title?: string;
   /** ISO-8601 timestamp of the submission. */
   submittedAt?: string;
 }
@@ -68,6 +84,10 @@ export interface VerificationGateInitResult {
   /** Single-use submit nonce — pass as `csrfToken` to `submit()`. */
   csrfToken: string;
   returnUrl: string;
+  /** The calling origin's `gate_accent_color` (a CSS hex color), if it has
+   * one configured — see {@link TosGateInitResult.accentColor} for the
+   * full explanation; both gates share the same origin-metadata source. */
+  accentColor?: string;
 }
 
 export interface SubmitDocumentConfirmation {

@@ -35,6 +35,13 @@ export interface TosGateInitResult {
   returnUrl: string;
   /** Whether the hosted page's intro screens should play before the document. */
   showHome: boolean;
+  /** The calling origin's `gate_accent_color` (a CSS hex color), if it has
+   * one configured — the same color the hosted page itself applies via
+   * `--accent`. `undefined` when the origin has none configured or it
+   * failed validation server-side (e.g. not a valid 3-/6-digit hex). Only
+   * useful if you're building your own UI around the gate rather than
+   * just opening `url` in a browser/webview. */
+  accentColor?: string;
 }
 
 export interface TosGateAcceptParams {

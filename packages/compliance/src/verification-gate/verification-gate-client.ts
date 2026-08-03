@@ -39,6 +39,7 @@ function mapRequirement(
     key: requirement.key,
     kind: requirement.kind,
     description: requirement.description,
+    title: requirement.title,
     fields: requirement.fields?.map(mapRequirementField),
     uploadable: requirement.uploadable,
     uploadIntents: requirement.upload_intents?.map(mapUploadIntent),
@@ -118,11 +119,13 @@ export class VerificationGateClient extends BaseClient {
         (requirement) => ({
           key: requirement.key,
           description: requirement.description,
+          title: requirement.title,
           submittedAt: requirement.submitted_at,
         }),
       ),
       csrfToken: response.csrf_token,
       returnUrl: response.return_url,
+      accentColor: response.accent_color,
     };
   }
 
