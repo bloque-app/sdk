@@ -5,11 +5,39 @@ import {
   type CreateIdentityParams,
   IdentityClient,
   type IdentityMe,
-  type OriginMetadataPatch,
-  type UpdateOriginMetadataResult,
 } from '@bloque/sdk-identity';
 import { OrgsClient } from '@bloque/sdk-orgs';
 import { SwapClient } from '@bloque/sdk-swap';
+
+/**
+ * Self-serviceable presentation metadata for an API-key origin. This is the
+ * complete allowlist accepted by `bloque.origins.updateMetadata()` — any
+ * other field on an origin's `metadata` (e.g. `contactEmail`) is owned by
+ * other systems and can't be set through this surface.
+ */
+export interface OriginMetadataPatch {
+  /**
+   * Developer-facing display name substituted as `{{developer_name}}` into
+   * the hosted TOS document. Non-empty, at most 200 characters.
+   */
+  company?: string;
+  /** Skip the hosted TOS gate's intro screens. */
+  tosGateShowHome?: boolean;
+  /**
+   * Brand accent color applied to both hosted gates' `--accent` CSS
+   * variable. Strict 3- or 6-digit CSS hex (e.g. `#f80` or `#ff8800`) —
+   * anything else is silently dropped server-side, never partially applied.
+   */
+  gateAccentColor?: string;
+  /**
+   * Bare origins (scheme + host + port, no path or trailing slash) allowed
+   * as `returnUrl` on `compliance.verificationGate.start()`, in addition to
+   * the deployment-wide `VERIFICATION_GATE_RETURN_URL_ALLOWLIST` env var —
+   * either being satisfied is enough. Replaces the whole array; it does not
+   * append to whatever is already configured.
+   */
+  verificationGateReturnUrlAllowlist?: string[];
+}
 
 export interface UpdateOriginMetadataOptions {
   /**
@@ -26,6 +54,25 @@ export interface UpdateOriginMetadataOptions {
    */
   apiKey?: string;
   metadata: OriginMetadataPatch;
+}
+
+export interface UpdateOriginMetadataResult {
+  /** Origin namespace that was updated. */
+  originName: string;
+  /** The origin's full metadata after the patch was merged in. */
+  metadata: Record<string, unknown>;
+  updated: true;
+}
+
+interface UpdateOriginMetadataRequest {
+  api_key: string;
+  metadata: Record<string, unknown>;
+}
+
+interface UpdateOriginMetadataResponse {
+  origin_name: string;
+  metadata: Record<string, unknown>;
+  updated: true;
 }
 
 export interface BloqueClients {
@@ -281,7 +328,7 @@ export class SDK {
    * `register()`, but for configuring the origin itself rather than one of
    * its identities.
    */
-  get origin() {
+  get origins() {
     return {
       /**
        * Patch this origin's own presentation metadata (`company`,
@@ -291,15 +338,18 @@ export class SDK {
        * you typically only pass `metadata`:
        *
        * ```typescript
-       * await bloque.origin.metadata({
+       * await bloque.origins.updateMetadata({
        *   metadata: { gateAccentColor: '#1a73e8' },
        * });
        * ```
        *
        * This is a one-time/deploy-script call, not something you run
-       * per-request or per-user.
+       * per-request or per-user. Fields you omit from `metadata` are left
+       * untouched on the origin (shallow merge) — the response echoes the
+       * full post-merge metadata so you can confirm what actually took
+       * effect.
        */
-      metadata: (
+      updateMetadata: (
         options: UpdateOriginMetadataOptions,
       ): Promise<UpdateOriginMetadataResult> =>
         this.updateOriginMetadata(options),
@@ -312,22 +362,50 @@ export class SDK {
     const originName = options.originName ?? this.httpClient.origin;
     if (!originName) {
       throw new Error(
-        'origin.metadata() requires originName (or configure the SDK with an origin)',
+        'origins.updateMetadata() requires originName (or configure the SDK with an origin)',
       );
     }
 
     const apiKey = options.apiKey ?? this.resolveOwnApiKey();
     if (!apiKey) {
       throw new Error(
-        'origin.metadata() requires apiKey (or configure the SDK with apiKey/originKey auth)',
+        'origins.updateMetadata() requires apiKey (or configure the SDK with apiKey/originKey auth)',
       );
     }
 
-    return this.identity.origins.updateMetadata({
-      originName,
-      apiKey,
-      metadata: options.metadata,
+    const metadata: Record<string, unknown> = {};
+    if (options.metadata.company !== undefined) {
+      metadata.company = options.metadata.company;
+    }
+    if (options.metadata.tosGateShowHome !== undefined) {
+      metadata.tos_gate_show_home = options.metadata.tosGateShowHome;
+    }
+    if (options.metadata.gateAccentColor !== undefined) {
+      metadata.gate_accent_color = options.metadata.gateAccentColor;
+    }
+    if (options.metadata.verificationGateReturnUrlAllowlist !== undefined) {
+      metadata.verification_gate_return_url_allowlist =
+        options.metadata.verificationGateReturnUrlAllowlist;
+    }
+
+    const response = await this.httpClient.request<
+      UpdateOriginMetadataResponse,
+      UpdateOriginMetadataRequest
+    >({
+      method: 'PATCH',
+      path: `/api/origins/${originName}/metadata`,
+      body: { api_key: apiKey, metadata },
+      // Authenticates via api_key in the body, not the SDK's own session —
+      // skip the apiKey-auth auto-exchange so this never depends on (or
+      // triggers) a JWT the caller may not need at all.
+      _skipExchange: true,
     });
+
+    return {
+      originName: response.origin_name,
+      metadata: response.metadata,
+      updated: true,
+    };
   }
 
   private resolveOwnApiKey(): string | undefined {

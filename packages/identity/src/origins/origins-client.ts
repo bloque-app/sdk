@@ -16,20 +16,7 @@ import type {
   IndividualRegisterParams,
   RegisterParams,
   RegisterResult,
-  UpdateOriginMetadataParams,
-  UpdateOriginMetadataResult,
 } from './types';
-
-interface UpdateOriginMetadataRequest {
-  api_key: string;
-  metadata: Record<string, unknown>;
-}
-
-interface UpdateOriginMetadataResponse {
-  origin_name: string;
-  metadata: Record<string, unknown>;
-  updated: true;
-}
 
 export class OriginsClient extends BaseClient {
   public readonly whatsapp: OriginClient<OTPAssertionWhatsApp>;
@@ -219,73 +206,6 @@ export class OriginsClient extends BaseClient {
 
     return {
       accessToken: response.result.access_token,
-    };
-  }
-
-  /**
-   * Self-service update of an API-key origin's own presentation metadata:
-   * `company`, `tosGateShowHome`, `gateAccentColor`, and
-   * `verificationGateReturnUrlAllowlist`. Authenticated purely by the
-   * origin's own `apiKey` in the request body — no session/JWT involved,
-   * and works even before you've ever called `connect()`/`register()`.
-   *
-   * This is a one-time, deploy-script-shaped call, not something you run
-   * per-request or per-user. Fields you omit from `metadata` are left
-   * untouched on the origin (shallow merge) — the response echoes the full
-   * post-merge metadata so you can confirm what actually took effect.
-   *
-   * @param params - Origin to patch, its own secret key, and the metadata patch
-   * @returns Promise resolving to the origin's full metadata after the merge
-   *
-   * @example
-   * ```typescript
-   * const result = await bloque.identity.origins.updateMetadata({
-   *   originName: 'acme',
-   *   apiKey: process.env.ACME_ORIGIN_KEY!,
-   *   metadata: {
-   *     company: 'Acme Inc.',
-   *     gateAccentColor: '#1a73e8',
-   *     verificationGateReturnUrlAllowlist: ['https://app.acme.example.com'],
-   *   },
-   * });
-   * console.log(result.updated); // true
-   * ```
-   */
-  async updateMetadata(
-    params: UpdateOriginMetadataParams,
-  ): Promise<UpdateOriginMetadataResult> {
-    const metadata: Record<string, unknown> = {};
-    if (params.metadata.company !== undefined) {
-      metadata.company = params.metadata.company;
-    }
-    if (params.metadata.tosGateShowHome !== undefined) {
-      metadata.tos_gate_show_home = params.metadata.tosGateShowHome;
-    }
-    if (params.metadata.gateAccentColor !== undefined) {
-      metadata.gate_accent_color = params.metadata.gateAccentColor;
-    }
-    if (params.metadata.verificationGateReturnUrlAllowlist !== undefined) {
-      metadata.verification_gate_return_url_allowlist =
-        params.metadata.verificationGateReturnUrlAllowlist;
-    }
-
-    const response = await this.httpClient.request<
-      UpdateOriginMetadataResponse,
-      UpdateOriginMetadataRequest
-    >({
-      method: 'PATCH',
-      path: `/api/origins/${params.originName}/metadata`,
-      body: { api_key: params.apiKey, metadata },
-      // Authenticates via api_key in the body, not the SDK's own session —
-      // skip the apiKey-auth auto-exchange so this never depends on (or
-      // triggers) a JWT the caller may not need at all.
-      _skipExchange: true,
-    });
-
-    return {
-      originName: response.origin_name,
-      metadata: response.metadata,
-      updated: true,
     };
   }
 
