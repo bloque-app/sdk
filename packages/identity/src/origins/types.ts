@@ -211,3 +211,60 @@ export interface RegisterResult {
    */
   accessToken: string;
 }
+
+/**
+ * Self-serviceable presentation metadata for an API-key origin. This is the
+ * complete allowlist accepted by `OriginsClient.updateMetadata()` — any other
+ * field on `Origin.metadata` (e.g. `contactEmail`) is owned by other systems
+ * and can't be set through this surface.
+ */
+export interface OriginMetadataPatch {
+  /**
+   * Developer-facing display name substituted as `{{developer_name}}` into
+   * the hosted TOS document. Non-empty, at most 200 characters.
+   */
+  company?: string;
+  /** Skip the hosted TOS gate's intro screens. */
+  tosGateShowHome?: boolean;
+  /**
+   * Brand accent color applied to both hosted gates' `--accent` CSS
+   * variable. Strict 3- or 6-digit CSS hex (e.g. `#f80` or `#ff8800`) —
+   * anything else is silently dropped server-side, never partially applied.
+   */
+  gateAccentColor?: string;
+  /**
+   * Bare origins (scheme + host + port, no path or trailing slash) allowed
+   * as `returnUrl` on `compliance.verificationGate.start()`, in addition to
+   * the deployment-wide `VERIFICATION_GATE_RETURN_URL_ALLOWLIST` env var —
+   * either being satisfied is enough. Replaces the whole array; it does not
+   * append to whatever is already configured.
+   */
+  verificationGateReturnUrlAllowlist?: string[];
+}
+
+export interface UpdateOriginMetadataParams {
+  /**
+   * Origin namespace to patch — the same value passed as `origin` to
+   * `new SDK(...)`.
+   */
+  originName: string;
+  /**
+   * The origin's own provisioned secret key (`sk_live_...`/`sk_test_...`),
+   * verified server-side against `origin_key_values` — not a
+   * dashboard-issued API key.
+   */
+  apiKey: string;
+  /**
+   * Shallow-merged into the origin's existing metadata: fields you omit are
+   * left untouched.
+   */
+  metadata: OriginMetadataPatch;
+}
+
+export interface UpdateOriginMetadataResult {
+  /** Origin namespace that was updated. */
+  originName: string;
+  /** The origin's full metadata after the patch was merged in. */
+  metadata: Record<string, unknown>;
+  updated: true;
+}

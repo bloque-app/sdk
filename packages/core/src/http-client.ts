@@ -37,6 +37,7 @@ export class HttpClient {
     '/api/aliases',
     '/api/origins/*/assert',
     '/api/origins/*/connect',
+    '/api/origins/*/metadata',
     '/api/origins',
     '/api/api-keys/exchange',
   ];
