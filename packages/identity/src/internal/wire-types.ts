@@ -77,6 +77,14 @@ export interface Origin {
   namespace: string;
   provider: ' evm' | 'auth0' | 'whatsapp' | 'email' | 'api-key';
   status: 'active' | 'inactive' | 'disabled';
+  /**
+   * Always `{}` on this (public, unauthenticated) endpoint — the backend
+   * blanks it out regardless of what's actually stored, since it's a
+   * free-form blob that has held secrets (API tokens) and commercially
+   * sensitive terms (fee overrides) for other internal purposes. Never
+   * relied on for origin presentation data (company name, branding,
+   * feature flags, ...); nothing in this SDK reads it.
+   */
   metadata: Record<string, unknown>;
   created_at: string;
   updated_at: string;

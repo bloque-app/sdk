@@ -9,8 +9,14 @@ export type { StartGateResult } from '../tos-gate/types';
 export interface StartVerificationGateParams {
   /**
    * Where the hosted verification gate page redirects back to after
-   * submission. Must be present in the backend's
-   * `VERIFICATION_GATE_RETURN_URL_ALLOWLIST` (enforced fail-closed).
+   * submission. Validated fail-closed against the union of two
+   * allowlists: the calling origin's own
+   * `metadata.verification_gate_return_url_allowlist` (if configured)
+   * and the deployment-wide `VERIFICATION_GATE_RETURN_URL_ALLOWLIST` env
+   * var. Either one being satisfied is enough — an origin with its own
+   * list configured doesn't need every value re-registered centrally,
+   * and one without its own list still falls back to the env var exactly
+   * as before.
    */
   returnUrl: string;
 }
