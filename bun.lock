@@ -16,7 +16,7 @@
     },
     "packages/accounts": {
       "name": "@bloque/sdk-accounts",
-      "version": "0.4.0",
+      "version": "0.4.1",
       "dependencies": {
         "@bloque/sdk-core": "workspace:*",
       },
@@ -29,7 +29,7 @@
     },
     "packages/cli": {
       "name": "@bloque/cli",
-      "version": "0.4.0",
+      "version": "0.4.1",
       "bin": {
         "bloque": "./bin/npm.cjs",
       },
@@ -48,7 +48,7 @@
     },
     "packages/compliance": {
       "name": "@bloque/sdk-compliance",
-      "version": "0.4.0",
+      "version": "0.4.1",
       "dependencies": {
         "@bloque/sdk-core": "workspace:*",
       },
@@ -61,7 +61,7 @@
     },
     "packages/core": {
       "name": "@bloque/sdk-core",
-      "version": "0.4.0",
+      "version": "0.4.1",
       "devDependencies": {
         "@rslib/core": "catalog:",
         "@types/node": "catalog:",
@@ -71,7 +71,7 @@
     },
     "packages/identity": {
       "name": "@bloque/sdk-identity",
-      "version": "0.4.0",
+      "version": "0.4.1",
       "dependencies": {
         "@bloque/sdk-core": "workspace:*",
       },
@@ -84,7 +84,7 @@
     },
     "packages/orgs": {
       "name": "@bloque/sdk-orgs",
-      "version": "0.4.0",
+      "version": "0.4.1",
       "dependencies": {
         "@bloque/sdk-core": "workspace:*",
       },
@@ -97,7 +97,7 @@
     },
     "packages/sdk": {
       "name": "@bloque/sdk",
-      "version": "0.4.0",
+      "version": "0.4.1",
       "dependencies": {
         "@bloque/sdk-accounts": "workspace:*",
         "@bloque/sdk-compliance": "workspace:*",
@@ -115,7 +115,7 @@
     },
     "packages/swap": {
       "name": "@bloque/sdk-swap",
-      "version": "0.4.0",
+      "version": "0.4.1",
       "dependencies": {
         "@bloque/sdk-core": "workspace:*",
       },
@@ -480,7 +480,7 @@
 
     "hasown": ["hasown@2.0.4", "", { "dependencies": { "function-bind": "^1.1.2" } }, "sha512-T2UbfbBEF32wiepXIsMlTW9+dDYC6wMh/t/vYA4tuOMKqWz/n3vr1NFSxQiyP+zk2mXsoMA/i/7qV6LKut1t1A=="],
 
-    "hono": ["hono@4.12.33", "", {}, "sha512-+SwvkaiJtxsiPjhy9LivY/1m7UsNqCJetM1BrZl9A5DkQhlbHQDU730mMiDPWjnoCYOM8Chf3WrCJw27kNTPFQ=="],
+    "hono": ["hono@4.12.34", "", {}, "sha512-GqXJqY/xJkJmuloTrnV1ZEXG3fqte+VjkUqoRNZXcrUidiUOP4fMSIHHY4tsqZBK++kVyWmt/AAfSUuy57/eSA=="],
 
     "http-errors": ["http-errors@2.0.1", "", { "dependencies": { "depd": "~2.0.0", "inherits": "~2.0.4", "setprototypeof": "~1.2.0", "statuses": "~2.0.2", "toidentifier": "~1.0.1" } }, "sha512-4FbRdAX+bSdmo4AUFuS0WNiPz8NgFt+r8ThgNWmlrjQjt1Q7ZR9+zTlce2859x4KSXrwIsaeTqDoKQmtP8pLmQ=="],
 
