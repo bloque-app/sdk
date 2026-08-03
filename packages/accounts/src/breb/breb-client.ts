@@ -223,12 +223,18 @@ export class BrebClient extends BaseClient {
    * Create a BRE-B key account by calling the BRE-B key creation endpoint.
    *
    * For `keyType: 'ALPHA'`, `key` is free choice (e.g. your own phone number
-   * as an alphanumeric key), but with the active provider (Cobre) it's
-   * validated against your own verified name, last name, phone, or email —
-   * a value that isn't derived from your own data is rejected. Other key
+   * as an alphanumeric key), but with the active provider (Cobre) it must
+   * contain a recognizable fragment of your own verified name, last name,
+   * phone, or email — not an exact match, so e.g. "MiguelBBlo001" is fine,
+   * but a value with no connection to your own data is rejected. Other key
    * types aren't checked this way (see {@link CreateBrebKeyParams.key}).
    * `displayName` is Passport-only and ignored with Cobre; the displayed
    * name is always your own verified name.
+   *
+   * With Cobre, `metadata.holder_id_number`/`holder_id_type` are required
+   * (fails with `E_COBRE_HOLDER_REQUIRED` otherwise) — unlike the name,
+   * these are trusted as-is from `metadata`, not cross-checked against your
+   * own verified ID (see {@link CreateBrebKeyParams.metadata}).
    *
    * @example
    * ```ts
@@ -236,7 +242,11 @@ export class BrebClient extends BaseClient {
    *   keyType: 'ALPHA',
    *   key: '3124581131', // the caller's own verified phone number
    *   ledgerId: 'ledger-account-breb-001',
-   *   metadata: { channel: 'sdk-typescript' },
+   *   metadata: {
+   *     channel: 'sdk-typescript',
+   *     holder_id_number: '0000000000',
+   *     holder_id_type: 'cc',
+   *   },
    * });
    * ```
    */

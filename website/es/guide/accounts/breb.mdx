@@ -31,6 +31,10 @@ const { data, error } = await session.accounts.breb.createKey({
   webhookUrl: 'https://api.example.com/webhooks/breb',
   metadata: {
     source: 'checkout',
+    // Requerido con el proveedor activo (Cobre) — no se contrasta contra
+    // tu propio documento verificado, a diferencia del nombre del titular.
+    holder_id_number: '0000000000',
+    holder_id_type: 'cc',
   },
 });
 
@@ -70,7 +74,7 @@ En el SDK usas `keyType` y `key`. En la infraestructura BRE-B esos campos suelen
 | `ID` | `ID` | Número de documento | `7922089` |
 | `PHONE` | `MOBILE` | Número de celular | `+573001234567` |
 | `EMAIL` | `EMAIL` | Correo electrónico | `user@example.com` |
-| `ALPHA` | `ALPHA` | Alias personalizado — debe derivarse de tu propio nombre/teléfono/correo verificado | `3124581131` |
+| `ALPHA` | `ALPHA` | Alias personalizado — debe contener un fragmento reconocible de tu propio nombre/teléfono/correo verificado | `3124581131` |
 | `BCODE` | `BCODE` | Código comercial de la entidad | `0012345678` |
 
 :::note
@@ -78,7 +82,11 @@ La combinación de `keyType` + `key` debe ser única en toda la infraestructura 
 :::
 
 :::warning Se requiere identidad verificada
-Crear una llave BRE-B requiere una identidad con KYC verificado — si no, `createKey()` falla con `E_BREB_IDENTITY_NOT_KYC_VERIFIED`. Específicamente para `keyType: 'ALPHA'`, `key` también debe ser una combinación verificada de tu propio nombre, apellido, teléfono o correo (normalizado) — un valor que no se derive de tus propios datos, como el nombre de un banco o una empresa, falla con `E_BREB_KEY_VALUE_NOT_VERIFIED`. Esto no aplica a `ID`/`PHONE`/`EMAIL`/`BCODE`, que son tu propio identificador verificado por el riel BRE-B o (en el caso de `BCODE`) no son datos personales en absoluto. `displayName` es exclusivo de Passport y se ignora con el proveedor activo (Cobre) — el nombre mostrado siempre es tu propio nombre verificado, no un valor que tú envíes.
+Crear una llave BRE-B requiere una identidad con KYC verificado — si no, `createKey()` falla con `E_BREB_IDENTITY_NOT_KYC_VERIFIED`. Específicamente para `keyType: 'ALPHA'`, `key` también debe *contener* un fragmento reconocible de tu propio nombre, apellido, teléfono o correo (normalizado) — no una coincidencia exacta, así que por ejemplo `"MiguelBBlo001"` (nombre + apellido abreviado + un número) es válido, pero un valor sin ninguna conexión con tus propios datos, como el nombre de un banco o una empresa, falla con `E_BREB_KEY_VALUE_NOT_VERIFIED`. Esto no aplica a `ID`/`PHONE`/`EMAIL`/`BCODE`, que son tu propio identificador verificado por el riel BRE-B o (en el caso de `BCODE`) no son datos personales en absoluto. `displayName` es exclusivo de Passport y se ignora con el proveedor activo (Cobre) — el nombre mostrado siempre es tu propio nombre verificado, no un valor que tú envíes.
+:::
+
+:::warning Se requieren `holder_id_number`/`holder_id_type` en `metadata`
+Con el proveedor activo (Cobre), `createKey()` falla con `E_COBRE_HOLDER_REQUIRED` a menos que envíes `metadata.holder_id_number` y `metadata.holder_id_type` (ej. `'cc'`). A diferencia del nombre del titular (siempre derivado de tu identidad verificada), estos dos **no** se contrastan contra tu propio documento verificado — lo que envíes se acepta tal cual. Confirmado en vivo: esto falla incluso para una identidad completamente verificada por KYC si se omiten.
 :::
 
 ## Resultado de creación

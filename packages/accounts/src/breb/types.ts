@@ -35,12 +35,14 @@ export interface CreateBrebKeyParams {
   /**
    * Value to register for the selected key type. For `keyType: 'ALPHA'`
    * (free-form alias, e.g. your own phone number as an alphanumeric key)
-   * the backend validates it against your own verified name, last name,
-   * phone, or email — a value that isn't derived from your own data (e.g.
-   * a bank or business name) is rejected. `ID`/`PHONE`/`EMAIL` are your own
-   * rail-verified identifiers (BRE-B itself enforces that ownership) and
-   * `BCODE` is an entity commercial code, not personal data — neither is
-   * checked against your profile.
+   * the backend requires it to *contain* a recognizable fragment (4+
+   * characters) of your own verified name, last name, phone, or email —
+   * not an exact match, so e.g. "MiguelBBlo001" (name + abbreviated last
+   * name + a number) is fine, but a value with no connection to your own
+   * data (e.g. a bank or business name) is rejected. `ID`/`PHONE`/`EMAIL`
+   * are your own rail-verified identifiers (BRE-B itself enforces that
+   * ownership) and `BCODE` is an entity commercial code, not personal
+   * data — neither is checked against your profile.
    */
   key: string;
 
@@ -63,6 +65,14 @@ export interface CreateBrebKeyParams {
 
   /**
    * Arbitrary metadata stored alongside the account.
+   *
+   * With the active provider (Cobre), `holder_id_number` and
+   * `holder_id_type` (e.g. `'cc'`) are effectively required — Cobre key
+   * creation fails with `E_COBRE_HOLDER_REQUIRED` without them. Unlike the
+   * holder's name (always derived from your verified identity, see `key`
+   * above), these two are **not** cross-checked against your own verified
+   * ID number — whatever you pass here is trusted as-is. Confirmed live:
+   * omitting them fails even for an otherwise fully KYC-verified identity.
    */
   metadata?: Record<string, unknown>;
 }

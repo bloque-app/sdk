@@ -31,6 +31,10 @@ const { data, error } = await session.accounts.breb.createKey({
   webhookUrl: 'https://api.example.com/webhooks/breb',
   metadata: {
     source: 'checkout',
+    // Required with the active provider (Cobre) — not cross-checked
+    // against your own verified ID, unlike the holder name.
+    holder_id_number: '0000000000',
+    holder_id_type: 'cc',
   },
 });
 
@@ -70,7 +74,7 @@ In the SDK you use `keyType` and `key`. In BRE-B infrastructure those fields com
 | `ID` | `ID` | Identification number | `7922089` |
 | `PHONE` | `MOBILE` | Mobile phone number | `+573001234567` |
 | `EMAIL` | `EMAIL` | Email address | `user@example.com` |
-| `ALPHA` | `ALPHA` | Custom alias — must be derived from your own verified name/phone/email | `3124581131` |
+| `ALPHA` | `ALPHA` | Custom alias — must contain a recognizable fragment of your own verified name/phone/email | `3124581131` |
 | `BCODE` | `BCODE` | Entity commercial code | `0012345678` |
 
 :::note
@@ -78,7 +82,11 @@ The `keyType` + `key` combination must be unique across the BRE-B infrastructure
 :::
 
 :::warning Identity verification required
-Creating a BRE-B key requires a KYC-verified identity — otherwise `createKey()` fails with `E_BREB_IDENTITY_NOT_KYC_VERIFIED`. For `keyType: 'ALPHA'` specifically, `key` must also be a verified combination of your own name, last name, phone, or email (normalized) — a value that isn't derived from your own data, like a bank or business name, fails with `E_BREB_KEY_VALUE_NOT_VERIFIED`. This doesn't apply to `ID`/`PHONE`/`EMAIL`/`BCODE`, which either are your own rail-verified identifier or (for `BCODE`) not personal data at all. `displayName` is Passport-only and ignored with the active provider (Cobre) — the displayed name is always your own verified name, not a value you supply.
+Creating a BRE-B key requires a KYC-verified identity — otherwise `createKey()` fails with `E_BREB_IDENTITY_NOT_KYC_VERIFIED`. For `keyType: 'ALPHA'` specifically, `key` must also *contain* a recognizable fragment of your own name, last name, phone, or email (normalized) — not an exact match, so e.g. `"MiguelBBlo001"` (name + abbreviated last name + a number) is fine, but a value with no connection to your own data, like a bank or business name, fails with `E_BREB_KEY_VALUE_NOT_VERIFIED`. This doesn't apply to `ID`/`PHONE`/`EMAIL`/`BCODE`, which either are your own rail-verified identifier or (for `BCODE`) not personal data at all. `displayName` is Passport-only and ignored with the active provider (Cobre) — the displayed name is always your own verified name, not a value you supply.
+:::
+
+:::warning `holder_id_number`/`holder_id_type` required in `metadata`
+With the active provider (Cobre), `createKey()` fails with `E_COBRE_HOLDER_REQUIRED` unless `metadata.holder_id_number` and `metadata.holder_id_type` (e.g. `'cc'`) are supplied. Unlike the holder's name (always derived from your verified identity), these are **not** cross-checked against your own verified ID — whatever you pass is trusted as-is. Confirmed live: this fails even for an otherwise fully KYC-verified identity if omitted.
 :::
 
 ## Create Result
