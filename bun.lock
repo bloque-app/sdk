@@ -16,7 +16,7 @@
     },
     "packages/accounts": {
       "name": "@bloque/sdk-accounts",
-      "version": "0.4.1",
+      "version": "0.5.0",
       "dependencies": {
         "@bloque/sdk-core": "workspace:*",
       },
@@ -29,7 +29,7 @@
     },
     "packages/cli": {
       "name": "@bloque/cli",
-      "version": "0.4.1",
+      "version": "0.5.0",
       "bin": {
         "bloque": "./bin/npm.cjs",
       },
@@ -48,7 +48,7 @@
     },
     "packages/compliance": {
       "name": "@bloque/sdk-compliance",
-      "version": "0.4.1",
+      "version": "0.5.0",
       "dependencies": {
         "@bloque/sdk-core": "workspace:*",
       },
@@ -61,7 +61,7 @@
     },
     "packages/core": {
       "name": "@bloque/sdk-core",
-      "version": "0.4.1",
+      "version": "0.5.0",
       "devDependencies": {
         "@rslib/core": "catalog:",
         "@types/node": "catalog:",
@@ -71,7 +71,7 @@
     },
     "packages/identity": {
       "name": "@bloque/sdk-identity",
-      "version": "0.4.1",
+      "version": "0.5.0",
       "dependencies": {
         "@bloque/sdk-core": "workspace:*",
       },
@@ -84,7 +84,7 @@
     },
     "packages/orgs": {
       "name": "@bloque/sdk-orgs",
-      "version": "0.4.1",
+      "version": "0.5.0",
       "dependencies": {
         "@bloque/sdk-core": "workspace:*",
       },
@@ -97,7 +97,7 @@
     },
     "packages/sdk": {
       "name": "@bloque/sdk",
-      "version": "0.4.1",
+      "version": "0.5.0",
       "dependencies": {
         "@bloque/sdk-accounts": "workspace:*",
         "@bloque/sdk-compliance": "workspace:*",
@@ -115,7 +115,7 @@
     },
     "packages/swap": {
       "name": "@bloque/sdk-swap",
-      "version": "0.4.1",
+      "version": "0.5.0",
       "dependencies": {
         "@bloque/sdk-core": "workspace:*",
       },
@@ -512,7 +512,7 @@
 
     "jiti": ["jiti@2.7.0", "", { "bin": { "jiti": "lib/jiti-cli.mjs" } }, "sha512-AC/7JofJvZGrrneWNaEnJeOLUx+JlGt7tNa0wZiRPT4MY1wmfKjt2+6O2p2uz2+skll8OZZmJMNqeke7kKbNgQ=="],
 
-    "jose": ["jose@6.2.7", "", {}, "sha512-hq1OB1bALKfydZNoViyg6hPVGV4i93ny9Op+n4zP5RSf7SCZEXa/TsG2O3IEr7+WlHRTPnpqDmHfMH6qXAD60w=="],
+    "jose": ["jose@6.2.8", "", {}, "sha512-Bsdjwm3Qsd/P0jR+BHDe3LytDfY7WBq2HmCCLIwuVRHMuEC9ae7/R474GIUdF1NgCyZjzVo/A9DOiOBtXq8ZoQ=="],
 
     "js-yaml": ["js-yaml@4.3.1", "", { "dependencies": { "argparse": "^2.0.1" }, "bin": { "js-yaml": "bin/js-yaml.js" } }, "sha512-CY6crGq313MX8GkwvB7tzgp99vjQxY1++5y10/BKN/GUfHqWaOGQMNZkBvqSzsZKWk/ijwHlWzzkLulsGHhjWQ=="],
 
