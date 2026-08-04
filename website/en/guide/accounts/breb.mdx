@@ -89,6 +89,10 @@ Creating a BRE-B key requires a KYC-verified identity — otherwise `createKey()
 With the active provider (Cobre), `createKey()` fails with `E_COBRE_HOLDER_REQUIRED` unless `metadata.holder_id_number` and `metadata.holder_id_type` (e.g. `'cc'`) are supplied. Unlike the holder's name (always derived from your verified identity), these are **not** cross-checked against your own verified ID — whatever you pass is trusted as-is. Confirmed live: this fails even for an otherwise fully KYC-verified identity if omitted.
 :::
 
+:::warning The payer sees "Pexto Colombia SAS" as the recipient, not your name
+With Cobre, when someone sends you money over BRE-B, their bank's confirmation screen shows "Pexto Colombia SAS" (Cobre's legal entity name) as the recipient, not your verified name. Cobre registers its users' keys under its own legal entity in the BRE-B directory — that's how its BaaS model operates, not something Bloque controls or can adjust. It doesn't affect `displayName` or anything you receive via webhook — only what the payer sees on their own bank's screen before confirming the transfer. Confirmed live, 2026-08-04.
+:::
+
 ## Create Result
 
 ```typescript title="types.ts"

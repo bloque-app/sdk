@@ -89,6 +89,10 @@ Crear una llave BRE-B requiere una identidad con KYC verificado — si no, `crea
 Con el proveedor activo (Cobre), `createKey()` falla con `E_COBRE_HOLDER_REQUIRED` a menos que envíes `metadata.holder_id_number` y `metadata.holder_id_type` (ej. `'cc'`). A diferencia del nombre del titular (siempre derivado de tu identidad verificada), estos dos **no** se contrastan contra tu propio documento verificado — lo que envíes se acepta tal cual. Confirmado en vivo: esto falla incluso para una identidad completamente verificada por KYC si se omiten.
 :::
 
+:::warning El pagador ve "Pexto Colombia SAS" como destinatario, no tu nombre
+Con Cobre, cuando alguien te envía dinero por BRE-B, la pantalla de confirmación del **banco del pagador** muestra "Pexto Colombia SAS" (la razón social de Cobre) como destinatario, no tu nombre verificado. Cobre registra las llaves de sus usuarios bajo su propia razón social en el directorio BRE-B — es cómo opera su modelo BaaS, no algo que Bloque controle ni pueda ajustar. No afecta `displayName` ni nada que recibas por webhook, solo lo que ve el pagador en su propio banco antes de confirmar el envío. Confirmado en vivo, 2026-08-04.
+:::
+
 ## Resultado de creación
 
 ```typescript title="tipos.ts"
