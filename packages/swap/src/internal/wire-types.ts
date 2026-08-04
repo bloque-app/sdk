@@ -93,6 +93,12 @@ export interface DepositInformation {
   urn?: string;
   /** BRE-B payout resolution id */
   resolution_id?: string;
+  /** BRE-B payout recipient, identified by their key */
+  destination_key?: {
+    key_value: string;
+    key_type: string;
+    display_name?: string;
+  };
   /** External US bank on-ramp: destination Kusama ledger account id */
   ledger_account_id?: string;
   /** RTP payout: account holder name */

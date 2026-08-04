@@ -20,7 +20,10 @@ import type {
 
 export class BrebClient extends BaseClient {
   /**
-   * Create a BRE-B payout order (Kusama → BRE-B COP cash-out).
+   * Create a BRE-B payout order (Kusama → BRE-B COP cash-out). Converts
+   * `params.args.sourceAccountUrn`'s own Kusama balance and pays it out to
+   * `params.depositInformation.destinationKey` — any valid BRE-B key,
+   * independent of the source account.
    */
   async create(
     params: CreateBrebOrderParams,
@@ -154,6 +157,13 @@ export class BrebClient extends BaseClient {
   ): WireDepositInformation {
     return {
       resolution_id: depositInfo.resolutionId,
+      destination_key: {
+        key_value: depositInfo.destinationKey.keyValue,
+        key_type: depositInfo.destinationKey.keyType,
+        ...(depositInfo.destinationKey.displayName
+          ? { display_name: depositInfo.destinationKey.displayName }
+          : {}),
+      },
     };
   }
 

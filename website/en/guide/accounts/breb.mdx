@@ -217,20 +217,9 @@ interface BrebResolvedKey {
 
 ## Pay to a BRE-B Key
 
-Resolve the recipient key first, then create a BRE-B payout order:
+Convert your own Kusama-linked balance and send it to any BRE-B key — the recipient does not need to be a Bloque-managed account. Identify them directly with `destinationKey`; there's no need to resolve the key first (`session.accounts.breb.resolveKey()` is unsupported with the active provider, Cobre — it fails with `E_COBRE_RESOLVE_KEY_UNSUPPORTED`).
 
 ```typescript title="pay-to-breb-key.ts"
-const resolution = await session.accounts.breb.resolveKey({
-  keyType: 'PHONE',
-  key: '3015550127',
-});
-
-if (resolution.error || !resolution.data) {
-  throw new Error(
-    resolution.error?.message ?? 'Failed to resolve BRE-B key',
-  );
-}
-
 const rates = await session.swap.findRates({
   fromAsset: 'COPM/2',
   toAsset: 'COP/2',
@@ -247,9 +236,16 @@ const result = await session.swap.breb.create({
   rateSig: rates.rates[0].sig,
   amountSrc: '10000000',
   depositInformation: {
-    resolutionId: resolution.data.resolutionId,
+    // Any unique string — used only to derive an idempotency key, not a
+    // real key resolution.
+    resolutionId: 'payout-' + crypto.randomUUID(),
+    destinationKey: {
+      keyValue: '3015550127',
+      keyType: 'PHONE',
+    },
   },
   args: {
+    // Your own account — funds the payout, not the recipient.
     sourceAccountUrn: 'did:bloque:account:breb:demo-account-id',
   },
 });

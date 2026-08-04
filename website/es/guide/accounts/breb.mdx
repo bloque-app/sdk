@@ -217,20 +217,9 @@ interface BrebResolvedKey {
 
 ## Pagar a una llave BRE-B
 
-Primero resuelve la llave del destinatario y luego crea la orden de pago BRE-B:
+Convierte tu propio saldo vinculado a Kusama y envíalo a cualquier llave BRE-B — el destinatario no necesita ser una cuenta administrada por Bloque. Identifícalo directamente con `destinationKey`; no hace falta resolver la llave primero (`session.accounts.breb.resolveKey()` no está soportado con el proveedor activo, Cobre — falla con `E_COBRE_RESOLVE_KEY_UNSUPPORTED`).
 
 ```typescript title="pagar-a-llave-breb.ts"
-const resolution = await session.accounts.breb.resolveKey({
-  keyType: 'PHONE',
-  key: '3015550127',
-});
-
-if (resolution.error || !resolution.data) {
-  throw new Error(
-    resolution.error?.message ?? 'Failed to resolve BRE-B key',
-  );
-}
-
 const rates = await session.swap.findRates({
   fromAsset: 'COPM/2',
   toAsset: 'COP/2',
@@ -247,9 +236,16 @@ const result = await session.swap.breb.create({
   rateSig: rates.rates[0].sig,
   amountSrc: '10000000',
   depositInformation: {
-    resolutionId: resolution.data.resolutionId,
+    // Cualquier string único — solo se usa para derivar una llave de
+    // idempotencia, no es una resolución real de la llave.
+    resolutionId: 'payout-' + crypto.randomUUID(),
+    destinationKey: {
+      keyValue: '3015550127',
+      keyType: 'PHONE',
+    },
   },
   args: {
+    // Tu propia cuenta — financia el pago, no es el destinatario.
     sourceAccountUrn: 'did:bloque:account:breb:demo-account-id',
   },
 });

@@ -7,11 +7,38 @@ import type {
 
 export type { ExecutionHow, ExecutionResult, OrderType, SwapOrder };
 
+/**
+ * Identifies the payout's recipient by their BRE-B key — any valid key on
+ * the network, whether or not it corresponds to a Bloque-managed account.
+ */
+export interface BrebDestinationKey {
+  /** The recipient's BRE-B key value, e.g. `'@JAR1234'`. */
+  keyValue: string;
+  /** The recipient key's type. */
+  keyType: 'ID' | 'PHONE' | 'MOBILE' | 'EMAIL' | 'ALPHA' | 'BCODE';
+  /** Optional display name for the recipient. */
+  displayName?: string;
+}
+
 export interface BrebDepositInformation {
   /**
-   * Resolution id returned by BRE-B key resolution (payout).
+   * Any unique string identifying this payout. With the active provider
+   * (Cobre), this is used only to derive an idempotency key — it is *not* a
+   * real resolution from `session.accounts.breb.resolveKey()`, which is
+   * unsupported for Cobre (fails with `E_COBRE_RESOLVE_KEY_UNSUPPORTED`).
+   * There is no need to resolve the recipient key before calling
+   * `session.swap.breb.create()` — pass any unique value here, e.g. your
+   * own order/idempotency id.
    */
   resolutionId: string;
+
+  /**
+   * The recipient of this payout. Required — any valid Bre-B key, whether
+   * or not it corresponds to a Bloque-managed account. Independent of
+   * `args.sourceAccountUrn`, which only identifies the account being
+   * debited on-chain to fund the payout.
+   */
+  destinationKey: BrebDestinationKey;
 }
 
 /**
@@ -26,7 +53,9 @@ export interface BrebDepositOnRampInformation {
 
 export interface BrebSwapArgs {
   /**
-   * Account URN where funds will be debited from.
+   * Your own Kusama-linked BRE-B account URN — funds the payout (this
+   * account's on-chain balance is debited). Not the recipient; see
+   * `depositInformation.destinationKey` for that.
    */
   sourceAccountUrn: string;
 }
