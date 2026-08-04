@@ -5,6 +5,7 @@ import { logAndFormatToolError } from '../../bloque-error-mcp.ts';
 import { resolveMccs } from '../../categories.ts';
 import { humanizeBalance, toRaw } from '../../currency.ts';
 import { mcpDebug } from '../../debug-log.ts';
+import { deterministicIdempotencyKey } from '../../idempotency.ts';
 import type { BloqueClients } from '../../types.ts';
 
 /**
@@ -86,6 +87,7 @@ export function registerCardWorkflows(
         fundAmount: z.string().optional(),
         currency: z.string().optional().default('USD'),
         webhookUrl: z.string().optional(),
+        idempotencyKey: z.string().optional(),
       },
     },
     async ({
@@ -98,6 +100,7 @@ export function registerCardWorkflows(
       fundAmount,
       currency,
       webhookUrl,
+      idempotencyKey,
     }) => {
       try {
         mcpDebug('tool create_card invoked', {
@@ -161,7 +164,13 @@ export function registerCardWorkflows(
 
         const card = await clients.accounts.card.create(
           { ledgerId, name, webhookUrl },
-          { waitLedger: true },
+          {
+            waitLedger: true,
+            idempotencyKey:
+              idempotencyKey != null
+                ? `${idempotencyKey}:card`
+                : deterministicIdempotencyKey('create_card.card', { ledgerId, name, webhookUrl }),
+          },
         );
         await pollUntilActive(clients, card.urn);
 
@@ -190,12 +199,25 @@ export function registerCardWorkflows(
         let transferResult: unknown;
         if (fundFromUrn && fundAmount) {
           const { amount: rawAmount, asset } = toRaw(fundAmount, currency);
-          transferResult = await clients.accounts.transfer({
-            sourceUrn: fundFromUrn,
-            destinationUrn: virtualAccount.urn,
-            amount: rawAmount,
-            asset: asset as SupportedAsset,
-          });
+          transferResult = await clients.accounts.transfer(
+            {
+              sourceUrn: fundFromUrn,
+              destinationUrn: virtualAccount.urn,
+              amount: rawAmount,
+              asset: asset as SupportedAsset,
+            },
+            {
+              idempotencyKey:
+                idempotencyKey != null
+                  ? `${idempotencyKey}:fund`
+                  : deterministicIdempotencyKey('create_card.fund', {
+                      sourceUrn: fundFromUrn,
+                      destinationUrn: virtualAccount.urn,
+                      amount: rawAmount,
+                      asset,
+                    }),
+            },
+          );
         }
 
         const result = {
@@ -241,6 +263,7 @@ export function registerCardWorkflows(
           .optional()
           .describe('Domains this card should be used for (e.g. "amazon.com")'),
         webhookUrl: z.string().optional(),
+        idempotencyKey: z.string().optional(),
       },
     },
     async ({
@@ -252,6 +275,7 @@ export function registerCardWorkflows(
       allowedMccs,
       websites,
       webhookUrl,
+      idempotencyKey,
     }) => {
       try {
         mcpDebug('tool create_disposable_card invoked', { name, sourceUrn });
@@ -284,17 +308,40 @@ export function registerCardWorkflows(
         });
         const card = await clients.accounts.card.create(
           { ledgerId: pocket.ledgerId, name, webhookUrl },
-          { waitLedger: true },
+          {
+            waitLedger: true,
+            idempotencyKey:
+              idempotencyKey != null
+                ? `${idempotencyKey}:card`
+                : deterministicIdempotencyKey('create_disposable_card.card', {
+                    ledgerId: pocket.ledgerId,
+                    name,
+                    webhookUrl,
+                  }),
+          },
         );
         await pollUntilActive(clients, card.urn);
 
         const { amount: rawAmount, asset } = toRaw(amount, currency);
-        const transferResult = await clients.accounts.transfer({
-          sourceUrn,
-          destinationUrn: pocket.urn,
-          amount: rawAmount,
-          asset: asset as SupportedAsset,
-        });
+        const transferResult = await clients.accounts.transfer(
+          {
+            sourceUrn,
+            destinationUrn: pocket.urn,
+            amount: rawAmount,
+            asset: asset as SupportedAsset,
+          },
+          {
+            idempotencyKey:
+              idempotencyKey != null
+                ? `${idempotencyKey}:fund`
+                : deterministicIdempotencyKey('create_disposable_card.fund', {
+                    sourceUrn,
+                    destinationUrn: pocket.urn,
+                    amount: rawAmount,
+                    asset,
+                  }),
+          },
+        );
 
         const mccs = resolveMccs(allowedCategories, allowedMccs);
         const normalizedWebsites = (websites ?? [])

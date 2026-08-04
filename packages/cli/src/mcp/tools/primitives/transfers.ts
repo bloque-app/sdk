@@ -2,6 +2,7 @@ import type { SupportedAsset } from '@bloque/sdk';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod/v4';
 import { toHuman, toRaw } from '../../currency.ts';
+import { deterministicIdempotencyKey } from '../../idempotency.ts';
 import type { BloqueClients } from '../../types.ts';
 
 export function registerTransferTools(server: McpServer, clients: BloqueClients) {
@@ -15,17 +16,30 @@ export function registerTransferTools(server: McpServer, clients: BloqueClients)
         amount: z.string(),
         currency: z.string().default('USD'),
         metadata: z.record(z.string(), z.unknown()).optional(),
+        idempotencyKey: z.string().optional(),
       },
     },
-    async ({ sourceUrn, destinationUrn, amount, currency, metadata }) => {
+    async ({ sourceUrn, destinationUrn, amount, currency, metadata, idempotencyKey }) => {
       const { amount: rawAmount, asset } = toRaw(amount, currency);
-      const result = await clients.accounts.transfer({
-        sourceUrn,
-        destinationUrn,
-        amount: rawAmount,
-        asset: asset as SupportedAsset,
-        metadata,
-      });
+      const result = await clients.accounts.transfer(
+        {
+          sourceUrn,
+          destinationUrn,
+          amount: rawAmount,
+          asset: asset as SupportedAsset,
+          metadata,
+        },
+        {
+          idempotencyKey:
+            idempotencyKey ??
+            deterministicIdempotencyKey('transfer', {
+              sourceUrn,
+              destinationUrn,
+              amount: rawAmount,
+              asset,
+            }),
+        },
+      );
       const humanized = {
         ...result,
         amount: toHuman(rawAmount, asset).amount,
@@ -55,9 +69,10 @@ export function registerTransferTools(server: McpServer, clients: BloqueClients)
         ),
         metadata: z.record(z.string(), z.unknown()).optional(),
         webhookUrl: z.string().optional(),
+        idempotencyKey: z.string().optional(),
       },
     },
-    async ({ reference, operations, metadata, webhookUrl }) => {
+    async ({ reference, operations, metadata, webhookUrl, idempotencyKey }) => {
       const mappedOps = operations.map((op) => {
         const { amount, asset } = toRaw(op.amount, op.currency);
         return {
@@ -69,12 +84,19 @@ export function registerTransferTools(server: McpServer, clients: BloqueClients)
           metadata: op.metadata,
         };
       });
-      const result = await clients.accounts.batchTransfer({
-        reference,
-        operations: mappedOps,
-        metadata,
-        webhookUrl,
-      });
+      const result = await clients.accounts.batchTransfer(
+        {
+          reference,
+          operations: mappedOps,
+          metadata,
+          webhookUrl,
+        },
+        {
+          idempotencyKey:
+            idempotencyKey ??
+            deterministicIdempotencyKey('batch_transfer', { reference, operations: mappedOps }),
+        },
+      );
       return {
         content: [{ type: 'text', text: JSON.stringify(result, null, 2) }],
       };
