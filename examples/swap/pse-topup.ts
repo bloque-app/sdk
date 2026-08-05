@@ -39,14 +39,20 @@ const result = await user.swap.pse.create({
   },
   args: {
     bankCode: banks.banks[0]!?.code,
-    userType: "natural",
+    userType: 0, // 0 = natural person, 1 = legal entity
     customerEmail: "user@example.com",
     userLegalIdType: "CC",
     userLegalId: "123456789",
     customerData: {
       fullName: "John Doe",
+      phoneNumber: "+573001234567",
     },
+    // Required for every PSE payment (Wompi and Cobre alike) — the bank
+    // redirects the customer here once the flow completes.
+    redirectUrl: "https://your-app.com/payment-status",
   },
 });
 
-console.log("PSE Top-up order created:", result.execution?.result.how?.url);
+const how = result.execution?.result.how;
+const redirectUrl = how && "url" in how ? how.url : undefined;
+console.log("PSE Top-up order created, redirect to:", redirectUrl);

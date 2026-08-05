@@ -28,6 +28,32 @@ export interface TosGateDocument {
   content: string;
 }
 
+/**
+ * WebAuthn passkey registration challenge for the account-activation step —
+ * present on `init()` only when the active TOS document has
+ * `requiresAccountActivation` set (see compliance's `TosPolicyConfig`).
+ * Build a `PublicKeyCredentialCreationOptions` from this and call
+ * `navigator.credentials.create()`, then pass the result to `accept()` as
+ * `passkey`. Declining is fine — call `accept()` without it and the
+ * acceptance still records; the account is simply left
+ * registered-but-not-activated (recoverable later).
+ */
+export interface TosGatePasskeyChallenge {
+  /** Base64url — becomes `publicKey.challenge`. */
+  challenge: string;
+  /** The chain block this challenge is bound to; pass back unchanged in `accept()`'s `passkey.context`. */
+  context: number;
+  /** Last block the challenge can still be answered at (advisory only — the chain enforces it). */
+  expiresAtBlock: number;
+  /** Base64url — becomes `publicKey.user.id`. */
+  userId: string;
+  /** Human-facing credential name, as the authenticator displays it. */
+  userName: string;
+  publicAddress: string;
+  /** Relying Party ID for `navigator.credentials.create()`, if the deployment sets one. */
+  rpId?: string;
+}
+
 export interface TosGateInitResult {
   document: TosGateDocument;
   /** Single-use acceptance nonce — pass as `csrfToken` to `accept()`. */
@@ -42,6 +68,31 @@ export interface TosGateInitResult {
    * useful if you're building your own UI around the gate rather than
    * just opening `url` in a browser/webview. */
   accentColor?: string;
+  /**
+   * Passkey registration challenge, or `null` when this TOS document
+   * doesn't require account activation (or minting the challenge failed
+   * server-side — this fails open, so `null` here never blocks acceptance).
+   */
+  passkey: TosGatePasskeyChallenge | null;
+}
+
+/**
+ * Raw WebAuthn registration parts, as an alternative to `deviceAttestation`
+ * on `accept()` — use this when you drive `init()`/`accept()` yourself
+ * (rather than opening the hosted page) and ran WebAuthn in-browser against
+ * `init()`'s `passkey` challenge.
+ */
+export interface TosGatePasskeyRegistration {
+  /** `PublicKeyCredential.rawId`, base64url. */
+  credentialId: string;
+  /** `response.getAuthenticatorData()`, base64url. */
+  authenticatorData: string;
+  /** `response.clientDataJSON`, base64url. */
+  clientData: string;
+  /** `response.getPublicKey()` (SPKI), base64url. */
+  publicKey: string;
+  /** The `context` from `init()`'s `passkey` challenge — echoed back unchanged. */
+  context: number;
 }
 
 export interface TosGateAcceptParams {
@@ -52,9 +103,32 @@ export interface TosGateAcceptParams {
   /**
    * Optional Pass device attestation (0x-hex SCALE-encoded
    * `PassDeviceAttestation`). When present, accepting the terms also hands
-   * control of the identity's Kreivo PassAccount to that device.
+   * control of the identity's Kreivo PassAccount to that device. Takes
+   * precedence over `passkey` if both are set.
    */
   deviceAttestation?: string;
+  /**
+   * Alternative to `deviceAttestation` — the raw WebAuthn registration you
+   * produced yourself against `init()`'s `passkey` challenge.
+   */
+  passkey?: TosGatePasskeyRegistration;
+}
+
+/**
+ * Outcome of handing the identity's Kreivo PassAccount to the device that
+ * supplied `deviceAttestation`/`passkey` on `accept()`. Non-throwing: a
+ * failed activation never invalidates the (legally meaningful) acceptance
+ * record it's attached to — check `attempted`/`reason` and retry via
+ * `accept()` again (or the account stays recoverable in its
+ * registered-but-not-activated state).
+ */
+export interface TosAccountActivation {
+  attempted: boolean;
+  /** Provisioning state reported by ledger, when the call succeeded. */
+  state?: string;
+  publicAddress?: string;
+  /** Why activation did not happen or did not succeed. */
+  reason?: string;
 }
 
 export interface TosAcceptanceRecord {
@@ -65,6 +139,8 @@ export interface TosAcceptanceRecord {
   documentHash: string;
   acceptedAt: string;
   authAssurance: string;
+  /** Present only when `accept()` was called with `deviceAttestation` or `passkey`. */
+  accountActivation?: TosAccountActivation;
 }
 
 export interface TosGateAcceptResult {

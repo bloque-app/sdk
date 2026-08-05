@@ -191,6 +191,24 @@ export class SDK {
     return response;
   }
 
+  /**
+   * Register a new identity on this SDK's configured origin, authenticated
+   * by the origin's own key (`API_KEY` challenge).
+   *
+   * If you're calling this from your own backend on behalf of an end user,
+   * pass their real IP as `params.clientIp` — Bloque uses it to resolve
+   * their usage country and records it on the compliance audit trail,
+   * instead of falling back to your server's IP.
+   *
+   * @example
+   * ```typescript
+   * await bloque.register('user-123', {
+   *   type: 'individual',
+   *   profile: { firstName: 'Jane', lastName: 'Doe', ... },
+   *   clientIp: req.headers['x-forwarded-for'],
+   * });
+   * ```
+   */
   async register(alias: string, params: CreateIdentityParams) {
     if (this.httpClient.auth.type !== 'originKey') {
       throw new Error('register() is only available for originKey auth');
@@ -222,7 +240,15 @@ export class SDK {
 
   async connect(): Promise<BloqueClients>;
   async connect(options: { scopes?: string[] }): Promise<BloqueClients>;
-  async connect(alias: string): Promise<BloqueClients>;
+  /**
+   * `originKey` auth only. `options.clientIp` forwards the end user's real
+   * IP when your backend connects on their behalf — see `register()`'s docs
+   * for why that matters.
+   */
+  async connect(
+    alias: string,
+    options?: { clientIp?: string },
+  ): Promise<BloqueClients>;
   async connect(
     origin: string,
     alias: string,
@@ -230,7 +256,7 @@ export class SDK {
   ): Promise<BloqueClients>;
   async connect(
     arg1?: string | { scopes?: string[] },
-    arg2?: string,
+    arg2?: string | { clientIp?: string },
     arg3?: string,
   ): Promise<BloqueClients> {
     const authType = this.httpClient.auth.type;
@@ -262,6 +288,8 @@ export class SDK {
       const alias = arg1;
       const urn = this.buildUrn(alias);
       const origin = this.requireOrigin();
+      const clientIp =
+        arg2 && typeof arg2 === 'object' ? arg2.clientIp : undefined;
 
       const response = await this.httpClient.request<{
         result: { access_token: string };
@@ -278,6 +306,7 @@ export class SDK {
           },
           extra_context: {},
         },
+        headers: clientIp ? { 'x-original-client-ip': clientIp } : undefined,
       });
 
       const session = this.httpClient.fork();
@@ -290,7 +319,13 @@ export class SDK {
     // --- jwt: OTP connect(origin, alias, code) ---
     this.assertJwtAuth();
 
-    if (!arg1 || typeof arg1 !== 'string' || !arg2 || !arg3) {
+    if (
+      !arg1 ||
+      typeof arg1 !== 'string' ||
+      !arg2 ||
+      typeof arg2 !== 'string' ||
+      !arg3
+    ) {
       throw new Error('connect(origin, alias, code) is required for JWT auth');
     }
 

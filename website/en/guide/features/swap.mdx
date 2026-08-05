@@ -239,7 +239,10 @@ const result = await userSession.swap.pse.create({
     customerData: {
       fullName: 'User Name',
       phoneNumber: '3018362958',
-    }
+    },
+    // Required for every PSE payment — the order is rejected up front
+    // without it, regardless of the underlying bank gateway.
+    redirectUrl: 'https://your-app.com/payment-status',
   }, // Auto-executes PSE payment
 });
 
@@ -285,6 +288,7 @@ interface PsePaymentArgs {
     fullName: string;         // Customer's full name
     phoneNumber: string;
   };
+  redirectUrl: string;      // Required — bank redirects here once the flow completes
 }
 ```
 
@@ -488,6 +492,7 @@ async function performPSESwap() {
         fullName: 'John Doe',
         phoneNumber: '3018362958',
       },
+      redirectUrl: 'https://your-app.com/payment-status',
     },
   });
 

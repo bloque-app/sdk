@@ -20,13 +20,16 @@ export function registerTopupWorkflows(server: McpServer, clients: BloqueClients
         userLegalId: z.string(),
         fullName: z.string(),
         phoneNumber: z.string().optional(),
+        // Required for every PSE payment regardless of gateway — the order
+        // is rejected up front without it.
+        redirectUrl: z.string(),
         webhookUrl: z.string().optional(),
       },
     },
     async ({
       accountUrn, amount, bankCode, userType,
       customerEmail, userLegalIdType, userLegalId,
-      fullName, phoneNumber, webhookUrl,
+      fullName, phoneNumber, redirectUrl, webhookUrl,
     }) => {
       const { amount: rawAmount } = toRaw(amount, 'COP');
       const ratesResult = await clients.swap.findRates({
@@ -59,6 +62,7 @@ export function registerTopupWorkflows(server: McpServer, clients: BloqueClients
           userLegalIdType,
           userLegalId,
           customerData: { fullName, phoneNumber: phoneNumber ?? '' },
+          redirectUrl,
         },
       });
 

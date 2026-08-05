@@ -4,8 +4,14 @@ import type {
 } from './origins/types';
 
 export type CreateIdentityParams =
-  | Pick<IndividualRegisterParams, 'extraContext' | 'type' | 'profile'>
-  | Pick<BusinessRegisterParams, 'extraContext' | 'type' | 'profile'>;
+  | Pick<
+      IndividualRegisterParams,
+      'extraContext' | 'type' | 'profile' | 'clientIp'
+    >
+  | Pick<
+      BusinessRegisterParams,
+      'extraContext' | 'type' | 'profile' | 'clientIp'
+    >;
 
 /**
  * Parameters for updating the current user's identity

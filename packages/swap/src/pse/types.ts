@@ -76,6 +76,14 @@ export interface PsePaymentArgs {
    * Additional customer data
    */
   customerData: PseCustomerData;
+  /**
+   * URL the bank redirects the customer to once the PSE flow completes
+   * (success, failure, or abandonment). Required for every PSE payment
+   * regardless of the underlying gateway (Wompi or Cobre) — the order is
+   * rejected before any gateway is contacted if this is missing.
+   * @example "https://your-app.com/payment-status"
+   */
+  redirectUrl: string;
 }
 
 /**

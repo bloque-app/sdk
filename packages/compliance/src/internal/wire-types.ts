@@ -215,6 +215,23 @@ export interface TosGateDocumentWire {
 
 /**
  * @internal
+ * WebAuthn registration challenge minted by ledger for a TOS document that
+ * requires account activation. Present on `GET /api/tos-gate/init` only when
+ * that document's `requires_account_activation` is set.
+ */
+export interface TosGatePasskeyChallengeWire {
+  challenge: string;
+  context: number;
+  expires_at_block: number;
+  user_id: string;
+  user_name: string;
+  public_address: string;
+  /** Only present if the deployment has `TOS_GATE_WEBAUTHN_RP_ID` set. */
+  rp_id?: string;
+}
+
+/**
+ * @internal
  * `GET /api/tos-gate/init` response.
  */
 export interface TosGateInitResponse {
@@ -223,6 +240,25 @@ export interface TosGateInitResponse {
   return_url: string;
   show_home: boolean;
   accent_color?: string;
+  /**
+   * `null` when this document doesn't require account activation, or when
+   * minting the challenge failed server-side (fails open).
+   */
+  passkey: TosGatePasskeyChallengeWire | null;
+}
+
+/**
+ * @internal
+ * Raw WebAuthn registration parts, as an alternative to `device_attestation`
+ * for callers driving `init()`/`accept()` themselves instead of opening the
+ * hosted page.
+ */
+export interface TosGatePasskeyRegistrationWire {
+  credential_id: string;
+  authenticator_data: string;
+  client_data: string;
+  public_key: string;
+  context: number;
 }
 
 /**
@@ -232,6 +268,20 @@ export interface TosGateInitResponse {
 export interface TosGateAcceptRequest {
   csrf_token: string;
   device_attestation?: string;
+  passkey?: TosGatePasskeyRegistrationWire;
+}
+
+/**
+ * @internal
+ * Outcome of handing the identity's Kreivo PassAccount to the device that
+ * supplied `device_attestation`/`passkey` on accept. Absent when no
+ * attestation was supplied.
+ */
+export interface TosAccountActivationWire {
+  attempted: boolean;
+  state?: string;
+  public_address?: string;
+  reason?: string;
 }
 
 /**
@@ -246,6 +296,7 @@ export interface TosAcceptanceRecordWire {
   document_hash: string;
   accepted_at: string;
   auth_assurance: string;
+  account_activation?: TosAccountActivationWire;
 }
 
 /**
