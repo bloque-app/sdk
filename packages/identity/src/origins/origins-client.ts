@@ -83,7 +83,10 @@ export class OriginsClient extends BaseClient {
    * - **PASSWORD**: Password-based authentication
    *
    * @param origin - The origin namespace to register the identity to (e.g., 'ethereum-mainnet', 'bloque-api')
-   * @param params - Registration data including assertion result and profile information
+   * @param params - Registration data including assertion result and profile information.
+   *   For `API_KEY` challenges (your server registering on the user's behalf), pass their
+   *   real IP as `clientIp` so Bloque resolves usage country and audits decisions against
+   *   the end user rather than your server.
    * @returns Promise resolving to the registration result with access token
    *
    * @example
@@ -202,6 +205,9 @@ export class OriginsClient extends BaseClient {
       method: 'POST',
       path: `/api/origins/${origin}/register`,
       body: request,
+      headers: params.clientIp
+        ? { 'x-original-client-ip': params.clientIp }
+        : undefined,
     });
 
     return {

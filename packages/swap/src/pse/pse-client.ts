@@ -84,21 +84,24 @@ export class PseClient extends BaseClient {
    *     },
    *     args: {
    *       bankCode: '1',
-   *       userType: 'natural',
+   *       userType: 0,
    *       customerEmail: 'user@example.com',
    *       userLegalIdType: 'CC',
    *       userLegalId: '1234567890',
    *       customerData: {
-   *         fullName: 'John Doe'
-   *       }
+   *         fullName: 'John Doe',
+   *         phoneNumber: '+573001234567'
+   *       },
+   *       redirectUrl: 'https://your-app.com/payment-status'
    *     }
    *   },
    *   { idempotencyKey: 'pse-order-10000000' }
    * );
    *
-   * // If execution returned a checkout URL, redirect user
-   * if (result.execution?.result.checkoutUrl) {
-   *   window.location.href = result.execution.result.checkoutUrl;
+   * // If execution paused for a bank redirect, send the user there
+   * const redirectUrl = result.execution?.result.how?.url;
+   * if (redirectUrl) {
+   *   window.location.href = redirectUrl;
    * }
    * ```
    */
@@ -140,6 +143,7 @@ export class PseClient extends BaseClient {
         customer_email: params.args.customerEmail,
         user_legal_id_type: params.args.userLegalIdType,
         user_legal_id: params.args.userLegalId,
+        redirect_url: params.args.redirectUrl,
         ...(params.args.customerData && {
           customer_data: {
             full_name: params.args.customerData.fullName,

@@ -55,13 +55,16 @@ export function registerSwapTools(server: McpServer, clients: BloqueClients) {
         userLegalId: z.string(),
         fullName: z.string(),
         phoneNumber: z.string().optional(),
+        // Required for every PSE payment regardless of gateway — the order
+        // is rejected up front without it.
+        redirectUrl: z.string(),
         webhookUrl: z.string().optional(),
       },
     },
     async ({
       rateSig, toMedium, amountSrc, amountDst, depositUrn,
       bankCode, userType, customerEmail, userLegalIdType,
-      userLegalId, fullName, phoneNumber, webhookUrl,
+      userLegalId, fullName, phoneNumber, redirectUrl, webhookUrl,
     }) => {
       const result = await clients.swap.pse.create({
         rateSig,
@@ -77,6 +80,7 @@ export function registerSwapTools(server: McpServer, clients: BloqueClients) {
           userLegalIdType,
           userLegalId,
           customerData: { fullName, phoneNumber: phoneNumber ?? '' },
+          redirectUrl,
         },
       });
       return {

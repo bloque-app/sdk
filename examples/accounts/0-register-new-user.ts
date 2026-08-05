@@ -23,4 +23,8 @@ await bloque.register('@nestor', {
     countryOfBirthCode: 'MX',
     countryOfResidenceCode: 'MX',
   },
+  // Your server is registering on the user's behalf — forward their real IP
+  // (e.g. from the incoming request's `X-Forwarded-For`) so Bloque resolves
+  // their usage country and audits decisions against them, not your server.
+  clientIp: '190.85.12.4',
 });

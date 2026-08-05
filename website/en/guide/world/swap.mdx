@@ -84,6 +84,7 @@ const order = await client.swap.pse.create({
     userLegalIdType: 'CC',
     userLegalId: '123456789',
     customerData: { fullName: 'Alice Smith', phoneNumber: '3001234567' },
+    redirectUrl: 'https://your-app.com/payment-status', // required for every PSE payment
   },
 })
 

@@ -251,6 +251,131 @@ const verification = await bloque.compliance.kyc.startVerification({
 });
 ```
 
+## Terms of Service (TOS) Gate
+
+The TOS gate is a hosted page a user opens to accept your Terms of Service. Most of the time you never call it directly — catch a `BloqueVerificationRequiredError` with `reason === 'tos'` and open the link it gives you:
+
+```typescript
+import { BloqueVerificationRequiredError } from '@bloque/sdk';
+
+try {
+  await user.accounts.card.create({ /* ... */ });
+} catch (error) {
+  if (error instanceof BloqueVerificationRequiredError && error.reason === 'tos') {
+    const link = await error.getVerificationLink({
+      returnUrl: 'https://myapp.com/verification-complete',
+    });
+    // Open link.url in a browser or webview — the user accepts the TOS there.
+    return { redirectTo: link?.url };
+  }
+  throw error;
+}
+```
+
+Some Terms of Service documents also require handing the user's account to a passkey on their device (account activation) — this depends on the identity's usage country and is configured server-side, not something you opt into per call. When it applies, the hosted page runs WebAuthn automatically; you don't need to do anything extra to support it.
+
+### Driving the gate yourself
+
+Build your own UI around the gate with `start()` → `init()` → `accept()` instead of opening the hosted page:
+
+```typescript
+// 1. Mint a capability token + hosted URL (or just use the URL as a fallback)
+const gate = await user.compliance.tosGate.start({
+  returnUrl: 'https://myapp.com/verification-complete',
+});
+
+// 2. Fetch the document to render, plus an activation challenge if this
+//    document requires one
+const init = await user.compliance.tosGate.init({ token: gate.token });
+console.log(init.document.content); // Rendered TOS content to display
+
+// 3a. No activation step — just accept
+await user.compliance.tosGate.accept({
+  token: gate.token,
+  csrfToken: init.csrfToken,
+});
+
+// 3b. With activation — run WebAuthn against init.passkey first
+if (init.passkey) {
+  const credential = await navigator.credentials.create({
+    publicKey: {
+      challenge: base64UrlDecode(init.passkey.challenge),
+      rp: { id: init.passkey.rpId },
+      user: {
+        id: base64UrlDecode(init.passkey.userId),
+        name: init.passkey.userName,
+        displayName: init.passkey.userName,
+      },
+      pubKeyCredParams: [{ type: 'public-key', alg: -7 }],
+    },
+  });
+
+  const response = credential.response as AuthenticatorAttestationResponse;
+  const { acceptance } = await user.compliance.tosGate.accept({
+    token: gate.token,
+    csrfToken: init.csrfToken,
+    passkey: {
+      credentialId: base64UrlEncode(credential.rawId),
+      authenticatorData: base64UrlEncode(response.getAuthenticatorData()),
+      clientData: base64UrlEncode(response.clientDataJSON),
+      publicKey: base64UrlEncode(response.getPublicKey()!),
+      context: init.passkey.context,
+    },
+  });
+
+  console.log('Activation attempted:', acceptance.accountActivation?.attempted);
+}
+```
+
+Declining the passkey step is always safe — call `accept()` without `passkey`/`deviceAttestation` and the TOS acceptance still records; the account is simply left registered-but-not-activated, which is a recoverable state.
+
+### API Reference
+
+| Method | Returns | Description |
+|--------|---------|-------------|
+| `tosGate.start({ returnUrl })` | `StartGateResult` | Mints a portable capability `token` + hosted `url`. |
+| `tosGate.init({ token })` | `TosGateInitResult` | Fetches the active TOS document and a single-use `csrfToken`. `passkey` is non-null only if this document requires account activation. |
+| `tosGate.accept({ token, csrfToken, deviceAttestation?, passkey? })` | `TosGateAcceptResult` | Records acceptance. `accountActivation` on the result is set only if you supplied `deviceAttestation`/`passkey`. |
+
+```typescript
+interface TosGateInitResult {
+  document: { documentVersionId: string; versionLabel: string; contentHash: string; content: string };
+  csrfToken: string;
+  returnUrl: string;
+  showHome: boolean;
+  accentColor?: string;
+  passkey: {
+    challenge: string;      // base64url — publicKey.challenge
+    context: number;        // echo back unchanged in accept()
+    expiresAtBlock: number;
+    userId: string;         // base64url — publicKey.user.id
+    userName: string;
+    publicAddress: string;
+    rpId?: string;
+  } | null;
+}
+
+interface TosAcceptanceRecord {
+  id: string;
+  identityUrn: string;
+  documentVersionId: string;
+  documentVersionLabel: string;
+  documentHash: string;
+  acceptedAt: string;
+  authAssurance: string;
+  accountActivation?: {
+    attempted: boolean;
+    state?: string;
+    publicAddress?: string;
+    reason?: string;        // Non-throwing — check this instead of catching an error
+  };
+}
+```
+
+### Error Handling
+
+Activation failures never throw — `accept()` still resolves and the TOS acceptance is recorded regardless. Check `acceptance.accountActivation?.attempted`/`reason` if you need to know whether the activation leg itself succeeded, and retry later via `accept()` again if it didn't.
+
 ## Next Steps
 
 - [Accounts Guide](/sdk/guide/accounts/overview) - Create virtual cards for verified users

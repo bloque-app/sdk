@@ -182,6 +182,16 @@ export interface IndividualRegisterParams {
    * User profile information
    */
   profile: UserProfile;
+  /**
+   * The end user's own IP address, forwarded from your server so Bloque can
+   * resolve their real usage country and record it on the compliance audit
+   * trail — instead of falling back to your server's own IP. Only honored
+   * for `API_KEY`-challenge registrations (your server calling on the
+   * user's behalf); silently ignored otherwise, since Bloque can already
+   * see the caller's real IP for interactive challenge types.
+   * @example "190.85.12.4"
+   */
+  clientIp?: string;
 }
 
 export interface BusinessRegisterParams {
@@ -201,6 +211,16 @@ export interface BusinessRegisterParams {
    * Business profile information
    */
   profile: BusinessProfile;
+  /**
+   * The end user's own IP address, forwarded from your server so Bloque can
+   * resolve their real usage country and record it on the compliance audit
+   * trail — instead of falling back to your server's own IP. Only honored
+   * for `API_KEY`-challenge registrations (your server calling on the
+   * user's behalf); silently ignored otherwise, since Bloque can already
+   * see the caller's real IP for interactive challenge types.
+   * @example "190.85.12.4"
+   */
+  clientIp?: string;
 }
 
 export type RegisterParams = IndividualRegisterParams | BusinessRegisterParams;

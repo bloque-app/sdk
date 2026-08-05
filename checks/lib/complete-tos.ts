@@ -33,10 +33,26 @@ export async function completeTos(
     `Fetched document ${init.document.versionLabel} (${init.document.documentVersionId})`,
   );
 
+  if (init.passkey) {
+    // This document requires account activation. The hosted page would run
+    // WebAuthn here and submit the result as `accept()`'s `passkey` — a
+    // headless check has no authenticator to do that with, so it just
+    // declines, same as a real user closing the passkey prompt. The
+    // acceptance below still records either way.
+    info(
+      `This document requires account activation (passkey challenge for ${init.passkey.userName}) — declining it in this check`,
+    );
+  }
+
   step('Driving the TOS gate programmatically: POST /accept');
   const accept = await clients.compliance.tosGate.accept({
     token,
     csrfToken: init.csrfToken,
   });
   ok(`TOS accepted at ${accept.acceptance.acceptedAt}`);
+  if (accept.acceptance.accountActivation) {
+    info(
+      `Account activation: attempted=${accept.acceptance.accountActivation.attempted} reason=${accept.acceptance.accountActivation.reason ?? 'n/a'}`,
+    );
+  }
 }
