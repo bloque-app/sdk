@@ -1,5 +1,26 @@
 # @bloque/sdk
 
+## 0.8.1
+
+### Patch Changes
+
+- 87fbca3: Surface ToS rollout grace on tier status:
+
+  - **`TierRequirementStatus.graceUntil`** — optional ISO-8601 cutoff when the
+    `tos` requirement is `'satisfied'` only because of a policy
+    `enforcement_starts_at` window. Lets clients prompt acceptance even while
+    `missingRequirements` / `verificationFlow` stay quiet.
+  - **`TierStatus.nextRecomputeAt`** — optional ISO-8601 (or `null`) for the
+    earliest instant the tier answer can change with no further input.
+
+- Updated dependencies [87fbca3]
+  - @bloque/sdk-compliance@0.8.1
+  - @bloque/sdk-core@0.8.1
+  - @bloque/sdk-accounts@0.8.1
+  - @bloque/sdk-identity@0.8.1
+  - @bloque/sdk-orgs@0.8.1
+  - @bloque/sdk-swap@0.8.1
+
 ## 0.8.0
 
 ### Minor Changes
