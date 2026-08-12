@@ -1,5 +1,12 @@
 # @bloque/cli
 
+## 0.8.1
+
+### Patch Changes
+
+- Updated dependencies [87fbca3]
+  - @bloque/sdk@0.8.1
+
 ## 0.8.0
 
 ### Patch Changes

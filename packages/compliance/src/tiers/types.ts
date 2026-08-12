@@ -70,6 +70,14 @@ export interface TierRequirementStatus {
   /** ISO-8601 timestamp of the submission behind a `'pending_review'`
    * status, for a "submitted on X" line. */
   submittedAt?: string;
+  /**
+   * ISO-8601. Set only on the `tos` requirement, and only while it reads
+   * `'satisfied'` because of a policy rollout `enforcement_starts_at`
+   * window — not for prior-version `grace_period_days`, and not from other
+   * requirement kinds. Use it to prompt "accept by X" even though
+   * `missingRequirements` / `verificationFlow` are quiet for the window.
+   */
+  graceUntil?: string;
 }
 
 export interface TierLevelStatus {
@@ -107,4 +115,10 @@ export interface TierStatus {
    * there is nothing left for your user to do. */
   pendingRequirements: string[];
   verificationFlow?: VerificationFlowHandoff;
+  /**
+   * Earliest ISO-8601 instant this answer could change with no further
+   * input (TOS rollout cutoff, or satisfied evidence reaching `expires_at`).
+   * `null` / omitted when nothing time-driven is pending.
+   */
+  nextRecomputeAt?: string | null;
 }
