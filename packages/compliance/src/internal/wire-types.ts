@@ -125,6 +125,9 @@ export interface TierRequirementStatusWire {
   fields?: RequirementFieldWire[];
   requires_upload?: boolean;
   submitted_at?: string;
+  /** Present only on `tos` while a rollout `enforcement_starts_at` window
+   * is treating the requirement as satisfied. ISO-8601. */
+  grace_until?: string;
 }
 
 /**
@@ -181,6 +184,9 @@ export interface GetTierStatusResponse {
   missing_requirements?: string[];
   pending_requirements?: string[];
   verification_flow?: VerificationFlowHandoffWire;
+  /** Earliest ISO-8601 instant this answer could change with no further
+   * input (e.g. TOS rollout cutoff). `null` when nothing time-driven is pending. */
+  next_recompute_at?: string | null;
 }
 
 /* ------------------------------------------------------------------

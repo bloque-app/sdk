@@ -251,6 +251,58 @@ const verification = await bloque.compliance.kyc.startVerification({
 });
 ```
 
+## Tier status
+
+Read an identity's effective compliance level and outstanding requirements:
+
+```typescript
+const status = await user.compliance.tiers.getStatus({ urn: user.urn });
+
+console.log(status.effectiveLevel, status.policyVersion);
+
+// During a ToS rollout grace window the `tos` requirement stays satisfied
+// until the policy cutoff — prompt acceptance even though nothing blocks yet.
+const tos = status.levels
+  .flatMap((level) => level.requirements)
+  .find((req) => req.kind === 'tos');
+
+if (tos?.graceUntil) {
+  console.log('Ask the user to accept TOS before', tos.graceUntil);
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `effectiveLevel` | `number` | Highest contiguous satisfied level (`-1` if Level 0 is open). |
+| `nextRecomputeAt` | `string \| null \| undefined` | Earliest ISO-8601 instant this answer can change with no further input. |
+| `levels[].requirements[].graceUntil` | `string \| undefined` | On `tos` only, while a rollout `enforcement_starts_at` window is active. |
+
+## Tier status
+
+Read an identity's effective compliance level and outstanding requirements:
+
+```typescript
+const status = await user.compliance.tiers.getStatus({ urn: user.urn });
+
+console.log(status.effectiveLevel, status.policyVersion);
+
+// During a ToS rollout grace window the `tos` requirement stays satisfied
+// until the policy cutoff — prompt acceptance even though nothing blocks yet.
+const tos = status.levels
+  .flatMap((level) => level.requirements)
+  .find((req) => req.kind === 'tos');
+
+if (tos?.graceUntil) {
+  console.log('Ask the user to accept TOS before', tos.graceUntil);
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `effectiveLevel` | `number` | Highest contiguous satisfied level (`-1` if Level 0 is open). |
+| `nextRecomputeAt` | `string \| null \| undefined` | Earliest ISO-8601 instant this answer can change with no further input. |
+| `levels[].requirements[].graceUntil` | `string \| undefined` | On `tos` only, while a rollout `enforcement_starts_at` window is active. |
+
 ## Terms of Service (TOS) Gate
 
 The TOS gate is a hosted page a user opens to accept your Terms of Service. Most of the time you never call it directly — catch a `BloqueVerificationRequiredError` with `reason === 'tos'` and open the link it gives you:

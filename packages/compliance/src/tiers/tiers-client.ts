@@ -54,6 +54,7 @@ function mapRequirementStatus(
     fields: requirement.fields?.map(mapRequirementField),
     requiresUpload: requirement.requires_upload,
     submittedAt: requirement.submitted_at,
+    graceUntil: requirement.grace_until,
   };
 }
 
@@ -108,6 +109,7 @@ export class TiersClient extends BaseClient {
       missingRequirements: response.missing_requirements ?? [],
       pendingRequirements: response.pending_requirements ?? [],
       verificationFlow: mapVerificationFlow(response.verification_flow),
+      nextRecomputeAt: response.next_recompute_at,
     };
   }
 }
