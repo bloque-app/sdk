@@ -7,7 +7,7 @@ export function registerCardTools(server: McpServer, clients: BloqueClients) {
   server.registerTool(
     'create_raw_card',
     {
-      description: "Low-level: create a card linked to an existing ledgerId. Does NOT create the virtual account or polygon account. For most cases, use the high-level 'create_card' workflow instead.",
+      description: "Low-level: create a card linked to an existing ledgerId (take it from a virtual account). Does NOT create the virtual account or polygon account. For most cases, use the high-level 'create_card' workflow instead.",
       inputSchema: {
         ledgerId: z.string(),
         name: z.string().optional(),

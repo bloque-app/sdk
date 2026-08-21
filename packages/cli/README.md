@@ -177,7 +177,7 @@ claude mcp add bloque -- npx -y @bloque/cli mcp
 ## Tools Reference
 
 <details>
-<summary>Workflows — 14 high-level tools (click to expand)</summary>
+<summary>Workflows — 15 high-level tools (click to expand)</summary>
 
 | Tool | What it does |
 |------|-------------|
@@ -191,6 +191,7 @@ claude mcp add bloque -- npx -y @bloque/cli mcp
 | `assign_card_to_website` | Associate a card with one or more website domains |
 | `topup_via_pse` | Load COP via PSE bank transfer |
 | `cashout_to_bank` | Cash out USD to a Colombian bank |
+| `send_to_breb_key` | Send COP to a BRE-B key |
 | `configure_spending_rules` | Route transactions to different accounts by merchant type |
 | `add_spending_category` | Add a spending category to a card |
 | `wallet_overview` | All accounts, balances, and recent transactions |
@@ -199,7 +200,7 @@ claude mcp add bloque -- npx -y @bloque/cli mcp
 </details>
 
 <details>
-<summary>Primitives — 26 low-level tools (click to expand)</summary>
+<summary>Primitives — 37 low-level tools (click to expand)</summary>
 
 | Domain | Tools |
 |--------|-------|
@@ -208,9 +209,11 @@ claude mcp add bloque -- npx -y @bloque/cli mcp
 | Cards | `create_raw_card`, `list_cards`, `freeze_card`, `activate_card`, `disable_card`, `update_card_metadata`, `rename_card` |
 | Polygon | `create_polygon_account`, `list_polygon_accounts` |
 | US Bank | `get_us_tos_link`, `create_us_account`, `list_us_accounts` |
+| BRE-B | `create_breb_key`, `resolve_breb_key`, `decode_breb_qr`, `suspend_breb_key`, `activate_breb_key`, `delete_breb_key` |
+| API keys | `list_api_keys`, `get_api_key`, `revoke_api_key`, `rotate_api_key` |
 | Transfers | `transfer`, `batch_transfer` |
 | History | `list_transactions`, `list_account_movements` |
-| Swap | `find_rates`, `list_pse_banks`, `create_pse_order`, `create_bank_transfer_order` |
+| Swap | `find_rates`, `list_pse_banks`, `create_pse_order`, `create_bank_transfer_order`, `create_breb_order` |
 
 </details>
 

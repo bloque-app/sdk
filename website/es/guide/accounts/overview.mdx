@@ -13,6 +13,13 @@ El SDK de Bloque proporciona funcionalidad completa para gestionar varios tipos 
 
 El SDK soporta múltiples tipos de cuentas, cada una diseñada para casos de uso específicos:
 
+:::tip Empieza por una cuenta virtual
+Todos los tipos de cuenta de abajo toman su balance de un **ledger**, y una
+[cuenta virtual](/sdk/guide/accounts/virtual) es la que lo crea. Créala primero — su `ledgerId`
+viene en la respuesta de creación — y luego pasa ese `ledgerId` a cada otra cuenta con la que
+quieras compartir el balance. Ver [Ledger y Balance](/sdk/guide/world/ledger) para el concepto.
+:::
+
 ### Tarjetas Virtuales
 
 Crea tarjetas virtuales instantáneas para pagos en línea. Las tarjetas son:

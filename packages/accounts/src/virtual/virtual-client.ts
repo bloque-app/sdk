@@ -34,6 +34,7 @@ export function mapVirtualAccountFromWire(
     status: account.status,
     ownerUrn: account.owner_urn,
     ledgerId: account.ledger_account_id,
+    ledgerAccountUrn: account.metadata?.ledger_account_urn,
     webhookUrl: account.webhook_url,
     metadata: account.metadata as Record<string, string> | undefined,
     createdAt: account.created_at,
@@ -109,8 +110,16 @@ export class VirtualClient extends BaseClient {
   /**
    * Create a new virtual account
    *
-   * Virtual accounts are simple testing accounts requiring only basic personal information.
-   * They're useful for development and testing purposes.
+   * A virtual account is the account type that holds a balance. Creating one
+   * without a `ledgerId` mints a new ledger account for it; passing a
+   * `ledgerId` attaches it to an existing balance instead.
+   *
+   * `ledgerId` is populated on the returned account either way, so you can link
+   * cards and Polygon accounts to it immediately — there is nothing to wait for
+   * to learn it. What you may need to wait for is `status: 'active'`: a freshly
+   * minted ledger account is registering on-chain behind this response, and
+   * until it finishes the account can receive funds but not send them. Pass
+   * `waitLedger: true` when the next thing you do is spend from it.
    *
    * @param params - Virtual account creation parameters
    * @param options - Creation options (optional)
@@ -118,13 +127,14 @@ export class VirtualClient extends BaseClient {
    *
    * @example
    * ```typescript
-   * // Create without waiting
+   * // Create and link straight away — no waiting needed to get the ledgerId
    * const account = await bloque.accounts.virtual.create({
    *   firstName: 'John',
    *   lastName: 'Doe'
    * });
+   * await bloque.accounts.polygon.create({ ledgerId: account.ledgerId });
    *
-   * // Create and wait for active status with explicit idempotency key
+   * // Wait until it can send, with an explicit idempotency key
    * const account = await bloque.accounts.virtual.create({
    *   firstName: 'John',
    *   lastName: 'Doe'

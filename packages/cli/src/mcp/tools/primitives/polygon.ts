@@ -7,7 +7,7 @@ export function registerPolygonTools(server: McpServer, clients: BloqueClients) 
   server.registerTool(
     'create_polygon_account',
     {
-      description: "Low-level: create a Polygon blockchain account. If ledgerId is provided, shares that ledger's balance. For most cases, use the 'create_card' workflow which creates it automatically.",
+      description: "Low-level: create a Polygon blockchain account. If ledgerId is provided, shares that ledger's balance — this is the usual way to use it, taking the ledgerId from a virtual account. Omitted, a ledger account is provisioned for it, but its id is not returned here and arrives later. For most cases, use the 'create_card' workflow which creates it automatically.",
       inputSchema: {
         ledgerId: z.string().optional(),
         name: z.string().optional(),

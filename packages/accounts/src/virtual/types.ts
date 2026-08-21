@@ -40,8 +40,17 @@ export interface CreateVirtualAccountParams {
   name?: string;
 
   /**
-   * Ledger account ID to associate with the virtual account
-   * If not provided, a new ledger account will be created automatically
+   * Ledger account ID to associate with the virtual account.
+   *
+   * Pass one to share an existing balance — the account is `active` straight
+   * away, since the ledger it points at is already on-chain.
+   *
+   * Omit it and a new ledger account is minted for you. Its `ledgerId` is
+   * derived rather than assigned by the chain, so it comes back in the create
+   * response and is immediately usable to link cards and Polygon accounts. The
+   * account itself starts `creation_in_progress` and can *receive* right away;
+   * it can *send* once the ledger account finishes registering on-chain and the
+   * status flips to `active`.
    */
   ledgerId?: string;
 
@@ -118,9 +127,23 @@ export interface VirtualAccount {
   ownerUrn: string;
 
   /**
-   * Ledger account ID associated with the virtual account
+   * Ledger account ID associated with the virtual account.
+   *
+   * This is the ledger account's on-chain address, and it is the value other
+   * account types take as their own `ledgerId` to share this balance. Always
+   * populated, including on the create response.
    */
   ledgerId: string;
+
+  /**
+   * URN of the ledger account backing this virtual account.
+   *
+   * A stable handle for the same ledger account that `ledgerId` addresses:
+   * `ledgerId` is the address, this is the name. Present on accounts whose
+   * ledger account was minted for them; absent when the account was attached to
+   * a pre-existing `ledgerId`.
+   */
+  ledgerAccountUrn?: string;
 
   /**
    * Webhook URL (if configured)
