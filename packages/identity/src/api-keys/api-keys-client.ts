@@ -6,6 +6,8 @@ import type {
   ExchangeApiKeyParams,
   ExchangeApiKeyResult,
   RotateApiKeyResult,
+  UpsertOriginWebhookSecretParams,
+  UpsertOriginWebhookSecretResult,
 } from './types';
 
 interface CreateApiKeyRequest {
@@ -44,6 +46,17 @@ interface ExchangeApiKeyResponse {
 
 interface RotateApiKeyResponse {
   secret_key: string;
+}
+
+interface UpsertOriginWebhookSecretRequest {
+  api_key: string;
+  webhook_secret: string;
+}
+
+interface UpsertOriginWebhookSecretResponse {
+  origin_name: string;
+  key: string;
+  updated: true;
 }
 
 function mapApiKeyWire(wire: ApiKeyWire): ApiKeyInfo {
@@ -147,5 +160,35 @@ export class ApiKeysClient extends BaseClient {
     });
 
     return { secretKey: response.secret_key };
+  }
+
+  /**
+   * Create or update the webhook secret for an API-key-provider origin.
+   * Authenticates purely via the origin's own `apiKey` — no session/JWT
+   * involved, so your server can call this without a logged-in user.
+   *
+   * @param originName - The namespace of the api-key-provider origin.
+   */
+  async upsertOriginWebhookSecret(
+    originName: string,
+    params: UpsertOriginWebhookSecretParams,
+  ): Promise<UpsertOriginWebhookSecretResult> {
+    const response = await this.httpClient.request<
+      UpsertOriginWebhookSecretResponse,
+      UpsertOriginWebhookSecretRequest
+    >({
+      method: 'PUT',
+      path: `/api/api-keys/origins/${originName}/webhook-secret`,
+      body: {
+        api_key: params.apiKey,
+        webhook_secret: params.webhookSecret,
+      },
+    });
+
+    return {
+      originName: response.origin_name,
+      key: response.key,
+      updated: response.updated,
+    };
   }
 }

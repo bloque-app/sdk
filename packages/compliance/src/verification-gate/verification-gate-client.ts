@@ -125,6 +125,7 @@ export class VerificationGateClient extends BaseClient {
       ),
       csrfToken: response.csrf_token,
       returnUrl: response.return_url,
+      developerName: response.developer_name,
       accentColor: response.accent_color,
     };
   }

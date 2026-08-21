@@ -20,10 +20,13 @@ import type {
   TokenizeGoogleCardResponse,
   UpdateAccountRequest,
   UpdateAccountResponse,
+  UpdateCardAccountInput,
 } from '../internal/wire-types';
 import type { CreateAccountOptions } from '../types';
 import type {
   CardAccount,
+  CardSpendingControlMetadata,
+  CardStatusReason,
   CreateCardParams,
   GetBalanceParams,
   ListCardAccountsParams,
@@ -37,6 +40,131 @@ import type {
   UpdateCardMetadataParams,
   UpdateCardParams,
 } from './types';
+
+/**
+ * Maps typed spending-control/cashback/fee fields to their raw `metadata`
+ * key equivalents. Only sets keys that were actually provided.
+ * @internal
+ */
+function mapSpendingControlMetadataToRaw(
+  input: CardSpendingControlMetadata,
+): Record<string, unknown> {
+  const raw: Record<string, unknown> = {};
+
+  if (input.spendingControl !== undefined) {
+    raw.spending_control = input.spendingControl;
+  }
+  if (input.priorityMcc !== undefined) {
+    raw.priority_mcc = input.priorityMcc;
+  }
+  if (input.mccWhitelist !== undefined) {
+    raw.mcc_whitelist = input.mccWhitelist;
+  }
+  if (input.cashbackPrograms !== undefined) {
+    raw.cashback_programs = input.cashbackPrograms.map((program) => ({
+      program_name: program.programName,
+      type: program.type,
+      target_pocket_urn: program.targetPocketUrn,
+      ...(program.feeType && { fee_type: program.feeType }),
+      ...(program.value !== undefined && { value: program.value }),
+    }));
+  }
+  if (input.spendingFees !== undefined) {
+    raw.spending_fees = input.spendingFees.map((fee) => ({
+      fee_name: fee.feeName,
+      account_urn: fee.accountUrn,
+      type: fee.type,
+      value: fee.value,
+      ...(fee.category && { category: fee.category }),
+      ...(fee.rule && { rule: fee.rule }),
+      ...(fee.ruleParams && { rule_params: fee.ruleParams }),
+    }));
+  }
+  if (input.fallbackAsset !== undefined) {
+    raw.fallback_asset = input.fallbackAsset;
+  }
+  if (input.whatsappNotification !== undefined) {
+    raw.whatsapp_notification = input.whatsappNotification;
+  }
+  if (input.currencyAssetMap !== undefined) {
+    raw.currency_asset_map = input.currencyAssetMap;
+  }
+
+  return raw;
+}
+
+/**
+ * Maps the raw `metadata` object's spending-control/cashback/fee keys back
+ * to typed camelCase fields, when present.
+ * @internal
+ */
+function mapSpendingControlMetadataFromRaw(
+  metadata: Record<string, unknown> | undefined,
+): CardSpendingControlMetadata | undefined {
+  if (!metadata) return undefined;
+
+  const result: CardSpendingControlMetadata = {};
+
+  if (
+    metadata.spending_control === 'default' ||
+    metadata.spending_control === 'smart'
+  ) {
+    result.spendingControl = metadata.spending_control;
+  }
+  if (Array.isArray(metadata.priority_mcc)) {
+    result.priorityMcc = metadata.priority_mcc as string[];
+  }
+  if (metadata.mcc_whitelist && typeof metadata.mcc_whitelist === 'object') {
+    result.mccWhitelist =
+      metadata.mcc_whitelist as CardSpendingControlMetadata['mccWhitelist'];
+  }
+  if (Array.isArray(metadata.cashback_programs)) {
+    result.cashbackPrograms = (
+      metadata.cashback_programs as Array<Record<string, unknown>>
+    ).map((program) => ({
+      programName: program.program_name as string,
+      type: program.type as 'extra_savings' | 'round_up',
+      targetPocketUrn: program.target_pocket_urn as string,
+      ...(program.fee_type !== undefined && {
+        feeType: program.fee_type as 'percentage' | 'flat',
+      }),
+      ...(program.value !== undefined && { value: program.value as number }),
+    }));
+  }
+  if (Array.isArray(metadata.spending_fees)) {
+    result.spendingFees = (
+      metadata.spending_fees as Array<Record<string, unknown>>
+    ).map((fee) => ({
+      feeName: fee.fee_name as string,
+      accountUrn: fee.account_urn as string,
+      type: fee.type as 'percentage' | 'flat',
+      value: fee.value as number,
+      ...(fee.category !== undefined && {
+        category: fee.category as 'fx' | 'interchange' | 'custom',
+      }),
+      ...(fee.rule !== undefined && { rule: fee.rule as string }),
+      ...(fee.rule_params !== undefined && {
+        ruleParams: fee.rule_params as Record<string, unknown>,
+      }),
+    }));
+  }
+  if (typeof metadata.fallback_asset === 'string') {
+    result.fallbackAsset =
+      metadata.fallback_asset as CardSpendingControlMetadata['fallbackAsset'];
+  }
+  if (typeof metadata.whatsapp_notification === 'boolean') {
+    result.whatsappNotification = metadata.whatsapp_notification;
+  }
+  if (
+    metadata.currency_asset_map &&
+    typeof metadata.currency_asset_map === 'object'
+  ) {
+    result.currencyAssetMap =
+      metadata.currency_asset_map as CardSpendingControlMetadata['currencyAssetMap'];
+  }
+
+  return Object.keys(result).length > 0 ? result : undefined;
+}
 
 /**
  * Maps a wire card account to the SDK CardAccount type.
@@ -55,6 +183,7 @@ export function mapCardAccountFromWire(
     productType: account.details.card_product_type,
     status: account.status,
     cardType: account.details.card_type,
+    statusReason: account.details.status_reason,
     detailsUrl: account.details.card_url_details,
     ownerUrn: account.owner_urn,
     ledgerId: account.ledger_account_id,
@@ -64,6 +193,9 @@ export function mapCardAccountFromWire(
       typeof defaultAsset === 'string' && isSupportedAsset(defaultAsset)
         ? defaultAsset
         : undefined,
+    spendingControlMetadata: mapSpendingControlMetadataFromRaw(
+      account.metadata,
+    ),
     createdAt: account.created_at,
     updatedAt: account.updated_at,
     balance: account.balance,
@@ -105,19 +237,40 @@ export class CardClient extends BaseClient {
     }
 
     const program = params.program || 'card';
+    const cardType = params.cardType || 'VIRTUAL';
+
+    if (cardType === 'PHYSICAL' && !params.cardAddress) {
+      throw new Error('cardAddress is required when cardType is "PHYSICAL"');
+    }
+
     const request: CreateAccountRequest<CreateCardAccountInput> = {
       holder_urn: params?.holderUrn || this.httpClient.urn || '',
       webhook_url: params.webhookUrl,
       ledger_account_id: params.ledgerId,
       input: {
         create: {
-          card_type: 'VIRTUAL',
+          card_type: cardType,
+          ...(params.cardAddress && {
+            card_address: {
+              street_name: params.cardAddress.streetName,
+              street_number: params.cardAddress.streetNumber,
+              floor: params.cardAddress.floor,
+              apartment: params.cardAddress.apartment,
+              city: params.cardAddress.city,
+              region: params.cardAddress.region,
+              country: params.cardAddress.country,
+              zip_code: params.cardAddress.zipCode,
+              neighborhood: params.cardAddress.neighborhood,
+            },
+          }),
         },
       },
       metadata: {
         source: 'sdk-typescript',
         name: params.name,
         ...params.metadata,
+        ...(params.spendingControlMetadata &&
+          mapSpendingControlMetadataToRaw(params.spendingControlMetadata)),
         ...(params.defaultAsset && { default_asset: params.defaultAsset }),
       },
     };
@@ -381,16 +534,25 @@ export class CardClient extends BaseClient {
    * ```
    */
   async update(params: UpdateCardParams): Promise<CardAccount> {
-    const request: UpdateAccountRequest = {
+    const input: UpdateCardAccountInput | undefined =
+      params.statusReason || params.pin
+        ? {
+            ...(params.statusReason && { status_reason: params.statusReason }),
+            ...(params.pin && { pin: params.pin }),
+          }
+        : undefined;
+
+    const request: UpdateAccountRequest<UpdateCardAccountInput> = {
       ...(params.metadata && { metadata: params.metadata }),
       ...(params.status && { status: params.status as AccountStatus }),
       ...(params.webhookUrl && { webhook_url: params.webhookUrl }),
       ...(params.ledgerId && { ledger_account_id: params.ledgerId }),
+      ...(input && { input }),
     };
 
     const response = await this.httpClient.request<
       UpdateAccountResponse<CardDetails>,
-      UpdateAccountRequest
+      UpdateAccountRequest<UpdateCardAccountInput>
     >({
       method: 'PATCH',
       path: `/api/accounts/${params.urn}`,
@@ -424,15 +586,21 @@ export class CardClient extends BaseClient {
       );
     }
 
-    if (!params.metadata && !params.defaultAsset) {
+    if (
+      !params.metadata &&
+      !params.defaultAsset &&
+      !params.spendingControlMetadata
+    ) {
       throw new Error(
-        'updateMetadata requires either `metadata` or `defaultAsset`',
+        'updateMetadata requires `metadata`, `defaultAsset`, or `spendingControlMetadata`',
       );
     }
 
     const request: UpdateAccountRequest = {
       metadata: {
         ...params.metadata,
+        ...(params.spendingControlMetadata &&
+          mapSpendingControlMetadataToRaw(params.spendingControlMetadata)),
         ...(params.defaultAsset && { default_asset: params.defaultAsset }),
       },
     };
@@ -498,6 +666,28 @@ export class CardClient extends BaseClient {
    */
   async activate(urn: string): Promise<CardAccount> {
     return this._updateStatus(urn, 'active');
+  }
+
+  /**
+   * Freeze, disable, or activate a card account with a reason attached
+   * (e.g. `'LOST'`, `'STOLEN'`, `'BROKEN'`). Use this instead of
+   * `freeze()`/`disable()`/`activate()` when you want the reason recorded.
+   *
+   * @example
+   * ```typescript
+   * const card = await bloque.accounts.card.updateStatus(
+   *   'did:bloque:mediums:card:account:123',
+   *   'disabled',
+   *   'STOLEN',
+   * );
+   * ```
+   */
+  async updateStatus(
+    urn: string,
+    status: AccountStatus,
+    statusReason?: CardStatusReason,
+  ): Promise<CardAccount> {
+    return this._updateStatus(urn, status, statusReason);
   }
 
   /**
@@ -622,14 +812,16 @@ export class CardClient extends BaseClient {
   private async _updateStatus(
     urn: string,
     status: AccountStatus,
+    statusReason?: CardStatusReason,
   ): Promise<CardAccount> {
-    const request: UpdateAccountRequest = {
+    const request: UpdateAccountRequest<UpdateCardAccountInput> = {
       status,
+      ...(statusReason && { input: { status_reason: statusReason } }),
     };
 
     const response = await this.httpClient.request<
       UpdateAccountResponse<CardDetails>,
-      UpdateAccountRequest
+      UpdateAccountRequest<UpdateCardAccountInput>
     >({
       method: 'PATCH',
       path: `/api/accounts/${urn}`,

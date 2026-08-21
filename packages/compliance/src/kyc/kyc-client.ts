@@ -25,11 +25,14 @@ export class KycClient extends BaseClient {
       path: '/api/compliance',
       body: {
         urn: params.urn,
-        type: 'kyc',
-        accompliceType: 'person',
+        type: params.type ?? 'kyc',
+        accompliceType: params.accompliceType ?? 'person',
       },
     });
     return {
+      type: response.type,
+      level: response.level,
+      provider: response.provider,
       url: response.url,
       status: response.status,
       completedAt: null,
@@ -44,6 +47,9 @@ export class KycClient extends BaseClient {
       path: `/api/compliance/${params.urn}`,
     });
     return {
+      type: response.type,
+      level: response.level,
+      provider: response.provider,
       status: response.status,
       url: response.verification_url,
       completedAt: response.completed_at,
@@ -65,8 +71,9 @@ export class KycClient extends BaseClient {
       documents: response.documents.map((doc) => ({
         documentType: doc.document_type,
         side: doc.side,
-        imageBase64: doc.image_base64,
+        imageS3Key: doc.image_s3_key,
         imageSizeBytes: doc.image_size_bytes,
+        downloadUrl: doc.download_url,
       })),
     };
   }

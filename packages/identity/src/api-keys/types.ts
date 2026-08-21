@@ -41,3 +41,15 @@ export interface ApiKeyInfo {
 export interface RotateApiKeyResult {
   secretKey: string;
 }
+
+export interface UpsertOriginWebhookSecretParams {
+  /** The origin's own API key — authenticates this call, no session/JWT needed. */
+  apiKey: string;
+  webhookSecret: string;
+}
+
+export interface UpsertOriginWebhookSecretResult {
+  originName: string;
+  key: string;
+  updated: true;
+}

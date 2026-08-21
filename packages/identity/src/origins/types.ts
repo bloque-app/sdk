@@ -32,7 +32,12 @@ type BaseAssertion<TType extends string, TValue> = {
 
 type ApiKeyAssertion = BaseAssertion<'API_KEY', ApiKeyValue>;
 
-type InteractiveAssertion = BaseAssertion<
+/**
+ * An assertion resolution for a challenge type a user resolves directly
+ * (as opposed to `API_KEY`, which is your server registering on a user's
+ * behalf). This is the only kind `connect()` accepts.
+ */
+export type InteractiveAssertionResult = BaseAssertion<
   | 'REDIRECT'
   | 'OAUTH_REDIRECT'
   | 'SIGNING_CHALLENGE'
@@ -41,6 +46,8 @@ type InteractiveAssertion = BaseAssertion<
   | 'PASSWORD',
   SigningChallengeValue
 >;
+
+type InteractiveAssertion = InteractiveAssertionResult;
 
 type AssertionResult = ApiKeyAssertion | InteractiveAssertion;
 
@@ -223,11 +230,86 @@ export interface BusinessRegisterParams {
   clientIp?: string;
 }
 
-export type RegisterParams = IndividualRegisterParams | BusinessRegisterParams;
+/**
+ * Registration params for identity types with no dedicated profile shape
+ * (`dao`, `proxy`, `other`). These have little to no server-side profile
+ * validation today — confirm with Bloque which of these your integration
+ * actually needs before relying on one in production.
+ */
+export interface OtherRegisterParams {
+  /**
+   * Result of the assertion challenge
+   */
+  assertionResult: AssertionResult;
+  /**
+   * Additional context data
+   */
+  extraContext?: Record<string, unknown>;
+  /**
+   * Type of entity being registered
+   */
+  type: 'dao' | 'proxy' | 'other';
+  /**
+   * Unstructured profile data — shape is caller-defined for these types.
+   */
+  profile: Record<string, unknown>;
+  /**
+   * The end user's own IP address, forwarded from your server so Bloque can
+   * resolve their real usage country and record it on the compliance audit
+   * trail — instead of falling back to your server's own IP. Only honored
+   * for `API_KEY`-challenge registrations (your server calling on the
+   * user's behalf); silently ignored otherwise, since Bloque can already
+   * see the caller's real IP for interactive challenge types.
+   * @example "190.85.12.4"
+   */
+  clientIp?: string;
+}
+
+export type RegisterParams =
+  | IndividualRegisterParams
+  | BusinessRegisterParams
+  | OtherRegisterParams;
 
 export interface RegisterResult {
   /**
    * JWT access token for the registered identity
    */
   accessToken: string;
+}
+
+export interface ConnectParams {
+  /**
+   * Result of the assertion challenge from `assert()`. Only interactive
+   * challenge types are accepted — not `API_KEY`, which is for registering
+   * a new identity on a user's behalf, not reconnecting to an existing one.
+   */
+  assertionResult: InteractiveAssertionResult;
+  /**
+   * Additional context data
+   */
+  extraContext?: Record<string, unknown>;
+}
+
+/**
+ * Metadata keys an origin may self-service update via `updateMetadata()`.
+ * Any other key is rejected.
+ */
+export type SelfServiceMetadataKey =
+  | 'company'
+  | 'tos_gate_show_home'
+  | 'gate_accent_color'
+  | 'verification_gate_return_url_allowlist'
+  | 'gate_frame_ancestors_allowlist';
+
+export interface UpdateOriginMetadataParams {
+  /** The origin's own API key — authenticates this call, no session/JWT needed. */
+  apiKey: string;
+  /** Shallow-merged into the origin's existing metadata. Unlisted keys are rejected. */
+  metadata: Partial<Record<SelfServiceMetadataKey, unknown>>;
+}
+
+export interface UpdateOriginMetadataResult {
+  originName: string;
+  metadata: Record<string, unknown>;
+  updated: true;
 }

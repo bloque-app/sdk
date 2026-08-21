@@ -59,6 +59,10 @@ export interface TosGateInitResult {
   /** Single-use acceptance nonce — pass as `csrfToken` to `accept()`. */
   csrfToken: string;
   returnUrl: string;
+  /** The calling origin's branding name, substituted into the rendered
+   * document and shown in the hosted page's wordmark. `undefined` when the
+   * origin has none configured. */
+  developerName?: string;
   /** Whether the hosted page's intro screens should play before the document. */
   showHome: boolean;
   /** The calling origin's `gate_accent_color` (a CSS hex color), if it has
@@ -69,9 +73,24 @@ export interface TosGateInitResult {
    * just opening `url` in a browser/webview. */
   accentColor?: string;
   /**
-   * Passkey registration challenge, or `null` when this TOS document
-   * doesn't require account activation (or minting the challenge failed
-   * server-side — this fails open, so `null` here never blocks acceptance).
+   * Whether this document requires an account-activation passkey step —
+   * `init()` only tells you *whether* to ask, not the challenge itself: the
+   * challenge is bound to a short block-hash window, so it's minted
+   * separately, as late as possible, via `challenge()` (call that right
+   * before the user commits, not at page load).
+   */
+  passkeyRequired: boolean;
+}
+
+export interface TosGateChallengeParams {
+  /** The capability token returned by `start()`. */
+  token: string;
+}
+
+export interface TosGateChallengeResult {
+  /**
+   * Passkey registration challenge, or `null` when the identity has no
+   * account ready for a device (the gate then shows no passkey step).
    */
   passkey: TosGatePasskeyChallenge | null;
 }

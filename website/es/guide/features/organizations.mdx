@@ -4,7 +4,7 @@ Aprende cómo crear y gestionar organizaciones usando el SDK de Bloque.
 
 ## Descripción General
 
-Las organizaciones son la base de la plataforma Bloque. Pueden ser empresas o individuos y contienen toda la información de perfil y cumplimiento normativo necesaria.
+Las organizaciones son la base de la plataforma Bloque. Pueden ser empresas o DAOs y contienen toda la información de perfil y cumplimiento normativo necesaria.
 
 ## Crear una Organización
 
@@ -45,11 +45,11 @@ const params: CreateOrgParams = {
 const organization = await bloque.orgs.create(params);
 ```
 
-### Organización Individual
+### Organización DAO
 
 ```typescript
 const params: CreateOrgParams = {
-  org_type: 'individual',
+  org_type: 'dao',
   profile: {
     legal_name: 'John Doe',
     tax_id: '123-45-6789',
@@ -71,7 +71,7 @@ const organization = await bloque.orgs.create(params);
 
 | Campo | Tipo | Requerido | Descripción |
 |-------|------|----------|-------------|
-| `org_type` | `'business' \| 'individual'` | Sí | Tipo de organización |
+| `org_type` | `'business' \| 'dao'` | Sí | Tipo de organización |
 | `profile` | `OrgProfile` | Sí | Detalles del perfil de la organización |
 | `metadata` | `Record<string, unknown>` | No | Metadatos personalizados |
 
@@ -99,7 +99,7 @@ const organization = await bloque.orgs.create(params);
 ```typescript
 interface Organization {
   urn: string;                           // Nombre único de recurso
-  org_type: 'business' | 'individual';   // Tipo de organización
+  org_type: 'business' | 'dao';          // Tipo de organización
   profile: OrgProfile;                   // Perfil de la organización
   metadata?: Record<string, unknown>;    // Metadatos personalizados
   status: OrgStatus;                     // Estado de la organización
@@ -111,9 +111,9 @@ interface Organization {
 | Estado | Descripción | Puede Transicionar A |
 |--------|-------------|-------------------|
 | `awaiting_compliance_verification` | Pendiente de verificación de cumplimiento normativo | `active`, `rejected` |
-| `active` | La organización está activa | `suspended`, `closed` |
-| `suspended` | La organización está suspendida | `active`, `closed` |
-| `closed` | La organización está cerrada | - |
+| `active` | La organización está activa | `suspended`, `inactive` |
+| `suspended` | La organización está suspendida | `active`, `inactive` |
+| `inactive` | La organización está inactiva | - |
 
 ```mermaid
 stateDiagram-v2
@@ -121,11 +121,11 @@ stateDiagram-v2
     awaiting_compliance_verification --> active
     awaiting_compliance_verification --> rejected
     active --> suspended
-    active --> closed
+    active --> inactive
     suspended --> active
-    suspended --> closed
+    suspended --> inactive
     rejected --> [*]
-    closed --> [*]
+    inactive --> [*]
 ```
 
 ## Organizaciones con Múltiples Ubicaciones
