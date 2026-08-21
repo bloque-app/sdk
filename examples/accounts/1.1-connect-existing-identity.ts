@@ -25,12 +25,16 @@ console.log('Challenge to sign:', challenge);
 //    resolve it.
 const signature = '0x1234567890abcdef...'; // from the user's wallet
 
-const session = await bloque.identity.origins.connect(alias, 'ethereum-mainnet', {
-  assertionResult: {
-    alias,
-    challengeType: 'SIGNING_CHALLENGE',
-    value: { signature, alias },
+const session = await bloque.identity.origins.connect(
+  alias,
+  'ethereum-mainnet',
+  {
+    assertionResult: {
+      alias,
+      challengeType: 'SIGNING_CHALLENGE',
+      value: { signature, alias },
+    },
   },
-});
+);
 
 console.log('Connected, access token:', session.accessToken);
