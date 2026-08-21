@@ -13,6 +13,13 @@ The Bloque SDK provides comprehensive functionality for managing various types o
 
 The SDK supports multiple account types, each designed for specific use cases:
 
+:::tip Start with a virtual account
+Every account type below draws its balance from a **ledger**, and a
+[virtual account](/sdk/guide/accounts/virtual) is what creates one. Create it first — its
+`ledgerId` comes back in the create response — then pass that `ledgerId` to every other account you
+want to share the balance. See [Ledger & Balance](/sdk/guide/world/ledger) for the concept.
+:::
+
 ### Virtual Cards
 
 Create instant virtual cards for online payments. Cards are:

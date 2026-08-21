@@ -9,7 +9,7 @@ export function registerAccountWorkflows(server: McpServer, clients: BloqueClien
     'create_account',
     {
       description:
-        'Create a financial account — the place where money lives. Sets up a virtual pocket (holds the balance) and a Polygon blockchain address (for receiving USDC/crypto) sharing the same ledger. Use this when you need a shared balance that multiple cards will draw from. For a single-card setup, use create_card directly (it creates the account automatically).',
+        'Create a financial account — the place where money lives. Sets up a virtual pocket (holds the balance) and a Polygon blockchain address (for receiving USDC/crypto) sharing the same ledger. Use this when you need a shared balance that multiple cards will draw from. The account can receive funds immediately; sending becomes possible once its ledger account finishes registering and the pocket reports status "active". For a single-card setup, use create_card directly (it creates the account automatically).',
       inputSchema: {
         name: z.string().optional().default('Account'),
         fundFromUrn: z.string().optional(),

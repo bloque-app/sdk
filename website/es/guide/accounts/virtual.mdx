@@ -51,9 +51,26 @@ const account = await session.accounts.virtual.create({
 });
 
 console.log('Cuenta creada:', account.urn);
-console.log('Estado:', account.status);
-console.log('ID del Ledger:', account.ledgerId);
+console.log('Estado:', account.status);         // 'creation_in_progress'
+console.log('ID del Ledger:', account.ledgerId); // '0xaedf3f21...' — ya utilizable
 ```
+
+:::tip Qué puedes hacer de inmediato
+`ledgerId` viene en la respuesta de creación, así que puedes adjuntar tarjetas, cuentas Polygon y
+cuentas bancarias a este ledger en tu siguiente llamada — no hay nada que esperar para conocerlo.
+
+La cuenta misma arranca en `creation_in_progress` mientras su ledger se registra on-chain. Durante
+esa ventana **puede recibir fondos pero no enviarlos**. Pasa a `active` cuando el registro
+aterriza. Pasa `{ waitLedger: true }` como segundo argumento si lo siguiente que harás es
+transferir *desde* la cuenta:
+
+```typescript
+const account = await session.accounts.virtual.create(
+  { firstName: 'Juan', lastName: 'Pérez' },
+  { waitLedger: true },   // consulta cada 2s hasta que el status sea 'active'
+);
+```
+:::
 
 ### Parámetros
 
@@ -61,7 +78,8 @@ console.log('ID del Ledger:', account.ledgerId);
 interface CreateVirtualAccountParams {
   firstName: string;       // Requerido: Nombre del titular de la cuenta
   lastName: string;        // Requerido: Apellido del titular de la cuenta
-  ledgerId?: string;       // Opcional: ID de cuenta ledger (se crea automáticamente si no se proporciona)
+  ledgerId?: string;       // Opcional: adjuntar a un ledger existente (si se omite se
+                           // acuña uno nuevo y viene en la respuesta)
   webhookUrl?: string;     // Opcional: Webhook para eventos de la cuenta
   metadata?: Record<string, string>; // Opcional: Metadata personalizada (debe ser strings)
 }
@@ -77,7 +95,8 @@ interface VirtualAccount {
   lastName: string;         // Apellido del titular
   status: AccountStatus;    // Estado de la cuenta
   ownerUrn: string;         // URN del propietario
-  ledgerId: string;         // ID de cuenta ledger
+  ledgerId: string;         // Dirección de la cuenta ledger — pásala a otras cuentas
+  ledgerAccountUrn?: string; // La misma cuenta ledger bajo su URN
   webhookUrl: string | null;
   metadata?: Record<string, string>;
   createdAt: string;        // Timestamp ISO 8601
