@@ -94,10 +94,10 @@ export function registerTopupWorkflows(server: McpServer, clients: BloqueClients
         amount: z.string(),
         currency: z.string().optional().default('USD'),
         bankName: z.string(),
-        bankAccountType: z.enum(['savings', 'checking']),
+        bankAccountType: z.enum(['savings', 'checkings']),
         bankAccountNumber: z.string(),
         bankAccountHolderName: z.string(),
-        idType: z.enum(['CC', 'CE', 'NIT', 'PP']),
+        idType: z.enum(['CC', 'CE', 'NIT', 'PASSPORT']),
         idNumber: z.string(),
         webhookUrl: z.string().optional(),
       },
@@ -169,7 +169,8 @@ export function registerTopupWorkflows(server: McpServer, clients: BloqueClients
         sourceCurrency: z.string().default('COPM'),
         targetCurrency: z.string().default('COP'),
         sourceMedium: z.string().default('kusama'),
-        keyType: z.enum(['ID', 'PHONE', 'EMAIL', 'ALPHA', 'BCODE']),
+        // ALPHA is currently the only operationally supported BRE-B key type.
+        keyType: z.enum(['ALPHA']),
         key: z.string(),
         webhookUrl: z.string().optional(),
       },
@@ -230,6 +231,7 @@ export function registerTopupWorkflows(server: McpServer, clients: BloqueClients
         webhookUrl,
         depositInformation: {
           resolutionId: resolution.data.resolutionId,
+          destinationKey: { keyValue: key, keyType },
         },
         args: { sourceAccountUrn },
       });
