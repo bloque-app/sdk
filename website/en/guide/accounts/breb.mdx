@@ -224,9 +224,10 @@ const result = await session.swap.breb.create({
     // Any unique string — used only to derive an idempotency key, not a
     // real key resolution.
     resolutionId: 'payout-' + crypto.randomUUID(),
+    // ALPHA is the only key type currently supported for payouts.
     destinationKey: {
-      keyValue: '3015550127',
-      keyType: 'PHONE',
+      keyValue: '@JAR1234',
+      keyType: 'ALPHA',
     },
   },
   args: {

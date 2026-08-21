@@ -224,9 +224,10 @@ const result = await session.swap.breb.create({
     // Cualquier string único — solo se usa para derivar una llave de
     // idempotencia, no es una resolución real de la llave.
     resolutionId: 'payout-' + crypto.randomUUID(),
+    // ALPHA es el único tipo de llave soportado actualmente para pagos.
     destinationKey: {
-      keyValue: '3015550127',
-      keyType: 'PHONE',
+      keyValue: '@JAR1234',
+      keyType: 'ALPHA',
     },
   },
   args: {
