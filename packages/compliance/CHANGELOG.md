@@ -1,5 +1,11 @@
 # @bloque/sdk-compliance
 
+## 0.9.1
+
+### Patch Changes
+
+- @bloque/sdk-core@0.9.1
+
 ## 0.9.0
 
 ### Minor Changes
