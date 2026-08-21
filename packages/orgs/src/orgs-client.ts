@@ -24,6 +24,7 @@ import type {
   VerifySlugResponse,
 } from './internal/wire-types';
 import type {
+  AssumeOriginResult,
   CreateInviteParams,
   CreateOrgParams,
   ListInvitesParams,
@@ -381,5 +382,42 @@ export class OrgsClient extends BaseClient {
       method: 'DELETE',
       path: `/api/orgs/${orgUrn}`,
     });
+  }
+
+  /**
+   * Assume origin-operator credentials for a namespace this org controls.
+   *
+   * Call after a human `connect`/`register` (user JWT). Issues a 15-minute
+   * `kind: origin-operator` JWT (`sub` = controller org, `origin` =
+   * namespace, `act.sub` = the human). Org-admin scopes never enter this
+   * token. The current session switches to that JWT so subsequent
+   * `identity.apiKeys.create` mints origin-bound keys.
+   *
+   * Does not grant `*.read.any`, pay/create/transfers, or passkey-as-user.
+   *
+   * @param namespace - Origin namespace (e.g. `'colocapay'`)
+   * @returns Operator JWT (`accessToken`, `expiresIn`, `tokenType`)
+   */
+  async assumeOrigin(namespace: string): Promise<AssumeOriginResult> {
+    const response = await this.httpClient.request<{
+      access_token: string;
+      expires_in: number;
+      token_type: string;
+    }>({
+      method: 'POST',
+      path: `/api/origins/${encodeURIComponent(namespace)}/as`,
+    });
+
+    this.httpClient.setAccessToken(response.access_token);
+    this.httpClient.setOrigin(namespace);
+    if (this.httpClient.auth.type === 'jwt') {
+      this.httpClient.setJwtToken(response.access_token);
+    }
+
+    return {
+      accessToken: response.access_token,
+      expiresIn: response.expires_in,
+      tokenType: response.token_type,
+    };
   }
 }

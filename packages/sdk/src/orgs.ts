@@ -1,4 +1,5 @@
 export type {
+  AssumeOriginResult,
   CreateInviteParams,
   CreateOrgParams,
   CreateOrgResponse,

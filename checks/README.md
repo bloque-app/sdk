@@ -82,7 +82,13 @@ non-zero with a clear message on the first unmet assertion.
 ```bash
 bun run checks/compliance-tos-required.check.ts
 bun run checks/compliance-venezuela-earthquake.check.ts
+bun run checks/origin-operator-read-only.check.ts
 ```
+
+`origin-operator-read-only.check.ts` skips (exit 0) unless
+`ORIGIN_OPERATOR_USER_TOKEN` and `ORIGIN_OPERATOR_NAMESPACE` are set — bind
+is ops-only. It exercises `orgs.assumeOrigin()`, bound `apiKeys.create`,
+and discovery `apiKeys.exchange({ key })`.
 
 Each check registers its own brand-new identity (unique alias per run), so
 they're safe to re-run repeatedly without cleanup.

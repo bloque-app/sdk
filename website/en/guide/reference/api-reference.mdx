@@ -110,6 +110,14 @@ Top-level (`identity`):
 Aliases (`identity.aliases`):
 - `get(alias)`
 
+API Keys (`identity.apiKeys`):
+- `create(params)` — with `kind: origin-operator` mints origin-bound keys
+- `list()`
+- `get(id)`
+- `exchange({ key, scopes?, asIdentity })`
+- `revoke(id)`
+- `rotate(id)`
+
 Origins (`identity.origins`):
 - `list()`
 - `register(alias, origin, params)`
@@ -121,6 +129,7 @@ Origins (`identity.origins`):
 
 Top-level (`orgs`):
 - `create(params)`
+- `assumeOrigin(namespace)` — 15-min `kind: origin-operator` JWT; session switches so `apiKeys.create` mints bound keys
 
 ## Swap
 

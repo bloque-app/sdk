@@ -302,6 +302,57 @@ await bloque.orgs.invites.resend('invite-code-123');
 | `invites.reject(code, reason?)` | Reject an invite |
 | `invites.resend(code)` | Resend an invite email |
 
+## Origin-operator credentials (tenant CS)
+
+Tenant customer-service operators assume an origin, mint **org-owned**
+read-only keys, and optionally impersonate a user of that origin. This is
+a server-side flow.
+
+1. Human `connect`/`register` as themselves (user JWT). No tenant powers.
+2. `orgs.assumeOrigin(namespace)` → 15-minute `kind: origin-operator` JWT.
+   `sub` is the controller org, `origin` is the namespace, `act.sub` is the
+   human. Org-admin scopes never enter this token. The current session
+   switches to that JWT.
+3. `identity.apiKeys.create` with that session mints a bound `sk_`
+   (`bound_origin` set). User JWTs cannot mint bound keys.
+4. `identity.apiKeys.exchange`:
+   - `{ key }` → origin-operator JWT (discovery, unauthenticated)
+   - `{ key, asIdentity }` → owner-read impersonation (`kind: api-key`,
+     `sub` = that identity). Forwards the operator Bearer. Cross-origin
+     URNs are **404**. Unbound keys reject `asIdentity` with
+     `400 E_AS_IDENTITY_NOT_ALLOWED`.
+
+Ops bind is service-only (`PUT /orgs/{org_urn}/controlled-origins/{namespace}`)
+and is not wrapped by the SDK.
+
+Forbidden on this surface: `*.read.any`, pay/create/transfers, passkey-as-user,
+mapping generic org `admin` to origin scopes.
+
+```typescript
+const user = await bloque.connect('@cs-alice');
+
+const assumed = await user.orgs.assumeOrigin('colocapay');
+// assumed.accessToken is a 15-min origin-operator JWT
+// user.identity.apiKeys.create now mints origin-bound keys
+
+const minted = await user.identity.apiKeys.create({
+  name: 'cs-readonly',
+  scopes: ['identity.read.origin', 'alias.find.origin'],
+  domains: [],
+  expiration: 'never',
+});
+
+const discovery = await user.identity.apiKeys.exchange({
+  key: minted.secretKey,
+});
+
+const impersonation = await user.identity.apiKeys.exchange({
+  key: minted.secretKey,
+  asIdentity: 'did:bloque:colocapay:customer',
+  scopes: ['payments.read'],
+});
+```
+
 ## Best Practices
 
 1. **Validate Data**: Ensure all required fields are present before calling the API

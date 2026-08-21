@@ -94,3 +94,16 @@ export interface UpdateTeamMemberParams {
   teamRoles?: string[];
   metadata?: Record<string, string>;
 }
+
+/**
+ * Result of `orgs.assumeOrigin(namespace)`.
+ *
+ * 15-minute `kind: origin-operator` JWT. `sub` is the controller org URN;
+ * `origin` is the namespace; `act.sub` is the human who assumed. Org-admin
+ * scopes never enter this token.
+ */
+export interface AssumeOriginResult {
+  accessToken: string;
+  expiresIn: number;
+  tokenType: string;
+}

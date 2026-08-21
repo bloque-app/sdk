@@ -189,6 +189,14 @@ export type AuthStrategy =
 export interface ExchangeApiKeyParams {
   key: string;
   scopes?: string[];
+  /**
+   * Origin-bound keys only. Issues an owner-read impersonation JWT
+   * (`kind: api-key`, `sub` = this identity). Requires a
+   * `kind: origin-operator` Bearer on the current session.
+   * Cross-origin URNs return 404. Unbound keys reject this with
+   * `400 E_AS_IDENTITY_NOT_ALLOWED`.
+   */
+  asIdentity?: string;
 }
 
 /**
