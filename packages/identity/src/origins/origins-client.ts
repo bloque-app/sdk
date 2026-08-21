@@ -13,10 +13,34 @@ import type {
 import { OriginClient } from './origin-client';
 import type {
   BusinessRegisterParams,
+  ConnectParams,
   IndividualRegisterParams,
   RegisterParams,
   RegisterResult,
+  UpdateOriginMetadataParams,
+  UpdateOriginMetadataResult,
 } from './types';
+
+interface ConnectRequest {
+  assertion_result: {
+    alias?: string;
+    challengeType: string;
+    value: unknown;
+    originalChallengeParams?: { challenge: string; timestamp: number };
+  };
+  extra_context?: Record<string, unknown>;
+}
+
+interface UpdateOriginMetadataRequest {
+  api_key: string;
+  metadata: Record<string, unknown>;
+}
+
+interface UpdateOriginMetadataResponse {
+  origin_name: string;
+  metadata: Record<string, unknown>;
+  updated: true;
+}
 
 export class OriginsClient extends BaseClient {
   public readonly whatsapp: OriginClient<OTPAssertionWhatsApp>;
@@ -189,12 +213,19 @@ export class OriginsClient extends BaseClient {
         type: 'individual',
         profile: this._mapUserProfile(params.profile),
       };
-    } else {
+    } else if (params.type === 'business') {
       request = {
         assertion_result,
         extra_context: params.extraContext,
         type: 'business',
         profile: this._mapBusinessProfile(params.profile),
+      };
+    } else {
+      request = {
+        assertion_result,
+        extra_context: params.extraContext,
+        type: params.type,
+        profile: params.profile,
       };
     }
 
@@ -212,6 +243,92 @@ export class OriginsClient extends BaseClient {
 
     return {
       accessToken: response.result.access_token,
+    };
+  }
+
+  /**
+   * Connect to an existing identity — the counterpart to `register()`.
+   * Resolve an `assert()` challenge and pass the result here to obtain an
+   * access token for an identity that already exists, instead of creating
+   * a new one.
+   *
+   * @param alias - The identity alias/identifier being connected (same
+   *   value passed to `assert()`).
+   * @param origin - The origin namespace to connect with.
+   * @param params - The resolved assertion result.
+   * @returns Promise resolving to the connection result with access token.
+   *
+   * @example
+   * ```typescript
+   * const challenge = await bloque.identity.email.assert('user@example.com');
+   * // ...resolve the challenge (e.g. collect the OTP the user received)...
+   * const session = await bloque.identity.origins.connect('user@example.com', 'bloque-email', {
+   *   assertionResult: {
+   *     alias: 'user@example.com',
+   *     challengeType: 'OTP',
+   *     value: { code: '123456' },
+   *   },
+   * });
+   * ```
+   */
+  async connect(
+    alias: string,
+    origin: string,
+    params: ConnectParams,
+  ): Promise<RegisterResult> {
+    const response = await this.httpClient.request<
+      RegisterResponse,
+      ConnectRequest
+    >({
+      method: 'POST',
+      path: `/api/origins/${origin}/connect`,
+      body: {
+        assertion_result: {
+          alias,
+          challengeType: params.assertionResult.challengeType,
+          value: params.assertionResult.value,
+          originalChallengeParams:
+            params.assertionResult.originalChallengeParams,
+        },
+        extra_context: params.extraContext,
+      },
+    });
+
+    return {
+      accessToken: response.result.access_token,
+    };
+  }
+
+  /**
+   * Self-service update of an API-key-provider origin's presentation
+   * metadata (e.g. `company`, `gate_accent_color`). Authenticates purely
+   * via the origin's own `apiKey` — no session/JWT involved, so your
+   * server can call this directly. Shallow-merges `params.metadata` into
+   * the origin's existing metadata; only allowlisted keys are accepted
+   * (see {@link SelfServiceMetadataKey}).
+   *
+   * @param originName - The namespace of the api-key-provider origin.
+   */
+  async updateMetadata(
+    originName: string,
+    params: UpdateOriginMetadataParams,
+  ): Promise<UpdateOriginMetadataResult> {
+    const response = await this.httpClient.request<
+      UpdateOriginMetadataResponse,
+      UpdateOriginMetadataRequest
+    >({
+      method: 'PATCH',
+      path: `/api/origins/${originName}/metadata`,
+      body: {
+        api_key: params.apiKey,
+        metadata: params.metadata,
+      },
+    });
+
+    return {
+      originName: response.origin_name,
+      metadata: response.metadata,
+      updated: response.updated,
     };
   }
 

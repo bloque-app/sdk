@@ -58,10 +58,24 @@ console.log('Details URL:', card.detailsUrl);
 interface CreateCardParams {
   holderUrn?: string;      // Optional user URN
   name?: string;           // Optional card name
+  cardType?: 'VIRTUAL' | 'PHYSICAL'; // Default: 'VIRTUAL'
+  cardAddress?: CardMailingAddress;  // Required when cardType is 'PHYSICAL'
   webhookUrl?: string;     // Optional webhook for events
   ledgerId?: string;       // Optional ledger account ID
   defaultAsset?: SupportedAsset; // Primary settlement asset, e.g. "DUSD/6"
   metadata?: Record<string, unknown>; // Custom metadata
+}
+
+interface CardMailingAddress {
+  streetName: string;
+  streetNumber: string;
+  floor: string;
+  apartment: string;
+  city: string;
+  region: string;
+  country: string;
+  zipCode: string;
+  neighborhood: string;
 }
 ```
 
@@ -79,7 +93,8 @@ interface CardAccount {
   productType: 'CREDIT' | 'DEBIT';
   status: CardStatus;
   cardType: 'VIRTUAL' | 'PHYSICAL';
-  detailsUrl: string;             // PCI-compliant details URL
+  statusReason?: CardStatusReason; // Set after a status update that supplied one
+  detailsUrl: string | null;      // PCI-compliant details URL, null when blocked
   ownerUrn: string;
   ledgerId: string;
   webhookUrl: string | null;
@@ -90,6 +105,48 @@ interface CardAccount {
   balance?: Record<string, TokenBalance>; // Only in list responses
 }
 ```
+
+### Physical Cards
+
+Pass `cardType: 'PHYSICAL'` with a mailing address to issue a physical card instead:
+
+```typescript title="create-physical-card.ts"
+const card = await userSession.accounts.card.create({
+  holderUrn: 'did:bloque:your-origin:user-alias',
+  name: 'My Physical Card',
+  cardType: 'PHYSICAL',
+  cardAddress: {
+    streetName: 'Main St',
+    streetNumber: '123',
+    floor: '4',
+    apartment: 'B',
+    city: 'Bogotá',
+    region: 'Bogotá D.C.',
+    country: 'COL',
+    zipCode: '110111',
+    neighborhood: 'Chapinero',
+  },
+});
+```
+
+`cardAddress` is required when `cardType` is `'PHYSICAL'` — the SDK throws before making a request if it's missing.
+
+### Setting a PIN or Reporting a Card Lost/Stolen
+
+`update()` (and the status-change helpers) accept a `statusReason` for auditing, plus a `pin` to set or change the card's PIN:
+
+```typescript title="update-card-status.ts"
+// Set/change the PIN
+await userSession.accounts.card.update({
+  urn: card.urn,
+  pin: '1234',
+});
+
+// Report lost and disable, with a reason attached
+await userSession.accounts.card.updateStatus(card.urn, 'disabled', 'LOST');
+```
+
+`statusReason` is one of `'CLIENT_INTERNAL_REASON'`, `'USER_INTERNAL_REASON'`, `'POMELO_INTERNAL_REASON'`, `'PROVIDER_INTERNAL_REASON'`, `'LOST'`, `'STOLEN'`, `'BROKEN'`, or `'UPGRADE'`.
 
 ## Listing Cards
 

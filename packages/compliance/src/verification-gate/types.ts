@@ -84,6 +84,9 @@ export interface VerificationGateInitResult {
   /** Single-use submit nonce — pass as `csrfToken` to `submit()`. */
   csrfToken: string;
   returnUrl: string;
+  /** The calling origin's branding name, shown in the hosted page's
+   * wordmark. `undefined` when the origin has none configured. */
+  developerName?: string;
   /** The calling origin's `gate_accent_color` (a CSS hex color), if it has
    * one configured — see {@link TosGateInitResult.accentColor} for the
    * full explanation; both gates share the same origin-metadata source. */

@@ -30,7 +30,21 @@ export function mapPolygonAccountFromWire(
     urn: account.urn,
     id: account.id,
     address: account.details.address,
+    fundingTx: account.details.funding_tx,
     network: account.details.network,
+    openDeposits: account.details.open_deposits
+      ? Object.fromEntries(
+          Object.entries(account.details.open_deposits).map(([key, order]) => [
+            key,
+            {
+              fromAccountId: order.from_account_id,
+              sweptHash: order.swept_hash,
+              toLedgerAccountId: order.to_ledger_account_id,
+              fromAmount: order.from_amount,
+            },
+          ]),
+        )
+      : undefined,
     status: account.status,
     ownerUrn: account.owner_urn,
     ledgerId: account.ledger_account_id,

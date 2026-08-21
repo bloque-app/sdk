@@ -1,6 +1,12 @@
 import type { AccountStatus, TokenBalance } from '../types';
 
-export type BrebKeyType = 'ID' | 'PHONE' | 'EMAIL' | 'ALPHA' | 'BCODE';
+export type BrebKeyType =
+  | 'ID'
+  | 'PHONE'
+  | 'MOBILE'
+  | 'EMAIL'
+  | 'ALPHA'
+  | 'BCODE';
 
 export interface BrebOperationError {
   /**
@@ -348,6 +354,17 @@ export interface BrebDecodedQrMerchant {
   merchantPostCode: string | null;
 }
 
+export interface BrebDecodedQrVat {
+  vatValue: string | null;
+  vatBaseValue: string | null;
+  vatType: string | null;
+}
+
+export interface BrebDecodedQrInc {
+  incValue: string | null;
+  incType: string | null;
+}
+
 export interface BrebDecodedQrAdditionalInfo {
   transactionPurpose: string | null;
   terminalLabel: string | null;
@@ -370,6 +387,10 @@ export interface BrebDecodedQr {
   acquirerNetworkIdentifier: string | null;
   merchant: BrebDecodedQrMerchant | null;
   channel: string | null;
+  /** VAT/tax info attached to the QR, if any. */
+  vat: BrebDecodedQrVat | null;
+  /** Tip ("propina"/INC) info attached to the QR, if any. */
+  inc: BrebDecodedQrInc | null;
   qrCodeReference: string | null;
   type: string | null;
   resolutionId: string | null;

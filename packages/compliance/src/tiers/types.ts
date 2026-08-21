@@ -93,11 +93,25 @@ export interface TierLevelStatus {
  * request, or just catch the `BloqueVerificationRequiredError` this maps
  * onto and call its `getVerificationLink()` instead.
  */
+export interface VerificationFlowRequestBody {
+  /** Field names the start endpoint requires in its request body. */
+  required: string[];
+  /** Field names the start endpoint accepts but doesn't require. */
+  optional?: string[];
+  /** `returnUrl` (when accepted) must be present in the backend's allowlist. */
+  returnUrlPolicy: 'server_allowlisted';
+}
+
 export interface VerificationFlowHandoff {
   type: 'tos_hosted_acceptance' | 'document_submission';
   method: 'POST';
   startEndpoint: string;
+  requestBody: VerificationFlowRequestBody;
   responseUrlField: string;
+  /** Whether opening the returned `url` redirects back with a transactional
+   * result appended, rather than just returning the user to `returnUrl`
+   * as-is. `false` for both flows today. */
+  transactionalRedirect: boolean;
 }
 
 export interface TierStatus {

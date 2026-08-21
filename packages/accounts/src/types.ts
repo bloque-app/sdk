@@ -161,12 +161,74 @@ export interface BatchTransferChunkResult {
  * Result of a batch transfer operation
  */
 export interface BatchTransferResult {
+  /**
+   * `'executed'` — all effective operations were queued (including the
+   * ready portion of a mixed batch). `'deferred'` — every account is still
+   * being created; the whole batch was rescheduled for retry.
+   * `'failed'` — the batch exhausted all retry attempts.
+   */
+  status: 'executed' | 'deferred' | 'failed';
   /** Array of chunk results */
   chunks: BatchTransferChunkResult[];
   /** Total number of operations in the batch */
   totalOperations: number;
   /** Total number of chunks the batch was split into */
   totalChunks: number;
+}
+
+// ---------------------------------------------------------------------------
+// Batch-transfer webhooks — POSTed to `webhookUrl` for both the batch's own
+// lifecycle events and each chunk's settlement. Not returned by any client
+// method; these types are for consumers who verify/parse the webhook body
+// themselves.
+// ---------------------------------------------------------------------------
+
+/** Lifecycle event fired over the course of a batch transfer's execution. */
+export type BatchTransferWebhookEvent =
+  | 'batch_transfer.completed'
+  | 'batch_transfer.operations_deferred'
+  | 'batch_transfer.retry_attempt'
+  | 'batch_transfer.failed';
+
+/**
+ * Body POSTed to `webhookUrl` for a batch-level lifecycle event. Signed
+ * with `x-bloque-signature` (HMAC-SHA256 over the JSON body) when the
+ * origin has a webhook secret configured.
+ */
+export interface BatchTransferLifecycleWebhookPayload {
+  event: BatchTransferWebhookEvent;
+  reference: string;
+  status: 'executed' | 'deferred' | 'failed';
+  chunks: BatchTransferChunkResult[];
+  totalOperations: number;
+  totalChunks: number;
+}
+
+/**
+ * Body POSTed to `webhookUrl` for a single chunk's settlement, proxied
+ * from the underlying signing service. Signed the same way as the
+ * lifecycle events above.
+ */
+export interface BatchTransferSettlementWebhookPayload {
+  queueId: string;
+  status: 'pending' | 'confirmed' | 'settled' | 'failed';
+  message: {
+    urn: string;
+    railName: string;
+    metadata?: Record<string, unknown>;
+  };
+  settlement: {
+    status:
+      | 'pending'
+      | 'confirmed'
+      | 'settled'
+      | 'cancelled'
+      | 'failed'
+      | 'ignored';
+    txHash?: string;
+    output?: { results: unknown[] };
+    [key: string]: unknown;
+  };
 }
 
 /**
@@ -271,9 +333,74 @@ export interface ListAccountsParams {
   urn?: string;
 
   /**
+   * Multiple account URNs to filter by
+   */
+  urns?: string[];
+
+  /**
    * Account medium/type to filter by
    */
   medium?: AccountMedium;
+
+  /**
+   * Free-text search query
+   */
+  q?: string;
+
+  /**
+   * Filter by a custom identifier set on the account
+   */
+  customId?: string;
+
+  /**
+   * Filter by account status (one or more)
+   */
+  status?: AccountStatus | AccountStatus[];
+
+  /**
+   * Only accounts created on or after this ISO 8601 timestamp
+   * @example "2026-01-01T00:00:00.000Z"
+   */
+  createdAfter?: string;
+
+  /**
+   * Only accounts created on or before this ISO 8601 timestamp
+   * @example "2026-01-31T23:59:59.999Z"
+   */
+  createdBefore?: string;
+
+  /**
+   * Filter by a single ledger account ID
+   */
+  ledgerAccountId?: string;
+
+  /**
+   * Filter by multiple ledger account IDs
+   */
+  ledgerAccountIds?: string[];
+
+  /**
+   * Filter by metadata key/value pairs
+   */
+  metadata?: Record<string, string>;
+
+  /**
+   * Maximum number of accounts to return
+   * @default 100
+   */
+  limit?: number;
+
+  /**
+   * Number of accounts to skip
+   * @default 0
+   */
+  offset?: number;
+
+  /**
+   * Sort order by creation date
+   * @default "DESC"
+   */
+  order?: 'ASC' | 'DESC';
 }
 
 /**
@@ -353,10 +480,26 @@ export interface ListMovementsResult {
 }
 
 /**
+ * Parameters for aggregated balances across accounts.
+ */
+export interface GetBalancesParams {
+  /**
+   * Restrict the aggregation to this subset of the holder's accounts.
+   * Omit to aggregate across all of them.
+   */
+  accountUrns?: string[];
+}
+
+/**
  * Parameters for listing transactions across all accounts.
  * This endpoint does not receive account URN.
  */
 export interface ListTransactionsParams {
+  /**
+   * Restrict the query to this subset of the holder's accounts. Omit to
+   * query across all of them.
+   */
+  accountUrns?: string[];
   /**
    * Asset to filter transactions by.
    * @example "DUSD/6"

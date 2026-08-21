@@ -36,7 +36,7 @@ import type {
  *       bankAccountHolderIdentificationType: 'CC',
  *       bankAccountHolderIdentificationValue: '1234567890',
  *     },
- *     args: { accountUrn: 'did:bloque:card:abc123' },
+ *     args: { sourceAccountUrn: 'did:bloque:card:abc123' },
  *   },
  *   { idempotencyKey: 'bank-transfer-5000000' }
  * );

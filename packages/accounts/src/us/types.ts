@@ -37,6 +37,20 @@ export interface UsAccountAddress {
 }
 
 /**
+ * EU compliance source-of-funds questionnaire, required by some EU
+ * jurisdictions on account creation.
+ */
+export interface UsAccountSofEuQuestionnaire {
+  actingAsIntermediary: 'yes' | 'no';
+  employmentStatus: 'employed' | 'unemployed';
+  expectedMonthlyPayments: string;
+  mostRecentOccupation: string;
+  primaryPurpose: string;
+  primaryPurposeOther: string;
+  sourceOfFunds: string;
+}
+
+/**
  * Parameters for creating a US account
  */
 export interface CreateUsAccountParams {
@@ -46,7 +60,7 @@ export interface CreateUsAccountParams {
    */
   holderUrn?: string;
   /**
-   * Account type (individual or business)
+   * Account type — this medium only accepts individual profiles.
    * @example "individual"
    */
   type: UsAccountType;
@@ -65,6 +79,19 @@ export interface CreateUsAccountParams {
    * @example "Johnson"
    */
   lastName: string;
+  /**
+   * Transliterated (e.g. Latin-alphabet) first name, when `firstName` uses
+   * a non-Latin script.
+   */
+  transliteratedFirstName?: string;
+  /**
+   * Transliterated middle name.
+   */
+  transliteratedMiddleName?: string;
+  /**
+   * Transliterated last name.
+   */
+  transliteratedLastName?: string;
   /**
    * Email address
    * @example "robert.johnson@example.com"
@@ -97,12 +124,24 @@ export interface CreateUsAccountParams {
   /**
    * Base64-encoded image of government ID front
    */
-  govIdImageFront: string;
+  govIdImageFront?: string;
+  /**
+   * Base64-encoded image of government ID back
+   */
+  govIdImageBack?: string;
+  /**
+   * Base64-encoded proof-of-address document
+   */
+  proofOfAddressDocument?: string;
+  /**
+   * Required by some EU jurisdictions on account creation.
+   */
+  sofEuQuestionnaire?: UsAccountSofEuQuestionnaire;
   /**
    * Signed agreement ID obtained from getTosLink
    * @example "0d139f8e-14b0-4540-92ba-4e66c619b533"
    */
-  signedAgreementId: string;
+  signedAgreementId?: string;
   /**
    * Display name for the US account
    */

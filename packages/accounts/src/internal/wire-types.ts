@@ -64,12 +64,54 @@ export interface CreateAccountRequest<TInput = unknown> {
 
 /**
  * @internal
+ * Physical card mailing address. All fields required by the provider —
+ * only relevant when `card_type: 'PHYSICAL'`.
+ */
+export type PomeloCardAddress = {
+  street_name: string;
+  street_number: string;
+  floor: string;
+  apartment: string;
+  city: string;
+  region: string;
+  country: string;
+  zip_code: string;
+  neighborhood: string;
+};
+
+/**
+ * @internal
  * Card account input for creation
  */
 export type CreateCardAccountInput = {
   create: {
     card_type: CardType;
+    /** Required when `card_type` is `'PHYSICAL'`. */
+    card_address?: PomeloCardAddress;
   };
+};
+
+/**
+ * @internal
+ * Reason accompanying a card status/PIN update.
+ */
+export type PomeloCardUpdateReason =
+  | 'CLIENT_INTERNAL_REASON'
+  | 'USER_INTERNAL_REASON'
+  | 'POMELO_INTERNAL_REASON'
+  | 'PROVIDER_INTERNAL_REASON'
+  | 'LOST'
+  | 'STOLEN'
+  | 'BROKEN'
+  | 'UPGRADE';
+
+/**
+ * @internal
+ * Card-specific update input, nested under `UpdateAccountRequest.input`.
+ */
+export type UpdateCardAccountInput = {
+  status_reason?: PomeloCardUpdateReason;
+  pin?: string;
 };
 
 /**
@@ -97,7 +139,9 @@ export type CardDetails = {
   card_provider: 'VISA';
   card_product_type: 'CREDIT';
   card_status: 'ACTIVE';
-  card_url_details: string;
+  card_url_details: string | null;
+  /** Set only after a status update that supplied a reason. */
+  status_reason?: PomeloCardUpdateReason;
   card_type: CardType;
   user_id: string;
 };
@@ -158,17 +202,36 @@ export type CreatePolygonAccountInput = Record<string, never>;
  * @internal
  * Polygon account details from API
  */
+/**
+ * @internal
+ * A deposit swap order in progress against a Polygon account's address.
+ */
+export type PolygonDepositSwapOrder = {
+  /** Account ID the deposit operation originated from. */
+  from_account_id: string;
+  /** Transaction hash of the swept event that originated this order. */
+  swept_hash: string;
+  /** Ledger account ID the deposit is addressed to. */
+  to_ledger_account_id: string;
+  /** Original deposit amount. */
+  from_amount: string;
+};
+
 export type PolygonDetails = {
   id: string;
   address: string;
+  /** Transaction hash of the on-chain funding transfer, or `null` before it lands. */
+  funding_tx: string | null;
   network: string;
+  /** Deposit swap orders currently in flight against this address, keyed by id. */
+  open_deposits?: Record<string, PolygonDepositSwapOrder>;
 };
 
 /**
  * @internal
- * US account type
+ * US account type — this medium only accepts individual profiles.
  */
-export type UsAccountType = 'individual' | 'business';
+export type UsAccountType = 'individual';
 
 /**
  * @internal
@@ -185,6 +248,21 @@ export interface UsAccountAddress {
 
 /**
  * @internal
+ * EU compliance source-of-funds questionnaire, required by some EU
+ * jurisdictions on account creation.
+ */
+export interface UsAccountSofEuQuestionnaire {
+  acting_as_intermediary: 'yes' | 'no';
+  employment_status: 'employed' | 'unemployed';
+  expected_monthly_payments: string;
+  most_recent_occupation: string;
+  primary_purpose: string;
+  primary_purpose_other: string;
+  source_of_funds: string;
+}
+
+/**
+ * @internal
  * US account input for creation
  */
 export interface CreateUsAccountInput {
@@ -192,14 +270,20 @@ export interface CreateUsAccountInput {
   first_name: string;
   middle_name?: string;
   last_name: string;
+  transliterated_first_name?: string;
+  transliterated_middle_name?: string;
+  transliterated_last_name?: string;
   email: string;
   phone: string;
   address: UsAccountAddress;
   birth_date: string;
   tax_identification_number: string;
+  signed_agreement_id?: string;
   gov_id_country: string;
-  gov_id_image_front: string;
-  signed_agreement_id: string;
+  gov_id_image_front?: string;
+  gov_id_image_back?: string;
+  proof_of_address_document?: string;
+  sof_eu_questionnaire?: UsAccountSofEuQuestionnaire;
 }
 
 /**
@@ -638,6 +722,7 @@ export interface BatchTransferChunk {
  */
 export interface BatchTransferResponse {
   result: {
+    status: 'executed' | 'deferred' | 'failed';
     chunks: BatchTransferChunk[];
     total_operations: number;
     total_chunks: number;

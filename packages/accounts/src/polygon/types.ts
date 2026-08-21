@@ -97,9 +97,29 @@ export interface PolygonAccount {
   address: string;
 
   /**
+   * Transaction hash of the on-chain funding transfer, or `null` before
+   * the funding transaction lands.
+   */
+  fundingTx: string | null;
+
+  /**
    * Network name (always "polygon")
    */
   network: string;
+
+  /**
+   * Deposit swap orders currently in flight against this address, keyed
+   * by an internal id. Present only while a sweep is being processed.
+   */
+  openDeposits?: Record<
+    string,
+    {
+      fromAccountId: string;
+      sweptHash: string;
+      toLedgerAccountId: string;
+      fromAmount: string;
+    }
+  >;
 
   /**
    * Account status
