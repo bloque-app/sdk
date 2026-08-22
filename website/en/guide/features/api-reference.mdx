@@ -94,7 +94,7 @@ Polygon (`accounts.polygon`):
 ## Compliance
 
 KYC (`compliance.kyc`):
-- `startVerification(params)`
+- `startVerification(params)` — KYC vs KYB is derived from the URN
 - `getVerification(params)`
 
 ## Identity
@@ -116,6 +116,8 @@ Origins (`identity.origins`):
 
 Top-level (`orgs`):
 - `create(params)`
+- `createOrigin(orgUrn, { namespace })` — KYB-active org; returns `originApiKey` once
+- `assumeOrigin(namespace)` — 15-min `kind: origin-operator` JWT; session switches so `apiKeys.create` mints bound keys
 
 ## Swap
 

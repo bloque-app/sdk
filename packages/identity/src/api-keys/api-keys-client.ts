@@ -81,6 +81,11 @@ export class ApiKeysClient extends BaseClient {
    *
    * The response includes the secret key, which is shown only once.
    * Store it securely -- it cannot be retrieved later.
+   *
+   * When the current session is `kind: origin-operator` (after
+   * `orgs.assumeOrigin()` or a bound-key discovery exchange), the minted
+   * key is origin-bound (`bound_origin` set, owner = controller org).
+   * User JWTs cannot mint bound keys.
    */
   async create(params: CreateApiKeyParams): Promise<CreateApiKeyResult> {
     const request: CreateApiKeyRequest = {
@@ -127,14 +132,41 @@ export class ApiKeysClient extends BaseClient {
   /**
    * Exchange an API secret key for a short-lived JWT.
    *
-   * This endpoint is unauthenticated and rate-limited.
+   * Unbound keys need no Authorization — this endpoint is public and
+   * rate-limited. Origin-bound keys:
+   * - `{ key }` → origin-operator JWT (discovery)
+   * - `{ key, asIdentity }` → owner-read impersonation JWT. Requires the
+   *   current session to already hold a `kind: origin-operator` token
+   *   (from `orgs.assumeOrigin()` or a previous bound-key discovery
+   *   exchange); that Bearer is forwarded. Cross-origin URNs are 404.
+   *
    * The returned JWT is valid for `expiresIn` seconds (default 900 = 15 min).
    */
   async exchange(params: ExchangeApiKeyParams): Promise<ExchangeApiKeyResult> {
+    const body: {
+      key: string;
+      scopes?: string[];
+      as_identity?: string;
+    } = { key: params.key };
+
+    if (params.scopes) {
+      body.scopes = params.scopes;
+    }
+    if (params.asIdentity) {
+      body.as_identity = params.asIdentity;
+    }
+
+    const operatorToken = params.asIdentity
+      ? this.resolveOperatorBearer()
+      : undefined;
+
     const response = await this.httpClient.request<ExchangeApiKeyResponse>({
       method: 'POST',
       path: '/api/api-keys/exchange',
-      body: { key: params.key, scopes: params.scopes },
+      body,
+      authorizationOverride: operatorToken
+        ? `Bearer ${operatorToken}`
+        : undefined,
     });
 
     return {
@@ -142,6 +174,21 @@ export class ApiKeysClient extends BaseClient {
       expiresIn: response.expires_in,
       tokenType: response.token_type,
     };
+  }
+
+  /**
+   * Bearer used for `as_identity` impersonation. `/api/api-keys/exchange`
+   * is a public route, so the HTTP client would otherwise strip auth —
+   * we forward the current origin-operator JWT explicitly.
+   */
+  private resolveOperatorBearer(): string | undefined {
+    if (this.httpClient.accessToken) {
+      return this.httpClient.accessToken;
+    }
+    if (this.httpClient.auth.type === 'jwt') {
+      return this.httpClient.getJwtToken() ?? undefined;
+    }
+    return undefined;
   }
 
   /** Revoke an API key. */

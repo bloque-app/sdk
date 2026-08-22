@@ -99,7 +99,7 @@ Upcoming / sales-gated account plugins:
 ## Compliance
 
 KYC (`compliance.kyc`):
-- `startVerification(params)`
+- `startVerification(params)` — KYC vs KYB is derived from the URN
 - `getVerification(params)`
 
 ## Identity
@@ -109,6 +109,14 @@ Top-level (`identity`):
 
 Aliases (`identity.aliases`):
 - `get(alias)`
+
+API Keys (`identity.apiKeys`):
+- `create(params)` — with `kind: origin-operator` mints origin-bound keys
+- `list()`
+- `get(id)`
+- `exchange({ key, scopes?, asIdentity })`
+- `revoke(id)`
+- `rotate(id)`
 
 Origins (`identity.origins`):
 - `list()`
@@ -121,6 +129,8 @@ Origins (`identity.origins`):
 
 Top-level (`orgs`):
 - `create(params)`
+- `createOrigin(orgUrn, { namespace })` — KYB-active org; returns `originApiKey` once
+- `assumeOrigin(namespace)` — 15-min `kind: origin-operator` JWT; session switches so `apiKeys.create` mints bound keys
 
 ## Swap
 

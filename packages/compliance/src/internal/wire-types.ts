@@ -17,8 +17,8 @@ export type AccompliceType = 'person' | 'company';
  */
 export interface StartKycVerificationRequest {
   urn: string;
-  type: 'kyc' | 'kyb';
-  accompliceType: AccompliceType;
+  type?: 'kyc' | 'kyb';
+  accompliceType?: AccompliceType;
 }
 
 /**

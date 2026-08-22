@@ -1,7 +1,10 @@
 export type {
+  AssumeOriginResult,
   CreateInviteParams,
   CreateOrgParams,
   CreateOrgResponse,
+  CreateOriginParams,
+  CreateOriginResult,
   Invite,
   InviteChannel,
   InviteStatus,

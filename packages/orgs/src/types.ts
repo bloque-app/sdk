@@ -92,3 +92,38 @@ export interface UpdateTeamMemberParams {
   teamRoles?: string[];
   metadata?: Record<string, string>;
 }
+
+/**
+ * Result of `orgs.assumeOrigin(namespace)`.
+ *
+ * 15-minute `kind: origin-operator` JWT. `sub` is the controller org URN;
+ * `origin` is the namespace; `act.sub` is the human who assumed. Org-admin
+ * scopes never enter this token.
+ */
+export interface AssumeOriginResult {
+  accessToken: string;
+  expiresIn: number;
+  tokenType: string;
+}
+
+/**
+ * Parameters for `orgs.createOrigin(orgUrn, params)`.
+ *
+ * Requires a KYB-verified (`active`) org and `orgs.write`. The origin is
+ * created as `provider: api-key`, bound to this org, and the origin API
+ * key is returned once.
+ */
+export interface CreateOriginParams {
+  namespace: string;
+  metadata?: Record<string, unknown>;
+}
+
+/**
+ * Result of `orgs.createOrigin`. `originApiKey` is shown only once.
+ */
+export interface CreateOriginResult {
+  origin: string;
+  orgUrn: string;
+  originApiKey: string;
+  roles: string[];
+}

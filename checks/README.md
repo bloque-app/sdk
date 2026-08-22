@@ -82,7 +82,13 @@ non-zero with a clear message on the first unmet assertion.
 ```bash
 bun run checks/compliance-tos-required.check.ts
 bun run checks/compliance-venezuela-earthquake.check.ts
+bun run checks/origin-operator-read-only.check.ts
 ```
+
+`origin-operator-read-only.check.ts` is a self-serve path: register →
+orgs.create (drive TOS/docs/KYC) → org KYB → `orgs.createOrigin` →
+`orgs.assumeOrigin` → bound `apiKeys.create` → discovery
+`apiKeys.exchange({ key })`. Requires sandbox `DEV_AUTO_APPROVE_KYC`.
 
 Each check registers its own brand-new identity (unique alias per run), so
 they're safe to re-run repeatedly without cleanup.

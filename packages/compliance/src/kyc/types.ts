@@ -6,25 +6,23 @@ export type KycAccompliceType = 'person' | 'company';
 
 export interface KycVerificationParams {
   /**
-   * URN (Uniform Resource Name) that uniquely identifies the user
-   * within the system.
+   * URN that uniquely identifies the subject.
    *
-   * This value is used to associate the KYC verification process
-   * with a specific user.
+   * Identity URNs start KYC. Organization URNs (`did:bloque:orgs:{id}`)
+   * start KYB. The backend derives this from the URN; do not pass a type.
    *
-   * @example "did:bloque:origin:..."
+   * @example "did:bloque:bloque-id:alice"
    */
   urn: string;
 
   /**
-   * Verification type to start.
-   * @default "kyc"
+   * @deprecated Ignored. KYC vs KYB is derived from the URN
+   * (`did:bloque:orgs:{id}` → KYB, everything else → KYC).
    */
   type?: KycComplianceType;
 
   /**
-   * Who is being verified.
-   * @default "person"
+   * @deprecated Ignored. Derived with `type` from the URN.
    */
   accompliceType?: KycAccompliceType;
 
