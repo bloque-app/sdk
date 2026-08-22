@@ -25,8 +25,6 @@ export class KycClient extends BaseClient {
       path: '/api/compliance',
       body: {
         urn: params.urn,
-        type: params.type ?? 'kyc',
-        accompliceType: params.type === 'kyb' ? 'company' : 'person',
       },
     });
     return {

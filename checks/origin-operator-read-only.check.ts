@@ -140,7 +140,6 @@ async function main() {
   step('Starting org KYB');
   const kyb = await clients.compliance.kyc.startVerification({
     urn: org.urn,
-    type: 'kyb',
   });
   ok(`org KYB start returned status=${kyb.status}`);
   await pollOrgActive(clients, org.urn);

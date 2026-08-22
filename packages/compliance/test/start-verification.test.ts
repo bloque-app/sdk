@@ -44,28 +44,13 @@ describe('KycClient.startVerification()', () => {
     return () => capturedBody;
   }
 
-  it('defaults to kyc / person', async () => {
-    const body = mockStart();
-    await new KycClient(createConnectedClient()).startVerification({
-      urn: 'did:bloque:bloque-id:alice',
-    });
-    expect(body()).toEqual({
-      urn: 'did:bloque:bloque-id:alice',
-      type: 'kyc',
-      accompliceType: 'person',
-    });
-  });
-
-  it('sends kyb / company for an org URN', async () => {
+  it('sends only the urn; KYC vs KYB is derived by the backend', async () => {
     const body = mockStart();
     await new KycClient(createConnectedClient()).startVerification({
       urn: 'did:bloque:orgs:acme',
-      type: 'kyb',
     });
     expect(body()).toEqual({
       urn: 'did:bloque:orgs:acme',
-      type: 'kyb',
-      accompliceType: 'company',
     });
   });
 });

@@ -20,5 +20,6 @@ Add origin-operator credentials for tenant customer-service:
   unauthenticated discovery; `{ key, asIdentity }` sends `as_identity` and
   forwards the current origin-operator Bearer. Cross-origin URNs are 404;
   unbound keys reject `asIdentity` with `400 E_AS_IDENTITY_NOT_ALLOWED`.
-- **`compliance.kyc.startVerification({ urn, type })`** — `type` defaults to
-  `'kyc'` / person. Pass `'kyb'` for an org URN (`accompliceType: company`).
+- **`compliance.kyc.startVerification({ urn })`** — KYC vs KYB is derived
+  by the backend from the URN (`did:bloque:orgs:{id}` → KYB). Do not pass
+  `type`.

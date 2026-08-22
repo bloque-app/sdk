@@ -312,8 +312,9 @@ read-only keys, and optionally impersonate a user of that origin.
 2. `orgs.create` — may throw `BloqueVerificationRequiredError` (`tos` /
    `documents` / `kyc`). Drive hosted gates; for `kyc` call
    `compliance.kyc.startVerification({ urn })`.
-3. `compliance.kyc.startVerification({ urn: orgUrn, type: 'kyb' })` — sandbox
-   with `DEV_AUTO_APPROVE_KYC` APPROVEs immediately and activates the org.
+3. `compliance.kyc.startVerification({ urn: orgUrn })` — backend derives
+   KYB from the org URN. Sandbox with `DEV_AUTO_APPROVE_KYC` APPROVEs
+   immediately and activates the org.
 4. `orgs.createOrigin(orgUrn, { namespace })` → origin + `originApiKey` once.
    Requires org `status === 'active'` and `orgs.write`.
 5. `orgs.assumeOrigin(namespace)` → 15-minute `kind: origin-operator` JWT.
@@ -340,7 +341,7 @@ mapping generic org `admin` to origin scopes.
 const user = await bloque.connect('@cs-alice');
 
 const org = await user.orgs.create({ /* business profile */ });
-await user.compliance.kyc.startVerification({ urn: org.urn, type: 'kyb' });
+await user.compliance.kyc.startVerification({ urn: org.urn });
 
 const created = await user.orgs.createOrigin(org.urn, { namespace: 'colocapay' });
 // created.originApiKey is shown only once
