@@ -11,6 +11,12 @@ export interface KycVerificationParams {
   urn: string;
 
   /**
+   * `kyc` (default) verifies a person. `kyb` verifies an organization URN
+   * (`did:bloque:orgs:{id}`). Org KYB sends `accompliceType: 'company'`.
+   */
+  type?: 'kyc' | 'kyb';
+
+  /**
    * URL where webhook notifications will be sent when the verification
    * status changes.
    *

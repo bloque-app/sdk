@@ -27,6 +27,8 @@ import type {
   AssumeOriginResult,
   CreateInviteParams,
   CreateOrgParams,
+  CreateOriginParams,
+  CreateOriginResult,
   ListInvitesParams,
   ListInvitesResult,
   Organization,
@@ -382,6 +384,43 @@ export class OrgsClient extends BaseClient {
       method: 'DELETE',
       path: `/api/orgs/${orgUrn}`,
     });
+  }
+
+  /**
+   * Create an origin controlled by this organization.
+   *
+   * Requires a user JWT and `orgs.write` on a KYB-verified (`active`) org.
+   * Creates an api-key origin, binds this org as controller, seeds
+   * origin-cs roles, and returns `originApiKey` once. Origin-operator and
+   * service JWTs are rejected (`403 E_USER_ONLY`).
+   *
+   * @param orgUrn - Organization URN (`did:bloque:orgs:…`)
+   * @param params - Origin namespace and optional metadata
+   */
+  async createOrigin(
+    orgUrn: string,
+    params: CreateOriginParams,
+  ): Promise<CreateOriginResult> {
+    const response = await this.httpClient.request<{
+      origin: string;
+      org_urn: string;
+      origin_api_key: string;
+      roles: string[];
+    }>({
+      method: 'POST',
+      path: `/api/orgs/${encodeURIComponent(orgUrn)}/origins`,
+      body: {
+        namespace: params.namespace,
+        metadata: params.metadata,
+      },
+    });
+
+    return {
+      origin: response.origin,
+      orgUrn: response.org_urn,
+      originApiKey: response.origin_api_key,
+      roles: response.roles,
+    };
   }
 
   /**

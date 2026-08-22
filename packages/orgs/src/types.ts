@@ -107,3 +107,25 @@ export interface AssumeOriginResult {
   expiresIn: number;
   tokenType: string;
 }
+
+/**
+ * Parameters for `orgs.createOrigin(orgUrn, params)`.
+ *
+ * Requires a KYB-verified (`active`) org and `orgs.write`. The origin is
+ * created as `provider: api-key`, bound to this org, and the origin API
+ * key is returned once.
+ */
+export interface CreateOriginParams {
+  namespace: string;
+  metadata?: Record<string, unknown>;
+}
+
+/**
+ * Result of `orgs.createOrigin`. `originApiKey` is shown only once.
+ */
+export interface CreateOriginResult {
+  origin: string;
+  orgUrn: string;
+  originApiKey: string;
+  roles: string[];
+}

@@ -3,6 +3,8 @@ export type {
   CreateInviteParams,
   CreateOrgParams,
   CreateOrgResponse,
+  CreateOriginParams,
+  CreateOriginResult,
   Invite,
   InviteChannel,
   InviteStatus,
