@@ -4,7 +4,9 @@ import type {
   TosAcceptanceRecordWire,
   TosGateAcceptRequest,
   TosGateAcceptResponse,
+  TosGateChallengeResponse,
   TosGateInitResponse,
+  TosGatePasskeyChallengeWire,
 } from '../internal/wire-types';
 import type {
   StartGateResult,
@@ -12,6 +14,8 @@ import type {
   TosAcceptanceRecord,
   TosGateAcceptParams,
   TosGateAcceptResult,
+  TosGateChallengeParams,
+  TosGateChallengeResult,
   TosGateInitParams,
   TosGateInitResult,
   TosGatePasskeyChallenge,
@@ -53,11 +57,13 @@ function mapAcceptance(record: TosAcceptanceRecordWire): TosAcceptanceRecord {
  *
  * Some TOS documents also require handing the identity's Kreivo PassAccount
  * to a passkey on the same request (account activation). When that applies,
- * `init()`'s `passkey` is non-null — the hosted page runs WebAuthn against it
- * automatically; driving `init()`/`accept()` yourself means doing that
- * yourself and passing the result as `accept()`'s `passkey` (or a finished
- * `deviceAttestation`). Declining is fine — `accept()` without either still
- * records the acceptance.
+ * `init()`'s `passkeyRequired` is `true` — the hosted page calls
+ * `challenge()` itself, right before the user commits, and runs WebAuthn
+ * against it automatically. Driving `init()`/`accept()` yourself means
+ * calling `challenge()` the same way (as late as possible — its challenge is
+ * bound to a short block-hash window) and passing the WebAuthn result as
+ * `accept()`'s `passkey` (or a finished `deviceAttestation`). Declining is
+ * fine — `accept()` without either still records the acceptance.
  */
 export class TosGateClient extends BaseClient {
   /**
@@ -90,13 +96,14 @@ export class TosGateClient extends BaseClient {
    *
    * @example
    * ```typescript
-   * const { document, csrfToken, passkey } = await bloque.compliance.tosGate.init({
+   * const { document, csrfToken, passkeyRequired } = await bloque.compliance.tosGate.init({
    *   token: gate.token,
    * });
    *
-   * if (passkey) {
-   *   // This document requires account activation — run WebAuthn against
-   *   // the challenge, then pass the result to accept() as `passkey`.
+   * if (passkeyRequired) {
+   *   // This document requires account activation. Call challenge() right
+   *   // before the user commits, run WebAuthn against it, then pass the
+   *   // result to accept() as `passkey`.
    * }
    * ```
    */
@@ -115,8 +122,40 @@ export class TosGateClient extends BaseClient {
       },
       csrfToken: response.csrf_token,
       returnUrl: response.return_url,
+      developerName: response.developer_name,
       showHome: response.show_home,
       accentColor: response.accent_color,
+      passkeyRequired: response.passkey_required,
+    };
+  }
+
+  /**
+   * Mint the WebAuthn registration challenge for the token's identity.
+   * Separate from `init()`, and call it right before the user commits
+   * rather than at page load — the challenge is bound to a short
+   * block-hash window, so minting it early spends that window on however
+   * long the user takes to read the document.
+   *
+   * Only call this when `init()`'s `passkeyRequired` was `true`.
+   *
+   * @example
+   * ```typescript
+   * const { passkey } = await bloque.compliance.tosGate.challenge({ token: gate.token });
+   * if (passkey) {
+   *   // Build a PublicKeyCredentialCreationOptions from `passkey` and call
+   *   // navigator.credentials.create(), then pass the result to accept().
+   * }
+   * ```
+   */
+  async challenge(
+    params: TosGateChallengeParams,
+  ): Promise<TosGateChallengeResult> {
+    const response = await this.httpClient.request<TosGateChallengeResponse>({
+      method: 'GET',
+      path: '/api/tos-gate/challenge',
+      authorizationOverride: `Bearer ${params.token}`,
+    });
+    return {
       passkey: response.passkey
         ? this._mapPasskeyChallenge(response.passkey)
         : null,
@@ -181,7 +220,7 @@ export class TosGateClient extends BaseClient {
 
   /** @internal */
   private _mapPasskeyChallenge(
-    challenge: NonNullable<TosGateInitResponse['passkey']>,
+    challenge: TosGatePasskeyChallengeWire,
   ): TosGatePasskeyChallenge {
     return {
       challenge: challenge.challenge,

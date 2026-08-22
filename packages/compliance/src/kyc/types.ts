@@ -1,3 +1,9 @@
+/** Compliance verification type — individual (KYC) or business (KYB). */
+export type KycComplianceType = 'kyc' | 'kyb';
+
+/** Who is being verified within the request. */
+export type KycAccompliceType = 'person' | 'company';
+
 export interface KycVerificationParams {
   /**
    * URN that uniquely identifies the subject.
@@ -8,19 +14,44 @@ export interface KycVerificationParams {
    * @example "did:bloque:bloque-id:alice"
    */
   urn: string;
+
+  /**
+   * @deprecated Ignored. KYC vs KYB is derived from the URN
+   * (`did:bloque:orgs:{id}` → KYB, everything else → KYC).
+   */
+  type?: KycComplianceType;
+
+  /**
+   * @deprecated Ignored. Derived with `type` from the URN.
+   */
+  accompliceType?: KycAccompliceType;
+
   /**
    * URL where webhook notifications will be sent when the verification
    * status changes.
    *
-   * This is optional. If provided, the platform will send POST requests
-   * to this URL with verification status updates.
-   *
-   * @example "https://api.example.com/webhooks/kyc"
+   * @deprecated Not sent to the API — verification status webhooks are
+   * configured provider-side, not per-request. This field has no effect.
    */
   webhookUrl?: string;
 }
 
 export interface KycVerificationResponse {
+  /**
+   * Verification type used.
+   */
+  type: KycComplianceType;
+
+  /**
+   * Compliance level used.
+   */
+  level: 'basic';
+
+  /**
+   * Compliance provider handling this verification.
+   */
+  provider: 'AMLBOT' | 'SUMSUB';
+
   /**
    * Current status of the verification
    */
@@ -71,8 +102,12 @@ export interface GetKycDocumentsParams {
 export interface KycDocumentImage {
   documentType: string;
   side: string;
-  imageBase64: string;
+  /** S3 key for the stored image, or `null` if storage failed. */
+  imageS3Key: string | null;
   imageSizeBytes: number;
+  /** Short-lived presigned download URL, or `null` if presigning failed
+   * (e.g. no storage client configured) — never a hard failure. */
+  downloadUrl: string | null;
 }
 
 export interface KycDocumentsResponse {

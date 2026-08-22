@@ -67,7 +67,13 @@ export function mapVerificationFlow(
     type: flow.type,
     method: flow.method,
     startEndpoint: flow.start_endpoint,
+    requestBody: {
+      required: flow.request_body.required,
+      optional: flow.request_body.optional,
+      returnUrlPolicy: flow.request_body.return_url_policy,
+    },
     responseUrlField: flow.response_url_field,
+    transactionalRedirect: flow.transactional_redirect,
   };
 }
 

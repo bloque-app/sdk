@@ -15,16 +15,6 @@ const sourceAccountUrn =
   process.env.SOURCE_ACCOUNT_URN ?? 'did:bloque:account:breb:demo-account-id';
 const amountSrc = process.env.AMOUNT_SRC ?? '10000000';
 
-const resolution = await user.accounts.breb.resolveKey({
-  keyType: 'PHONE',
-  key: '3015550127',
-});
-console.log('BREB resolve key response 3015550127:', resolution);
-
-if (resolution.error || !resolution.data) {
-  throw new Error(resolution.error?.message ?? 'Failed to resolve BRE-B key');
-}
-
 const rates = await user.swap.findRates({
   fromAsset: 'COPM/2',
   toAsset: 'COP/2',
@@ -45,9 +35,17 @@ const result = await user.swap.breb.create(
     rateSig: rates.rates[0].sig,
     amountSrc,
     depositInformation: {
-      resolutionId: resolution.data.resolutionId,
+      // Any unique string -- used only to derive an idempotency key, not a
+      // real key resolution.
+      resolutionId: `payout-${crypto.randomUUID()}`,
+      // ALPHA is the only key type currently supported for payouts.
+      destinationKey: {
+        keyValue: '@JAR1234',
+        keyType: 'ALPHA',
+      },
     },
     args: {
+      // Your own account -- funds the payout, not the recipient.
       sourceAccountUrn,
     },
   },

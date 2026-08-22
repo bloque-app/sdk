@@ -188,6 +188,19 @@ function mapDecodedQrFromWire(result: DecodeBrebQrWireResult): BrebDecodedQr {
         }
       : null,
     channel: result.channel,
+    vat: result.vat
+      ? {
+          vatValue: result.vat.vat_value,
+          vatBaseValue: result.vat.vat_base_value,
+          vatType: result.vat.vat_type,
+        }
+      : null,
+    inc: result.inc
+      ? {
+          incValue: result.inc.inc_value,
+          incType: result.inc.inc_type,
+        }
+      : null,
     qrCodeReference: result.qr_code_reference,
     type: result.type,
     resolutionId: result.resolution_id,

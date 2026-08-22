@@ -99,10 +99,10 @@ export function registerSwapTools(server: McpServer, clients: BloqueClients) {
         amountSrc: z.string().optional(),
         amountDst: z.string().optional(),
         sourceAccountUrn: z.string(),
-        bankAccountType: z.enum(['savings', 'checking']),
+        bankAccountType: z.enum(['savings', 'checkings']),
         bankAccountNumber: z.string(),
         bankAccountHolderName: z.string(),
-        bankAccountHolderIdentificationType: z.enum(['CC', 'CE', 'NIT', 'PP']),
+        bankAccountHolderIdentificationType: z.enum(['CC', 'CE', 'NIT', 'PASSPORT']),
         bankAccountHolderIdentificationValue: z.string(),
         webhookUrl: z.string().optional(),
       },
@@ -137,13 +137,16 @@ export function registerSwapTools(server: McpServer, clients: BloqueClients) {
   server.registerTool(
     'create_breb_order',
     {
-      description: "Low-level: create a BRE-B payout order using a previously resolved BRE-B key (resolutionId). Use 'send_to_breb_key' workflow for a simpler flow.",
+      description: "Low-level: create a BRE-B payout order to a recipient key (keyValue/keyType) with a unique resolutionId. Use 'send_to_breb_key' workflow for a simpler flow.",
       inputSchema: {
         rateSig: z.string(),
         amountSrc: z.string().optional(),
         amountDst: z.string().optional(),
         type: z.enum(['src', 'dst']).optional(),
         resolutionId: z.string(),
+        keyValue: z.string(),
+        // ALPHA is currently the only operationally supported BRE-B key type.
+        keyType: z.enum(['ALPHA']),
         sourceAccountUrn: z.string(),
         webhookUrl: z.string().optional(),
         nodeId: z.string().optional(),
@@ -156,6 +159,8 @@ export function registerSwapTools(server: McpServer, clients: BloqueClients) {
       amountDst,
       type,
       resolutionId,
+      keyValue,
+      keyType,
       sourceAccountUrn,
       webhookUrl,
       nodeId,
@@ -169,7 +174,7 @@ export function registerSwapTools(server: McpServer, clients: BloqueClients) {
         webhookUrl,
         nodeId,
         metadata,
-        depositInformation: { resolutionId },
+        depositInformation: { resolutionId, destinationKey: { keyValue, keyType } },
         args: { sourceAccountUrn },
       });
       return {

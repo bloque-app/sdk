@@ -35,7 +35,7 @@
  *     toMedium: 'banco_de_bogota',
  *     amountSrc: '2000000',
  *     depositInformation: {
- *       bankAccountType: 'checking',
+ *       bankAccountType: 'checkings',
  *       bankAccountNumber: '987654321',
  *       bankAccountHolderName: 'María López',
  *       bankAccountHolderIdentificationType: 'CE',
@@ -102,12 +102,12 @@ export type SupportedBank =
 /**
  * Bank account type
  */
-export type BankAccountType = 'savings' | 'checking';
+export type BankAccountType = 'savings' | 'checkings';
 
 /**
  * Identification type for account holder
  */
-export type IdentificationType = 'CC' | 'CE' | 'NIT' | 'PP';
+export type IdentificationType = 'CC' | 'CE' | 'NIT' | 'PASSPORT';
 
 /**
  * Bank deposit information for direct bank transfers
@@ -289,6 +289,41 @@ export interface ExecutionHowRedirect {
 }
 
 /**
+ * A single argument the caller must supply to resume this paused execution
+ * via a follow-up call using `callbackToken`.
+ */
+export interface ExecutionCallbackArg {
+  /** Argument name */
+  name: string;
+  /** Expected value type */
+  type: 'string' | 'number' | 'boolean' | 'object' | 'json';
+  /** Default value, if any */
+  default?: unknown;
+  /** Whether this argument is required to resume execution */
+  required: boolean;
+}
+
+/**
+ * Out-of-band completion: an async step (e.g. an eligibility check) is
+ * still running. Resume execution later by calling back with the listed
+ * `args` and the paused step's `callbackToken`.
+ */
+export interface ExecutionHowCallback {
+  type: 'CALLBACK';
+  /** Arguments required to resume execution */
+  args: ExecutionCallbackArg[];
+}
+
+/**
+ * The payment must be completed inside an embedded iframe.
+ */
+export interface ExecutionHowIframe {
+  type: 'IFRAME';
+  /** URL to load in an iframe to complete the payment */
+  iframe: string;
+}
+
+/**
  * BRE-B on-ramp deposit instructions returned when the graph pauses.
  * Show `keyType` / `keyValue` so the payer can send COP via their bank's BRE-B app.
  */
@@ -319,7 +354,11 @@ export interface ExecutionHowBrebDeposit {
 /**
  * Instructions for completing a paused execution step
  */
-export type ExecutionHow = ExecutionHowRedirect | ExecutionHowBrebDeposit;
+export type ExecutionHow =
+  | ExecutionHowRedirect
+  | ExecutionHowCallback
+  | ExecutionHowIframe
+  | ExecutionHowBrebDeposit;
 
 /**
  * Execution result from auto-execution

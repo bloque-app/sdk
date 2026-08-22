@@ -4,7 +4,7 @@ Learn how to create and manage organizations using the Bloque SDK.
 
 ## Overview
 
-Organizations are the foundation of the Bloque platform. They can be either businesses or individuals and contain all the necessary profile and compliance information.
+Organizations are the foundation of the Bloque platform. They can be either businesses or DAOs and contain all the necessary profile and compliance information.
 
 ## Creating an Organization
 
@@ -45,11 +45,11 @@ const params: CreateOrgParams = {
 const organization = await bloque.orgs.create(params);
 ```
 
-### Individual Organization
+### DAO Organization
 
 ```typescript
 const params: CreateOrgParams = {
-  org_type: 'individual',
+  org_type: 'dao',
   profile: {
     legal_name: 'John Doe',
     tax_id: '123-45-6789',
@@ -71,7 +71,7 @@ const organization = await bloque.orgs.create(params);
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `org_type` | `'business' \| 'individual'` | Yes | Type of organization |
+| `org_type` | `'business' \| 'dao'` | Yes | Type of organization |
 | `profile` | `OrgProfile` | Yes | Organization profile details |
 | `metadata` | `Record<string, unknown>` | No | Custom metadata |
 
@@ -99,7 +99,7 @@ const organization = await bloque.orgs.create(params);
 ```typescript
 interface Organization {
   urn: string;                           // Unique resource name
-  org_type: 'business' | 'individual';   // Organization type
+  org_type: 'business' | 'dao';          // Organization type
   profile: OrgProfile;                   // Organization profile
   metadata?: Record<string, unknown>;    // Custom metadata
   status: OrgStatus;                     // Organization status
@@ -110,22 +110,22 @@ interface Organization {
 
 | Status | Description | Can Transition To |
 |--------|-------------|-------------------|
-| `awaiting_compliance_verification` | Pending compliance verification | `active`, `suspended`, `closed` |
-| `active` | Organization is active and can operate | `suspended`, `closed` |
-| `suspended` | Organization is temporarily suspended for compliance violation | `active`, `closed` |
-| `closed` | Organization is permanently closed | - |
+| `awaiting_compliance_verification` | Pending compliance verification | `active`, `suspended`, `inactive` |
+| `active` | Organization is active and can operate | `suspended`, `inactive` |
+| `suspended` | Organization is temporarily suspended for compliance violation | `active`, `inactive` |
+| `inactive` | Organization is inactive | - |
 
 ```mermaid
 stateDiagram-v2
     [*] --> awaiting_compliance_verification
     awaiting_compliance_verification --> active
     awaiting_compliance_verification --> suspended
-    awaiting_compliance_verification --> closed
+    awaiting_compliance_verification --> inactive
     active --> suspended
-    active --> closed
+    active --> inactive
     suspended --> active
-    suspended --> closed
-    closed --> [*]
+    suspended --> inactive
+    inactive --> [*]
 ```
 
 ## Multi-location Organizations

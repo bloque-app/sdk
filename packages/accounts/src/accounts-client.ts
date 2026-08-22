@@ -50,6 +50,7 @@ import type {
   BatchTransferParams,
   BatchTransferResult,
   GeneralTokenBalance,
+  GetBalancesParams,
   ListAccountsParams,
   ListAccountsResult,
   ListMovementsResult,
@@ -163,10 +164,21 @@ export class AccountsClient extends BaseClient {
    * console.log(balances['DUSD/6']?.current);
    * ```
    */
-  async balances(): Promise<Record<string, GeneralTokenBalance>> {
+  async balances(
+    params?: GetBalancesParams,
+  ): Promise<Record<string, GeneralTokenBalance>> {
+    const queryParams = new URLSearchParams();
+    for (const urn of params?.accountUrns ?? []) {
+      queryParams.append('account_urns', urn);
+    }
+    const queryString = queryParams.toString();
+    const path = queryString
+      ? `/api/accounts/balances?${queryString}`
+      : '/api/accounts/balances';
+
     const response = await this.httpClient.request<GetBalancesResponse>({
       method: 'GET',
-      path: '/api/accounts/balances',
+      path,
     });
 
     return response.balance;
@@ -226,6 +238,66 @@ export class AccountsClient extends BaseClient {
     const queryParams = new URLSearchParams();
     if (holderUrn) {
       queryParams.append('holder_urn', holderUrn);
+    }
+
+    if (params?.urn) {
+      queryParams.append('urn', params.urn);
+    }
+
+    for (const urn of params?.urns ?? []) {
+      queryParams.append('urns', urn);
+    }
+
+    if (params?.medium) {
+      queryParams.append('medium', params.medium);
+    }
+
+    if (params?.q) {
+      queryParams.append('q', params.q);
+    }
+
+    if (params?.customId) {
+      queryParams.append('custom_id', params.customId);
+    }
+
+    for (const status of Array.isArray(params?.status)
+      ? (params?.status ?? [])
+      : params?.status
+        ? [params.status]
+        : []) {
+      queryParams.append('status', status);
+    }
+
+    if (params?.createdAfter) {
+      queryParams.append('created_after', params.createdAfter);
+    }
+
+    if (params?.createdBefore) {
+      queryParams.append('created_before', params.createdBefore);
+    }
+
+    if (params?.ledgerAccountId) {
+      queryParams.append('ledger_account_id', params.ledgerAccountId);
+    }
+
+    for (const id of params?.ledgerAccountIds ?? []) {
+      queryParams.append('ledger_account_ids', id);
+    }
+
+    if (params?.limit !== undefined) {
+      queryParams.append('limit', params.limit.toString());
+    }
+
+    if (params?.offset !== undefined) {
+      queryParams.append('offset', params.offset.toString());
+    }
+
+    if (params?.order) {
+      queryParams.append('order', params.order);
+    }
+
+    for (const [key, value] of Object.entries(params?.metadata ?? {})) {
+      queryParams.append(`metadata[${key}]`, value);
     }
 
     const queryString = queryParams.toString();
@@ -389,6 +461,7 @@ export class AccountsClient extends BaseClient {
     );
 
     return {
+      status: response.result.status,
       chunks,
       totalOperations: response.result.total_operations,
       totalChunks: response.result.total_chunks,
@@ -547,6 +620,10 @@ export class AccountsClient extends BaseClient {
 
     const queryParams = new URLSearchParams();
     queryParams.set('asset', asset);
+
+    for (const urn of params.accountUrns ?? []) {
+      queryParams.append('account_urns', urn);
+    }
 
     if (params.limit !== undefined) {
       queryParams.set('limit', params.limit.toString());

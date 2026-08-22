@@ -93,6 +93,12 @@ export interface DepositInformation {
   urn?: string;
   /** BRE-B payout resolution id */
   resolution_id?: string;
+  /** BRE-B payout recipient, identified by their key */
+  destination_key?: {
+    key_value: string;
+    key_type: string;
+    display_name?: string;
+  };
   /** External US bank on-ramp: destination Kusama ledger account id */
   ledger_account_id?: string;
   /** RTP payout: account holder name */
@@ -114,10 +120,10 @@ export interface DepositInformation {
  * Bancolombia deposit information for bank account details
  */
 export interface BancolombiaDepositInformation {
-  bank_account_type: 'savings' | 'checking';
+  bank_account_type: 'savings' | 'checkings';
   bank_account_number: string;
   bank_account_holder_name: string;
-  bank_account_holder_identification_type: 'CC' | 'CE' | 'NIT' | 'PP';
+  bank_account_holder_identification_type: 'CC' | 'CE' | 'NIT' | 'PASSPORT';
   bank_account_holder_identification_value: string;
 }
 
@@ -187,6 +193,37 @@ export interface ExecutionHowRedirect {
 
 /**
  * @internal
+ * A single argument the caller must supply to resume a paused execution
+ * via a follow-up call using `callback_token`.
+ */
+export interface ExecutionCallbackArg {
+  name: string;
+  type: 'string' | 'number' | 'boolean' | 'object' | 'json';
+  default?: unknown;
+  required: boolean;
+}
+
+/**
+ * @internal
+ * Out-of-band completion: the caller must resume execution later (e.g. once
+ * an async eligibility check completes) by supplying the listed args.
+ */
+export interface ExecutionHowCallback {
+  type: 'CALLBACK';
+  args: ExecutionCallbackArg[];
+}
+
+/**
+ * @internal
+ * The payment must be completed inside an embedded iframe.
+ */
+export interface ExecutionHowIframe {
+  type: 'IFRAME';
+  iframe: string;
+}
+
+/**
+ * @internal
  * BRE-B on-ramp deposit instructions returned when the graph pauses
  */
 export interface ExecutionHowBrebDeposit {
@@ -212,7 +249,11 @@ export interface ExecutionHowBrebDeposit {
  * @internal
  * Discriminated union of execution instructions
  */
-export type ExecutionHow = ExecutionHowRedirect | ExecutionHowBrebDeposit;
+export type ExecutionHow =
+  | ExecutionHowRedirect
+  | ExecutionHowCallback
+  | ExecutionHowIframe
+  | ExecutionHowBrebDeposit;
 
 /**
  * @internal

@@ -33,7 +33,7 @@ export interface VerifySlugResult {
  */
 export interface ListInvitesParams {
   type?: 'member' | 'team';
-  status?: 'pending' | 'accepted' | 'rejected' | 'expired' | 'cancelled';
+  status?: 'pending' | 'accepted' | 'rejected' | 'expired';
   channel?: 'email' | 'sms' | 'whatsapp' | 'identity';
   orgUrn?: string;
   teamUrn?: string;
@@ -49,8 +49,6 @@ export interface ListInvitesParams {
 export interface ListInvitesResult {
   data: import('./internal/wire-types').Invite[];
   total: number;
-  limit: number;
-  offset: number;
 }
 
 /**

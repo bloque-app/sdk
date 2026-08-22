@@ -178,6 +178,9 @@ export class UsClient extends BaseClient {
       first_name: params.firstName,
       middle_name: params.middleName,
       last_name: params.lastName,
+      transliterated_first_name: params.transliteratedFirstName,
+      transliterated_middle_name: params.transliteratedMiddleName,
+      transliterated_last_name: params.transliteratedLastName,
       email: params.email,
       phone: params.phone,
       address: wireAddress,
@@ -185,7 +188,23 @@ export class UsClient extends BaseClient {
       tax_identification_number: params.taxIdentificationNumber,
       gov_id_country: params.govIdCountry,
       gov_id_image_front: params.govIdImageFront,
+      gov_id_image_back: params.govIdImageBack,
+      proof_of_address_document: params.proofOfAddressDocument,
       signed_agreement_id: params.signedAgreementId,
+      ...(params.sofEuQuestionnaire && {
+        sof_eu_questionnaire: {
+          acting_as_intermediary:
+            params.sofEuQuestionnaire.actingAsIntermediary,
+          employment_status: params.sofEuQuestionnaire.employmentStatus,
+          expected_monthly_payments:
+            params.sofEuQuestionnaire.expectedMonthlyPayments,
+          most_recent_occupation:
+            params.sofEuQuestionnaire.mostRecentOccupation,
+          primary_purpose: params.sofEuQuestionnaire.primaryPurpose,
+          primary_purpose_other: params.sofEuQuestionnaire.primaryPurposeOther,
+          source_of_funds: params.sofEuQuestionnaire.sourceOfFunds,
+        },
+      }),
     };
 
     const request: CreateAccountRequest<CreateUsAccountInput> = {

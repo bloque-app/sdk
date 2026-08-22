@@ -16,23 +16,26 @@ export function registerIdentityWorkflows(server: McpServer, clients: BloqueClie
       } catch {
         kyc = { status: 'unknown' };
       }
+      // Fields below are only present on individual profiles — business/dao/
+      // proxy/other identities carry a differently shaped profile.
+      const meProfile = me.profile as Record<string, unknown>;
       const profile = {
         urn: me.urn,
-        firstName: me.profile.first_name,
-        lastName: me.profile.last_name,
-        email: me.profile.email,
-        phone: me.profile.phone,
-        legalIdType: me.profile.personal_id_type,
-        legalIdNumber: me.profile.personal_id_number,
+        firstName: meProfile.first_name,
+        lastName: meProfile.last_name,
+        email: meProfile.email,
+        phone: meProfile.phone,
+        legalIdType: meProfile.personal_id_type,
+        legalIdNumber: meProfile.personal_id_number,
         address: {
-          line1: me.profile.address_line1,
-          line2: me.profile.address_line2,
-          city: me.profile.city,
-          state: me.profile.state,
-          postalCode: me.profile.postal_code,
-          country: me.profile.country_of_residence_code,
+          line1: meProfile.address_line1,
+          line2: meProfile.address_line2,
+          city: meProfile.city,
+          state: meProfile.state,
+          postalCode: meProfile.postal_code,
+          country: meProfile.country_of_residence_code,
         },
-        birthdate: me.profile.birthdate,
+        birthdate: meProfile.birthdate,
         kycStatus: kyc.status ?? 'unknown',
         canCreateCards: kyc.status === 'approved',
       };

@@ -9,7 +9,7 @@
  * @internal
  * Organization type
  */
-export type OrgType = 'business' | 'individual';
+export type OrgType = 'business' | 'dao';
 
 /**
  * @internal
@@ -18,8 +18,8 @@ export type OrgType = 'business' | 'individual';
 export type OrgStatus =
   | 'awaiting_compliance_verification'
   | 'active'
-  | 'suspended'
-  | 'closed';
+  | 'inactive'
+  | 'suspended';
 
 /**
  * @internal
@@ -29,9 +29,11 @@ export interface Place {
   country_code: string;
   state: string;
   address_line1: string;
+  address_line2?: string;
   postal_code: string;
   city: string;
   is_primary: boolean;
+  metadata: Record<string, string>;
 }
 
 /**
@@ -44,7 +46,7 @@ export interface OrgProfile {
   incorporation_date: string;
   business_type: string;
   incorporation_country_code: string;
-  incorporation_state?: string;
+  incorporation_state: string;
   address_line1: string;
   address_line2?: string;
   postal_code: string;
@@ -238,12 +240,7 @@ export type InviteType = 'member' | 'team';
  * @internal
  * Invite status
  */
-export type InviteStatus =
-  | 'pending'
-  | 'accepted'
-  | 'rejected'
-  | 'expired'
-  | 'cancelled';
+export type InviteStatus = 'pending' | 'accepted' | 'rejected' | 'expired';
 
 /**
  * @internal
@@ -303,8 +300,6 @@ export interface CreateInviteResponse {
 export interface ListInvitesResponse {
   data: Invite[];
   total: number;
-  limit: number;
-  offset: number;
 }
 
 /**

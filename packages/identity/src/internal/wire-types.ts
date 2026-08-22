@@ -22,7 +22,12 @@ export type AliasResponse = {
     alias: string;
     [key: string]: unknown;
   };
-  status: 'active' | 'inactive' | 'revoked';
+  status:
+    | 'awaiting_verification'
+    | 'active'
+    | 'inactive'
+    | 'blocked'
+    | 'rejected';
   is_public: boolean;
   is_primary: boolean;
   created_at: string;
@@ -226,11 +231,24 @@ export type BusinessRegisterRequest = {
 
 /**
  * @internal
+ * Registration request for identity types with no dedicated profile shape
+ * (`dao`, `proxy`, `other`).
+ */
+export type OtherRegisterRequest = {
+  assertion_result: AssertionResult;
+  extra_context?: Record<string, unknown>;
+  type: 'dao' | 'proxy' | 'other';
+  profile: Record<string, unknown>;
+};
+
+/**
+ * @internal
  * Combined registration request type
  */
 export type RegisterRequest =
   | IndividualRegisterRequest
-  | BusinessRegisterRequest;
+  | BusinessRegisterRequest
+  | OtherRegisterRequest;
 
 /**
  * @internal

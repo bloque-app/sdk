@@ -40,7 +40,7 @@ export interface StartKycVerificationResponse {
 export interface GetKycVerificationResponse {
   type: 'kyc' | 'kyb';
   level: 'basic';
-  provider: 'AMLBOT';
+  provider: 'AMLBOT' | 'SUMSUB';
   status: 'awaiting_compliance_verification' | 'approved' | 'rejected';
   verification_url: string;
   completed_at: string | null;
@@ -55,8 +55,9 @@ export interface GetKycVerificationResponse {
 export interface ComplianceDocumentImage {
   document_type: string;
   side: string;
-  image_base64: string;
+  image_s3_key: string | null;
   image_size_bytes: number;
+  download_url: string | null;
 }
 
 /**
@@ -149,7 +150,13 @@ export interface TosHostedAcceptanceFlowHandoffWire {
   type: 'tos_hosted_acceptance';
   method: 'POST';
   start_endpoint: string;
+  request_body: {
+    required: string[];
+    optional?: string[];
+    return_url_policy: 'server_allowlisted';
+  };
   response_url_field: string;
+  transactional_redirect: boolean;
 }
 
 /**
@@ -160,7 +167,13 @@ export interface DocumentSubmissionFlowHandoffWire {
   type: 'document_submission';
   method: 'POST';
   start_endpoint: string;
+  request_body: {
+    required: string[];
+    optional?: string[];
+    return_url_policy: 'server_allowlisted';
+  };
   response_url_field: string;
+  transactional_redirect: boolean;
 }
 
 /**
@@ -244,12 +257,28 @@ export interface TosGateInitResponse {
   document: TosGateDocumentWire;
   csrf_token: string;
   return_url: string;
+  /** The calling origin's branding name, substituted into the rendered
+   * document and shown in the hosted page's wordmark. */
+  developer_name?: string;
   show_home: boolean;
   accent_color?: string;
   /**
-   * `null` when this document doesn't require account activation, or when
-   * minting the challenge failed server-side (fails open).
+   * Whether this document requires an account-activation passkey step —
+   * not the challenge itself. The challenge is bound to a block-hash
+   * window and must be minted separately, as late as possible, via
+   * `GET /api/tos-gate/challenge`.
    */
+  passkey_required: boolean;
+}
+
+/**
+ * @internal
+ * `GET /api/tos-gate/challenge` response. Minted separately from `/init`,
+ * at the moment the user commits, since the challenge is bound to a
+ * bounded block-hash window.
+ */
+export interface TosGateChallengeResponse {
+  /** `null` when the identity has no account ready for a device. */
   passkey: TosGatePasskeyChallengeWire | null;
 }
 
@@ -360,6 +389,8 @@ export interface VerificationGateInitResponse {
   pending_requirements?: PendingVerificationRequirementWire[];
   csrf_token: string;
   return_url: string;
+  /** The calling origin's branding name, shown in the hosted page's wordmark. */
+  developer_name?: string;
   accent_color?: string;
 }
 
