@@ -41,8 +41,23 @@ export interface Account<TDetails = unknown> {
   created_at: string;
   updated_at: string;
   webhook_url: string | null;
-  metadata?: Record<string, unknown>;
+  metadata?: AccountMetadata;
 }
+
+/**
+ * @internal
+ * Free-form account metadata, with the keys the platform sets itself called out.
+ */
+export type AccountMetadata = Record<string, unknown> & {
+  /**
+   * URN of the ledger account backing this account.
+   *
+   * Set on `virtual` accounts created without an explicit `ledger_account_id` —
+   * the ledger service mints the account and returns both its address
+   * (`ledger_account_id`) and its URN in the same response.
+   */
+  ledger_account_urn?: string;
+};
 
 /**
  * @internal

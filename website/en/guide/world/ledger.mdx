@@ -34,18 +34,43 @@ Think of a ledger like a bank account number that multiple cards and wallets can
 
 **How do I create a Ledger?**
 
-You don't create one directly. A ledger is created automatically when you create your first **virtual account** without specifying a `ledgerId`.
+You don't create one directly. A ledger is created for you when you create a **virtual account** without specifying a `ledgerId`.
 
 ```ts
 const virtualAccount = await client.accounts.virtual.create({
-  holderUrn: client.urn,
   name: 'Main',
 })
 
-console.log(virtualAccount.ledgerId) // "ldg_..."
+console.log(virtualAccount.ledgerId)        // "0xaedf3f2130328755760e37cf..."
+console.log(virtualAccount.ledgerAccountUrn) // "did:bloque:...:ledger:0"
+console.log(virtualAccount.status)           // "creation_in_progress"
 ```
 
-That `ledgerId` is now the ID of your ledger. Save it — you'll use it to attach other accounts.
+That `ledgerId` is the ID of your ledger. Save it — you'll use it to attach other accounts. It is
+final the moment `create` returns, so you can attach accounts to it in your very next call; there
+is nothing to wait for to learn it.
+
+`ledgerAccountUrn` is the same ledger under its other name: `ledgerId` is the address, the URN is
+the label. Either can be used to look the ledger account up.
+
+---
+
+**Why does a new virtual account say `creation_in_progress`?**
+
+Because a ledger is registered on-chain, and that happens just behind the response. While it is
+registering, the account **can receive funds but cannot send them**. Once registration lands, the
+account's `status` flips to `active` and it can spend.
+
+If the next thing you do is transfer *out* of the account, wait for it:
+
+```ts
+const virtualAccount = await client.accounts.virtual.create(
+  { name: 'Main' },
+  { waitLedger: true },   // polls until status is 'active'
+)
+```
+
+If you are only attaching other accounts or receiving funds, you don't need to wait.
 
 ---
 
@@ -66,20 +91,22 @@ Pass the `ledgerId` from your virtual account when creating any other account ty
 
 ```ts
 // Create the base account (creates the ledger)
-const base = await client.accounts.virtual.create({ holderUrn: client.urn })
+const base = await client.accounts.virtual.create({ name: 'Main' })
 
 // Attach a card to the same ledger
 const card = await client.accounts.card.create({
-  holderUrn: client.urn,
   ledgerId: base.ledgerId,
 })
 
 // Attach a Polygon wallet to the same ledger
 const wallet = await client.accounts.polygon.create({
-  holderUrn: client.urn,
   ledgerId: base.ledgerId,
 })
 ```
+
+Always create the virtual account first and pass its `ledgerId` to the others. Other account types
+will provision a ledger for themselves if you leave `ledgerId` out, but they don't hand you its id
+in the response the way `virtual.create()` does — so you'd have no way to share it.
 
 Now `base`, `card`, and `wallet` all share the same balance pool.
 
@@ -90,7 +117,7 @@ Now `base`, `card`, and `wallet` all share the same balance pool.
 All accounts on the same ledger draw from the same pool of funds. If you fund the virtual account with 100 DUSD, that 100 DUSD is accessible from the card and the wallet too — not copies of it, the same balance.
 
 ```
-Ledger ldg_abc
+Ledger 0xaedf3f21…
   ├─ balance: { DUSD/6: 100.00 }
   │
   ├─ Virtual account  → can check & transfer balance

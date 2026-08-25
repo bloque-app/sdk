@@ -40,8 +40,13 @@ export interface CreatePolygonAccountParams {
   name?: string;
 
   /**
-   * Ledger account ID to associate with the polygon account
-   * If not provided, a new ledger account will be created automatically
+   * Ledger account ID to associate with the polygon account.
+   *
+   * If not provided, a new ledger account is created automatically — but
+   * unlike `accounts.virtual.create()`, its id is not available in this
+   * response; it arrives once provisioning settles. Prefer creating a virtual
+   * account first and passing its `ledgerId` here when you need the two to
+   * share a balance.
    */
   ledgerId?: string;
 

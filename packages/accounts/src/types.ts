@@ -13,8 +13,16 @@ export type { SupportedAsset } from '@bloque/sdk-core';
  */
 export interface CreateAccountOptions {
   /**
-   * If true, wait for the account to become active before returning
-   * This will poll the account status every second until it's active
+   * If true, poll until the account reaches `active` before returning, instead
+   * of returning as soon as it is created.
+   *
+   * What this waits for is the account's ledger account finishing its
+   * registration on-chain — not its `ledgerId`, which is already present on the
+   * create response. Until then the account can receive funds but not send
+   * them, so this only matters when the next thing you do is spend from it.
+   *
+   * Polls every 2 seconds, and throws if the account ends up `creation_failed`.
+   *
    * @default false
    */
   waitLedger?: boolean;
