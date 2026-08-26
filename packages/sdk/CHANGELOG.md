@@ -1,5 +1,18 @@
 # @bloque/sdk
 
+## 0.11.0
+
+### Patch Changes
+
+- Updated dependencies [26ce11b]
+- Updated dependencies [cd490a2]
+  - @bloque/sdk-swap@0.11.0
+  - @bloque/sdk-accounts@0.11.0
+  - @bloque/sdk-core@0.11.0
+  - @bloque/sdk-compliance@0.11.0
+  - @bloque/sdk-identity@0.11.0
+  - @bloque/sdk-orgs@0.11.0
+
 ## 0.10.0
 
 ### Minor Changes
