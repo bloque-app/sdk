@@ -135,4 +135,27 @@ export interface TierStatus {
    * `null` / omitted when nothing time-driven is pending.
    */
   nextRecomputeAt?: string | null;
+  /**
+   * Effective-level money limits plus live usage for the current UTC
+   * windows. Always present. Empty `windows` below level 0, for ungated
+   * identities, or when the satisfied tier has no window rules. Amounts
+   * are USD decimal strings at scale 100 (`"6000.00"`). Debit-only /
+   * consume-on-authorize — refunds do not restore capacity.
+   */
+  limits: TierStatusLimits;
+}
+
+export interface TierWindowUsage {
+  windowType: 'day' | 'week' | 'month' | 'year';
+  windowKey: string;
+  limitUsdMinorUnits: string;
+  consumedUsdMinorUnits: string;
+  remainingUsdMinorUnits: string;
+  resetAt: string;
+}
+
+export interface TierStatusLimits {
+  /** Omitted when the effective tier has no per-transaction cap. */
+  maxPerTransactionUsdMinorUnits?: string;
+  windows: TierWindowUsage[];
 }

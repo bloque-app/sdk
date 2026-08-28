@@ -275,6 +275,8 @@ if (tos?.graceUntil) {
 |-------|------|-------------|
 | `effectiveLevel` | `number` | Highest contiguous satisfied level (`-1` if Level 0 is open). |
 | `nextRecomputeAt` | `string \| null \| undefined` | Earliest ISO-8601 instant this answer can change with no further input. |
+| `limits` | `TierStatusLimits` | Effective-tier per-transaction cap and live consumed/remaining/reset per UTC window. |
+| `limits` | `TierStatusLimits` | Effective-tier per-transaction cap and live consumed/remaining/reset per UTC window. |
 | `levels[].requirements[].graceUntil` | `string \| undefined` | On `tos` only, while a rollout `enforcement_starts_at` window is active. |
 
 ## Tier status
@@ -301,6 +303,8 @@ if (tos?.graceUntil) {
 |-------|------|-------------|
 | `effectiveLevel` | `number` | Highest contiguous satisfied level (`-1` if Level 0 is open). |
 | `nextRecomputeAt` | `string \| null \| undefined` | Earliest ISO-8601 instant this answer can change with no further input. |
+| `limits` | `TierStatusLimits` | Effective-tier per-transaction cap and live consumed/remaining/reset per UTC window. |
+| `limits` | `TierStatusLimits` | Effective-tier per-transaction cap and live consumed/remaining/reset per UTC window. |
 | `levels[].requirements[].graceUntil` | `string \| undefined` | On `tos` only, while a rollout `enforcement_starts_at` window is active. |
 
 ## Terms of Service (TOS) Gate

@@ -200,6 +200,29 @@ export interface GetTierStatusResponse {
   /** Earliest ISO-8601 instant this answer could change with no further
    * input (e.g. TOS rollout cutoff). `null` when nothing time-driven is pending. */
   next_recompute_at?: string | null;
+  limits?: TierStatusLimitsWire;
+}
+
+/**
+ * @internal
+ * Live usage for one configured window on the current effective tier.
+ */
+export interface TierWindowUsageWire {
+  window_type: 'day' | 'week' | 'month' | 'year';
+  window_key: string;
+  limit_usd_minor_units: string;
+  consumed_usd_minor_units: string;
+  remaining_usd_minor_units: string;
+  reset_at: string;
+}
+
+/**
+ * @internal
+ * Effective-level money limits plus live usage on GET /tier-status.
+ */
+export interface TierStatusLimitsWire {
+  max_per_transaction_usd_minor_units?: string;
+  windows: TierWindowUsageWire[];
 }
 
 /* ------------------------------------------------------------------
