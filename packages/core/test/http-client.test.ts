@@ -1,6 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, mock } from 'bun:test';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { BloqueAuthenticationError } from '../src/errors';
 import { HttpClient } from '../src/http-client';
+import { SDK_NAME, SDK_VERSION } from '../src/version';
 
 const SK_KEY = 'sk_test_abc123';
 
@@ -158,5 +161,119 @@ describe('HttpClient.ensureExchanged()', () => {
 
     expect(callCount).toBe(2);
     expect(client.accessToken).toBe('jwt_after_retry');
+  });
+});
+
+describe('HttpClient — X-Bloque-SDK header', () => {
+  const originalFetch = globalThis.fetch;
+
+  afterEach(() => {
+    globalThis.fetch = originalFetch;
+  });
+
+  it('sends the SDK name/version on every request', async () => {
+    let capturedHeaders: Record<string, string> | undefined;
+
+    globalThis.fetch = mock(
+      (_url: string | URL | Request, init?: RequestInit) => {
+        capturedHeaders = init?.headers as Record<string, string>;
+        return Promise.resolve(
+          new Response(JSON.stringify({ ok: true }), {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' },
+          }),
+        );
+      },
+    ) as typeof fetch;
+
+    const client = new HttpClient({
+      origin: 'test-origin',
+      auth: { type: 'originKey', originKey: 'sk_dev_origin' },
+      mode: 'sandbox',
+      retry: { enabled: false },
+    });
+
+    await client.request({ method: 'GET', path: '/api/aliases' });
+
+    expect(capturedHeaders?.['X-Bloque-SDK']).toBe(
+      `${SDK_NAME}@${SDK_VERSION}`,
+    );
+  });
+
+  it('coexists with an unrelated caller-supplied header', async () => {
+    let capturedHeaders: Record<string, string> | undefined;
+
+    globalThis.fetch = mock(
+      (_url: string | URL | Request, init?: RequestInit) => {
+        capturedHeaders = init?.headers as Record<string, string>;
+        return Promise.resolve(
+          new Response(JSON.stringify({ ok: true }), {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' },
+          }),
+        );
+      },
+    ) as typeof fetch;
+
+    const client = new HttpClient({
+      origin: 'test-origin',
+      auth: { type: 'originKey', originKey: 'sk_dev_origin' },
+      mode: 'sandbox',
+      retry: { enabled: false },
+    });
+
+    await client.request({
+      method: 'GET',
+      path: '/api/aliases',
+      headers: { 'X-Custom-Header': 'value' },
+    });
+
+    expect(capturedHeaders?.['X-Bloque-SDK']).toBe(
+      `${SDK_NAME}@${SDK_VERSION}`,
+    );
+    expect(capturedHeaders?.['X-Custom-Header']).toBe('value');
+  });
+
+  it('a same-named per-request header wins over the default (same precedence as every other DEFAULT_HEADERS entry, e.g. Content-Type)', async () => {
+    let capturedHeaders: Record<string, string> | undefined;
+
+    globalThis.fetch = mock(
+      (_url: string | URL | Request, init?: RequestInit) => {
+        capturedHeaders = init?.headers as Record<string, string>;
+        return Promise.resolve(
+          new Response(JSON.stringify({ ok: true }), {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' },
+          }),
+        );
+      },
+    ) as typeof fetch;
+
+    const client = new HttpClient({
+      origin: 'test-origin',
+      auth: { type: 'originKey', originKey: 'sk_dev_origin' },
+      mode: 'sandbox',
+      retry: { enabled: false },
+    });
+
+    await client.request({
+      method: 'GET',
+      path: '/api/aliases',
+      headers: { 'X-Bloque-SDK': 'spoofed@0.0.0' },
+    });
+
+    // Documents current, intentional behavior: no SDK client method exposes
+    // a `headers` passthrough for a caller to hit this in practice — only
+    // this low-level HttpClient.request() can. If that ever changes, this
+    // test is the tripwire.
+    expect(capturedHeaders?.['X-Bloque-SDK']).toBe('spoofed@0.0.0');
+  });
+
+  it('SDK_VERSION matches packages/sdk/package.json (nothing bumps version.ts automatically on release)', async () => {
+    const sdkPackageJson = JSON.parse(
+      readFileSync(join(import.meta.dir, '../../sdk/package.json'), 'utf-8'),
+    ) as { version: string };
+
+    expect(SDK_VERSION).toBe(sdkPackageJson.version);
   });
 });

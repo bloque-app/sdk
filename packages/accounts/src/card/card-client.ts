@@ -673,6 +673,9 @@ export class CardClient extends BaseClient {
    * (e.g. `'LOST'`, `'STOLEN'`, `'BROKEN'`). Use this instead of
    * `freeze()`/`disable()`/`activate()` when you want the reason recorded.
    *
+   * Does not accept `'deleted'` — the backend rejects that transition here
+   * with `E_INVALID_STATUS_TRANSITION`. Use `delete()` instead.
+   *
    * @example
    * ```typescript
    * const card = await bloque.accounts.card.updateStatus(
@@ -684,7 +687,7 @@ export class CardClient extends BaseClient {
    */
   async updateStatus(
     urn: string,
-    status: AccountStatus,
+    status: Exclude<AccountStatus, 'deleted'>,
     statusReason?: CardStatusReason,
   ): Promise<CardAccount> {
     return this._updateStatus(urn, status, statusReason);
@@ -722,6 +725,37 @@ export class CardClient extends BaseClient {
    */
   async disable(urn: string): Promise<CardAccount> {
     return this._updateStatus(urn, 'disabled');
+  }
+
+  /**
+   * Delete a card account.
+   *
+   * If the owner has another non-deleted account (e.g. a virtual pocket or
+   * bancolombia account) sharing this card's `ledgerId`, the balance stays
+   * reachable through that sibling and the delete succeeds immediately.
+   * Otherwise this is the owner's only account on that balance, and the
+   * delete is rejected with `E_ACCOUNT_HAS_BALANCE` if it still holds any
+   * funds — withdraw them first, then retry.
+   *
+   * @param urn - Card account URN
+   * @returns Promise resolving to the deleted card account (`status: 'deleted'`)
+   *
+   * @example
+   * ```typescript
+   * const card = await bloque.accounts.card.delete(
+   *   'did:bloque:mediums:card:account:123'
+   * );
+   * ```
+   */
+  async delete(urn: string): Promise<CardAccount> {
+    const response = await this.httpClient.request<
+      UpdateAccountResponse<CardDetails>
+    >({
+      method: 'DELETE',
+      path: `/api/accounts/${urn}`,
+    });
+
+    return this._mapAccountResponse(response.result.account);
   }
 
   /**

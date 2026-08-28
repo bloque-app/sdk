@@ -307,6 +307,37 @@ export class VirtualClient extends BaseClient {
   }
 
   /**
+   * Delete a virtual account.
+   *
+   * If the owner has another non-deleted account (e.g. a card or
+   * bancolombia account) sharing this pocket's `ledgerId`, the balance stays
+   * reachable through that sibling and the delete succeeds immediately.
+   * Otherwise this is the owner's only account on that balance, and the
+   * delete is rejected with `E_ACCOUNT_HAS_BALANCE` if it still holds any
+   * funds — withdraw them first, then retry.
+   *
+   * @param urn - Virtual account URN
+   * @returns Promise resolving to the deleted virtual account (`status: 'deleted'`)
+   *
+   * @example
+   * ```typescript
+   * const account = await bloque.accounts.virtual.delete(
+   *   'did:bloque:mediums:virtual:account:123'
+   * );
+   * ```
+   */
+  async delete(urn: string): Promise<VirtualAccount> {
+    const response = await this.httpClient.request<
+      UpdateAccountResponse<VirtualDetails>
+    >({
+      method: 'DELETE',
+      path: `/api/accounts/${urn}`,
+    });
+
+    return this._mapAccountResponse(response.result.account);
+  }
+
+  /**
    * Private method to update virtual account status
    */
   private async _updateStatus(

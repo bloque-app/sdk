@@ -1,4 +1,5 @@
 import type { Mode } from './types';
+import { SDK_NAME, SDK_VERSION } from './version';
 
 export const API_BASE_URLS: Record<Mode, string> = {
   sandbox: 'https://api.dev-bloque.app',
@@ -7,6 +8,7 @@ export const API_BASE_URLS: Record<Mode, string> = {
 
 export const DEFAULT_HEADERS = {
   'Content-Type': 'application/json',
+  'X-Bloque-SDK': `${SDK_NAME}@${SDK_VERSION}`,
 };
 
 /**
