@@ -4,6 +4,7 @@ import type {
   RequirementFieldOptionWire,
   RequirementFieldWire,
   TierRequirementStatusWire,
+  TierStatusLimitsWire,
   VerificationFlowHandoffWire,
 } from '../internal/wire-types';
 import type {
@@ -12,6 +13,7 @@ import type {
   RequirementFieldOption,
   TierRequirementStatus,
   TierStatus,
+  TierStatusLimits,
   VerificationFlowHandoff,
 } from './types';
 
@@ -58,6 +60,21 @@ function mapRequirementStatus(
   };
 }
 
+function mapLimits(limits: TierStatusLimitsWire | undefined): TierStatusLimits {
+  if (!limits) return { windows: [] };
+  return {
+    maxPerTransactionUsdMinorUnits: limits.max_per_transaction_usd_minor_units,
+    windows: limits.windows.map((w) => ({
+      windowType: w.window_type,
+      windowKey: w.window_key,
+      limitUsdMinorUnits: w.limit_usd_minor_units,
+      consumedUsdMinorUnits: w.consumed_usd_minor_units,
+      remainingUsdMinorUnits: w.remaining_usd_minor_units,
+      resetAt: w.reset_at,
+    })),
+  };
+}
+
 /** @internal Shared by verification-gate-client.ts's start()/init() responses. */
 export function mapVerificationFlow(
   flow: VerificationFlowHandoffWire | undefined,
@@ -84,8 +101,8 @@ export function mapVerificationFlow(
 export class TiersClient extends BaseClient {
   /**
    * Get an identity's effective compliance tier, per-level requirement
-   * status, and (if not fully verified) which requirements are missing and
-   * which hosted gate resolves them.
+   * status, live money-limit usage, and (if not fully verified) which
+   * requirements are missing and which hosted gate resolves them.
    *
    * @example
    * ```typescript
@@ -116,6 +133,7 @@ export class TiersClient extends BaseClient {
       pendingRequirements: response.pending_requirements ?? [],
       verificationFlow: mapVerificationFlow(response.verification_flow),
       nextRecomputeAt: response.next_recompute_at,
+      limits: mapLimits(response.limits),
     };
   }
 }
