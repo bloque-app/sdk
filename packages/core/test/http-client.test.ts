@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, mock } from 'bun:test';
 import { BloqueAuthenticationError } from '../src/errors';
 import { HttpClient } from '../src/http-client';
+import { SDK_NAME, SDK_VERSION } from '../src/version';
 
 const SK_KEY = 'sk_test_abc123';
 
@@ -158,5 +159,76 @@ describe('HttpClient.ensureExchanged()', () => {
 
     expect(callCount).toBe(2);
     expect(client.accessToken).toBe('jwt_after_retry');
+  });
+});
+
+describe('HttpClient — X-Bloque-SDK header', () => {
+  const originalFetch = globalThis.fetch;
+
+  afterEach(() => {
+    globalThis.fetch = originalFetch;
+  });
+
+  it('sends the SDK name/version on every request', async () => {
+    let capturedHeaders: Record<string, string> | undefined;
+
+    globalThis.fetch = mock(
+      (_url: string | URL | Request, init?: RequestInit) => {
+        capturedHeaders = init?.headers as Record<string, string>;
+        return Promise.resolve(
+          new Response(JSON.stringify({ ok: true }), {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' },
+          }),
+        );
+      },
+    ) as typeof fetch;
+
+    const client = new HttpClient({
+      origin: 'test-origin',
+      auth: { type: 'originKey', originKey: 'sk_dev_origin' },
+      mode: 'sandbox',
+      retry: { enabled: false },
+    });
+
+    await client.request({ method: 'GET', path: '/api/aliases' });
+
+    expect(capturedHeaders?.['X-Bloque-SDK']).toBe(
+      `${SDK_NAME}@${SDK_VERSION}`,
+    );
+  });
+
+  it('is not overridden by a caller-supplied headers object', async () => {
+    let capturedHeaders: Record<string, string> | undefined;
+
+    globalThis.fetch = mock(
+      (_url: string | URL | Request, init?: RequestInit) => {
+        capturedHeaders = init?.headers as Record<string, string>;
+        return Promise.resolve(
+          new Response(JSON.stringify({ ok: true }), {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' },
+          }),
+        );
+      },
+    ) as typeof fetch;
+
+    const client = new HttpClient({
+      origin: 'test-origin',
+      auth: { type: 'originKey', originKey: 'sk_dev_origin' },
+      mode: 'sandbox',
+      retry: { enabled: false },
+    });
+
+    await client.request({
+      method: 'GET',
+      path: '/api/aliases',
+      headers: { 'X-Custom-Header': 'value' },
+    });
+
+    expect(capturedHeaders?.['X-Bloque-SDK']).toBe(
+      `${SDK_NAME}@${SDK_VERSION}`,
+    );
+    expect(capturedHeaders?.['X-Custom-Header']).toBe('value');
   });
 });

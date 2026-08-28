@@ -305,6 +305,38 @@ export class PolygonClient extends BaseClient {
   }
 
   /**
+   * Delete a polygon account.
+   *
+   * If the owner has another non-deleted account (e.g. a card or virtual
+   * pocket) sharing this address's `ledgerId`, the balance stays reachable
+   * through that sibling and the delete succeeds immediately. Otherwise
+   * this is the owner's only account on that balance, and the delete is
+   * rejected with `E_ACCOUNT_HAS_BALANCE` if it still holds any funds —
+   * withdraw them first, then retry. The on-chain wallet itself cannot be
+   * removed and stays disassociated; this deletes Bloque's internal record.
+   *
+   * @param urn - Polygon account URN
+   * @returns Promise resolving to the deleted polygon account (`status: 'deleted'`)
+   *
+   * @example
+   * ```typescript
+   * const account = await bloque.accounts.polygon.delete(
+   *   'did:bloque:account:polygon:0x05B10c9B6241b73fc8c906fB7979eFc7764AB731'
+   * );
+   * ```
+   */
+  async delete(urn: string): Promise<PolygonAccount> {
+    const response = await this.httpClient.request<
+      UpdateAccountResponse<PolygonDetails>
+    >({
+      method: 'DELETE',
+      path: `/api/accounts/${urn}`,
+    });
+
+    return this._mapAccountResponse(response.result.account);
+  }
+
+  /**
    * Private method to update polygon account status
    */
   private async _updateStatus(
