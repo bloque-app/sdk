@@ -77,9 +77,11 @@ describe('CardClient.delete / VirtualClient.delete / PolygonClient.delete', () =
     globalThis.fetch = originalFetch;
   });
 
-  it('CardClient.delete sends DELETE to /api/accounts/:urn and maps the deleted account', async () => {
+  it('CardClient.delete sends DELETE to /api/accounts/:urn and maps the deleted account, medium-specific fields included', async () => {
     const urn = 'did:bloque:account:card:abc123';
-    const calls = mockDeleteSuccess(fakeAccount('card', urn));
+    const account = fakeAccount('card', urn);
+    account.details = { card_last_four: '4242', card_type: 'VIRTUAL' };
+    const calls = mockDeleteSuccess(account);
 
     const result = await new CardClient(authedClient()).delete(urn);
 
@@ -90,6 +92,7 @@ describe('CardClient.delete / VirtualClient.delete / PolygonClient.delete', () =
     expect(calls[0]?.init?.method).toBe('DELETE');
     expect(result.status).toBe('deleted');
     expect(result.urn).toBe(urn);
+    expect(result.lastFour).toBe('4242');
   });
 
   it('VirtualClient.delete sends DELETE to /api/accounts/:urn and maps the deleted account', async () => {
