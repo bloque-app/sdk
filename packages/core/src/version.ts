@@ -2,7 +2,7 @@
  * Identifies this SDK on every outgoing request (see `DEFAULT_HEADERS` in
  * `constants.ts`) so the backend can tell an official-SDK caller apart from
  * a direct API call, and which SDK/version made it — used for the account
- * deletion audit trail (BQE-1916), and available for any future use.
+ * deletion audit trail, and available for any future use.
  *
  * `@bloque/sdk-core`, `@bloque/sdk-accounts`, `@bloque/sdk`, and every other
  * package in this monorepo are version-locked together (see the `fixed`
