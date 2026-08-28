@@ -1,5 +1,12 @@
 # @bloque/sdk-identity
 
+## 0.12.0
+
+### Patch Changes
+
+- Updated dependencies [aec7365]
+  - @bloque/sdk-core@0.12.0
+
 ## 0.11.1
 
 ### Patch Changes

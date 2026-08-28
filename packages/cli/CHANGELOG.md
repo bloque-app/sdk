@@ -1,5 +1,12 @@
 # @bloque/cli
 
+## 0.12.0
+
+### Patch Changes
+
+- Updated dependencies [aec7365]
+  - @bloque/sdk@0.12.0
+
 ## 0.11.1
 
 ### Patch Changes
