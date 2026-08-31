@@ -72,10 +72,7 @@ async function pollUntilSettled(graphId: string, timeoutMs = 60_000) {
   while (Date.now() - start < timeoutMs) {
     const { orders } = await user.swap.listOrders({ graphId });
     const current = orders[0];
-    if (
-      current &&
-      ['completed', 'failed', 'cancelled'].includes(current.status)
-    ) {
+    if (current && ['completed', 'failed'].includes(current.status)) {
       return current;
     }
     await new Promise((resolve) => setTimeout(resolve, 3000));
