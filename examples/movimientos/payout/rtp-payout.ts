@@ -1,16 +1,13 @@
 import { SDK } from '../../../packages/sdk/src/index';
 
 /**
- * Step 2 of the Polygon → RTP guide.
- *
- * Connects as the identity registered in step 1 and cashes out via RTP:
- * DUSD on Kusama → USD to a US bank account.
+ * RTP cash-out: DUSD on Kusama → USD to a US bank account via RTP.
  *
  * Edge: kusama:rtp[dusd:usd]
+ * Template: KusamaRtp
  *
- * Prerequisites:
- * - ORIGIN, ORIGIN_KEY, USER_HANDLE env vars (see examples/.env.example)
- * - SOURCE_ACCOUNT_URN: Kusama account URN to debit DUSD from
+ * depositInformation carries the destination US bank details (owner, account,
+ * routing, account type). args.sourceAccountUrn is the Kusama account debited.
  */
 
 const bloque = new SDK({
@@ -19,18 +16,13 @@ const bloque = new SDK({
     type: 'originKey',
     originKey: process.env.ORIGIN_KEY!,
   },
-  mode: (process.env.MODE as 'production' | 'sandbox') ?? 'sandbox',
+  mode: 'sandbox',
   platform: 'node',
 });
 
-const handle = process.env.USER_HANDLE ?? 'nestor';
+const user = await bloque.connect(process.env.USER_HANDLE ?? 'nestor');
 
-const user = await bloque.connect(handle);
-
-console.log('Connected as:', user.urn);
-
-// RTP cash-out: DUSD on Kusama → USD to a US bank account.
-const amountSrc = process.env.AMOUNT_SRC ?? '20000000';
+const amountSrc = process.env.AMOUNT_SRC ?? '100000000';
 
 const rates = await user.swap.findRates({
   fromAsset: 'DUSD/6',
@@ -63,7 +55,7 @@ const result = await user.swap.rtp.create(
     },
     args: { sourceAccountUrn },
   },
-  { idempotencyKey: `rtp-payout-${handle}-${amountSrc}` },
+  { idempotencyKey: `rtp-payout-${amountSrc}` },
 );
 
 console.log('RTP payout order:', {

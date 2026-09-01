@@ -72,7 +72,7 @@ non-zero with a clear message on the first unmet assertion.
    ```
 
    (The checks themselves import `packages/sdk/src/index.ts` directly by
-   relative path — mirroring `examples/swap/rtp-payout.ts` — so the *SDK*
+   relative path — mirroring `examples/movimientos/payout/rtp-payout.ts` — so the *SDK*
    package doesn't need rebuilding for changes to itself, but its
    dependencies `@bloque/sdk-core`/`@bloque/sdk-compliance` are resolved
    through their built `dist/`, so those two do.)
