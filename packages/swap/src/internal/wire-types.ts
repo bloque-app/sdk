@@ -101,6 +101,10 @@ export interface DepositInformation {
   };
   /** External US bank on-ramp: destination Kusama ledger account id */
   ledger_account_id?: string;
+  /** External US bank on-ramp to Base: destination 0x */
+  wallet_address?: string;
+  /** External US bank on-ramp to Base: optional destination wallet label */
+  wallet_name?: string;
   /** RTP payout: account holder name */
   owner?: string;
   /** RTP payout: bank account number */

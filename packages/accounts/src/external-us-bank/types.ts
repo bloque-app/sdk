@@ -159,12 +159,16 @@ export interface ExchangeExternalUsBankPublicTokenParams {
   publicToken: string;
 }
 
+/** Destination chain for {@link ExternalUsBankClient.pull}. */
+export type PullExternalUsBankChain = 'kusama' | 'base';
+
 /**
  * Parameters for {@link ExternalUsBankClient.pull}.
  *
- * Initiates a Brale ACH debit from the user's linked bank and swaps the
- * proceeds to DUSD on Kusama, teleporting them to the caller's Kreivo ledger
- * account associated with the linked-bank account URN.
+ * Initiates a Brale ACH debit from the user's linked bank. By default the
+ * proceeds land as DUSD on Kusama and teleport to the Kreivo ledger account
+ * associated with the linked-bank URN. Pass `chain: 'base'` with
+ * `walletAddress` to receive USDC on Base at that 0x instead.
  */
 export interface PullExternalUsBankParams {
   /**
@@ -187,6 +191,20 @@ export interface PullExternalUsBankParams {
    * @example "100.00"
    */
   amount: string;
+
+  /**
+   * Destination chain. Omit or `'kusama'` to land DUSD on Kusama (default).
+   * Pass `'base'` together with `walletAddress` to receive USDC on Base.
+   */
+  chain?: PullExternalUsBankChain;
+
+  /**
+   * Destination 0x on Base. Required when `chain` is `'base'`.
+   * The server rejects this field unless `chain` is `'base'`.
+   *
+   * @example "0x1234567890abcdef1234567890abcdef12345678"
+   */
+  walletAddress?: string;
 
   /**
    * Optional caller-supplied idempotency hint. Currently informational

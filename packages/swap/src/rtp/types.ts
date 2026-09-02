@@ -7,8 +7,11 @@ import type {
 
 export type { ExecutionHow, ExecutionResult, OrderType, SwapOrder };
 
+/** Source medium for an RTP payout. */
+export type RtpSourceMedium = 'kusama' | 'base';
+
 /**
- * US bank details for RTP payout (Kusama → US bank via RTP).
+ * US bank details for RTP payout (Kusama or Base → US bank via RTP).
  */
 export interface RtpDepositInformation {
   /** Account holder name */
@@ -25,15 +28,20 @@ export interface RtpDepositInformation {
 
 export interface RtpSwapArgs {
   /**
-   * Kusama account URN where DUSD will be debited.
+   * Source account URN to debit.
+   *
+   * Kusama: the Kusama account holding DUSD.
+   * Base: the EVM/Polygon account that received USDC on Base.
    */
   sourceAccountUrn: string;
+  /**
+   * Transaction hash of the incoming USDC transfer on Base.
+   * Required when {@link CreateRtpOrderParams.fromMedium} is `'base'`.
+   */
+  txHash?: string;
 }
 
-/**
- * Parameters for creating an RTP payout swap order.
- */
-export interface CreateRtpOrderParams {
+interface CreateRtpOrderParamsBase {
   /**
    * Rate signature from findRates.
    */
@@ -65,11 +73,6 @@ export interface CreateRtpOrderParams {
   depositInformation: RtpDepositInformation;
 
   /**
-   * Source Kusama account for the debit leg.
-   */
-  args: RtpSwapArgs;
-
-  /**
    * Specific node ID to execute (defaults to first node).
    */
   nodeId?: string;
@@ -79,6 +82,32 @@ export interface CreateRtpOrderParams {
    */
   metadata?: Record<string, unknown>;
 }
+
+/**
+ * RTP payout from DUSD on Kusama. `fromMedium` may be omitted — Kusama is the default.
+ */
+export interface CreateRtpKusamaOrderParams extends CreateRtpOrderParamsBase {
+  fromMedium?: 'kusama';
+  args: RtpSwapArgs;
+}
+
+/**
+ * RTP payout from USDC on Base. Requires `args.txHash` of the USDC transfer.
+ */
+export interface CreateRtpBaseOrderParams extends CreateRtpOrderParamsBase {
+  fromMedium: 'base';
+  args: RtpSwapArgs & { txHash: string };
+}
+
+/**
+ * Parameters for creating an RTP payout swap order.
+ *
+ * Defaults to Kusama (`fromMedium` omitted). Pass `fromMedium: 'base'` with
+ * `args.txHash` to cash out USDC already sent to the source EVM account on Base.
+ */
+export type CreateRtpOrderParams =
+  | CreateRtpKusamaOrderParams
+  | CreateRtpBaseOrderParams;
 
 export interface CreateRtpOrderOptions {
   /**

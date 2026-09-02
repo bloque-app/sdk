@@ -16,13 +16,19 @@ import type {
 } from './types';
 
 /**
- * External US bank client for ACH on-ramp (US bank → Kusama DUSD).
+ * External US bank client for ACH on-ramp (US bank → Kusama DUSD or Base USDC).
  */
 export class ExternalUsBankSwapClient extends BaseClient {
   /**
-   * Create an external US bank on-ramp order (ACH pull → DUSD on Kusama).
+   * Create an external US bank on-ramp order (ACH pull → DUSD on Kusama, or
+   * USDC on Base).
    *
-   * @param params - Order parameters including ledger account and linked bank
+   * Omit `toMedium` (or pass `'kusama'`) and supply
+   * `depositInformation.ledgerAccountId` for the Kusama path. Pass
+   * `toMedium: 'base'` with `depositInformation.walletAddress` to land USDC
+   * on Base at that 0x.
+   *
+   * @param params - Order parameters including destination and linked bank
    * @returns Promise resolving to the created order
    *
    * @example
@@ -46,6 +52,29 @@ export class ExternalUsBankSwapClient extends BaseClient {
    *   },
    * });
    * ```
+   *
+   * @example
+   * ```typescript
+   * const rates = await bloque.swap.findRates({
+   *   fromAsset: 'USD/2',
+   *   toAsset: 'USDC/6',
+   *   fromMediums: ['external-us-bank'],
+   *   toMediums: ['base'],
+   *   amountSrc: '10000',
+   * });
+   *
+   * const result = await bloque.swap.externalUsBank.create({
+   *   rateSig: rates.rates[0].sig,
+   *   amountSrc: '10000',
+   *   toMedium: 'base',
+   *   depositInformation: {
+   *     walletAddress: '0x1234567890abcdef1234567890abcdef12345678',
+   *   },
+   *   args: {
+   *     sourceAccountUrn: 'did:bloque:account:external-us-bank:abc123',
+   *   },
+   * });
+   * ```
    */
   async create(
     params: CreateExternalUsBankOrderParams,
@@ -59,17 +88,20 @@ export class ExternalUsBankSwapClient extends BaseClient {
     }
 
     const orderType = params.type ?? 'src';
+    const toMedium = params.toMedium ?? 'kusama';
+    const deposit_information = this._mapDepositInformation(
+      toMedium,
+      params.depositInformation,
+    );
 
     const input: CreateOrderInput = {
       taker_urn: takerUrn,
       type: orderType,
       rate_sig: params.rateSig,
       from_medium: 'external-us-bank',
-      to_medium: 'kusama',
+      to_medium: toMedium,
       webhook_url: params.webhookUrl,
-      deposit_information: {
-        ledger_account_id: params.depositInformation.ledgerAccountId,
-      },
+      deposit_information,
       args: {
         account_urn: params.args.sourceAccountUrn,
       },
@@ -104,6 +136,40 @@ export class ExternalUsBankSwapClient extends BaseClient {
         ? this._mapExecutionResult(response.result.execution)
         : undefined,
       requestId: response.req_id,
+    };
+  }
+
+  private _mapDepositInformation(
+    toMedium: 'kusama' | 'base',
+    depositInformation: CreateExternalUsBankOrderParams['depositInformation'],
+  ): WireDepositInformation {
+    if (toMedium === 'base') {
+      if (
+        !('walletAddress' in depositInformation) ||
+        !depositInformation.walletAddress.trim()
+      ) {
+        throw new BloqueConfigError(
+          'toMedium "base" requires depositInformation.walletAddress (0x on Base).',
+        );
+      }
+      return {
+        wallet_address: depositInformation.walletAddress,
+        ...(depositInformation.walletName
+          ? { wallet_name: depositInformation.walletName }
+          : {}),
+      };
+    }
+
+    if (
+      !('ledgerAccountId' in depositInformation) ||
+      !depositInformation.ledgerAccountId.trim()
+    ) {
+      throw new BloqueConfigError(
+        'toMedium "kusama" requires depositInformation.ledgerAccountId.',
+      );
+    }
+    return {
+      ledger_account_id: depositInformation.ledgerAccountId,
     };
   }
 

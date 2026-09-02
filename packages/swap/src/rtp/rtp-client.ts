@@ -17,11 +17,16 @@ import type {
 } from './types';
 
 /**
- * RTP client for US instant bank payouts (Kusama → US bank via RTP).
+ * RTP client for US instant bank payouts (Kusama DUSD or Base USDC → US bank).
  */
 export class RtpClient extends BaseClient {
   /**
-   * Create an RTP payout swap order (DUSD on Kusama → USD to US bank).
+   * Create an RTP payout swap order (DUSD on Kusama or USDC on Base → USD to
+   * a US bank).
+   *
+   * Omit `fromMedium` (or pass `'kusama'`) to debit DUSD from a Kusama
+   * account. Pass `fromMedium: 'base'` with `args.txHash` to cash out USDC
+   * already sent to the source EVM account on Base.
    *
    * @param params - RTP order parameters including destination bank details
    * @returns Promise resolving to the created order
@@ -48,6 +53,33 @@ export class RtpClient extends BaseClient {
    *   args: { sourceAccountUrn: 'did:bloque:account:kusama-user-001' },
    * });
    * ```
+   *
+   * @example
+   * ```typescript
+   * const rates = await bloque.swap.findRates({
+   *   fromAsset: 'USDC/6',
+   *   toAsset: 'USD/2',
+   *   fromMediums: ['base'],
+   *   toMediums: ['rtp'],
+   *   amountSrc: '100000000',
+   * });
+   *
+   * const result = await bloque.swap.rtp.create({
+   *   rateSig: rates.rates[0].sig,
+   *   amountSrc: '100000000',
+   *   fromMedium: 'base',
+   *   depositInformation: {
+   *     owner: 'Jane Doe',
+   *     accountNumber: '1234567890',
+   *     routingNumber: '063108680',
+   *     accountType: 'checking',
+   *   },
+   *   args: {
+   *     sourceAccountUrn: 'did:bloque:account:polygon:abc123',
+   *     txHash: '0xabc…',
+   *   },
+   * });
+   * ```
    */
   async create(
     params: CreateRtpOrderParams,
@@ -61,20 +93,19 @@ export class RtpClient extends BaseClient {
     }
 
     const orderType = params.type ?? 'src';
+    const fromMedium = params.fromMedium ?? 'kusama';
 
     const input: CreateOrderInput = {
       taker_urn: takerUrn,
       type: orderType,
       rate_sig: params.rateSig,
-      from_medium: 'kusama',
+      from_medium: fromMedium,
       to_medium: 'rtp',
       webhook_url: params.webhookUrl,
       deposit_information: this._mapDepositInformationToWire(
         params.depositInformation,
       ),
-      args: {
-        account_urn: params.args.sourceAccountUrn,
-      },
+      args: this._mapArgs(fromMedium, params.args),
     };
 
     if (orderType === 'src' && params.amountSrc) {
@@ -106,6 +137,28 @@ export class RtpClient extends BaseClient {
         ? this._mapExecutionResult(response.result.execution)
         : undefined,
       requestId: response.req_id,
+    };
+  }
+
+  private _mapArgs(
+    fromMedium: 'kusama' | 'base',
+    args: CreateRtpOrderParams['args'],
+  ): Record<string, unknown> {
+    if (fromMedium === 'base') {
+      const txHash = args.txHash?.trim();
+      if (!txHash) {
+        throw new BloqueConfigError(
+          'fromMedium "base" requires args.txHash of the USDC transfer on Base.',
+        );
+      }
+      return {
+        urn: args.sourceAccountUrn,
+        tx_hash: txHash,
+      };
+    }
+
+    return {
+      account_urn: args.sourceAccountUrn,
     };
   }
 

@@ -35,11 +35,15 @@ export type {
 } from './breb/types';
 export { ExternalUsBankSwapClient } from './external-us-bank/external-us-bank-client';
 export type {
+  CreateExternalUsBankBaseOrderParams,
+  CreateExternalUsBankKusamaOrderParams,
   CreateExternalUsBankOrderOptions,
   CreateExternalUsBankOrderParams,
   CreateExternalUsBankOrderResult,
   ExternalUsBankArgs,
+  ExternalUsBankBaseDepositInformation,
   ExternalUsBankDepositInformation,
+  ExternalUsBankDestination,
 } from './external-us-bank/types';
 export { PseClient } from './pse/pse-client';
 // PSE — only unique types
@@ -55,10 +59,13 @@ export type {
 } from './pse/types';
 export { RtpClient } from './rtp/rtp-client';
 export type {
+  CreateRtpBaseOrderParams,
+  CreateRtpKusamaOrderParams,
   CreateRtpOrderOptions,
   CreateRtpOrderParams,
   CreateRtpOrderResult,
   RtpDepositInformation,
+  RtpSourceMedium,
   RtpSwapArgs,
 } from './rtp/types';
 

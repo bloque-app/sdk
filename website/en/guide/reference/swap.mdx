@@ -13,6 +13,7 @@ The swap module is the boundary between external payment rails and Bloque accoun
 | --- | --- | --- |
 | `pse` | `fromMediums` (cash-in only) | Colombian real-time bank transfer (23+ banks) |
 | `kusama` | `fromMediums` or `toMediums` | Kusama blockchain network |
+| `base` | `fromMediums` or `toMediums` | Base network (USDC) |
 | `breb` | `fromMediums` or `toMediums` | BRE-B instant payment key |
 | `rtp` | `toMediums` (cash-out only) | US instant bank payout via RTP |
 | `external-us-bank` | `fromMediums` (cash-in only) | US bank ACH on-ramp |
@@ -801,9 +802,48 @@ const result = await userSession.swap.rtp.create({
 
 **Errors:** `E_INVALID_DEPOSIT_INFORMATION` when required bank fields are missing or `accountType` is invalid. `E_RTP_SOURCE_ACCOUNT_REQUIRED` when `args.sourceAccountUrn` is missing.
 
+### RTP from Base (USDC → US Bank)
+
+Cash out USDC already sent to an EVM/Polygon account on Base. Same bank `depositInformation` as Kusama RTP. Pass `fromMedium: 'base'` and `args.txHash` of the incoming USDC transfer.
+
+```typescript
+const rates = await userSession.swap.findRates({
+  fromAsset: 'USDC/6',
+  toAsset: 'USD/2',
+  fromMediums: ['base'],
+  toMediums: ['rtp'],
+  amountSrc: '100000000',
+});
+
+const result = await userSession.swap.rtp.create({
+  rateSig: rates.rates[0].sig,
+  amountSrc: '100000000',
+  fromMedium: 'base',
+  depositInformation: {
+    owner: 'Jane Doe',
+    accountNumber: '1234567890',
+    routingNumber: '063108680',
+    accountType: 'checking',
+    bankName: 'Example Bank',
+  },
+  args: {
+    sourceAccountUrn: 'did:bloque:account:polygon:abc123',
+    txHash: '0xabc…',
+  },
+});
+```
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `fromMedium` | `'base'` | Yes | Selects the Base USDC → RTP graph |
+| `args.sourceAccountUrn` | `string` | Yes | EVM/Polygon account URN that received USDC on Base |
+| `args.txHash` | `string` | Yes | Transaction hash of the incoming USDC transfer |
+
+**Errors:** `E_RTP_SOURCE_ACCOUNT_REQUIRED` when `args.sourceAccountUrn` is missing. `E_RTP_TX_HASH_REQUIRED` when `args.txHash` is missing. The SDK throws `BloqueConfigError` before the request if `fromMedium` is `'base'` and `txHash` is empty.
+
 ## External US Bank On-Ramp (ACH → Kusama)
 
-Pull USD from a linked US bank account via ACH; funds teleport to Kusama as DUSD.
+Pull USD from a linked US bank account via ACH; funds teleport to Kusama as DUSD. `toMedium` defaults to `'kusama'`.
 
 ```typescript
 const rates = await userSession.swap.findRates({
@@ -826,10 +866,43 @@ const result = await userSession.swap.externalUsBank.create({
 | --- | --- | --- | --- |
 | `rateSig` | `string` | Yes | Rate signature from `findRates` |
 | `amountSrc` | `string` | Conditional | Source USD amount in cents (required if `type` is `'src'`) |
-| `depositInformation.ledgerAccountId` | `string` | Yes | Kusama ledger account id to credit |
+| `toMedium` | `'kusama' \| 'base'` | No | Destination chain. Omit or `'kusama'` for DUSD. |
+| `depositInformation.ledgerAccountId` | `string` | Yes (Kusama) | Kusama ledger account id to credit |
 | `args.sourceAccountUrn` | `string` | Yes | Linked external US bank account URN to pull from |
 
-**Errors:** `E_INVALID_DEPOSIT_INFORMATION` when `ledgerAccountId` is missing.
+**Errors:** `E_INVALID_DEPOSIT_INFORMATION` when `ledgerAccountId` is missing on the Kusama path.
+
+### External US Bank On-Ramp to Base (ACH → USDC)
+
+Same linked bank. Pass `toMedium: 'base'` and a destination 0x. No ledger account is required.
+
+```typescript
+const rates = await userSession.swap.findRates({
+  fromAsset: 'USD/2',
+  toAsset: 'USDC/6',
+  fromMediums: ['external-us-bank'],
+  toMediums: ['base'],
+  amountSrc: '10000',
+});
+
+const result = await userSession.swap.externalUsBank.create({
+  rateSig: rates.rates[0].sig,
+  amountSrc: '10000',
+  toMedium: 'base',
+  depositInformation: {
+    walletAddress: '0x1234567890abcdef1234567890abcdef12345678',
+  },
+  args: { sourceAccountUrn: 'did:bloque:account:external-us-bank:abc123' },
+});
+```
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `toMedium` | `'base'` | Yes | Selects the ACH → Base USDC graph |
+| `depositInformation.walletAddress` | `string` | Yes | Destination 0x on Base |
+| `depositInformation.walletName` | `string` | No | Optional label for the destination wallet |
+
+**Errors:** `E_INVALID_DEPOSIT_INFORMATION` when `walletAddress` is missing. The SDK throws `BloqueConfigError` before the request if `toMedium` is `'base'` and `walletAddress` is empty.
 
 ## Next Steps
 
