@@ -2,7 +2,7 @@ import { QuestHeader } from '@theme';
 
 <QuestHeader
   prereqs={["Connected SDK client", "KYC (if enforced by your origin)", "A browser to open the hosted Plaid Link page — or a frontend that can run Plaid Link"]}
-  unlocks={["Link a US bank account via Plaid", "Pull funds via ACH directly into DUSD on Kusama", "Store a stable bank URN for repeat on-ramps"]}
+  unlocks={["Link a US bank account via Plaid", "Pull funds via ACH into DUSD on Kusama or USDC on Base", "Store a stable bank URN for repeat on-ramps"]}
   time="10 min"
 />
 
@@ -172,9 +172,9 @@ if ('linkStatus' in account.details && account.details.needsUpdate) {
 }
 ```
 
-## Pull funds (ACH debit → DUSD on Kusama)
+## Pull funds (ACH debit → DUSD on Kusama or USDC on Base)
 
-Once `linkStatus === 'active'`, call `pull()` to debit the bank via Brale ACH and swap the proceeds to DUSD on Kusama. The DUSD is teleported directly to the Kreivo ledger account associated with the bank URN — no intermediate escrow.
+Once `linkStatus === 'active'`, call `pull()` to debit the bank via Brale ACH. Omit `chain` (or pass `'kusama'`) to swap the proceeds to DUSD on Kusama and teleport them to the Kreivo ledger account associated with the bank URN. Pass `chain: 'base'` with `walletAddress` to receive USDC on Base at that 0x — no ledger account is required.
 
 ```typescript title="pull.ts"
 const order = await user.accounts.externalUsBank.pull({
@@ -187,12 +187,23 @@ console.log(order.status);    // "pending"
 console.log(order.graphId);   // instruction graph executing the swap
 ```
 
+```typescript title="pull-base.ts"
+const order = await user.accounts.externalUsBank.pull({
+  urn: linked.urn,
+  amount: '100.00',
+  chain: 'base',
+  walletAddress: '0x1234567890abcdef1234567890abcdef12345678',
+});
+```
+
 ### Parameters
 
 | Name | Type | Required | Description |
 |------|------|----------|-------------|
 | `urn` | `string` | yes | URN of the linked bank. Must be on the `external-us-bank` medium and owned by the caller. Bank must be in `linkStatus === 'active'`. |
 | `amount` | `string` | yes | USD amount to debit, as a decimal string (e.g. `"100.00"`). Always pass as a string to avoid float precision loss. Must be positive. |
+| `chain` | `'kusama' \| 'base'` | no | Destination chain. Omit or `'kusama'` to land DUSD on Kusama. Pass `'base'` with `walletAddress` to receive USDC on Base. |
+| `walletAddress` | `string` | with `chain: 'base'` | Destination 0x on Base. Required when `chain` is `'base'`. Rejected without it. |
 | `idempotencyKey` | `string` | no | Caller hint. Informational — the server keys idempotency on the swap signature internally. |
 
 ### Response
@@ -211,11 +222,11 @@ interface PullExternalUsBankResult {
 
 | `BloqueAPIError` status | Cause | Resolution |
 |------|---------|----|
-| `400` | `amount` is not a positive decimal string, or `urn` is malformed/wrong medium | Validate input on the client. |
+| `400` | `amount` is not a positive decimal string, `urn` is malformed/wrong medium, or Base destination fields are incomplete (`chain: 'base'` without `walletAddress`, or the reverse) | Validate input on the client. |
 | `401` | Caller is not authenticated | Refresh the user session. |
 | `403` | URN belongs to a different user | The bank account is not owned by the caller — fetch the correct URN with `user.accounts.list()`. |
-| `404` | No address mapping for the URN, or the account has no ledger | Plaid Link hasn't completed; check `linkStatus === 'active'` and `details.braleAddressId` is populated. |
-| `503` | No swap rate available for `external-us-bank → kusama` | Transient. Retry after a short backoff. |
+| `404` | No address mapping for the URN, or the Kusama path has no ledger | Plaid Link hasn't completed; check `linkStatus === 'active'` and `details.braleAddressId` is populated. |
+| `503` | No swap rate available for `external-us-bank → kusama` or `external-us-bank → base` | Transient. Retry after a short backoff. |
 
 ```typescript title="with-error-handling.ts"
 import { BloqueAPIError } from '@bloque/sdk-core';
@@ -260,7 +271,7 @@ const order = await user.accounts.externalUsBank.pull({
 
 ### Tracking the swap to completion
 
-The pull endpoint returns immediately after `swap.take` auto-executes the first node of the instruction graph (which resolves the Brale account/address). The actual ACH settlement and Kusama teleport happen asynchronously. Two ways to observe progress:
+The pull endpoint returns immediately after `swap.take` auto-executes the first node of the instruction graph (which resolves the Brale account/address). ACH settlement and the Kusama teleport or Base USDC delivery happen asynchronously. Two ways to observe progress:
 
 - **Webhooks** — subscribe to `swap.order.*` and `transfer.*` events; match on `order.orderSig`.
 - **Polling** — query the swap service for the order by `orderSig`.

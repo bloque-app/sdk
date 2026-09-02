@@ -1,4 +1,4 @@
-import { BaseClient } from '@bloque/sdk-core';
+import { BaseClient, BloqueConfigError } from '@bloque/sdk-core';
 import type {
   AccountWithBalance,
   CreateAccountRequest,
@@ -46,6 +46,8 @@ type ExchangeExternalUsBankInput = {
 
 type PullExternalUsBankRequest = {
   amount: string;
+  chain?: 'kusama' | 'base';
+  wallet_address?: string;
   idempotency_key?: string;
 };
 
@@ -184,10 +186,11 @@ export class ExternalUsBankClient extends BaseClient {
   /**
    * Pull funds from a linked US bank via Brale ACH debit.
    *
-   * Proactively initiates an ACH debit from the user's linked bank account
-   * and swaps the proceeds to DUSD on Kusama, teleporting them directly to
-   * the caller's Kreivo ledger account that is associated with the linked
-   * bank URN.
+   * Proactively initiates an ACH debit from the user's linked bank account.
+   * Omit `chain` (or pass `'kusama'`) to swap the proceeds to DUSD on Kusama
+   * and teleport them to the caller's Kreivo ledger account associated with
+   * the linked bank URN. Pass `chain: 'base'` with `walletAddress` to receive
+   * USDC on Base at that 0x instead — no ledger account is required.
    *
    * The account must already be in `linkStatus === 'active'` — i.e. Plaid
    * Link has finished and the `public_token` has been exchanged (either via
@@ -197,7 +200,8 @@ export class ExternalUsBankClient extends BaseClient {
    * correlate webhook events (`swap.order.*`) and to poll the swap service
    * for status.
    *
-   * @param params - Pull parameters (URN of the linked bank, USD amount)
+   * @param params - Pull parameters (URN of the linked bank, USD amount,
+   *   optional Base destination)
    * @returns Snapshot of the created swap order
    *
    * @example
@@ -211,13 +215,26 @@ export class ExternalUsBankClient extends BaseClient {
    * console.log(order.status);    // "pending"
    * ```
    *
-   * @throws BloqueAPIError 400 — invalid amount or `urn`.
+   * @example
+   * ```typescript
+   * const order = await user.accounts.externalUsBank.pull({
+   *   urn: linked.urn,
+   *   amount: '100.00',
+   *   chain: 'base',
+   *   walletAddress: '0x1234567890abcdef1234567890abcdef12345678',
+   * });
+   * ```
+   *
+   * @throws BloqueConfigError — `chain: 'base'` without `walletAddress`, or
+   *   `walletAddress` without `chain: 'base'`.
+   * @throws BloqueAPIError 400 — invalid amount or `urn`, or Base destination
+   *   fields are incomplete.
    * @throws BloqueAPIError 401 — unauthenticated.
    * @throws BloqueAPIError 403 — the caller does not own the linked bank account.
    * @throws BloqueAPIError 404 — the bank URN has no address mapping yet
-   *   (`linkStatus !== 'active'`), or the account has no ledger.
+   *   (`linkStatus !== 'active'`), or the Kusama path has no ledger.
    * @throws BloqueAPIError 503 — no swap rate available for
-   *   `external-us-bank → kusama`.
+   *   `external-us-bank → kusama` or `external-us-bank → base`.
    */
   async pull(
     params: PullExternalUsBankParams,
@@ -231,6 +248,15 @@ export class ExternalUsBankClient extends BaseClient {
       );
     }
 
+    const chain = params.chain;
+    const walletAddress = params.walletAddress?.trim();
+    const wantsBase = chain === 'base' || Boolean(walletAddress);
+    if (wantsBase && (chain !== 'base' || !walletAddress)) {
+      throw new BloqueConfigError(
+        'Base destination requires chain: "base" and walletAddress (0x on Base).',
+      );
+    }
+
     const idempotencyKey =
       params.idempotencyKey ??
       (typeof globalThis.crypto !== 'undefined' &&
@@ -241,6 +267,8 @@ export class ExternalUsBankClient extends BaseClient {
     const body: PullExternalUsBankRequest = {
       amount: params.amount,
       idempotency_key: idempotencyKey,
+      ...(chain ? { chain } : {}),
+      ...(walletAddress ? { wallet_address: walletAddress } : {}),
     };
 
     const response = await this.httpClient.request<

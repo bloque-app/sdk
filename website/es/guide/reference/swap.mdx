@@ -13,6 +13,7 @@ El módulo swap es la frontera entre los rieles de pago externos y las cuentas B
 | --- | --- | --- |
 | `pse` | `fromMediums` (solo cash-in) | Transferencia bancaria en tiempo real colombiana (23+ bancos) |
 | `kusama` | `fromMediums` o `toMediums` | Red blockchain Kusama |
+| `base` | `fromMediums` o `toMediums` | Red Base (USDC) |
 | `breb` | `fromMediums` o `toMediums` | Llave de pago instantáneo BRE-B |
 | `rtp` | `toMediums` (solo cash-out) | Pago instantáneo a banco US vía RTP |
 | `external-us-bank` | `fromMediums` (solo cash-in) | On-ramp ACH desde banco US |
@@ -715,15 +716,54 @@ const result = await userSession.swap.rtp.create({
 
 **Errores:** `E_INVALID_DEPOSIT_INFORMATION` cuando faltan campos bancarios requeridos. `E_RTP_SOURCE_ACCOUNT_REQUIRED` cuando falta `args.sourceAccountUrn`.
 
+### RTP desde Base (USDC → Banco US)
+
+Retira USDC ya enviado a una cuenta EVM/Polygon en Base. Mismos datos bancarios que el RTP Kusama. Pasa `fromMedium: 'base'` y `args.txHash` de la transferencia USDC de entrada.
+
+```typescript
+const result = await userSession.swap.rtp.create({
+  rateSig: rates.rates[0].sig,
+  amountSrc: '100000000',
+  fromMedium: 'base',
+  depositInformation: {
+    owner: 'Jane Doe',
+    accountNumber: '1234567890',
+    routingNumber: '063108680',
+    accountType: 'checking',
+    bankName: 'Example Bank',
+  },
+  args: {
+    sourceAccountUrn: 'did:bloque:account:polygon:abc123',
+    txHash: '0xabc…',
+  },
+});
+```
+
 ## On-Ramp Banco US Externo (ACH → Kusama)
 
-Extrae USD de una cuenta bancaria US vinculada vía ACH; los fondos se teleportan a Kusama como DUSD.
+Extrae USD de una cuenta bancaria US vinculada vía ACH; los fondos se teleportan a Kusama como DUSD. `toMedium` por defecto es `'kusama'`.
 
 ```typescript
 const result = await userSession.swap.externalUsBank.create({
   rateSig: rates.rates[0].sig,
   amountSrc: '10000',
   depositInformation: { ledgerAccountId: 'ledger-user-001' },
+  args: { sourceAccountUrn: 'did:bloque:account:external-us-bank:abc123' },
+});
+```
+
+### On-Ramp Banco US Externo a Base (ACH → USDC)
+
+El mismo banco vinculado. Pasa `toMedium: 'base'` y un 0x de destino. No se requiere cuenta ledger.
+
+```typescript
+const result = await userSession.swap.externalUsBank.create({
+  rateSig: rates.rates[0].sig,
+  amountSrc: '10000',
+  toMedium: 'base',
+  depositInformation: {
+    walletAddress: '0x1234567890abcdef1234567890abcdef12345678',
+  },
   args: { sourceAccountUrn: 'did:bloque:account:external-us-bank:abc123' },
 });
 ```
