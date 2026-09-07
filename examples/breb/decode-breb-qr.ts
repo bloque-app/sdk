@@ -1,4 +1,4 @@
-import { SDK } from '../../../packages/sdk/src/index';
+import { SDK } from '../../packages/sdk/src/index';
 
 const bloque = new SDK({
   origin: process.env.ORIGIN!,
