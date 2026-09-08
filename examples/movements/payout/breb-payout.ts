@@ -9,7 +9,7 @@ import { SDK } from '../../../packages/sdk/src/index';
  * No key resolution step is required before calling `create()`.
  *
  * For the reverse direction (COP deposit → DUSD credit), see
- * examples/movimientos/payin/breb-deposit-onramp.ts.
+ * examples/movements/payin/breb-deposit-onramp.ts.
  */
 
 const bloque = new SDK({
