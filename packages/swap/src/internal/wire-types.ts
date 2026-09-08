@@ -251,13 +251,30 @@ export interface ExecutionHowBrebDeposit {
 
 /**
  * @internal
+ * Base USDC inbox transfer instructions when the graph pauses
+ */
+export interface ExecutionHowWalletTransfer {
+  type: 'WALLET_TRANSFER';
+  chain: 'base';
+  address: string;
+  token_address: string;
+  token_symbol: 'USDC';
+  token_decimals: 6;
+  amount: string;
+  currency: 'USDC';
+  deposit_account_urn: string;
+}
+
+/**
+ * @internal
  * Discriminated union of execution instructions
  */
 export type ExecutionHow =
   | ExecutionHowRedirect
   | ExecutionHowCallback
   | ExecutionHowIframe
-  | ExecutionHowBrebDeposit;
+  | ExecutionHowBrebDeposit
+  | ExecutionHowWalletTransfer;
 
 /**
  * @internal

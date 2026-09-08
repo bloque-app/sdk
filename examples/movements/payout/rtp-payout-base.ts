@@ -6,9 +6,9 @@ import { SDK } from '../../../packages/sdk/src/index';
  * Edge: base:rtp[usdc:usd]
  * Template: BASE_TO_RTP
  *
- * depositInformation carries the destination US bank details (same shape as
- * Kusama RTP). args.sourceAccountUrn is the EVM/Polygon account that received
- * USDC on Base; args.txHash is the incoming transfer hash.
+ * depositInformation is the destination US bank. `args` is optional. Omit it
+ * (or omit txHash) to pause: send native USDC to execution.how.address.
+ * Pass args.txHash only when that transfer is already on chain.
  */
 
 const bloque = new SDK({
@@ -39,9 +39,7 @@ if (rates.rates.length === 0) {
 
 console.log('Best rate:', rates.rates[0]);
 
-const sourceAccountUrn =
-  process.env.SOURCE_ACCOUNT_URN ?? 'did:bloque:account:polygon:abc123';
-const txHash = process.env.TX_HASH ?? '0xabc';
+const txHash = process.env.TX_HASH?.trim();
 
 const result = await user.swap.rtp.create(
   {
@@ -56,15 +54,17 @@ const result = await user.swap.rtp.create(
         (process.env.RTP_ACCOUNT_TYPE as 'checking' | 'savings') ?? 'checking',
       bankName: process.env.RTP_BANK_NAME ?? 'Example Bank',
     },
-    args: { sourceAccountUrn, txHash },
+    ...(txHash ? { args: { txHash } } : {}),
   },
   { idempotencyKey: `rtp-payout-base-${amountSrc}` },
 );
 
+const how = result.execution?.result.how;
 console.log('Base RTP payout order:', {
   requestId: result.requestId,
   orderId: result.order.id,
   status: result.order.status,
   fromAmount: result.order.fromAmount,
   toAmount: result.order.toAmount,
+  how,
 });

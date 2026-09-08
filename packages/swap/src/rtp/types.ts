@@ -28,15 +28,20 @@ export interface RtpDepositInformation {
 
 export interface RtpSwapArgs {
   /**
-   * Source account URN to debit.
-   *
-   * Kusama: the Kusama account holding DUSD.
-   * Base: the EVM/Polygon account that received USDC on Base.
+   * Kusama account URN holding DUSD to debit.
    */
   sourceAccountUrn: string;
+}
+
+/**
+ * Optional Base RTP take args. Omit the object entirely to pause for a
+ * USDC deposit (`execution.how` is `WALLET_TRANSFER`). Pass `txHash` only
+ * when USDC is already in the inbox and you want to skip the pause.
+ */
+export interface RtpBaseSwapArgs {
   /**
-   * Transaction hash of the incoming USDC transfer on Base.
-   * Required when {@link CreateRtpOrderParams.fromMedium} is `'base'`.
+   * Transaction hash of a native USDC transfer **into the Base RTP inbox**.
+   * Omit or leave empty to pause; do not invent a hash.
    */
   txHash?: string;
 }
@@ -92,18 +97,22 @@ export interface CreateRtpKusamaOrderParams extends CreateRtpOrderParamsBase {
 }
 
 /**
- * RTP payout from USDC on Base. Requires `args.txHash` of the USDC transfer.
+ * RTP payout from USDC on Base. `args` is optional — the live API does not
+ * require a source URN or tx hash. The create call still sends empty `args`
+ * so the first graph node auto-executes and returns the deposit `how`.
  */
 export interface CreateRtpBaseOrderParams extends CreateRtpOrderParamsBase {
   fromMedium: 'base';
-  args: RtpSwapArgs & { txHash: string };
+  args?: RtpBaseSwapArgs;
 }
 
 /**
  * Parameters for creating an RTP payout swap order.
  *
- * Defaults to Kusama (`fromMedium` omitted). Pass `fromMedium: 'base'` with
- * `args.txHash` to cash out USDC already sent to the source EVM account on Base.
+ * Defaults to Kusama (`fromMedium` omitted), which still requires
+ * `args.sourceAccountUrn`. Pass `fromMedium: 'base'` with bank
+ * `depositInformation` only to cash out USDC on Base; optional `args.txHash`
+ * skips the wallet-transfer pause.
  */
 export type CreateRtpOrderParams =
   | CreateRtpKusamaOrderParams
