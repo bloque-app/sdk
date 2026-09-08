@@ -4,7 +4,7 @@
 // This is what you get out of the box — no extra config needed.
 // But you CAN customize the preferred asset and currency mapping.
 
-import { SDK } from '../../../packages/sdk/src/index';
+import { SDK } from '../../packages/sdk/src/index';
 
 const bloque = new SDK({
   origin: process.env.ORIGIN!,

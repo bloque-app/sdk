@@ -4,7 +4,7 @@
 // add new category pockets, or change the MCC routing — all via
 // updateMetadata. No need to create a new card.
 
-import { SDK } from '../../../packages/sdk/src/index';
+import { SDK } from '../../packages/sdk/src/index';
 
 const bloque = new SDK({
   origin: process.env.ORIGIN!,

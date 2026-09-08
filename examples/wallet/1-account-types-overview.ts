@@ -12,13 +12,13 @@ import { SDK } from '../../packages/sdk/src/index';
  * same lifecycle methods (`activate`, `freeze`, `disable`) where applicable.
  *
  *   virtual            — this file. Just a balance, no external rail.
- *   card               — examples/internal-operations/card/*, examples/movimientos/internos/*
- *   polygon            — examples/internal-operations/8-add-multiple-accounts.ts
- *   breb (key account) — examples/internal-operations/breb/create-breb-key.ts and siblings
- *   us (FDIC US bank)  — user.accounts.us.create(), gated by TOS: examples/internal-operations/11-tos-accept.ts
+ *   card               — examples/cards/*, examples/movements/internal/*
+ *   polygon            — examples/wallet/7-add-multiple-accounts.ts
+ *   breb (key account) — examples/movements/breb/create-breb-key.ts and siblings
+ *   us (FDIC US bank)  — user.accounts.us.create(), gated by TOS: examples/wallet/9-tos-accept.ts
  *   us2                — user.accounts.us2.create({ type, email, phone })
- *   external-us-bank   — examples/internal-operations/external-us-bank-hosted-plaid-link.ts (linking),
- *                        examples/movimientos/payin/external-us-bank-ach-kusama.ts (pull)
+ *   external-us-bank   — examples/wallet/11-external-us-bank-hosted-plaid-link.ts (linking),
+ *                        examples/movements/payin/external-us-bank-ach-kusama.ts (pull)
  */
 
 const bloque = new SDK({
