@@ -8,7 +8,7 @@ import { SDK } from '../../../packages/sdk/src/index';
  *
  * Prerequisites:
  * - A linked external-us-bank account (see
- *   examples/internal-operations/external-us-bank-hosted-plaid-link.ts)
+ *   examples/wallet/11-external-us-bank-hosted-plaid-link.ts)
  * - The Kusama ledger account id to credit after teleport
  *
  * This uses swap.externalUsBank.create (order graph). For a direct mediums pull

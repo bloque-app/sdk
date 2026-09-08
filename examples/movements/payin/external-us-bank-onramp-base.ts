@@ -8,7 +8,7 @@ import { SDK } from '../../../packages/sdk/src/index';
  *
  * Prerequisites:
  * - A linked external-us-bank account (see
- *   examples/internal-operations/external-us-bank-hosted-plaid-link.ts)
+ *   examples/wallet/11-external-us-bank-hosted-plaid-link.ts)
  * - A Base 0x to receive USDC (`WALLET_ADDRESS`)
  *
  * This uses swap.externalUsBank.create (order graph). For a direct mediums pull
