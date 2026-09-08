@@ -4,6 +4,7 @@ import type {
   ExecutionHowBrebDeposit as WireExecutionHowBrebDeposit,
   ExecutionHowCallback as WireExecutionHowCallback,
   ExecutionHowIframe as WireExecutionHowIframe,
+  ExecutionHowWalletTransfer as WireExecutionHowWalletTransfer,
 } from './wire-types';
 
 function isWireBrebDepositHow(
@@ -23,6 +24,12 @@ function isWireCallbackHow(
 
 function isWireIframeHow(how: WireExecutionHow): how is WireExecutionHowIframe {
   return how.type === 'IFRAME' && 'iframe' in how;
+}
+
+function isWireWalletTransferHow(
+  how: WireExecutionHow,
+): how is WireExecutionHowWalletTransfer {
+  return how.type === 'WALLET_TRANSFER' && 'address' in how;
 }
 
 /**
@@ -53,6 +60,20 @@ export function mapExecutionHow(how: WireExecutionHow): PublicExecutionHow {
 
   if (isWireIframeHow(how)) {
     return { type: 'IFRAME', iframe: how.iframe };
+  }
+
+  if (isWireWalletTransferHow(how)) {
+    return {
+      type: 'WALLET_TRANSFER',
+      chain: how.chain,
+      address: how.address,
+      tokenAddress: how.token_address,
+      tokenSymbol: how.token_symbol,
+      tokenDecimals: how.token_decimals,
+      amount: how.amount,
+      currency: how.currency,
+      depositAccountUrn: how.deposit_account_urn,
+    };
   }
 
   return {

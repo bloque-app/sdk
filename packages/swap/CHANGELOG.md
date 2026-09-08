@@ -1,5 +1,12 @@
 # @bloque/sdk-orgs
 
+## 0.13.1
+
+### Patch Changes
+
+- Stop requiring `args` / `txHash` / `sourceAccountUrn` for `swap.rtp.create({ fromMedium: 'base' })`. The API only needs bank `depositInformation`; omitting `txHash` pauses with `WALLET_TRANSFER` how (inbox 0x). Map that how instead of dropping it to `{ type, url }`.
+  - @bloque/sdk-core@0.13.1
+
 ## 0.13.0
 
 ### Minor Changes

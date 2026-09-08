@@ -25,8 +25,10 @@ export class RtpClient extends BaseClient {
    * a US bank).
    *
    * Omit `fromMedium` (or pass `'kusama'`) to debit DUSD from a Kusama
-   * account. Pass `fromMedium: 'base'` with `args.txHash` to cash out USDC
-   * already sent to the source EVM account on Base.
+   * account (`args.sourceAccountUrn` required). Pass `fromMedium: 'base'`
+   * with bank `depositInformation` only — the graph ensures a `base-rtp`
+   * inbox and pauses with `WALLET_TRANSFER` how. Optional `args.txHash`
+   * skips the pause when USDC is already in that inbox.
    *
    * @param params - RTP order parameters including destination bank details
    * @returns Promise resolving to the created order
@@ -74,11 +76,8 @@ export class RtpClient extends BaseClient {
    *     routingNumber: '063108680',
    *     accountType: 'checking',
    *   },
-   *   args: {
-   *     sourceAccountUrn: 'did:bloque:account:polygon:abc123',
-   *     txHash: '0xabc…',
-   *   },
    * });
+   * // result.execution?.result.how → WALLET_TRANSFER (Base USDC inbox 0x)
    * ```
    */
   async create(
@@ -145,16 +144,16 @@ export class RtpClient extends BaseClient {
     args: CreateRtpOrderParams['args'],
   ): Record<string, unknown> {
     if (fromMedium === 'base') {
-      const txHash = args.txHash?.trim();
-      if (!txHash) {
-        throw new BloqueConfigError(
-          'fromMedium "base" requires args.txHash of the USDC transfer on Base.',
-        );
-      }
-      return {
-        urn: args.sourceAccountUrn,
-        tx_hash: txHash,
-      };
+      const txHash = args && 'txHash' in args ? args.txHash?.trim() : undefined;
+      // Always send `args` (even `{}`) so take auto-executes the first node
+      // and returns WALLET_TRANSFER how. Omit tx_hash to pause.
+      return txHash ? { tx_hash: txHash } : {};
+    }
+
+    if (!args || !('sourceAccountUrn' in args) || !args.sourceAccountUrn) {
+      throw new BloqueConfigError(
+        'fromMedium "kusama" requires args.sourceAccountUrn',
+      );
     }
 
     return {

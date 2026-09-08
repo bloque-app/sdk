@@ -374,13 +374,32 @@ export interface ExecutionHowBrebDeposit {
 }
 
 /**
+ * Instruct the payer to send native USDC on Base to a deposit 0x
+ * (base → rtp inbox pause).
+ */
+export interface ExecutionHowWalletTransfer {
+  type: 'WALLET_TRANSFER';
+  chain: 'base';
+  /** Inbox 0x that receives native USDC */
+  address: string;
+  tokenAddress: string;
+  tokenSymbol: 'USDC';
+  tokenDecimals: 6;
+  /** Atomic USDC amount (same precision as order.fromAmount) */
+  amount: string;
+  currency: 'USDC';
+  depositAccountUrn: string;
+}
+
+/**
  * Instructions for completing a paused execution step
  */
 export type ExecutionHow =
   | ExecutionHowRedirect
   | ExecutionHowCallback
   | ExecutionHowIframe
-  | ExecutionHowBrebDeposit;
+  | ExecutionHowBrebDeposit
+  | ExecutionHowWalletTransfer;
 
 /**
  * Execution result from auto-execution

@@ -1,5 +1,11 @@
 # @bloque/cli
 
+## 0.13.1
+
+### Patch Changes
+
+- @bloque/sdk@0.13.1
+
 ## 0.13.0
 
 ### Patch Changes
