@@ -32,6 +32,10 @@ export type AliasResponse = {
   is_primary: boolean;
   created_at: string;
   updated_at: string;
+  /** Resolved destination account URN for this identity, when one could be determined server-side. */
+  account_urn?: string;
+  /** Present only when no destination account could be resolved for this identity. */
+  account_resolution_error?: 'NO_ACCOUNT';
 };
 
 /**
