@@ -33,8 +33,22 @@ export interface UpdateIdentityParams {
 export interface IdentityAlias {
   alias: string;
   type: string;
-  verified: boolean;
-  primary: boolean;
+  urn: string;
+  origin: string;
+  details: Record<string, unknown>;
+  metadata: Record<string, unknown>;
+  status:
+    | 'awaiting_verification'
+    | 'active'
+    | 'inactive'
+    | 'blocked'
+    | 'rejected';
+  is_public: boolean;
+  is_primary: boolean;
+  /** @deprecated The API returns `status`; use `status === 'active'`. */
+  verified?: boolean;
+  /** @deprecated The API returns `is_primary`. */
+  primary?: boolean;
 }
 
 /**
