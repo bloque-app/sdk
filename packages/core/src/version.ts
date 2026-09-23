@@ -11,4 +11,4 @@
  * `version` field.
  */
 export const SDK_NAME = '@bloque/sdk';
-export const SDK_VERSION = '0.13.1';
+export const SDK_VERSION = '0.13.2';
