@@ -1,5 +1,21 @@
 # @bloque/sdk-identity
 
+## 0.13.3
+
+### Patch Changes
+
+- 9621d2d: `identity.aliases.get()` now may return one additional optional field
+  on the alias record:
+
+  - `display_name?: string` — the recipient's display name, derived
+    server-side from their KYC/KYB profile, when available. Use this to
+    show who a transfer is actually going to before confirming.
+
+  Additive; existing consumers that ignore it are unaffected. Requires
+  compatible backend support.
+
+  - @bloque/sdk-core@0.13.3
+
 ## 0.13.2
 
 ### Patch Changes
