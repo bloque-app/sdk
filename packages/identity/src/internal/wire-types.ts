@@ -36,6 +36,8 @@ export type AliasResponse = {
   account_urn?: string;
   /** Reason the destination account could not be returned. */
   account_resolution_error?: 'NO_ACCOUNT' | 'RESOLUTION_UNAVAILABLE';
+  /** Recipient's display name, derived server-side from their KYC/KYB profile, when available. */
+  display_name?: string;
 };
 
 /**
