@@ -63,15 +63,24 @@ export interface TransferParams {
    */
   asset: SupportedAsset;
   /**
-   * Optional metadata for the transfer
-   * @example { reference: "payment-123", note: "Monthly subscription" }
+   * Optional metadata for the transfer.
+   *
+   * `metadata.reference` identifies this transfer: a retry with the same
+   * reference from the same source account lands on the same operation instead
+   * of moving funds twice, so it must be unique per logical transfer: reusing
+   * it for another payment returns the earlier transfer or is refused. Keep it
+   * at most 128 bytes. When omitted, the SDK uses `idempotencyKey` or
+   * generates one per call.
+   * @example { reference: `payment-${paymentId}`, note: "Monthly subscription" }
    */
   metadata?: Record<string, unknown>;
 }
 
 export interface TransferOptions {
   /**
-   * Optional custom idempotency key sent as `Idempotency-Key` header.
+   * Optional custom idempotency key, sent as the `Idempotency-Key` header and,
+   * when `metadata.reference` is not set, as the transfer reference. Pass a
+   * stable value to make retries across calls safe.
    */
   idempotencyKey?: string;
 }

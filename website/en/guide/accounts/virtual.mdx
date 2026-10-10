@@ -78,12 +78,18 @@ const account = await session.accounts.virtual.create(
 interface CreateVirtualAccountParams {
   firstName: string;       // Required: Account holder's first name
   lastName: string;        // Required: Account holder's last name
-  ledgerId?: string;       // Optional: attach to an existing ledger (a new one is
-                           // minted if omitted, and returned in the response)
+  /** @deprecated Omit it: a new ledger is always minted and returned. */
+  ledgerId?: string;
   webhookUrl?: string;     // Optional: Webhook for account events
   metadata?: Record<string, string>; // Optional: Custom metadata (must be strings)
 }
 ```
+
+:::warning Deprecated: `ledgerId`
+A virtual account opens its own balance and can no longer be attached to an existing one; requests
+passing `ledgerId` may be refused. To share a balance, attach products (cards, Polygon accounts, …)
+to the virtual account by passing its returned `ledgerId` when you create them.
+:::
 
 ### Response
 

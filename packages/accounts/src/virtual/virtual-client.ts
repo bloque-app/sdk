@@ -111,10 +111,11 @@ export class VirtualClient extends BaseClient {
    * Create a new virtual account
    *
    * A virtual account is the account type that holds a balance. Creating one
-   * without a `ledgerId` mints a new ledger account for it; passing a
-   * `ledgerId` attaches it to an existing balance instead.
+   * mints a new ledger account for it. Passing `ledgerId` to attach it to an
+   * existing balance is deprecated: attach products (cards, Polygon accounts,
+   * …) to the virtual account instead, using its returned `ledgerId`.
    *
-   * `ledgerId` is populated on the returned account either way, so you can link
+   * `ledgerId` is populated on the returned account, so you can link
    * cards and Polygon accounts to it immediately — there is nothing to wait for
    * to learn it. What you may need to wait for is `status: 'active'`: a freshly
    * minted ledger account is registering on-chain behind this response, and

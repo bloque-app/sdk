@@ -18,6 +18,7 @@ import {
   mapExternalUsBankAccountFromWire,
 } from './external-us-bank/external-us-bank-client';
 import type { ExternalUsBankAccount } from './external-us-bank/types';
+import { generateReference } from './internal/reference';
 import type {
   AccountWithBalance,
   BancolombiaDetails,
@@ -316,6 +317,11 @@ export class AccountsClient extends BaseClient {
   /**
    * Transfer funds between accounts
    *
+   * Every transfer carries a `metadata.reference` that identifies it, so a
+   * retry with the same reference never moves funds twice. A caller-given
+   * `metadata.reference` wins; otherwise `options.idempotencyKey` is used, and
+   * failing both the SDK generates one, reused across its own retries.
+   *
    * @param params - Transfer parameters
    * @returns Promise resolving to transfer result
    *
@@ -328,11 +334,21 @@ export class AccountsClient extends BaseClient {
    *     amount: '1000000000000',
    *     asset: 'KSM/12',
    *     metadata: {
-   *       reference: 'payment-123',
+   *       reference: `payment-${paymentId}`, // unique per transfer
    *       note: 'Monthly subscription'
    *     }
+   *   }
+   * );
+   *
+   * // Or let `idempotencyKey` be the reference
+   * const transfer = await bloque.accounts.transfer(
+   *   {
+   *     sourceUrn: 'did:bloque:account:card:usr-123:crd-456',
+   *     destinationUrn: 'did:bloque:account:virtual:acc-67890',
+   *     amount: '1000000000000',
+   *     asset: 'KSM/12',
    *   },
-   *   { idempotencyKey: 'transfer-payment-123' }
+   *   { idempotencyKey: `payment-${paymentId}` }
    * );
    * ```
    */
@@ -347,20 +363,24 @@ export class AccountsClient extends BaseClient {
       );
     }
 
+    const callerReference = params.metadata?.reference;
+    const reference =
+      typeof callerReference === 'string' && callerReference.trim()
+        ? callerReference
+        : options?.idempotencyKey || generateReference();
+
     const request: TransferRequest = {
       destination_account_urn: params.destinationUrn,
       amount: params.amount,
       asset: asset,
-      metadata: params.metadata,
+      metadata: { ...params.metadata, reference },
     };
 
     const response = await this.httpClient.request<TransferResponse>({
       method: 'POST',
       path: `/api/accounts/${params.sourceUrn}/transfer`,
       body: request,
-      headers: options?.idempotencyKey
-        ? { 'Idempotency-Key': options.idempotencyKey }
-        : undefined,
+      headers: { 'Idempotency-Key': options?.idempotencyKey || reference },
     });
 
     return {

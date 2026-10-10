@@ -42,10 +42,12 @@ export interface CreateVirtualAccountParams {
   /**
    * Ledger account ID to associate with the virtual account.
    *
-   * Pass one to share an existing balance — the account is `active` straight
-   * away, since the ledger it points at is already on-chain.
+   * @deprecated A virtual account opens its own balance and can no longer be
+   * attached to an existing one; requests passing it may be refused. Omit it,
+   * and attach products (cards, Polygon accounts, …) to the virtual account
+   * instead by passing its returned `ledgerId` when creating them.
    *
-   * Omit it and a new ledger account is minted for you. Its `ledgerId` is
+   * Omitted, a new ledger account is minted for you. Its `ledgerId` is
    * derived rather than assigned by the chain, so it comes back in the create
    * response and is immediately usable to link cards and Polygon accounts. The
    * account itself starts `creation_in_progress` and can *receive* right away;
