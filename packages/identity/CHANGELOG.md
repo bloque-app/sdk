@@ -1,5 +1,11 @@
 # @bloque/sdk-identity
 
+## 0.13.4
+
+### Patch Changes
+
+- @bloque/sdk-core@0.13.4
+
 ## 0.13.3
 
 ### Patch Changes
