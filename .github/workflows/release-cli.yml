@@ -103,10 +103,8 @@ jobs:
         working-directory: dist/npm/${{ matrix.package_dir }}
 
       - name: Publish Platform Package
-        run: npm publish --access public
+        run: npm publish --provenance --access public
         working-directory: dist/npm/${{ matrix.package_dir }}
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
   publish-root:
     needs:
@@ -132,10 +130,8 @@ jobs:
         working-directory: dist/npm/root
 
       - name: Publish Root Package
-        run: npm publish --access public
+        run: npm publish --provenance --access public
         working-directory: dist/npm/root
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
   github-release:
     needs:
