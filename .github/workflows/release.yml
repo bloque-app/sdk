@@ -4,6 +4,8 @@ on:
   push:
     tags:
       - 'sdk-v*'
+  # Re-publish an existing tag after a failed publish (safe-publish skips versions already on npm).
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -24,6 +26,13 @@ jobs:
           bun-version: latest
           registries: 'https://registry.npmjs.org/'
 
+      # npm trusted publishing (OIDC, provenance) needs npm >= 11.5: Node 24's npm.
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          registry-url: https://registry.npmjs.org
+
       - name: Install packages
         run: bun install
 
@@ -31,7 +40,5 @@ jobs:
         run: bun run build:sdk-only
 
       - name: Publish Packages
-        env:
-          NPM_CONFIG_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
           bun run release:sdk-only
