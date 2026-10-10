@@ -43,7 +43,7 @@ const transfer = await bloque.accounts.transfer({
   amount: '1000000000000',
   asset: 'KSM/12',
   metadata: {
-    reference: 'payment-123',
+    reference: `payment-${paymentId}`, // unique per transfer
     note: 'Monthly subscription'
   }
 });
@@ -84,7 +84,7 @@ interface TransferParams {
 
   /**
    * Optional metadata
-   * @example { reference: "payment-123", note: "Payment description" }
+   * @example { reference: `payment-${paymentId}`, note: "Payment description" }
    */
   metadata?: Record<string, unknown>;
 }
@@ -136,7 +136,7 @@ const transfer = await bloque.accounts.transfer({
   amount: '5000000', // 5 DUSD (6 decimals)
   asset: 'DUSD/6',
   metadata: {
-    reference: 'withdrawal-001',
+    reference: `withdrawal-${withdrawalId}`,
     type: 'savings'
   }
 });
@@ -155,7 +155,7 @@ const transfer = await bloque.accounts.transfer({
   amount: '2000000000000', // 2 KSM (12 decimals)
   asset: 'KSM/12',
   metadata: {
-    reference: 'internal-transfer-42',
+    reference: `internal-transfer-${transferId}`,
     department: 'operations'
   }
 });
@@ -174,7 +174,7 @@ const transfer = await bloque.accounts.transfer({
   amount: '1000000', // 1 DUSD
   asset: 'DUSD/6',
   metadata: {
-    reference: 'user-payment-001',
+    reference: `user-payment-${paymentId}`,
     note: 'Payment for services'
   }
 });
@@ -205,7 +205,7 @@ const transfer = await bloque.accounts.transfer({
   asset: 'DUSD/6',
   metadata: {
     // Payment tracking
-    reference: 'INV-2025-001',
+    reference: `invoice-${invoiceId}`,
     invoiceId: 'inv_abc123',
 
     // Customer info
@@ -223,6 +223,42 @@ const transfer = await bloque.accounts.transfer({
   }
 });
 ```
+
+## Referencia de Transferencia y Reintentos
+
+Cada transferencia se identifica por `metadata.reference`. Un reintento con la misma referencia desde
+la misma cuenta origen cae en la misma transferencia en lugar de mover fondos dos veces.
+
+- **Pasas `metadata.reference`**: se envía tal cual.
+- **Pasas solo `idempotencyKey`**: se usa como referencia.
+- **No pasas ninguna**: el SDK genera una por cada llamada a `transfer()` y la reutiliza en sus
+  propios reintentos automáticos (timeouts, rate limits, errores de red).
+
+Una referencia generada solo protege los reintentos del propio SDK. Si tu código puede volver a
+llamar `transfer()` para el mismo pago (el reintento de un job, una caída antes de guardar el
+resultado), pasa un valor estable ligado a ese pago:
+
+```typescript title="transferencia-idempotente.ts"
+const transfer = await bloque.accounts.transfer(
+  {
+    sourceUrn: sourceAccount,
+    destinationUrn: destinationAccount,
+    amount: '1000000',
+    asset: 'DUSD/6',
+  },
+  { idempotencyKey: `payout-${invoiceId}` },
+);
+```
+
+La referencia debe ser única por transferencia lógica. Reutilizarla para otro pago desde la misma
+cuenta origen no lo ejecuta: con el mismo monto, activo y destino recibes la transferencia anterior
+y no se mueven fondos; con cualquier diferencia se rechaza con `409 E_IDEMPOTENCY_KEY_REUSED`.
+
+Mantén la referencia corta. Se guarda junto con un identificador de la cuenta origen bajo un límite
+de 256 bytes, así que el espacio exacto depende de ese identificador; **128 bytes o menos** siempre
+es seguro. Una referencia demasiado larga se rechaza con `400 E_IDEMPOTENCY_KEY_INVALID`, y el
+`extra_details.max_bytes` del error indica el espacio disponible. Esto también aplica a
+`idempotencyKey` cuando se usa como referencia.
 
 ## Manejo de Errores
 
@@ -398,7 +434,7 @@ console.log(`Completed: ${results.filter(r => r.success).length}/${results.lengt
 2. **Valida URNs**: Asegúrate de que los URNs de las cuentas sean válidos
 3. **Decimales de Activos**: Ten en cuenta los lugares decimales apropiados
 4. **Manejo de Errores**: Usa bloques try-catch
-5. **Metadatos**: Agrega información de rastreo
+5. **Metadatos**: Agrega información de rastreo, y una `reference` única por pago y estable entre sus reintentos
 6. **Prueba Primero**: Prueba en modo sandbox
 7. **Almacena IDs de Cola**: Guarda los IDs de cola para rastreo
 

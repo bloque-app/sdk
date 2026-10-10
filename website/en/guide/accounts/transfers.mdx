@@ -43,7 +43,7 @@ const transfer = await bloque.accounts.transfer({
   amount: '1000000000000',
   asset: 'KSM/12',
   metadata: {
-    reference: 'payment-123',
+    reference: `payment-${paymentId}`, // unique per transfer
     note: 'Monthly subscription'
   }
 });
@@ -84,7 +84,7 @@ interface TransferParams {
 
   /**
    * Optional metadata
-   * @example { reference: "payment-123", note: "Payment description" }
+   * @example { reference: `payment-${paymentId}`, note: "Payment description" }
    */
   metadata?: Record<string, unknown>;
 }
@@ -143,7 +143,7 @@ const transfer = await bloque.accounts.transfer({
   amount: '5000000', // 5 DUSD (6 decimals)
   asset: 'DUSD/6',
   metadata: {
-    reference: 'withdrawal-001',
+    reference: `withdrawal-${withdrawalId}`,
     type: 'savings'
   }
 });
@@ -162,7 +162,7 @@ const transfer = await bloque.accounts.transfer({
   amount: '2000000000000', // 2 KSM (12 decimals)
   asset: 'KSM/12',
   metadata: {
-    reference: 'internal-transfer-42',
+    reference: `internal-transfer-${transferId}`,
     department: 'operations'
   }
 });
@@ -181,7 +181,7 @@ const transfer = await bloque.accounts.transfer({
   amount: '1000000', // 1 DUSD
   asset: 'DUSD/6',
   metadata: {
-    reference: 'user-payment-001',
+    reference: `user-payment-${paymentId}`,
     note: 'Payment for services'
   }
 });
@@ -212,7 +212,7 @@ const transfer = await bloque.accounts.transfer({
   asset: 'DUSD/6',
   metadata: {
     // Payment tracking
-    reference: 'INV-2025-001',
+    reference: `invoice-${invoiceId}`,
     invoiceId: 'inv_abc123',
 
     // Customer info
@@ -230,6 +230,43 @@ const transfer = await bloque.accounts.transfer({
   }
 });
 ```
+
+## Transfer Reference and Retries
+
+Every transfer is identified by `metadata.reference`. A retry with the same reference from the same
+source account lands on the same transfer instead of moving funds twice.
+
+- **You pass `metadata.reference`**: it is sent as-is.
+- **You pass `idempotencyKey` only**: it is used as the reference.
+- **You pass neither**: the SDK generates one per `transfer()` call and reuses it on its own
+  automatic retries (timeouts, rate limits, network errors).
+
+A generated reference only protects the SDK's own retries. If your code may call `transfer()` again
+for the same payment (a job retry, a crash before you stored the result), pass a stable value tied
+to that payment:
+
+```typescript title="idempotent-transfer.ts"
+const transfer = await bloque.accounts.transfer(
+  {
+    sourceUrn: sourceAccount,
+    destinationUrn: destinationAccount,
+    amount: '1000000',
+    asset: 'DUSD/6',
+  },
+  { idempotencyKey: `payout-${invoiceId}` },
+);
+```
+
+The reference must be unique per logical transfer. Reusing one for a different payment from the
+same source account does not execute it: with the same amount, asset and destination you get back
+the earlier transfer and no funds move; with anything different it is refused with
+`409 E_IDEMPOTENCY_KEY_REUSED`.
+
+Keep the reference short. It is stored together with an identifier of the source account under a
+256-byte limit, so the exact room left depends on that identifier; **128 bytes or less** is always
+safe. A reference that is too long is refused with `400 E_IDEMPOTENCY_KEY_INVALID`, and the error's
+`extra_details.max_bytes` gives the room left. This applies to `idempotencyKey` too when it is used
+as the reference.
 
 ## Error Handling
 
@@ -405,7 +442,7 @@ console.log(`Completed: ${results.filter(r => r.success).length}/${results.lengt
 2. **Validate URNs**: Ensure account URNs are valid
 3. **Asset Decimals**: Account for proper decimal places
 4. **Error Handling**: Use try-catch blocks
-5. **Metadata**: Add tracking information
+5. **Metadata**: Add tracking information, and a `reference` that is unique per payment and stable across its retries
 6. **Test First**: Test in sandbox mode
 7. **Store Queue IDs**: Save queue IDs for tracking
 
