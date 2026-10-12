@@ -17,7 +17,8 @@ On aledgent, `accept()` returns `passkeyRegistered`.
 
 New browser helpers, also exported from `@bloque/sdk`:
 `buildTosGatePasskeyCreationOptions(challenge)` builds the
-`navigator.credentials.create()` options the hosted page uses, and
+`navigator.credentials.create()` options (ES256, discoverable, user
+verification required, since the backend rejects registrations without it), and
 `toTosGatePasskeyRegistration(credential, challenge)` turns the resulting
 `PublicKeyCredential` into `accept()`'s `passkey` in the challenge's scheme
 (`toAledgentPasskeyRegistration` / `toKreivoPasskeyRegistration` for one

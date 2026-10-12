@@ -295,7 +295,7 @@ describe('passkey helpers', () => {
     publicAddress: '5Grw',
   };
 
-  it('builds creation options like the hosted page', () => {
+  it('builds creation options that require user verification', () => {
     const options = buildTosGatePasskeyCreationOptions(aledgentChallenge);
     expect(new Uint8Array(options.challenge)).toEqual(seq(32));
     expect(new Uint8Array(options.user.id)).toEqual(seq(32, 100));
@@ -305,7 +305,7 @@ describe('passkey helpers', () => {
     expect(options.pubKeyCredParams).toEqual([{ type: 'public-key', alg: -7 }]);
     expect(options.authenticatorSelection).toEqual({
       residentKey: 'required',
-      userVerification: 'preferred',
+      userVerification: 'required',
     });
     expect(options.attestation).toBe('none');
     expect(options.timeout).toBe(120000);

@@ -44,7 +44,7 @@ export interface TosGatePasskeyCreationOptions {
   pubKeyCredParams: { type: 'public-key'; alg: number }[];
   authenticatorSelection: {
     residentKey: 'required';
-    userVerification: 'preferred';
+    userVerification: 'required';
   };
   timeout: number;
   attestation: 'none';
@@ -121,8 +121,10 @@ function base64UrlDecode(value: string): ArrayBuffer {
 
 /**
  * The `navigator.credentials.create()` options for a passkey challenge from
- * `tosGate.challenge()`, as the hosted page builds them: ES256 only, a
- * discoverable credential, no attestation.
+ * `tosGate.challenge()`: ES256 only, a discoverable credential, user
+ * verification required, no attestation. Same as the hosted page except
+ * `userVerification`, which is `required` here because the backend rejects
+ * registrations made without it.
  *
  * `rp.id` is the challenge's `rpId`. On `aledgent` it is always set and must
  * be used as is — ingress verifies against that exact value, not your page's
@@ -160,7 +162,11 @@ export function buildTosGatePasskeyCreationOptions(
     pubKeyCredParams: [{ type: 'public-key', alg: -7 }],
     authenticatorSelection: {
       residentKey: 'required',
-      userVerification: 'preferred',
+      // aledgent ingress refuses a registration without the user-verified
+      // flag (`require_user_verification`, on by default). Requiring it here
+      // makes the browser fail the ceremony up front, which callers treat as
+      // a declined passkey, instead of a silent `passkeyRegistered: false`.
+      userVerification: 'required',
     },
     timeout: params.timeout ?? 120000,
     attestation: 'none',

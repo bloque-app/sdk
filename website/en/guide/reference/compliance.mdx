@@ -409,7 +409,7 @@ On `aledgent`, `deviceAttestation` does not apply: an aledgent `passkey` is alwa
 | `tosGate.init({ token })` | `TosGateInitResult` | Fetches the active TOS document and a single-use `csrfToken`. `passkeyRequired` is `true` only if this document requires account activation. |
 | `tosGate.challenge({ token })` | `TosGateChallengeResult` | Mints the passkey challenge (`scheme: 'kreivo'` or `'aledgent'`). Call right before the user commits, not at page load — the challenge expires. Only needed when `init()`'s `passkeyRequired` is `true`. |
 | `tosGate.accept({ token, csrfToken, deviceAttestation?, passkey? })` | `TosGateAcceptResult` | Records acceptance. On `kreivo`, `acceptance.accountActivation` is set only if you supplied `deviceAttestation`/`passkey`; on `aledgent`, `passkeyRegistered` is set only if you supplied `passkey`. |
-| `buildTosGatePasskeyCreationOptions(challenge, { rpName?, timeout? }?)` | `TosGatePasskeyCreationOptions` | The `navigator.credentials.create({ publicKey })` options, as the hosted page builds them (ES256, discoverable, no attestation; `rp.id` from the challenge). |
+| `buildTosGatePasskeyCreationOptions(challenge, { rpName?, timeout? }?)` | `TosGatePasskeyCreationOptions` | The `navigator.credentials.create({ publicKey })` options (ES256, discoverable, user verification required, no attestation; `rp.id` from the challenge). User verification is required because the backend rejects registrations without it. |
 | `toTosGatePasskeyRegistration(credential, challenge)` | `TosGatePasskeyRegistration` | Turns the `PublicKeyCredential` into `accept()`'s `passkey`, in the challenge's scheme. `toAledgentPasskeyRegistration(credential)` and `toKreivoPasskeyRegistration(credential, context)` do one scheme each. |
 
 ```typescript
