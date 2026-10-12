@@ -257,11 +257,12 @@ export interface TosGateDocumentWire {
 
 /**
  * @internal
- * WebAuthn registration challenge minted by ledger for a TOS document that
- * requires account activation. Present on `GET /api/tos-gate/init` only when
- * that document's `requires_account_activation` is set.
+ * Legacy (Kreivo) WebAuthn registration challenge minted by ledger for a TOS
+ * document that requires account activation. Carries no `scheme` on the wire;
+ * the SDK tags it `kreivo`.
  */
-export interface TosGatePasskeyChallengeWire {
+export interface TosGateKreivoPasskeyChallengeWire {
+  scheme?: undefined;
   challenge: string;
   context: number;
   expires_at_block: number;
@@ -271,6 +272,34 @@ export interface TosGatePasskeyChallengeWire {
   /** Only present if the deployment has `TOS_GATE_WEBAUTHN_RP_ID` set. */
   rp_id?: string;
 }
+
+/**
+ * @internal
+ * aledgent WebAuthn `register` challenge, minted by aledgent ingress and
+ * always bound to the identity's aledgent identity. No `context`: ingress
+ * verifies the raw registration itself.
+ */
+export interface TosGateAledgentPasskeyChallengeWire {
+  scheme: 'aledgent';
+  /** Base64url, from ingress. */
+  challenge: string;
+  /** When the challenge expires, as ingress reports it. */
+  expires_at: number;
+  /** The RP id ingress verifies against (configured, not the page's host). */
+  rp_id: string;
+  /** Base64url WebAuthn `user.id`. */
+  user_id: string;
+  user_name: string;
+}
+
+/**
+ * @internal
+ * `passkey` on `GET /api/tos-gate/challenge`: the legacy (Kreivo) shape, or
+ * the aledgent one tagged `scheme: "aledgent"`, depending on the backend.
+ */
+export type TosGatePasskeyChallengeWire =
+  | TosGateKreivoPasskeyChallengeWire
+  | TosGateAledgentPasskeyChallengeWire;
 
 /**
  * @internal
@@ -309,15 +338,32 @@ export interface TosGateChallengeResponse {
  * @internal
  * Raw WebAuthn registration parts, as an alternative to `device_attestation`
  * for callers driving `init()`/`accept()` themselves instead of opening the
- * hosted page.
+ * hosted page. Legacy (Kreivo) backend.
  */
-export interface TosGatePasskeyRegistrationWire {
+export interface TosGateKreivoPasskeyRegistrationWire {
   credential_id: string;
   authenticator_data: string;
   client_data: string;
   public_key: string;
   context: number;
 }
+
+/**
+ * @internal
+ * The raw WebAuthn registration, base64url, as aledgent ingress verifies it.
+ * Exactly these two fields: no `scheme`, no credential id.
+ */
+export interface TosGateAledgentPasskeyRegistrationWire {
+  /** `response.clientDataJSON`. */
+  client_data_json: string;
+  /** `response.attestationObject`. */
+  attestation_object: string;
+}
+
+/** @internal */
+export type TosGatePasskeyRegistrationWire =
+  | TosGateKreivoPasskeyRegistrationWire
+  | TosGateAledgentPasskeyRegistrationWire;
 
 /**
  * @internal
@@ -364,6 +410,12 @@ export interface TosAcceptanceRecordWire {
 export interface TosGateAcceptResponse {
   acceptance: TosAcceptanceRecordWire;
   return_url: string;
+  /**
+   * aledgent backend only, and only when a `passkey` was sent: whether it was
+   * registered on the identity's aledgent identity. Best-effort; a failed
+   * registration never fails the acceptance.
+   */
+  passkey_registered?: boolean;
 }
 
 /* ------------------------------------------------------------------

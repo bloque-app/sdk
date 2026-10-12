@@ -328,13 +328,27 @@ try {
 }
 ```
 
-Some Terms of Service documents also require handing the user's account to a passkey on their device (account activation) — this depends on the identity's usage country and is configured server-side, not something you opt into per call. When it applies, the hosted page runs WebAuthn automatically; you don't need to do anything extra to support it.
+Some Terms of Service documents also ask the user for a passkey on their device — this depends on the identity's usage country and is configured server-side, not something you opt into per call. When it applies, the hosted page runs WebAuthn automatically; you don't need to do anything extra to support it.
+
+The passkey step has two schemes, and the backend picks one per deployment. The challenge says which in its `scheme` field; never infer it from the environment:
+
+| `scheme` | What the passkey does | What `accept()` sends back |
+|----------|-----------------------|----------------------------|
+| `kreivo` (legacy) | Takes control of the identity's Kreivo PassAccount (account activation) | The registration's parts: `credentialId`, `authenticatorData`, `clientData`, `publicKey`, and the challenge's `context` |
+| `aledgent` | Joins the identity's aledgent credential set | The whole registration: `clientDataJson` and `attestationObject` (base64url), which aledgent verifies itself |
+
+Both are supported while deployments move from one to the other. `buildTosGatePasskeyCreationOptions()` and `toTosGatePasskeyRegistration()` (exported from `@bloque/sdk` and `@bloque/sdk-compliance`) handle either, so code written against them needs no change when a deployment switches.
 
 ### Driving the gate yourself
 
 Build your own UI around the gate with `start()` → `init()` → `accept()` instead of opening the hosted page:
 
 ```typescript
+import {
+  buildTosGatePasskeyCreationOptions,
+  toTosGatePasskeyRegistration,
+} from '@bloque/sdk';
+
 // 1. Mint a capability token + hosted URL (or just use the URL as a fallback)
 const gate = await user.compliance.tosGate.start({
   returnUrl: 'https://myapp.com/verification-complete',
@@ -351,45 +365,41 @@ await user.compliance.tosGate.accept({
   csrfToken: init.csrfToken,
 });
 
-// 3b. With activation — mint the challenge right before the user commits
-//     (it's bound to a short block-hash window, so don't fetch it at page
-//     load), then run WebAuthn against it
+// 3b. With a passkey step — mint the challenge right before the user
+//     commits (it expires, so don't fetch it at page load), then run
+//     WebAuthn against it. The challenge's `scheme` says which backend
+//     minted it; the helpers answer in the same scheme.
 if (init.passkeyRequired) {
-  const { passkey } = await user.compliance.tosGate.challenge({ token: gate.token });
+  const { passkey: challenge } = await user.compliance.tosGate.challenge({
+    token: gate.token,
+  });
 
-  if (passkey) {
+  if (challenge) {
     const credential = await navigator.credentials.create({
-      publicKey: {
-        challenge: base64UrlDecode(passkey.challenge),
-        rp: { id: passkey.rpId },
-        user: {
-          id: base64UrlDecode(passkey.userId),
-          name: passkey.userName,
-          displayName: passkey.userName,
-        },
-        pubKeyCredParams: [{ type: 'public-key', alg: -7 }],
-      },
+      publicKey: buildTosGatePasskeyCreationOptions(challenge),
     });
 
-    const response = credential.response as AuthenticatorAttestationResponse;
-    const { acceptance } = await user.compliance.tosGate.accept({
+    const result = await user.compliance.tosGate.accept({
       token: gate.token,
       csrfToken: init.csrfToken,
-      passkey: {
-        credentialId: base64UrlEncode(credential.rawId),
-        authenticatorData: base64UrlEncode(response.getAuthenticatorData()),
-        clientData: base64UrlEncode(response.clientDataJSON),
-        publicKey: base64UrlEncode(response.getPublicKey()!),
-        context: passkey.context,
-      },
+      passkey: toTosGatePasskeyRegistration(
+        credential as PublicKeyCredential,
+        challenge,
+      ),
     });
 
-    console.log('Activation attempted:', acceptance.accountActivation?.attempted);
+    if (challenge.scheme === 'aledgent') {
+      console.log('Passkey registered:', result.passkeyRegistered);
+    } else {
+      console.log('Activation attempted:', result.acceptance.accountActivation?.attempted);
+    }
   }
 }
 ```
 
-Declining the passkey step is always safe — call `accept()` without `passkey`/`deviceAttestation` and the TOS acceptance still records; the account is simply left registered-but-not-activated, which is a recoverable state.
+Declining the passkey step is always safe — call `accept()` without `passkey`/`deviceAttestation` and the TOS acceptance still records. On `kreivo` the account is simply left registered-but-not-activated; on `aledgent` the identity just has no passkey yet. Both are recoverable.
+
+On `aledgent`, `deviceAttestation` does not apply: an aledgent `passkey` is always sent, and `deviceAttestation` is dropped. On `kreivo`, a `deviceAttestation` still takes precedence over `passkey` if both are set.
 
 ### API Reference
 
@@ -397,8 +407,10 @@ Declining the passkey step is always safe — call `accept()` without `passkey`/
 |--------|---------|-------------|
 | `tosGate.start({ returnUrl })` | `StartGateResult` | Mints a portable capability `token` + hosted `url`. |
 | `tosGate.init({ token })` | `TosGateInitResult` | Fetches the active TOS document and a single-use `csrfToken`. `passkeyRequired` is `true` only if this document requires account activation. |
-| `tosGate.challenge({ token })` | `TosGateChallengeResult` | Mints the activation passkey challenge. Call right before the user commits, not at page load — the challenge is bound to a short block-hash window. Only needed when `init()`'s `passkeyRequired` is `true`. |
-| `tosGate.accept({ token, csrfToken, deviceAttestation?, passkey? })` | `TosGateAcceptResult` | Records acceptance. `accountActivation` on the result is set only if you supplied `deviceAttestation`/`passkey`. |
+| `tosGate.challenge({ token })` | `TosGateChallengeResult` | Mints the passkey challenge (`scheme: 'kreivo'` or `'aledgent'`). Call right before the user commits, not at page load — the challenge expires. Only needed when `init()`'s `passkeyRequired` is `true`. |
+| `tosGate.accept({ token, csrfToken, deviceAttestation?, passkey? })` | `TosGateAcceptResult` | Records acceptance. On `kreivo`, `acceptance.accountActivation` is set only if you supplied `deviceAttestation`/`passkey`; on `aledgent`, `passkeyRegistered` is set only if you supplied `passkey`. |
+| `buildTosGatePasskeyCreationOptions(challenge, { rpName?, timeout? }?)` | `TosGatePasskeyCreationOptions` | The `navigator.credentials.create({ publicKey })` options (ES256, discoverable, user verification required, no attestation; `rp.id` from the challenge). User verification is required because the backend rejects registrations without it. |
+| `toTosGatePasskeyRegistration(credential, challenge)` | `TosGatePasskeyRegistration` | Turns the `PublicKeyCredential` into `accept()`'s `passkey`, in the challenge's scheme. `toAledgentPasskeyRegistration(credential)` and `toKreivoPasskeyRegistration(credential, context)` do one scheme each. |
 
 ```typescript
 interface TosGateInitResult {
@@ -412,15 +424,48 @@ interface TosGateInitResult {
 }
 
 interface TosGateChallengeResult {
-  passkey: {
-    challenge: string;      // base64url — publicKey.challenge
-    context: number;        // echo back unchanged in accept()
-    expiresAtBlock: number;
-    userId: string;         // base64url — publicKey.user.id
-    userName: string;
-    publicAddress: string;
-    rpId?: string;
-  } | null;
+  passkey:
+    | {
+        scheme: 'kreivo';
+        challenge: string;      // base64url — publicKey.challenge
+        context: number;        // echo back unchanged in accept()
+        expiresAtBlock: number;
+        userId: string;         // base64url — publicKey.user.id
+        userName: string;
+        publicAddress: string;
+        rpId?: string;
+      }
+    | {
+        scheme: 'aledgent';
+        challenge: string;      // base64url — publicKey.challenge
+        expiresAt: number;
+        rpId: string;           // always set; use it as rp.id as is
+        userId: string;         // base64url — publicKey.user.id
+        userName: string;
+      }
+    | null;
+}
+
+type TosGatePasskeyRegistration =
+  | {
+      scheme?: 'kreivo';        // optional: absent means kreivo
+      credentialId: string;
+      authenticatorData: string;
+      clientData: string;
+      publicKey: string;
+      context: number;
+    }
+  | {
+      scheme: 'aledgent';
+      clientDataJson: string;   // base64url response.clientDataJSON
+      attestationObject: string; // base64url response.attestationObject
+      credentialId?: string;    // for your records; not sent
+    };
+
+interface TosGateAcceptResult {
+  acceptance: TosAcceptanceRecord;
+  returnUrl: string;
+  passkeyRegistered?: boolean; // aledgent only, when `passkey` was sent
 }
 
 interface TosAcceptanceRecord {
@@ -442,7 +487,7 @@ interface TosAcceptanceRecord {
 
 ### Error Handling
 
-Activation failures never throw — `accept()` still resolves and the TOS acceptance is recorded regardless. Check `acceptance.accountActivation?.attempted`/`reason` if you need to know whether the activation leg itself succeeded, and retry later via `accept()` again if it didn't.
+Passkey failures never throw — `accept()` still resolves and the TOS acceptance is recorded regardless. On `kreivo`, check `acceptance.accountActivation?.attempted`/`reason` to know whether the activation leg itself succeeded; on `aledgent`, check `passkeyRegistered`. Retry later if it didn't.
 
 ## Next Steps
 

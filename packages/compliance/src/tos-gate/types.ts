@@ -29,16 +29,35 @@ export interface TosGateDocument {
 }
 
 /**
- * WebAuthn passkey registration challenge for the account-activation step —
- * present on `init()` only when the active TOS document has
- * `requiresAccountActivation` set (see compliance's `TosPolicyConfig`).
- * Build a `PublicKeyCredentialCreationOptions` from this and call
+ * Which ledger backend a passkey challenge (and the registration answering
+ * it) belongs to.
+ *
+ * - `kreivo` — the legacy path: the passkey takes control of the identity's
+ *   Kreivo PassAccount; the registration goes back as its parts
+ *   (`credentialId`, `authenticatorData`, `clientData`, `publicKey`,
+ *   `context`).
+ * - `aledgent` — the passkey is added to the identity's aledgent credential
+ *   set; the registration goes back whole (`clientDataJson`,
+ *   `attestationObject`) and aledgent ingress verifies it.
+ *
+ * The backend decides, per deployment: read `scheme` off `challenge()`'s
+ * `passkey` and answer in the same scheme. Never infer it from the
+ * environment name.
+ */
+export type TosGatePasskeyScheme = 'kreivo' | 'aledgent';
+
+/**
+ * Legacy (Kreivo) WebAuthn passkey registration challenge for the
+ * account-activation step. Build a `PublicKeyCredentialCreationOptions` from
+ * this (see `buildTosGatePasskeyCreationOptions()`), call
  * `navigator.credentials.create()`, then pass the result to `accept()` as
  * `passkey`. Declining is fine — call `accept()` without it and the
  * acceptance still records; the account is simply left
  * registered-but-not-activated (recoverable later).
  */
-export interface TosGatePasskeyChallenge {
+export interface TosGateKreivoPasskeyChallenge {
+  /** Discriminator. The backend sends no scheme for this shape; the SDK sets it. */
+  scheme: 'kreivo';
   /** Base64url — becomes `publicKey.challenge`. */
   challenge: string;
   /** The chain block this challenge is bound to; pass back unchanged in `accept()`'s `passkey.context`. */
@@ -53,6 +72,42 @@ export interface TosGatePasskeyChallenge {
   /** Relying Party ID for `navigator.credentials.create()`, if the deployment sets one. */
   rpId?: string;
 }
+
+/**
+ * aledgent WebAuthn `register` challenge for the passkey step, bound to the
+ * identity's aledgent identity. Build a `PublicKeyCredentialCreationOptions`
+ * from this (see `buildTosGatePasskeyCreationOptions()`), call
+ * `navigator.credentials.create()`, turn the result into a registration with
+ * `toAledgentPasskeyRegistration()` and pass it to `accept()` as `passkey`.
+ * Declining is fine — the acceptance records without it.
+ */
+export interface TosGateAledgentPasskeyChallenge {
+  /** Discriminator, as the backend sends it. */
+  scheme: 'aledgent';
+  /** Base64url — becomes `publicKey.challenge`. */
+  challenge: string;
+  /** When the challenge expires, as aledgent ingress reports it (advisory — ingress enforces it). */
+  expiresAt: number;
+  /**
+   * Relying Party ID the passkey must be created for — always set. Ingress
+   * verifies against this exact value, so use it as `rp.id` rather than your
+   * page's host.
+   */
+  rpId: string;
+  /** Base64url — becomes `publicKey.user.id`. Stable per identity, no personal data. */
+  userId: string;
+  /** Human-facing credential name, as the authenticator displays it. */
+  userName: string;
+}
+
+/**
+ * WebAuthn passkey registration challenge returned by `challenge()` —
+ * discriminated by `scheme`. Narrow on it before reading scheme-specific
+ * fields (`context` only exists on `kreivo`, `expiresAt` only on `aledgent`).
+ */
+export type TosGatePasskeyChallenge =
+  | TosGateKreivoPasskeyChallenge
+  | TosGateAledgentPasskeyChallenge;
 
 export interface TosGateInitResult {
   document: TosGateDocument;
@@ -96,12 +151,18 @@ export interface TosGateChallengeResult {
 }
 
 /**
- * Raw WebAuthn registration parts, as an alternative to `deviceAttestation`
- * on `accept()` — use this when you drive `init()`/`accept()` yourself
- * (rather than opening the hosted page) and ran WebAuthn in-browser against
- * `init()`'s `passkey` challenge.
+ * Raw WebAuthn registration parts on the legacy (Kreivo) backend, as an
+ * alternative to `deviceAttestation` on `accept()` — use this when you drive
+ * `init()`/`accept()` yourself (rather than opening the hosted page) and ran
+ * WebAuthn against a `kreivo` challenge. `toKreivoPasskeyRegistration()`
+ * builds it from a `PublicKeyCredential`.
  */
-export interface TosGatePasskeyRegistration {
+export interface TosGateKreivoPasskeyRegistration {
+  /**
+   * Discriminator. Optional so registrations written before the aledgent
+   * scheme existed keep compiling; absent means `kreivo`.
+   */
+  scheme?: 'kreivo';
   /** `PublicKeyCredential.rawId`, base64url. */
   credentialId: string;
   /** `response.getAuthenticatorData()`, base64url. */
@@ -110,9 +171,36 @@ export interface TosGatePasskeyRegistration {
   clientData: string;
   /** `response.getPublicKey()` (SPKI), base64url. */
   publicKey: string;
-  /** The `context` from `init()`'s `passkey` challenge — echoed back unchanged. */
+  /** The `context` from the `kreivo` challenge — echoed back unchanged. */
   context: number;
 }
+
+/**
+ * The raw WebAuthn registration on the aledgent backend, answering an
+ * `aledgent` challenge. aledgent ingress verifies it as is.
+ * `toAledgentPasskeyRegistration()` builds it from a `PublicKeyCredential`.
+ */
+export interface TosGateAledgentPasskeyRegistration {
+  /** Discriminator — required for this shape. */
+  scheme: 'aledgent';
+  /** `response.clientDataJSON`, base64url. */
+  clientDataJson: string;
+  /** `response.attestationObject`, base64url. */
+  attestationObject: string;
+  /**
+   * `PublicKeyCredential.rawId`, base64url — for your own records only. It
+   * is not sent: ingress reads the credential out of `attestationObject`.
+   */
+  credentialId?: string;
+}
+
+/**
+ * A WebAuthn registration for `accept()`'s `passkey`, discriminated by
+ * `scheme`. Answer in the scheme of the challenge it was made against.
+ */
+export type TosGatePasskeyRegistration =
+  | TosGateKreivoPasskeyRegistration
+  | TosGateAledgentPasskeyRegistration;
 
 export interface TosGateAcceptParams {
   /** The capability token returned by `start()`. */
@@ -128,7 +216,9 @@ export interface TosGateAcceptParams {
   deviceAttestation?: string;
   /**
    * Alternative to `deviceAttestation` — the raw WebAuthn registration you
-   * produced yourself against `init()`'s `passkey` challenge.
+   * produced yourself against `challenge()`'s `passkey`, in that challenge's
+   * `scheme`. On the aledgent backend this is the only passkey input
+   * (`deviceAttestation` is ignored there).
    */
   passkey?: TosGatePasskeyRegistration;
 }
@@ -165,4 +255,12 @@ export interface TosAcceptanceRecord {
 export interface TosGateAcceptResult {
   acceptance: TosAcceptanceRecord;
   returnUrl: string;
+  /**
+   * aledgent backend only, and only when `passkey` was sent: whether the
+   * passkey was registered on the identity's aledgent identity. Non-throwing
+   * — a failed registration never invalidates the acceptance, and the same
+   * registration can be retried later. `undefined` on the legacy backend
+   * (check `acceptance.accountActivation` there).
+   */
+  passkeyRegistered?: boolean;
 }
