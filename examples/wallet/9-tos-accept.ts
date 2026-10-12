@@ -60,10 +60,13 @@ const { document, csrfToken, passkeyRequired } =
 console.log('TOS document version:', document.versionLabel);
 
 if (passkeyRequired) {
-  // This document also activates the user's Kreivo PassAccount. Run
-  // WebAuthn against `tosGate.challenge({ token: gate.token })` right
-  // before accept() and pass the result as `passkey` below. Declining is
-  // fine too — accept() without it still records the acceptance.
+  // This document also asks for a passkey. In a browser, right before
+  // accept(): get `tosGate.challenge({ token: gate.token })`, create the
+  // credential with `buildTosGatePasskeyCreationOptions(challenge)`, and pass
+  // `toTosGatePasskeyRegistration(credential, challenge)` as `passkey` below.
+  // The challenge's `scheme` ('kreivo' or 'aledgent') says which backend
+  // minted it; the helpers answer in the same scheme. Declining is fine too —
+  // accept() without it still records the acceptance.
 }
 
 const { acceptance } = await user.compliance.tosGate.accept({

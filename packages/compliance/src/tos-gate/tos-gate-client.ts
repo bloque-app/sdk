@@ -7,6 +7,7 @@ import type {
   TosGateChallengeResponse,
   TosGateInitResponse,
   TosGatePasskeyChallengeWire,
+  TosGatePasskeyRegistrationWire,
 } from '../internal/wire-types';
 import type {
   StartGateResult,
@@ -19,6 +20,7 @@ import type {
   TosGateInitParams,
   TosGateInitResult,
   TosGatePasskeyChallenge,
+  TosGatePasskeyRegistration,
 } from './types';
 
 function mapAcceptance(record: TosAcceptanceRecordWire): TosAcceptanceRecord {
@@ -55,15 +57,24 @@ function mapAcceptance(record: TosAcceptanceRecordWire): TosAcceptanceRecord {
  * `BloqueVerificationRequiredError` with `reason === 'tos'` and call its
  * `getVerificationLink()` instead, which calls `start()` for you.
  *
- * Some TOS documents also require handing the identity's Kreivo PassAccount
- * to a passkey on the same request (account activation). When that applies,
- * `init()`'s `passkeyRequired` is `true` — the hosted page calls
+ * Some TOS documents also ask for a passkey on the same request. When that
+ * applies, `init()`'s `passkeyRequired` is `true` — the hosted page calls
  * `challenge()` itself, right before the user commits, and runs WebAuthn
  * against it automatically. Driving `init()`/`accept()` yourself means
- * calling `challenge()` the same way (as late as possible — its challenge is
- * bound to a short block-hash window) and passing the WebAuthn result as
- * `accept()`'s `passkey` (or a finished `deviceAttestation`). Declining is
- * fine — `accept()` without either still records the acceptance.
+ * calling `challenge()` the same way (as late as possible) and passing the
+ * WebAuthn result as `accept()`'s `passkey`. Declining is fine — `accept()`
+ * without it still records the acceptance.
+ *
+ * The passkey step comes in two schemes, chosen by the backend and named by
+ * the challenge's `scheme` (never by environment):
+ * - `kreivo` (legacy): the passkey takes control of the identity's Kreivo
+ *   PassAccount; answer with the registration's parts (or a finished
+ *   `deviceAttestation`).
+ * - `aledgent`: the passkey joins the identity's aledgent credential set;
+ *   answer with the whole registration (`clientDataJson`,
+ *   `attestationObject`).
+ * `toTosGatePasskeyRegistration(credential, challenge)` answers in the right
+ * one.
  */
 export class TosGateClient extends BaseClient {
   /**
@@ -132,9 +143,12 @@ export class TosGateClient extends BaseClient {
   /**
    * Mint the WebAuthn registration challenge for the token's identity.
    * Separate from `init()`, and call it right before the user commits
-   * rather than at page load — the challenge is bound to a short
-   * block-hash window, so minting it early spends that window on however
-   * long the user takes to read the document.
+   * rather than at page load — the challenge expires (on `kreivo` it is
+   * bound to a short block-hash window), so minting it early spends that
+   * window on however long the user takes to read the document.
+   *
+   * The result's `passkey.scheme` says which backend minted it (`kreivo` or
+   * `aledgent`); answer `accept()` in the same scheme.
    *
    * Only call this when `init()`'s `passkeyRequired` was `true`.
    *
@@ -142,8 +156,10 @@ export class TosGateClient extends BaseClient {
    * ```typescript
    * const { passkey } = await bloque.compliance.tosGate.challenge({ token: gate.token });
    * if (passkey) {
-   *   // Build a PublicKeyCredentialCreationOptions from `passkey` and call
-   *   // navigator.credentials.create(), then pass the result to accept().
+   *   const credential = await navigator.credentials.create({
+   *     publicKey: buildTosGatePasskeyCreationOptions(passkey),
+   *   });
+   *   // then accept({ ..., passkey: toTosGatePasskeyRegistration(credential, passkey) })
    * }
    * ```
    */
@@ -171,36 +187,31 @@ export class TosGateClient extends BaseClient {
    * // Plain acceptance, no activation step
    * await bloque.compliance.tosGate.accept({ token: gate.token, csrfToken });
    *
-   * // With account activation, after running WebAuthn against init().passkey
-   * const { acceptance } = await bloque.compliance.tosGate.accept({
+   * // With a passkey, after running WebAuthn against challenge()'s `passkey`
+   * const result = await bloque.compliance.tosGate.accept({
    *   token: gate.token,
    *   csrfToken,
-   *   passkey: {
-   *     credentialId,
-   *     authenticatorData,
-   *     clientData,
-   *     publicKey,
-   *     context: passkey.context,
-   *   },
+   *   passkey: toTosGatePasskeyRegistration(credential, challenge),
    * });
-   * console.log(acceptance.accountActivation?.attempted);
+   * // kreivo: result.acceptance.accountActivation?.attempted
+   * // aledgent: result.passkeyRegistered
    * ```
    */
   async accept(params: TosGateAcceptParams): Promise<TosGateAcceptResult> {
+    const aledgentPasskey = params.passkey?.scheme === 'aledgent';
+    // An aledgent registration is always sent (that backend ignores
+    // device_attestation). On kreivo, a finished deviceAttestation takes
+    // precedence over the parts, as before.
+    const sendDeviceAttestation =
+      !!params.deviceAttestation && !aledgentPasskey;
     const body: TosGateAcceptRequest = {
       csrf_token: params.csrfToken,
-      ...(params.deviceAttestation && {
+      ...(sendDeviceAttestation && {
         device_attestation: params.deviceAttestation,
       }),
-      ...(!params.deviceAttestation &&
+      ...(!sendDeviceAttestation &&
         params.passkey && {
-          passkey: {
-            credential_id: params.passkey.credentialId,
-            authenticator_data: params.passkey.authenticatorData,
-            client_data: params.passkey.clientData,
-            public_key: params.passkey.publicKey,
-            context: params.passkey.context,
-          },
+          passkey: this._mapPasskeyRegistration(params.passkey),
         }),
     };
     const response = await this.httpClient.request<
@@ -215,6 +226,29 @@ export class TosGateClient extends BaseClient {
     return {
       acceptance: mapAcceptance(response.acceptance),
       returnUrl: response.return_url,
+      ...(typeof response.passkey_registered === 'boolean' && {
+        passkeyRegistered: response.passkey_registered,
+      }),
+    };
+  }
+
+  /** @internal */
+  private _mapPasskeyRegistration(
+    passkey: TosGatePasskeyRegistration,
+  ): TosGatePasskeyRegistrationWire {
+    if (passkey.scheme === 'aledgent') {
+      // Exactly what aledgent ingress verifies: no scheme, no credential id.
+      return {
+        client_data_json: passkey.clientDataJson,
+        attestation_object: passkey.attestationObject,
+      };
+    }
+    return {
+      credential_id: passkey.credentialId,
+      authenticator_data: passkey.authenticatorData,
+      client_data: passkey.clientData,
+      public_key: passkey.publicKey,
+      context: passkey.context,
     };
   }
 
@@ -222,7 +256,26 @@ export class TosGateClient extends BaseClient {
   private _mapPasskeyChallenge(
     challenge: TosGatePasskeyChallengeWire,
   ): TosGatePasskeyChallenge {
+    if (challenge.scheme === 'aledgent') {
+      return {
+        scheme: 'aledgent',
+        challenge: challenge.challenge,
+        expiresAt: challenge.expires_at,
+        rpId: challenge.rp_id,
+        userId: challenge.user_id,
+        userName: challenge.user_name,
+      };
+    }
+    const scheme: unknown = (challenge as { scheme?: unknown }).scheme;
+    if (scheme !== undefined) {
+      // A scheme this SDK version cannot answer. Failing loudly beats
+      // answering in the wrong shape; accept() without a passkey still works.
+      throw new Error(
+        `Unsupported TOS gate passkey scheme "${String(scheme)}"; upgrade @bloque/sdk-compliance`,
+      );
+    }
     return {
+      scheme: 'kreivo',
       challenge: challenge.challenge,
       context: challenge.context,
       expiresAtBlock: challenge.expires_at_block,

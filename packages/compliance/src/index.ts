@@ -3,6 +3,7 @@ export * from './kyc/kyc-client';
 export * from './kyc/types';
 export * from './tiers/tiers-client';
 export * from './tiers/types';
+export * from './tos-gate/passkey';
 export * from './tos-gate/tos-gate-client';
 export * from './tos-gate/types';
 export * from './verification-gate/types';

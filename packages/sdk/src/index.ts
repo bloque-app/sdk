@@ -1,6 +1,12 @@
 export type * from '@bloque/sdk-accounts';
 export type { BrebClient } from '@bloque/sdk-accounts';
 export type * from '@bloque/sdk-compliance';
+export {
+  buildTosGatePasskeyCreationOptions,
+  toAledgentPasskeyRegistration,
+  toKreivoPasskeyRegistration,
+  toTosGatePasskeyRegistration,
+} from '@bloque/sdk-compliance';
 export type { BloqueSDKConfig } from '@bloque/sdk-core';
 export {
   BloqueAPIError,
