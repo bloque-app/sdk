@@ -549,15 +549,14 @@ export class HttpClient {
           clearTimeout(timeoutId);
         }
 
-        // Re-throw if it's already a BloqueAPIError (from the !response.ok block above)
-        // and it's not retryable
+        // Re-throw if it's already a BloqueAPIError (from the !response.ok block
+        // above): its retry was already decided there, so it keeps its type
         if (
           error &&
           typeof error === 'object' &&
           'name' in error &&
           typeof error.name === 'string' &&
-          error.name.startsWith('Bloque') &&
-          !this.isRetryableError(error)
+          error.name.startsWith('Bloque')
         ) {
           throw error;
         }
