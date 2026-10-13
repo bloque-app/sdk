@@ -461,10 +461,10 @@ const TIMED_OUT = Symbol('timed_out');
 /**
  * Settles with `work`, or with `TIMED_OUT` after `ms`, or rejects with the
  * signal's reason on abort — whichever comes first. `work` is not cancelled;
- * it settles in the background.
+ * it settles in the background. Without `work` it is an abortable sleep.
  */
-function within<T>(
-  work: Promise<T>,
+function within<T = never>(
+  work: Promise<T> | undefined,
   ms: number,
   signal?: AbortSignal,
 ): Promise<T | typeof TIMED_OUT> {
@@ -486,7 +486,7 @@ function within<T>(
       resolve(TIMED_OUT);
     }, ms);
     signal?.addEventListener('abort', onAbort, { once: true });
-    work.then(
+    work?.then(
       (value) => {
         settle();
         resolve(value);
@@ -498,8 +498,6 @@ function within<T>(
     );
   });
 }
-
-const NEVER = new Promise<never>(() => {});
 
 function stripUrlFragment(url: string | undefined): string | undefined {
   return url?.split('#')[0];
@@ -601,7 +599,7 @@ export class BloqueApprovalRequiredError extends BloqueAPIError {
 
       const remaining = deadline - Date.now();
       if (remaining <= 0) break;
-      await within(NEVER, Math.min(interval, remaining), signal);
+      await within(undefined, Math.min(interval, remaining), signal);
     }
 
     throw new BloqueApprovalExpiredError('', {

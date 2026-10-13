@@ -344,12 +344,14 @@ describe('BloqueApprovalRequiredError.waitForApproval()', () => {
     mockFetch([() => json(200, { status: 'pending' })]);
     const controller = new AbortController();
     setTimeout(() => controller.abort(new Error('stop')), 50);
+    const started = Date.now();
 
     const error = await requiredError(client())
       .waitForApproval({ signal: controller.signal })
       .catch((e) => e);
 
     expect(error.message).toBe('stop');
+    expect(Date.now() - started).toBeLessThan(1000);
   });
 
   it('surfaces a typed error from the result route', async () => {
