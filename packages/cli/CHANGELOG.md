@@ -1,5 +1,12 @@
 # @bloque/cli
 
+## 0.15.0
+
+### Patch Changes
+
+- Updated dependencies [7bab7eb]
+  - @bloque/sdk@0.15.0
+
 ## 0.14.0
 
 ### Patch Changes

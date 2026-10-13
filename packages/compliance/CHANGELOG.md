@@ -1,5 +1,12 @@
 # @bloque/sdk-compliance
 
+## 0.15.0
+
+### Patch Changes
+
+- Updated dependencies [7bab7eb]
+  - @bloque/sdk-core@0.15.0
+
 ## 0.14.0
 
 ### Minor Changes
