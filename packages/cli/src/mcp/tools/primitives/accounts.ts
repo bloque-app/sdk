@@ -100,14 +100,16 @@ export function registerAccountTools(server: McpServer, clients: BloqueClients) 
     {
       description: 'Resolve a BRE-B key (phone/email/id/alias/barcode) to obtain recipient routing details and a resolutionId for payouts.',
       inputSchema: {
-        keyType: z.enum(['ID', 'PHONE', 'EMAIL', 'ALPHA', 'BCODE']),
+        keyType: z
+          .enum(['ID', 'PHONE', 'MOBILE', 'EMAIL', 'ALPHA', 'BCODE'])
+          .optional(),
         key: z.string(),
       },
     },
     async ({ keyType, key }) => {
       const result = await clients.accounts.breb.resolveKey({
-        keyType,
         key,
+        ...(keyType && { keyType }),
       });
       return {
         content: [{ type: 'text', text: JSON.stringify(result, null, 2) }],

@@ -280,7 +280,10 @@ export interface BrebResolvedKey {
    * Resolved key information.
    */
   key: {
-    keyType: BrebKeyType;
+    /**
+     * Null when the type was neither sent nor returned by the provider.
+     */
+    keyType: BrebKeyType | null;
     keyValue: string;
   };
 

@@ -159,7 +159,9 @@ export class BrebClient extends BaseClient {
       resolution_id: depositInfo.resolutionId,
       destination_key: {
         key_value: depositInfo.destinationKey.keyValue,
-        key_type: depositInfo.destinationKey.keyType,
+        ...(depositInfo.destinationKey.keyType
+          ? { key_type: depositInfo.destinationKey.keyType }
+          : {}),
         ...(depositInfo.destinationKey.displayName
           ? { display_name: depositInfo.destinationKey.displayName }
           : {}),

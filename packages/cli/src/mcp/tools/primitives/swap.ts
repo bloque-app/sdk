@@ -137,7 +137,7 @@ export function registerSwapTools(server: McpServer, clients: BloqueClients) {
   server.registerTool(
     'create_breb_order',
     {
-      description: "Low-level: create a BRE-B payout order to a recipient key (keyValue/keyType) with a unique resolutionId. Use 'send_to_breb_key' workflow for a simpler flow.",
+      description: "Low-level: create a BRE-B payout order to a recipient key (keyValue, optional keyType) with a unique resolutionId. Use 'send_to_breb_key' workflow for a simpler flow.",
       inputSchema: {
         rateSig: z.string(),
         amountSrc: z.string().optional(),
@@ -145,8 +145,9 @@ export function registerSwapTools(server: McpServer, clients: BloqueClients) {
         type: z.enum(['src', 'dst']).optional(),
         resolutionId: z.string(),
         keyValue: z.string(),
-        // ALPHA is currently the only operationally supported BRE-B key type.
-        keyType: z.enum(['ALPHA']),
+        keyType: z
+          .enum(['ID', 'PHONE', 'MOBILE', 'EMAIL', 'ALPHA', 'BCODE'])
+          .optional(),
         sourceAccountUrn: z.string(),
         webhookUrl: z.string().optional(),
         nodeId: z.string().optional(),
@@ -174,7 +175,10 @@ export function registerSwapTools(server: McpServer, clients: BloqueClients) {
         webhookUrl,
         nodeId,
         metadata,
-        depositInformation: { resolutionId, destinationKey: { keyValue, keyType } },
+        depositInformation: {
+          resolutionId,
+          destinationKey: { keyValue, ...(keyType && { keyType }) },
+        },
         args: { sourceAccountUrn },
       });
       return {

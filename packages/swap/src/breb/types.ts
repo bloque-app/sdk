@@ -15,21 +15,23 @@ export type { ExecutionHow, ExecutionResult, OrderType, SwapOrder };
 export interface BrebDestinationKey {
   /** The recipient's BRE-B key value, e.g. `'@JAR1234'`. */
   keyValue: string;
-  /** The recipient key's type. */
-  keyType: 'ID' | 'PHONE' | 'MOBILE' | 'EMAIL' | 'ALPHA' | 'BCODE';
+  /**
+   * The recipient key's type. Optional and informational — the active
+   * provider pays out by `keyValue` alone. When sent, it must be one of the
+   * listed values.
+   */
+  keyType?: 'ID' | 'PHONE' | 'MOBILE' | 'EMAIL' | 'ALPHA' | 'BCODE';
   /** Optional display name for the recipient. */
   displayName?: string;
 }
 
 export interface BrebDepositInformation {
   /**
-   * Any unique string identifying this payout. With the active provider
-   * (Cobre), this is used only to derive an idempotency key — it is *not* a
-   * real resolution from `session.accounts.breb.resolveKey()`, which is
-   * unsupported for Cobre (fails with `E_COBRE_RESOLVE_KEY_UNSUPPORTED`).
-   * There is no need to resolve the recipient key before calling
-   * `session.swap.breb.create()` — pass any unique value here, e.g. your
-   * own order/idempotency id.
+   * Any unique string identifying this payout. With the active provider,
+   * this is used only to derive an idempotency key. Resolving the recipient
+   * key first with `session.accounts.breb.resolveKey()` is optional — pass
+   * its `resolutionId`, or any unique value such as your own
+   * order/idempotency id.
    */
   resolutionId: string;
 
