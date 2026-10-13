@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, mock } from 'bun:test';
+import { inspect } from 'node:util';
 import {
   OPERATION_APPROVAL_HEADER,
   operationApprovalHeaders,
@@ -74,6 +75,25 @@ function mockFetch(responses: Array<() => Response>) {
   return calls;
 }
 
+/** A client without a request timeout, so a hanging fetch leaves no timer. */
+function hangingClient(): HttpClient {
+  const http = new HttpClient({
+    origin: 'test-origin',
+    auth: { type: 'originKey', originKey: 'sk_dev_origin' },
+    mode: 'sandbox',
+    timeout: 0,
+    retry: { enabled: false },
+  });
+  http.setAccessToken('test_access_token');
+  return http;
+}
+
+function hangingFetch() {
+  globalThis.fetch = mock(
+    () => new Promise<Response>(() => {}),
+  ) as unknown as typeof fetch;
+}
+
 function requiredError(
   http: HttpClient,
   expiresAt?: number,
@@ -113,6 +133,15 @@ describe('approval errors', () => {
     expect(logged).not.toContain(TOKEN);
     expect(Object.keys(error)).not.toContain('approvalToken');
     expect(JSON.stringify(error.response)).not.toContain(TOKEN);
+  });
+
+  it('keeps the approval token out of inspected or spread errors', () => {
+    const error = requiredError(client());
+
+    expect(error.approvalUrl).toContain(`#token=${TOKEN}`);
+    expect(inspect(error, { depth: 10 })).not.toContain(TOKEN);
+    expect(JSON.stringify(Object.assign({}, error))).not.toContain(TOKEN);
+    expect(JSON.stringify({ ...error })).not.toContain(TOKEN);
   });
 
   it.each([
@@ -258,6 +287,57 @@ describe('BloqueApprovalRequiredError.waitForApproval()', () => {
 
     expect(error).toBeInstanceOf(BloqueApprovalExpiredError);
     expect(calls).toHaveLength(0);
+  });
+
+  it.each([Number.NaN, -1, Number.POSITIVE_INFINITY])(
+    'keeps the 2s floor for intervalMs %p',
+    async (intervalMs) => {
+      const calls = mockFetch([() => json(200, { status: 'pending' })]);
+
+      const error = await requiredError(client(), Date.now() + 500)
+        .waitForApproval({ intervalMs })
+        .catch((e) => e);
+
+      expect(error).toBeInstanceOf(BloqueApprovalExpiredError);
+      expect(calls).toHaveLength(1);
+    },
+  );
+
+  it('cuts an in-flight poll on abort', async () => {
+    hangingFetch();
+    const controller = new AbortController();
+    setTimeout(() => controller.abort(new Error('stop')), 100);
+    const started = Date.now();
+
+    const error = await requiredError(hangingClient())
+      .waitForApproval({ signal: controller.signal })
+      .catch((e) => e);
+
+    expect(error.message).toBe('stop');
+    expect(Date.now() - started).toBeLessThan(1000);
+  });
+
+  it('cuts an in-flight poll at expiresAt', async () => {
+    hangingFetch();
+    const started = Date.now();
+
+    const error = await requiredError(hangingClient(), Date.now() + 200)
+      .waitForApproval()
+      .catch((e) => e);
+
+    expect(error).toBeInstanceOf(BloqueApprovalExpiredError);
+    expect(Date.now() - started).toBeLessThan(1000);
+  });
+
+  it('reports an approval collected elsewhere with its own reason', async () => {
+    mockFetch([() => json(200, { status: 'delivered' })]);
+
+    const error = await requiredError(client(), Date.now() + 200)
+      .waitForApproval()
+      .catch((e) => e);
+
+    expect(error).toBeInstanceOf(BloqueApprovalExpiredError);
+    expect(error.reason).toBe('approval_delivered_elsewhere');
   });
 
   it('honors the abort signal', async () => {

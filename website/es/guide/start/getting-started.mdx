@@ -209,7 +209,9 @@ La primera llamada lanza `BloqueApprovalRequiredError` (HTTP 428). Comparte `app
 import { BloqueApprovalRequiredError, withApproval } from '@bloque/sdk';
 
 const transfer = await withApproval(
-  (approval) => bloque.accounts.transfer(params, { approval }),
+  // Mantén estable la idempotency key en ambas llamadas
+  (approval) =>
+    bloque.accounts.transfer(params, { idempotencyKey: paymentId, approval }),
   {
     onApprovalRequired: (error: BloqueApprovalRequiredError) => {
       // Muestra el link al dueño de la cuenta
@@ -224,17 +226,21 @@ O paso a paso:
 
 ```typescript
 try {
-  await bloque.accounts.transfer(params);
+  await bloque.accounts.transfer(params, { idempotencyKey: paymentId });
 } catch (error) {
   if (!(error instanceof BloqueApprovalRequiredError)) throw error;
   notifyOwner(error.approvalUrl);
   // Consulta cada 2s (mínimo) y se detiene en error.expiresAt
   const approval = await error.waitForApproval({ signal });
-  await bloque.accounts.transfer(params, { approval });
+  await bloque.accounts.transfer(params, { idempotencyKey: paymentId, approval });
 }
 ```
 
-Repite la llamada con las mismas cuentas, montos, assets y, en swaps, el mismo `rateSig` y `args`. Las referencias y las idempotency keys pueden cambiar. Usa la aprobación de inmediato: expira unos dos minutos después de que el dueño firma.
+Repite la llamada con las mismas cuentas, montos, assets y, en swaps, el mismo `rateSig` y `args`; el `rateSig` debe seguir vigente al repetirla. La aprobación no cubre referencias ni idempotency keys, pero mantenlas estables (`metadata.reference` / `idempotencyKey`) para que repetir tras una respuesta perdida no mueva el dinero dos veces. Usa la aprobación de inmediato: una aprobación que no se usa unos dos minutos después de que el dueño abre el link se descarta.
+
+Si `waitForApproval()` termina con `reason: 'approval_delivered_elsewhere'`, el dueño sí aprobó, pero otra consulta recogió la aprobación (por ejemplo, un request reintentado cuya respuesta se perdió); repite la operación para obtener un link nuevo.
+
+`summary.fields` es lo que el dueño aprueba y puede incluir datos personales (en swaps, `deposit_information` y `args`); trata `error.summary`, `error.response` y `toJSON()` como cualquier otro dato de clientes en tus logs.
 
 | Error | Código | Qué hacer |
 | --- | --- | --- |

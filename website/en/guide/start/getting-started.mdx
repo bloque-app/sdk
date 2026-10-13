@@ -230,7 +230,9 @@ The first call throws `BloqueApprovalRequiredError` (HTTP 428). Share `approvalU
 import { BloqueApprovalRequiredError, withApproval } from '@bloque/sdk';
 
 const transfer = await withApproval(
-  (approval) => bloque.accounts.transfer(params, { approval }),
+  // Keep the idempotency key stable across both calls
+  (approval) =>
+    bloque.accounts.transfer(params, { idempotencyKey: paymentId, approval }),
   {
     onApprovalRequired: (error: BloqueApprovalRequiredError) => {
       // Show the link to the account owner
@@ -245,17 +247,21 @@ Or step by step:
 
 ```typescript
 try {
-  await bloque.accounts.transfer(params);
+  await bloque.accounts.transfer(params, { idempotencyKey: paymentId });
 } catch (error) {
   if (!(error instanceof BloqueApprovalRequiredError)) throw error;
   notifyOwner(error.approvalUrl);
   // Polls every 2s (minimum) and stops at error.expiresAt
   const approval = await error.waitForApproval({ signal });
-  await bloque.accounts.transfer(params, { approval });
+  await bloque.accounts.transfer(params, { idempotencyKey: paymentId, approval });
 }
 ```
 
-Repeat the call with the same accounts, amounts, assets and, for swaps, the same `rateSig` and `args`. References and idempotency keys may change. Use the approval right away: it expires about two minutes after the owner signs.
+Repeat the call with the same accounts, amounts, assets and, for swaps, the same `rateSig` and `args`; the `rateSig` must still be valid when you repeat it. The approval does not cover references or idempotency keys, but keep them stable (`metadata.reference` / `idempotencyKey`) so that re-running after a lost response cannot move money twice. Use the approval right away: an approval not used about two minutes after the owner opens the link is dropped.
+
+If `waitForApproval()` ends with `reason: 'approval_delivered_elsewhere'`, the owner did approve, but another poll collected the approval (for example a retried request whose response was lost); repeat the operation to get a new link.
+
+`summary.fields` is what the owner approves and can include personal data (for swaps, `deposit_information` and `args`); treat `error.summary`, `error.response` and `toJSON()` like any other customer data in your logs.
 
 | Error | Code | What to do |
 | --- | --- | --- |
