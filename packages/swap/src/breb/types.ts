@@ -18,20 +18,20 @@ export interface BrebDestinationKey {
   /**
    * The recipient key's type. Optional and informational — the active
    * provider pays out by `keyValue` alone. When sent, it must be one of the
-   * listed values.
+   * listed values; `null` is accepted and omitted, so a resolved key's
+   * `keyType` can be passed through as-is.
    */
-  keyType?: 'ID' | 'PHONE' | 'MOBILE' | 'EMAIL' | 'ALPHA' | 'BCODE';
+  keyType?: 'ID' | 'PHONE' | 'MOBILE' | 'EMAIL' | 'ALPHA' | 'BCODE' | null;
   /** Optional display name for the recipient. */
   displayName?: string;
 }
 
 export interface BrebDepositInformation {
   /**
-   * Any unique string identifying this payout. With the active provider,
-   * this is used only to derive an idempotency key. Resolving the recipient
-   * key first with `session.accounts.breb.resolveKey()` is optional — pass
-   * its `resolutionId`, or any unique value such as your own
-   * order/idempotency id.
+   * Required. Any unique string identifying this payout; the active
+   * provider does not use it. Resolving the recipient key first with
+   * `session.accounts.breb.resolveKey()` is optional — pass its
+   * `resolutionId`, or any unique value such as your own order id.
    */
   resolutionId: string;
 

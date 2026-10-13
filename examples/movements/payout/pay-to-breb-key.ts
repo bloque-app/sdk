@@ -35,13 +35,11 @@ const result = await user.swap.breb.create(
     rateSig: rates.rates[0].sig,
     amountSrc,
     depositInformation: {
-      // Any unique string -- used only to derive an idempotency key, not a
-      // real key resolution.
+      // Any unique string -- required, not used by the active provider.
       resolutionId: `payout-${crypto.randomUUID()}`,
-      // ALPHA is the only key type currently supported for payouts.
+      // keyType is optional; only the key value is required.
       destinationKey: {
         keyValue: '@JAR1234',
-        keyType: 'ALPHA',
       },
     },
     args: {

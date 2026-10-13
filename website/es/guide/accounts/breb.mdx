@@ -69,7 +69,7 @@ En el SDK usas `keyType` y `key`. En la infraestructura BRE-B esos campos suelen
 | Tipo en SDK (`keyType`) | Referencia BRE-B (`key_type`) | Descripción | Ejemplo de valor (`key`) |
 | --- | --- | --- | --- |
 | `ID` | `ID` | Número de documento | `7922089` |
-| `PHONE` | `MOBILE` | Número de celular | `3015550127` |
+| `PHONE` | `MOBILE` | Número de celular | — |
 | `EMAIL` | `EMAIL` | Correo electrónico | `user@example.com` |
 | `ALPHA` | `ALPHA` | Alias personalizado | `@clientalias123` |
 | `BCODE` | `BCODE` | Código comercial de la entidad | `0012345678` |
@@ -138,7 +138,7 @@ const { data, error } = await session.accounts.breb.resolveKey({
   key: '3015550127',
 });
 
-// sin keyType — BRE-B lo infiere a partir del valor de la llave
+// sin keyType — solo se envía el valor de la llave
 const { data, error } = await session.accounts.breb.resolveKey({
   key: '3015550127',
 });
@@ -161,7 +161,7 @@ interface ResolveBrebKeyParams {
 }
 ```
 
-`keyType` es opcional. Cuando se omite, la infraestructura BRE-B infiere el tipo de llave automáticamente a partir del valor de `key`.
+`keyType` es opcional. Cuando se omite, solo se envía `key` y el `keyType` de la llave resuelta llega como `null`.
 
 ## Respuesta de resolución
 
@@ -171,7 +171,7 @@ interface BrebResolvedKey {
   resolutionId: string;
   customerId: string;
   key: {
-    keyType: 'ID' | 'PHONE' | 'EMAIL' | 'ALPHA' | 'BCODE';
+    keyType: 'ID' | 'PHONE' | 'EMAIL' | 'ALPHA' | 'BCODE' | null;
     keyValue: string;
   };
   owner: {
@@ -221,8 +221,7 @@ const result = await session.swap.breb.create({
   rateSig: rates.rates[0].sig,
   amountSrc: '10000000',
   depositInformation: {
-    // Cualquier string único — solo se usa para derivar una llave de
-    // idempotencia.
+    // Cualquier string único — obligatorio, el proveedor activo no lo usa.
     resolutionId: 'payout-' + crypto.randomUUID(),
     // keyType es opcional; solo el valor de la llave es obligatorio.
     destinationKey: {

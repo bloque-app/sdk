@@ -80,6 +80,29 @@ describe('breb.create destination key', () => {
     expect('key_type' in destinationKey).toBe(false);
   });
 
+  it('omits key_type when keyType is null', async () => {
+    const destinationKey = await createPayout({
+      keyValue: '@JAR1234',
+      keyType: null,
+    });
+
+    expect('key_type' in destinationKey).toBe(false);
+  });
+
+  it('accepts a resolved key passed through as-is', async () => {
+    // Same shape as accounts' BrebResolvedKey['key'].
+    const resolved: { keyType: 'PHONE' | null; keyValue: string } = {
+      keyType: null,
+      keyValue: '@JAR1234',
+    };
+    const destinationKey = await createPayout({
+      keyValue: resolved.keyValue,
+      keyType: resolved.keyType,
+    });
+
+    expect(destinationKey).toEqual({ key_value: '@JAR1234' });
+  });
+
   it('sends key_type when keyType is provided', async () => {
     const destinationKey = await createPayout({
       keyValue: '3001234567',

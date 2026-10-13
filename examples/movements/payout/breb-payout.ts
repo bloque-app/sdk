@@ -49,7 +49,6 @@ const result = await user.swap.breb.create(
       resolutionId: `breb-payout-${amountSrc}`,
       destinationKey: {
         keyValue: process.env.BREB_KEY_VALUE ?? '@JAR1234',
-        keyType: 'ALPHA',
         displayName: 'Jane Doe',
       },
     },
