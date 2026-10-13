@@ -456,23 +456,50 @@ export interface WaitForApprovalOptions {
 
 const MIN_APPROVAL_POLL_INTERVAL_MS = 2000;
 
-function sleepUntil(ms: number, signal?: AbortSignal): Promise<void> {
+const TIMED_OUT = Symbol('timed_out');
+
+/**
+ * Settles with `work`, or with `TIMED_OUT` after `ms`, or rejects with the
+ * signal's reason on abort — whichever comes first. `work` is not cancelled;
+ * it settles in the background.
+ */
+function within<T>(
+  work: Promise<T>,
+  ms: number,
+  signal?: AbortSignal,
+): Promise<T | typeof TIMED_OUT> {
   return new Promise((resolve, reject) => {
     if (signal?.aborted) {
       reject(signal.reason);
       return;
     }
-    const onAbort = () => {
+    const settle = () => {
       clearTimeout(timer);
+      signal?.removeEventListener('abort', onAbort);
+    };
+    const onAbort = () => {
+      settle();
       reject(signal?.reason);
     };
     const timer = setTimeout(() => {
-      signal?.removeEventListener('abort', onAbort);
-      resolve();
+      settle();
+      resolve(TIMED_OUT);
     }, ms);
     signal?.addEventListener('abort', onAbort, { once: true });
+    work.then(
+      (value) => {
+        settle();
+        resolve(value);
+      },
+      (error) => {
+        settle();
+        reject(error);
+      },
+    );
   });
 }
+
+const NEVER = new Promise<never>(() => {});
 
 function stripUrlFragment(url: string | undefined): string | undefined {
   return url?.split('#')[0];
@@ -487,8 +514,12 @@ function stripUrlFragment(url: string | undefined): string | undefined {
  * as the `approval` option. `withApproval()` wraps the whole flow.
  */
 export class BloqueApprovalRequiredError extends BloqueAPIError {
-  /** Hosted page where the account owner reviews and approves the operation. */
-  public readonly approvalUrl?: string;
+  /**
+   * Hosted page where the account owner reviews and approves the operation.
+   * It carries the approval token, so it is non-enumerable: readable, but
+   * left out when the error is inspected, spread or serialized.
+   */
+  declare readonly approvalUrl?: string;
 
   /** When the approval expires. Repeat the operation before this time. */
   public readonly expiresAt: Date;
@@ -513,10 +544,10 @@ export class BloqueApprovalRequiredError extends BloqueAPIError {
       },
     );
     this.name = 'BloqueApprovalRequiredError';
-    this.approvalUrl = extra?.approval_url;
     this.expiresAt = new Date(extra?.expires_at ?? Number.NaN);
     this.summary = extra?.summary;
     Object.defineProperties(this, {
+      approvalUrl: { value: extra?.approval_url, enumerable: false },
       approvalToken: { value: extra?.approval_token, enumerable: false },
       requestClient: { value: options?.httpClient, enumerable: false },
     });
@@ -527,7 +558,11 @@ export class BloqueApprovalRequiredError extends BloqueAPIError {
    * Polls for the account owner's approval and resolves with the value to
    * pass as the `approval` option when repeating the operation.
    *
-   * Stops at `expiresAt`, rejecting with {@link BloqueApprovalExpiredError}.
+   * Stops at `expiresAt` (cutting a poll in flight), rejecting with
+   * {@link BloqueApprovalExpiredError}. Its `reason` is
+   * `approval_delivered_elsewhere` when the approval was collected by another
+   * poll (e.g. a retried request whose `ready` response was lost): the owner
+   * approved, but this call never received it.
    */
   async waitForApproval(options?: WaitForApprovalOptions): Promise<string> {
     if (!this.approvalToken || !this.requestClient) {
@@ -537,32 +572,47 @@ export class BloqueApprovalRequiredError extends BloqueAPIError {
       });
     }
 
-    const interval = Math.max(
-      options?.intervalMs ?? MIN_APPROVAL_POLL_INTERVAL_MS,
-      MIN_APPROVAL_POLL_INTERVAL_MS,
-    );
+    const requested = options?.intervalMs;
+    const interval =
+      requested !== undefined && Number.isFinite(requested)
+        ? Math.max(requested, MIN_APPROVAL_POLL_INTERVAL_MS)
+        : MIN_APPROVAL_POLL_INTERVAL_MS;
     const deadline = this.expiresAt.getTime();
+    const signal = options?.signal;
+    let delivered = false;
 
     while (Date.now() < deadline) {
-      options?.signal?.throwIfAborted();
-      const result = await this.requestClient.request<ApprovalResult>({
-        method: 'GET',
-        path: '/api/origins/operation-approvals/result',
-        authorizationOverride: `Bearer ${this.approvalToken}`,
-        _skipExchange: true,
-      });
-      if (result.status === 'ready') {
+      signal?.throwIfAborted();
+      const result = await within(
+        this.requestClient.request<ApprovalResult>({
+          method: 'GET',
+          path: '/api/origins/operation-approvals/result',
+          authorizationOverride: `Bearer ${this.approvalToken}`,
+          _skipExchange: true,
+        }),
+        deadline - Date.now(),
+        signal,
+      );
+      if (result === TIMED_OUT) break;
+      if (result.status === 'ready' && typeof result.value === 'string') {
         return result.value;
       }
+      if (result.status === 'delivered') delivered = true;
 
       const remaining = deadline - Date.now();
       if (remaining <= 0) break;
-      await sleepUntil(Math.min(interval, remaining), options?.signal);
+      await within(NEVER, Math.min(interval, remaining), signal);
     }
 
     throw new BloqueApprovalExpiredError('', {
       code: 'E_APPROVAL_EXPIRED',
-      response: { extra_details: { reason: 'approval_not_received' } },
+      response: {
+        extra_details: {
+          reason: delivered
+            ? 'approval_delivered_elsewhere'
+            : 'approval_not_received',
+        },
+      },
     });
   }
 

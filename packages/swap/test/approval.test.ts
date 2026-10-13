@@ -4,7 +4,11 @@ import {
   HttpClient,
   OPERATION_APPROVAL_HEADER,
 } from '@bloque/sdk-core';
+import { BankTransferClient } from '../src/bank-transfer/bank-transfer-client';
 import { BrebClient } from '../src/breb/breb-client';
+import { ExternalUsBankSwapClient } from '../src/external-us-bank/external-us-bank-client';
+import { PseClient } from '../src/pse/pse-client';
+import { RtpClient } from '../src/rtp/rtp-client';
 
 const originalFetch = globalThis.fetch;
 
@@ -82,25 +86,125 @@ const params = {
   args: { sourceAccountUrn: 'did:bloque:account:virtual:acc-1' },
 };
 
+const orderCreates: Array<
+  [string, (http: HttpClient, approval?: string) => Promise<unknown>]
+> = [
+  [
+    'breb.create',
+    (http, approval) =>
+      new BrebClient(http).create(params, { idempotencyKey: 'k', approval }),
+  ],
+  [
+    'breb.createDeposit',
+    (http, approval) =>
+      new BrebClient(http).createDeposit(
+        {
+          rateSig: 'rate-sig',
+          amountSrc: '1000',
+          depositInformation: { urn: 'did:bloque:account:virtual:acc-1' },
+          args: {},
+        },
+        { idempotencyKey: 'k', approval },
+      ),
+  ],
+  [
+    'pse.create',
+    (http, approval) =>
+      new PseClient(http).create(
+        {
+          rateSig: 'rate-sig',
+          toMedium: 'kusama',
+          amountSrc: '1000',
+          depositInformation: { urn: 'did:bloque:account:virtual:acc-1' },
+          args: {
+            bankCode: '1007',
+            userType: 0,
+            customerEmail: 'owner@example.com',
+            userLegalIdType: 'CC',
+            userLegalId: '123',
+            customerData: { fullName: 'Owner', phoneNumber: '3001234567' },
+            redirectUrl: 'https://example.com/back',
+          },
+        },
+        { idempotencyKey: 'k', approval },
+      ),
+  ],
+  [
+    'bankTransfer.create',
+    (http, approval) =>
+      new BankTransferClient(http).create(
+        {
+          rateSig: 'rate-sig',
+          toMedium: 'bancolombia',
+          amountSrc: '1000',
+          depositInformation: {
+            bankAccountType: 'savings',
+            bankAccountNumber: '123',
+            bankAccountHolderName: 'Owner',
+            bankAccountHolderIdentificationType: 'CC',
+            bankAccountHolderIdentificationValue: '123',
+          },
+          args: { sourceAccountUrn: 'did:bloque:account:virtual:acc-1' },
+        },
+        { idempotencyKey: 'k', approval },
+      ),
+  ],
+  [
+    'rtp.create',
+    (http, approval) =>
+      new RtpClient(http).create(
+        {
+          rateSig: 'rate-sig',
+          amountSrc: '1000',
+          depositInformation: {
+            owner: 'Owner',
+            accountNumber: '123',
+            routingNumber: '021000021',
+            accountType: 'checking',
+          },
+          args: { sourceAccountUrn: 'did:bloque:account:virtual:acc-1' },
+        },
+        { idempotencyKey: 'k', approval },
+      ),
+  ],
+  [
+    'externalUsBank.create',
+    (http, approval) =>
+      new ExternalUsBankSwapClient(http).create(
+        {
+          rateSig: 'rate-sig',
+          amountSrc: '1000',
+          depositInformation: { ledgerAccountId: 'ledger-1' },
+          args: { sourceAccountUrn: 'did:bloque:account:external-us-bank:1' },
+        },
+        { idempotencyKey: 'k', approval },
+      ),
+  ],
+];
+
 describe('swap order approval', () => {
-  it('repeats the take with the same rate_sig and args plus the approval header', async () => {
-    const calls = mockFetch([orderOk]);
-    const breb = new BrebClient(authedClient());
-
-    await breb.create(params, { idempotencyKey: 'take-1' });
-    await breb.create(params, {
-      idempotencyKey: 'take-2',
-      approval: 'signed-approval',
-    });
-
-    expect(calls[1].body).toEqual(calls[0].body);
-    expect(calls[1].body.rate_sig).toBe('rate-sig');
-    expect(calls[0].headers.has(OPERATION_APPROVAL_HEADER)).toBe(false);
-    expect(calls[1].headers.get(OPERATION_APPROVAL_HEADER)).toBe(
-      'signed-approval',
-    );
-    expect(calls[1].headers.get('Idempotency-Key')).toBe('take-2');
+  it('covers every order create', () => {
+    expect(orderCreates).toHaveLength(6);
   });
+
+  it.each(orderCreates)(
+    '%s repeats the same body and rate_sig with the approval header',
+    async (_name, create) => {
+      const calls = mockFetch([orderOk]);
+      const http = authedClient();
+
+      await create(http);
+      await create(http, 'signed-approval');
+
+      expect(calls[1].body).toEqual(calls[0].body);
+      expect(calls[1].body.rate_sig).toBe('rate-sig');
+      expect(calls[0].headers.has(OPERATION_APPROVAL_HEADER)).toBe(false);
+      expect(calls[1].headers.get(OPERATION_APPROVAL_HEADER)).toBe(
+        'signed-approval',
+      );
+      expect(calls[1].headers.get('Idempotency-Key')).toBe('k');
+    },
+  );
 
   it('throws BloqueApprovalArgsRequiredError naming the missing args', async () => {
     mockFetch([
