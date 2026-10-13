@@ -1,3 +1,4 @@
+import type { OperationApprovalOptions } from '@bloque/sdk-core';
 import type {
   ExecutionHow,
   ExecutionResult,
@@ -133,7 +134,7 @@ export interface CreatePseOrderParams {
   metadata?: Record<string, unknown>;
 }
 
-export interface CreatePseOrderOptions {
+export interface CreatePseOrderOptions extends OperationApprovalOptions {
   /**
    * Optional custom idempotency key sent as `Idempotency-Key` header.
    */

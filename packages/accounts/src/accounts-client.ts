@@ -2,6 +2,7 @@ import type { HttpClient } from '@bloque/sdk-core';
 import {
   BaseClient,
   isSupportedAsset,
+  operationApprovalHeaders,
   SUPPORTED_ASSETS,
 } from '@bloque/sdk-core';
 import {
@@ -380,7 +381,10 @@ export class AccountsClient extends BaseClient {
       method: 'POST',
       path: `/api/accounts/${params.sourceUrn}/transfer`,
       body: request,
-      headers: { 'Idempotency-Key': options?.idempotencyKey || reference },
+      headers: operationApprovalHeaders({
+        idempotencyKey: options?.idempotencyKey || reference,
+        approval: options?.approval,
+      }),
     });
 
     return {
@@ -467,9 +471,7 @@ export class AccountsClient extends BaseClient {
       method: 'POST',
       path: '/api/accounts/batch/transfer',
       body: request,
-      headers: options?.idempotencyKey
-        ? { 'Idempotency-Key': options.idempotencyKey }
-        : undefined,
+      headers: operationApprovalHeaders(options),
     });
 
     const chunks: BatchTransferChunkResult[] = response.result.chunks.map(

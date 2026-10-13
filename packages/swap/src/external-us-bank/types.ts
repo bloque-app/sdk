@@ -1,3 +1,4 @@
+import type { OperationApprovalOptions } from '@bloque/sdk-core';
 import type {
   ExecutionHow,
   ExecutionResult,
@@ -120,7 +121,8 @@ export type CreateExternalUsBankOrderParams =
   | CreateExternalUsBankKusamaOrderParams
   | CreateExternalUsBankBaseOrderParams;
 
-export interface CreateExternalUsBankOrderOptions {
+export interface CreateExternalUsBankOrderOptions
+  extends OperationApprovalOptions {
   /**
    * Optional custom idempotency key sent as `Idempotency-Key` header.
    */

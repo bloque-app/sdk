@@ -2,7 +2,10 @@
  * Public types for @bloque/sdk-accounts
  */
 
-import type { SupportedAsset } from '@bloque/sdk-core';
+import type {
+  OperationApprovalOptions,
+  SupportedAsset,
+} from '@bloque/sdk-core';
 import type { TransactionStatus } from './internal/wire-types';
 
 // Re-export SupportedAsset from core
@@ -76,7 +79,7 @@ export interface TransferParams {
   metadata?: Record<string, unknown>;
 }
 
-export interface TransferOptions {
+export interface TransferOptions extends OperationApprovalOptions {
   /**
    * Optional custom idempotency key, sent as the `Idempotency-Key` header and,
    * when `metadata.reference` is not set, as the transfer reference. Pass a
@@ -155,7 +158,7 @@ export interface BatchTransferParams {
   webhookUrl?: string;
 }
 
-export interface BatchTransferOptions {
+export interface BatchTransferOptions extends OperationApprovalOptions {
   /**
    * Optional custom idempotency key sent as `Idempotency-Key` header.
    */
