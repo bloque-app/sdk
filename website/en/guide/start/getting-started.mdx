@@ -380,6 +380,7 @@ if (!error) {
       amountSrc: '10000000',
       depositInformation: {
         resolutionId: resolution.data.resolutionId,
+        destinationKey: { keyValue: resolution.data.key.keyValue },
       },
       args: {
         sourceAccountUrn: 'did:bloque:account:breb:demo-account-id',

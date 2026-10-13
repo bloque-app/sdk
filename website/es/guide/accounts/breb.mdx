@@ -69,7 +69,7 @@ En el SDK usas `keyType` y `key`. En la infraestructura BRE-B esos campos suelen
 | Tipo en SDK (`keyType`) | Referencia BRE-B (`key_type`) | Descripción | Ejemplo de valor (`key`) |
 | --- | --- | --- | --- |
 | `ID` | `ID` | Número de documento | `7922089` |
-| `PHONE` | `MOBILE` | Número de celular | `+573001234567` |
+| `PHONE` | `MOBILE` | Número de celular | `3015550127` |
 | `EMAIL` | `EMAIL` | Correo electrónico | `user@example.com` |
 | `ALPHA` | `ALPHA` | Alias personalizado | `@clientalias123` |
 | `BCODE` | `BCODE` | Código comercial de la entidad | `0012345678` |
@@ -202,7 +202,7 @@ interface BrebResolvedKey {
 
 ## Pagar a una llave BRE-B
 
-Convierte tu propio saldo vinculado a Kusama y envíalo a cualquier llave BRE-B — el destinatario no necesita ser una cuenta administrada por Bloque. Identifícalo directamente con `destinationKey`; no hace falta resolver la llave primero (`session.accounts.breb.resolveKey()` no está soportado con el proveedor activo, Cobre — falla con `E_COBRE_RESOLVE_KEY_UNSUPPORTED`).
+Convierte tu propio saldo vinculado a Kusama y envíalo a cualquier llave BRE-B — el destinatario no necesita ser una cuenta administrada por Bloque. Identifícalo directamente con `destinationKey` — solo `keyValue` es obligatorio. `keyType` es opcional: el proveedor activo paga usando solo el valor de la llave, y si lo envías debe ser uno de los tipos de la tabla anterior. Resolver la llave antes con `session.accounts.breb.resolveKey()` también es opcional, útil para mostrar el nombre del destinatario antes de pagar.
 
 ```typescript title="pagar-a-llave-breb.ts"
 const rates = await session.swap.findRates({
@@ -222,12 +222,11 @@ const result = await session.swap.breb.create({
   amountSrc: '10000000',
   depositInformation: {
     // Cualquier string único — solo se usa para derivar una llave de
-    // idempotencia, no es una resolución real de la llave.
+    // idempotencia.
     resolutionId: 'payout-' + crypto.randomUUID(),
-    // ALPHA es el único tipo de llave soportado actualmente para pagos.
+    // keyType es opcional; solo el valor de la llave es obligatorio.
     destinationKey: {
       keyValue: '@JAR1234',
-      keyType: 'ALPHA',
     },
   },
   args: {

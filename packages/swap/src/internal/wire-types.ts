@@ -96,7 +96,7 @@ export interface DepositInformation {
   /** BRE-B payout recipient, identified by their key */
   destination_key?: {
     key_value: string;
-    key_type: string;
+    key_type?: string;
     display_name?: string;
   };
   /** External US bank on-ramp: destination Kusama ledger account id */
