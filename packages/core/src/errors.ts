@@ -11,6 +11,8 @@ export interface RequestCapableClient {
     method: string;
     path: string;
     body?: U;
+    authorizationOverride?: string;
+    _skipExchange?: boolean;
   }): Promise<T>;
 }
 
@@ -417,6 +419,355 @@ export class BloqueVerificationPendingError extends BloqueAuthenticationError {
   }
 }
 
+/** What the account owner approves: the operation and its exact money fields. */
+export interface OperationApprovalSummary {
+  /** Operation label, e.g. `accounts.transfer` or `swap.take`. */
+  operation: string;
+  /** The exact fields the approval covers (accounts, amounts, assets, ...). */
+  fields: Record<string, unknown>;
+}
+
+interface ApprovalRequiredExtraDetails {
+  approval_token?: string;
+  approval_url?: string;
+  /** Epoch ms. */
+  expires_at?: number;
+  summary?: OperationApprovalSummary;
+}
+
+interface ApprovalExtraDetails {
+  reason?: string;
+  message?: string;
+  args?: string[];
+}
+
+type ApprovalResult =
+  | { status: 'pending' }
+  | { status: 'ready'; header: string; value: string }
+  | { status: 'delivered' };
+
+/** Options for {@link BloqueApprovalRequiredError.waitForApproval}. */
+export interface WaitForApprovalOptions {
+  /** Delay between polls, in milliseconds. Never below 2000. @default 2000 */
+  intervalMs?: number;
+  /** Aborts the wait; the promise rejects with the signal's reason. */
+  signal?: AbortSignal;
+}
+
+const MIN_APPROVAL_POLL_INTERVAL_MS = 2000;
+
+function sleepUntil(ms: number, signal?: AbortSignal): Promise<void> {
+  return new Promise((resolve, reject) => {
+    if (signal?.aborted) {
+      reject(signal.reason);
+      return;
+    }
+    const onAbort = () => {
+      clearTimeout(timer);
+      reject(signal?.reason);
+    };
+    const timer = setTimeout(() => {
+      signal?.removeEventListener('abort', onAbort);
+      resolve();
+    }, ms);
+    signal?.addEventListener('abort', onAbort, { once: true });
+  });
+}
+
+function stripUrlFragment(url: string | undefined): string | undefined {
+  return url?.split('#')[0];
+}
+
+/**
+ * Error thrown when a money-moving operation needs the account owner's
+ * passkey approval (`E_APPROVAL_REQUIRED`, HTTP 428).
+ *
+ * Show `approvalUrl` to the account owner, wait for their signature with
+ * `waitForApproval()`, then repeat the same call passing the returned value
+ * as the `approval` option. `withApproval()` wraps the whole flow.
+ */
+export class BloqueApprovalRequiredError extends BloqueAPIError {
+  /** Hosted page where the account owner reviews and approves the operation. */
+  public readonly approvalUrl?: string;
+
+  /** When the approval expires. Repeat the operation before this time. */
+  public readonly expiresAt: Date;
+
+  /** What the account owner is asked to approve. */
+  public readonly summary?: OperationApprovalSummary;
+
+  // Non-enumerable so the token never shows up when the error is logged.
+  private declare readonly approvalToken?: string;
+  private declare readonly requestClient?: RequestCapableClient;
+
+  constructor(_message: string, options?: BloqueAPIErrorOptions) {
+    const extra = extractExtraDetails<ApprovalRequiredExtraDetails>(
+      options?.response,
+    );
+    super(
+      'This operation needs the account owner to approve it with their passkey. Share approvalUrl with them, then call waitForApproval() and repeat the same request with the approval.',
+      {
+        ...options,
+        code: options?.code ?? 'E_APPROVAL_REQUIRED',
+        response: redactApprovalResponse(options?.response),
+      },
+    );
+    this.name = 'BloqueApprovalRequiredError';
+    this.approvalUrl = extra?.approval_url;
+    this.expiresAt = new Date(extra?.expires_at ?? Number.NaN);
+    this.summary = extra?.summary;
+    Object.defineProperties(this, {
+      approvalToken: { value: extra?.approval_token, enumerable: false },
+      requestClient: { value: options?.httpClient, enumerable: false },
+    });
+    Object.setPrototypeOf(this, BloqueApprovalRequiredError.prototype);
+  }
+
+  /**
+   * Polls for the account owner's approval and resolves with the value to
+   * pass as the `approval` option when repeating the operation.
+   *
+   * Stops at `expiresAt`, rejecting with {@link BloqueApprovalExpiredError}.
+   */
+  async waitForApproval(options?: WaitForApprovalOptions): Promise<string> {
+    if (!this.approvalToken || !this.requestClient) {
+      throw new BloqueApprovalExpiredError('', {
+        code: 'E_APPROVAL_EXPIRED',
+        response: { extra_details: { reason: 'approval_token_missing' } },
+      });
+    }
+
+    const interval = Math.max(
+      options?.intervalMs ?? MIN_APPROVAL_POLL_INTERVAL_MS,
+      MIN_APPROVAL_POLL_INTERVAL_MS,
+    );
+    const deadline = this.expiresAt.getTime();
+
+    while (Date.now() < deadline) {
+      options?.signal?.throwIfAborted();
+      const result = await this.requestClient.request<ApprovalResult>({
+        method: 'GET',
+        path: '/api/origins/operation-approvals/result',
+        authorizationOverride: `Bearer ${this.approvalToken}`,
+        _skipExchange: true,
+      });
+      if (result.status === 'ready') {
+        return result.value;
+      }
+
+      const remaining = deadline - Date.now();
+      if (remaining <= 0) break;
+      await sleepUntil(Math.min(interval, remaining), options?.signal);
+    }
+
+    throw new BloqueApprovalExpiredError('', {
+      code: 'E_APPROVAL_EXPIRED',
+      response: { extra_details: { reason: 'approval_not_received' } },
+    });
+  }
+
+  toJSON() {
+    return {
+      ...super.toJSON(),
+      approvalUrl: stripUrlFragment(this.approvalUrl),
+      expiresAt: Number.isNaN(this.expiresAt.getTime())
+        ? undefined
+        : this.expiresAt.toISOString(),
+      summary: this.summary,
+    };
+  }
+}
+
+/** Drops the approval token (and the URL fragment carrying it) from a 428 body. */
+function redactApprovalResponse(response: unknown): unknown {
+  const extra = extractExtraDetails<ApprovalRequiredExtraDetails>(response);
+  if (!extra) return response;
+  const { approval_token: _token, ...rest } = extra;
+  return {
+    ...(response as object),
+    extra_details: {
+      ...rest,
+      ...(rest.approval_url && {
+        approval_url: stripUrlFragment(rest.approval_url),
+      }),
+    },
+  };
+}
+
+function approvalInvalidMessage(extra?: ApprovalExtraDetails): string {
+  switch (extra?.reason) {
+    case 'passkey_rejected':
+      return 'The passkey approval was refused or already used. Ask the account owner to open the approval link again and approve.';
+    case 'passkey_not_registered':
+      return (
+        extra.message ??
+        'This passkey is not registered for approvals. Register it again, then approve the operation.'
+      );
+    case 'operation_mismatch':
+    case 'args_not_approved':
+      return 'The request differs from the approved operation. Repeat the exact approved request, or request a new approval.';
+    case 'passkey_not_owned_by_identity':
+      return 'The passkey used to approve belongs to someone else. The account owner must approve with their own passkey.';
+    default:
+      return `The operation approval is not valid${extra?.reason ? ` (${extra.reason})` : ''}.`;
+  }
+}
+
+/**
+ * Error thrown when an operation approval is refused (`E_APPROVAL_INVALID`,
+ * HTTP 403). `reason` says why, e.g. `passkey_rejected` (ask the owner to
+ * open the approval link again) or `passkey_not_registered` (the owner must
+ * register their passkey again, then approve).
+ */
+export class BloqueApprovalInvalidError extends BloqueAPIError {
+  /** Why the approval was refused (`extra_details.reason`). */
+  public readonly reason?: string;
+
+  constructor(_message: string, options?: BloqueAPIErrorOptions) {
+    const extra = extractExtraDetails<ApprovalExtraDetails>(options?.response);
+    super(approvalInvalidMessage(extra), {
+      ...options,
+      code: options?.code ?? 'E_APPROVAL_INVALID',
+    });
+    this.name = 'BloqueApprovalInvalidError';
+    this.reason = extra?.reason;
+    Object.setPrototypeOf(this, BloqueApprovalInvalidError.prototype);
+  }
+
+  toJSON() {
+    return { ...super.toJSON(), reason: this.reason };
+  }
+}
+
+/**
+ * Error thrown when an operation approval expired (`E_APPROVAL_EXPIRED`), or
+ * when `waitForApproval()` reached `expiresAt` without one. Repeat the
+ * operation without an approval to get a new link.
+ */
+export class BloqueApprovalExpiredError extends BloqueAPIError {
+  /** Why the approval expired (`extra_details.reason`), when given. */
+  public readonly reason?: string;
+
+  constructor(_message: string, options?: BloqueAPIErrorOptions) {
+    const extra = extractExtraDetails<ApprovalExtraDetails>(options?.response);
+    super(
+      'The operation approval expired. Repeat the operation to request a new approval.',
+      { ...options, code: options?.code ?? 'E_APPROVAL_EXPIRED' },
+    );
+    this.name = 'BloqueApprovalExpiredError';
+    this.reason = extra?.reason;
+    Object.setPrototypeOf(this, BloqueApprovalExpiredError.prototype);
+  }
+
+  toJSON() {
+    return { ...super.toJSON(), reason: this.reason };
+  }
+}
+
+/**
+ * Error thrown when approvals cannot be issued or verified right now
+ * (`E_APPROVAL_UNAVAILABLE`, HTTP 503). No money moved; retry later.
+ */
+export class BloqueApprovalUnavailableError extends BloqueAPIError {
+  /** Why approvals are unavailable (`extra_details.reason`). */
+  public readonly reason?: string;
+
+  constructor(_message: string, options?: BloqueAPIErrorOptions) {
+    const extra = extractExtraDetails<ApprovalExtraDetails>(options?.response);
+    super('Operation approvals are unavailable right now. Retry later.', {
+      ...options,
+      code: options?.code ?? 'E_APPROVAL_UNAVAILABLE',
+    });
+    this.name = 'BloqueApprovalUnavailableError';
+    this.reason = extra?.reason;
+    Object.setPrototypeOf(this, BloqueApprovalUnavailableError.prototype);
+  }
+
+  toJSON() {
+    return { ...super.toJSON(), reason: this.reason };
+  }
+}
+
+/**
+ * Error thrown when a swap order needs its first step's `args` to be approved
+ * with it (`E_APPROVAL_ARGS_REQUIRED`, HTTP 422). Repeat the same call with
+ * `args` set; `args` here names the missing ones.
+ */
+export class BloqueApprovalArgsRequiredError extends BloqueAPIError {
+  /** Names of the first-step args the request must carry. */
+  public readonly args: string[];
+
+  /** `extra_details.reason`, e.g. `first_node_args_required`. */
+  public readonly reason?: string;
+
+  constructor(_message: string, options?: BloqueAPIErrorOptions) {
+    const extra = extractExtraDetails<ApprovalExtraDetails>(options?.response);
+    const args = extra?.args ?? [];
+    super(
+      `This order must carry its first step's args to be approved${args.length ? ` (${args.join(', ')})` : ''}. Repeat the request with args.`,
+      { ...options, code: options?.code ?? 'E_APPROVAL_ARGS_REQUIRED' },
+    );
+    this.name = 'BloqueApprovalArgsRequiredError';
+    this.args = args;
+    this.reason = extra?.reason;
+    Object.setPrototypeOf(this, BloqueApprovalArgsRequiredError.prototype);
+  }
+
+  toJSON() {
+    return { ...super.toJSON(), args: this.args, reason: this.reason };
+  }
+}
+
+/**
+ * Error thrown when a batch debits accounts of more than one person who must
+ * approve it (`E_APPROVAL_MULTIPLE_OWNERS`, HTTP 422). One approval covers
+ * one owner: submit one batch per owner.
+ */
+export class BloqueApprovalMultipleOwnersError extends BloqueAPIError {
+  /** `extra_details.reason`. */
+  public readonly reason?: string;
+
+  constructor(_message: string, options?: BloqueAPIErrorOptions) {
+    const extra = extractExtraDetails<ApprovalExtraDetails>(options?.response);
+    super(
+      'This batch debits accounts of more than one person who must approve it. Submit one batch per account owner.',
+      { ...options, code: options?.code ?? 'E_APPROVAL_MULTIPLE_OWNERS' },
+    );
+    this.name = 'BloqueApprovalMultipleOwnersError';
+    this.reason = extra?.reason;
+    Object.setPrototypeOf(this, BloqueApprovalMultipleOwnersError.prototype);
+  }
+
+  toJSON() {
+    return { ...super.toJSON(), reason: this.reason };
+  }
+}
+
+/**
+ * Error thrown when a batch that needs an approval has accounts still being
+ * created (`E_APPROVAL_ACCOUNTS_NOT_READY`, HTTP 422). Submit it again once
+ * its accounts are ready.
+ */
+export class BloqueApprovalAccountsNotReadyError extends BloqueAPIError {
+  /** `extra_details.reason`, e.g. `batch_has_accounts_in_creation`. */
+  public readonly reason?: string;
+
+  constructor(_message: string, options?: BloqueAPIErrorOptions) {
+    const extra = extractExtraDetails<ApprovalExtraDetails>(options?.response);
+    super(
+      'Some accounts in this batch are still being created. Submit it again once they are ready.',
+      { ...options, code: options?.code ?? 'E_APPROVAL_ACCOUNTS_NOT_READY' },
+    );
+    this.name = 'BloqueApprovalAccountsNotReadyError';
+    this.reason = extra?.reason;
+    Object.setPrototypeOf(this, BloqueApprovalAccountsNotReadyError.prototype);
+  }
+
+  toJSON() {
+    return { ...super.toJSON(), reason: this.reason };
+  }
+}
+
 /**
  * Error thrown when request validation fails (HTTP 400).
  *
@@ -599,6 +950,17 @@ const ERROR_CODE_MAP: Record<
   // Add more mappings as we discover them from the API
 };
 
+/** Passkey operation-approval codes, mapped regardless of HTTP status. */
+const APPROVAL_ERROR_MAP: Record<string, typeof BloqueAPIError> = {
+  E_APPROVAL_REQUIRED: BloqueApprovalRequiredError,
+  E_APPROVAL_INVALID: BloqueApprovalInvalidError,
+  E_APPROVAL_EXPIRED: BloqueApprovalExpiredError,
+  E_APPROVAL_UNAVAILABLE: BloqueApprovalUnavailableError,
+  E_APPROVAL_ARGS_REQUIRED: BloqueApprovalArgsRequiredError,
+  E_APPROVAL_MULTIPLE_OWNERS: BloqueApprovalMultipleOwnersError,
+  E_APPROVAL_ACCOUNTS_NOT_READY: BloqueApprovalAccountsNotReadyError,
+};
+
 /**
  * Factory function to create the appropriate error type based on status code and error code.
  *
@@ -621,6 +983,9 @@ export function createBloqueError(
   }
   if (code === 'E_TIER_LIMIT_EXCEEDED') {
     return new BloqueTierLimitExceededError(message, options);
+  }
+  if (code && APPROVAL_ERROR_MAP[code]) {
+    return new APPROVAL_ERROR_MAP[code](message, options);
   }
 
   // Check for specific error codes first

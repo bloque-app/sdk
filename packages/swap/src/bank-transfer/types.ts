@@ -1,3 +1,4 @@
+import type { OperationApprovalOptions } from '@bloque/sdk-core';
 /**
  * Generic bank transfer types for @bloque/sdk-swap
  *
@@ -245,7 +246,8 @@ export interface CreateBankTransferOrderParams {
   metadata?: Record<string, unknown>;
 }
 
-export interface CreateBankTransferOrderOptions {
+export interface CreateBankTransferOrderOptions
+  extends OperationApprovalOptions {
   /**
    * Optional custom idempotency key sent as `Idempotency-Key` header.
    */

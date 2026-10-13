@@ -7,9 +7,22 @@ export {
   toKreivoPasskeyRegistration,
   toTosGatePasskeyRegistration,
 } from '@bloque/sdk-compliance';
-export type { BloqueSDKConfig } from '@bloque/sdk-core';
+export type {
+  BloqueSDKConfig,
+  OperationApprovalOptions,
+  OperationApprovalSummary,
+  WaitForApprovalOptions,
+  WithApprovalOptions,
+} from '@bloque/sdk-core';
 export {
   BloqueAPIError,
+  BloqueApprovalAccountsNotReadyError,
+  BloqueApprovalArgsRequiredError,
+  BloqueApprovalExpiredError,
+  BloqueApprovalInvalidError,
+  BloqueApprovalMultipleOwnersError,
+  BloqueApprovalRequiredError,
+  BloqueApprovalUnavailableError,
   BloqueAuthenticationError,
   BloqueConfigError,
   BloqueInsufficientFundsError,
@@ -21,6 +34,8 @@ export {
   BloqueValidationError,
   BloqueVerificationPendingError,
   BloqueVerificationRequiredError,
+  OPERATION_APPROVAL_HEADER,
+  withApproval,
 } from '@bloque/sdk-core';
 export type * from '@bloque/sdk-identity';
 export type * from '@bloque/sdk-orgs';

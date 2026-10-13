@@ -1,4 +1,8 @@
-import { BaseClient, BloqueConfigError } from '@bloque/sdk-core';
+import {
+  BaseClient,
+  BloqueConfigError,
+  operationApprovalHeaders,
+} from '@bloque/sdk-core';
 import { mapExecutionHow } from '../internal/map-execution';
 import type {
   CreateOrderInput,
@@ -71,9 +75,7 @@ export class BrebClient extends BaseClient {
       method: 'PUT',
       path: '/api/order',
       body: input,
-      headers: options?.idempotencyKey
-        ? { 'Idempotency-Key': options.idempotencyKey }
-        : undefined,
+      headers: operationApprovalHeaders(options),
     });
 
     return {
@@ -138,9 +140,7 @@ export class BrebClient extends BaseClient {
       method: 'PUT',
       path: '/api/order',
       body: input,
-      headers: options?.idempotencyKey
-        ? { 'Idempotency-Key': options.idempotencyKey }
-        : undefined,
+      headers: operationApprovalHeaders(options),
     });
 
     return {

@@ -1,3 +1,4 @@
+import type { OperationApprovalOptions } from '@bloque/sdk-core';
 import type {
   ExecutionHow,
   ExecutionResult,
@@ -118,7 +119,7 @@ export type CreateRtpOrderParams =
   | CreateRtpKusamaOrderParams
   | CreateRtpBaseOrderParams;
 
-export interface CreateRtpOrderOptions {
+export interface CreateRtpOrderOptions extends OperationApprovalOptions {
   /**
    * Optional custom idempotency key sent as `Idempotency-Key` header.
    */

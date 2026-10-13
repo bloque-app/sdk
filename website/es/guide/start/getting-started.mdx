@@ -199,6 +199,53 @@ Todos los errores incluyen metadata rica para debugging:
 - `response`: Body de respuesta original (para debugging)
 - `toJSON()`: Serializar error para logging
 
+### Aprobaciones con Passkey
+
+Cuando las aprobaciones con passkey están activas, una operación que mueve dinero de la cuenta de una persona necesita que esa persona la apruebe con su passkey. Una aprobación cubre exactamente una operación. Aplica a `accounts.transfer`, `accounts.batchTransfer`, `accounts.externalUsBank.pull` y a todo `create` / `createDeposit` de órdenes de swap.
+
+La primera llamada lanza `BloqueApprovalRequiredError` (HTTP 428). Comparte `approvalUrl` con el dueño de la cuenta, espera su firma y repite **la misma llamada** con la aprobación. `withApproval` hace todo y repite la llamada exactamente una vez:
+
+```typescript
+import { BloqueApprovalRequiredError, withApproval } from '@bloque/sdk';
+
+const transfer = await withApproval(
+  (approval) => bloque.accounts.transfer(params, { approval }),
+  {
+    onApprovalRequired: (error: BloqueApprovalRequiredError) => {
+      // Muestra el link al dueño de la cuenta
+      console.log('Aprueba aquí:', error.approvalUrl);
+      console.log('Operación:', error.summary, 'hasta', error.expiresAt);
+    },
+  },
+);
+```
+
+O paso a paso:
+
+```typescript
+try {
+  await bloque.accounts.transfer(params);
+} catch (error) {
+  if (!(error instanceof BloqueApprovalRequiredError)) throw error;
+  notifyOwner(error.approvalUrl);
+  // Consulta cada 2s (mínimo) y se detiene en error.expiresAt
+  const approval = await error.waitForApproval({ signal });
+  await bloque.accounts.transfer(params, { approval });
+}
+```
+
+Repite la llamada con las mismas cuentas, montos, assets y, en swaps, el mismo `rateSig` y `args`. Las referencias y las idempotency keys pueden cambiar. Usa la aprobación de inmediato: expira unos dos minutos después de que el dueño firma.
+
+| Error | Código | Qué hacer |
+| --- | --- | --- |
+| `BloqueApprovalRequiredError` | 428 `E_APPROVAL_REQUIRED` | Comparte `approvalUrl`, `waitForApproval()`, repite con `{ approval }` |
+| `BloqueApprovalInvalidError` | 403 `E_APPROVAL_INVALID` | Revisa `reason`: `passkey_rejected` → pide al dueño abrir el link de nuevo; `passkey_not_registered` → el dueño registra su passkey de nuevo y luego aprueba |
+| `BloqueApprovalExpiredError` | 403 `E_APPROVAL_EXPIRED` | Repite la llamada sin `approval` para obtener un link nuevo (también lo lanza `waitForApproval()` al llegar a `expiresAt`) |
+| `BloqueApprovalUnavailableError` | 503 `E_APPROVAL_UNAVAILABLE` | Se reintenta automáticamente; si persiste, reintenta más tarde. No se movió dinero |
+| `BloqueApprovalArgsRequiredError` | 422 `E_APPROVAL_ARGS_REQUIRED` | Solo swap: repite la orden con `args` (`error.args` los nombra) |
+| `BloqueApprovalMultipleOwnersError` | 422 `E_APPROVAL_MULTIPLE_OWNERS` | Solo batch: envía un batch por dueño de cuenta |
+| `BloqueApprovalAccountsNotReadyError` | 422 `E_APPROVAL_ACCOUNTS_NOT_READY` | Solo batch: envíalo de nuevo cuando sus cuentas estén listas |
+
 ## Soporte TypeScript
 
 El SDK está construido con TypeScript y proporciona type safety completo:

@@ -1,4 +1,9 @@
-import { BaseClient, BloqueConfigError } from '@bloque/sdk-core';
+import {
+  BaseClient,
+  BloqueConfigError,
+  type OperationApprovalOptions,
+  operationApprovalHeaders,
+} from '@bloque/sdk-core';
 import type {
   AccountWithBalance,
   CreateAccountRequest,
@@ -235,9 +240,12 @@ export class ExternalUsBankClient extends BaseClient {
    *   (`linkStatus !== 'active'`), or the Kusama path has no ledger.
    * @throws BloqueAPIError 503 — no swap rate available for
    *   `external-us-bank → kusama` or `external-us-bank → base`.
+   * @throws BloqueApprovalRequiredError 428 — the account owner must approve
+   *   the pull with their passkey; repeat it with `options.approval`.
    */
   async pull(
     params: PullExternalUsBankParams,
+    options?: OperationApprovalOptions,
   ): Promise<PullExternalUsBankResult> {
     if (!params?.urn?.trim()) {
       throw new Error('Bank account URN is required');
@@ -278,7 +286,10 @@ export class ExternalUsBankClient extends BaseClient {
       method: 'POST',
       path: `/api/mediums/external-us-bank/${encodeURIComponent(params.urn)}/pull`,
       body,
-      headers: { 'Idempotency-Key': idempotencyKey },
+      headers: operationApprovalHeaders({
+        idempotencyKey,
+        approval: options?.approval,
+      }),
     });
 
     return {

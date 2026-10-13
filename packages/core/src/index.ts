@@ -1,3 +1,4 @@
+export * from './approvals';
 export * from './base-client';
 export * from './constants';
 export * from './errors';

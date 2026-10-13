@@ -1,0 +1,395 @@
+import { afterEach, describe, expect, it, mock } from 'bun:test';
+import {
+  OPERATION_APPROVAL_HEADER,
+  operationApprovalHeaders,
+  withApproval,
+} from '../src/approvals';
+import {
+  BloqueApprovalAccountsNotReadyError,
+  BloqueApprovalArgsRequiredError,
+  BloqueApprovalExpiredError,
+  BloqueApprovalInvalidError,
+  BloqueApprovalMultipleOwnersError,
+  BloqueApprovalRequiredError,
+  BloqueApprovalUnavailableError,
+  createBloqueError,
+} from '../src/errors';
+import { HttpClient } from '../src/http-client';
+
+const originalFetch = globalThis.fetch;
+const RESULT_PATH = '/api/origins/operation-approvals/result';
+const TOKEN = 'approval-token-123';
+
+afterEach(() => {
+  globalThis.fetch = originalFetch;
+});
+
+function client(): HttpClient {
+  const http = new HttpClient({
+    origin: 'test-origin',
+    auth: { type: 'originKey', originKey: 'sk_dev_origin' },
+    mode: 'sandbox',
+    retry: { enabled: false },
+  });
+  http.setAccessToken('test_access_token');
+  return http;
+}
+
+function json(status: number, body: unknown): Response {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { 'Content-Type': 'application/json' },
+  });
+}
+
+function approvalError(code: string, extra: Record<string, unknown>) {
+  return { error: true, code, message: code, extra_details: extra };
+}
+
+function requiredBody(expiresAt = Date.now() + 60_000) {
+  return approvalError('E_APPROVAL_REQUIRED', {
+    approval_token: TOKEN,
+    expires_at: expiresAt,
+    approval_url: `https://api.bloque.app/api/origins/operation-approvals/approve#token=${TOKEN}`,
+    summary: {
+      operation: 'accounts.transfer',
+      fields: { amount: '100', asset: 'DUSD/6' },
+    },
+  });
+}
+
+type Call = { url: string; method?: string; headers: Headers };
+
+function mockFetch(responses: Array<() => Response>) {
+  const calls: Call[] = [];
+  globalThis.fetch = mock((url: string | URL | Request, init?: RequestInit) => {
+    calls.push({
+      url: String(url),
+      method: init?.method,
+      headers: new Headers(init?.headers),
+    });
+    const next = responses[Math.min(calls.length - 1, responses.length - 1)];
+    return Promise.resolve(next());
+  }) as unknown as typeof fetch;
+  return calls;
+}
+
+function requiredError(
+  http: HttpClient,
+  expiresAt?: number,
+): BloqueApprovalRequiredError {
+  return createBloqueError('E_APPROVAL_REQUIRED', {
+    status: 428,
+    code: 'E_APPROVAL_REQUIRED',
+    response: requiredBody(expiresAt),
+    httpClient: http,
+  }) as BloqueApprovalRequiredError;
+}
+
+describe('approval errors', () => {
+  it('maps a 428 E_APPROVAL_REQUIRED response to BloqueApprovalRequiredError', async () => {
+    const expiresAt = Date.now() + 60_000;
+    mockFetch([() => json(428, requiredBody(expiresAt))]);
+
+    const error = await client()
+      .request({ method: 'POST', path: '/api/accounts/x/transfer', body: {} })
+      .catch((e) => e);
+
+    expect(error).toBeInstanceOf(BloqueApprovalRequiredError);
+    expect(error.status).toBe(428);
+    expect(error.code).toBe('E_APPROVAL_REQUIRED');
+    expect(error.approvalUrl).toContain(`#token=${TOKEN}`);
+    expect(error.expiresAt.getTime()).toBe(expiresAt);
+    expect(error.summary).toEqual({
+      operation: 'accounts.transfer',
+      fields: { amount: '100', asset: 'DUSD/6' },
+    });
+  });
+
+  it('keeps the approval token out of logs', () => {
+    const error = requiredError(client());
+    const logged = JSON.stringify(error.toJSON());
+
+    expect(logged).not.toContain(TOKEN);
+    expect(Object.keys(error)).not.toContain('approvalToken');
+    expect(JSON.stringify(error.response)).not.toContain(TOKEN);
+  });
+
+  it.each([
+    [
+      403,
+      'E_APPROVAL_INVALID',
+      { reason: 'passkey_rejected' },
+      BloqueApprovalInvalidError,
+    ],
+    [
+      403,
+      'E_APPROVAL_EXPIRED',
+      { reason: 'approval_token_expired' },
+      BloqueApprovalExpiredError,
+    ],
+    [
+      503,
+      'E_APPROVAL_UNAVAILABLE',
+      { reason: 'passkey_verification_unavailable' },
+      BloqueApprovalUnavailableError,
+    ],
+    [
+      422,
+      'E_APPROVAL_MULTIPLE_OWNERS',
+      { reason: 'batch_debits_multiple_approving_owners' },
+      BloqueApprovalMultipleOwnersError,
+    ],
+    [
+      422,
+      'E_APPROVAL_ACCOUNTS_NOT_READY',
+      { reason: 'batch_has_accounts_in_creation' },
+      BloqueApprovalAccountsNotReadyError,
+    ],
+  ] as const)(
+    'maps %i %s to its typed error',
+    async (status, code, extra, ErrorClass) => {
+      mockFetch([() => json(status, approvalError(code, extra))]);
+
+      const error = await client()
+        .request({ method: 'POST', path: '/api/accounts/x/transfer', body: {} })
+        .catch((e) => e);
+
+      expect(error).toBeInstanceOf(ErrorClass);
+      expect(error.status).toBe(status);
+      expect(error.code).toBe(code);
+      expect(error.reason).toBe(extra.reason);
+    },
+  );
+
+  it('tells the owner to re-register on passkey_not_registered', () => {
+    const error = createBloqueError('E_APPROVAL_INVALID', {
+      status: 403,
+      code: 'E_APPROVAL_INVALID',
+      response: approvalError('E_APPROVAL_INVALID', {
+        reason: 'passkey_not_registered',
+        message:
+          'This passkey is not registered for approvals. Register it again, then approve the operation.',
+      }),
+    }) as BloqueApprovalInvalidError;
+
+    expect(error.reason).toBe('passkey_not_registered');
+    expect(error.message).toContain('Register it again');
+  });
+
+  it('exposes the missing args on E_APPROVAL_ARGS_REQUIRED', () => {
+    const error = createBloqueError('E_APPROVAL_ARGS_REQUIRED', {
+      status: 422,
+      code: 'E_APPROVAL_ARGS_REQUIRED',
+      response: approvalError('E_APPROVAL_ARGS_REQUIRED', {
+        reason: 'first_node_args_required',
+        args: ['account_urn'],
+      }),
+    }) as BloqueApprovalArgsRequiredError;
+
+    expect(error).toBeInstanceOf(BloqueApprovalArgsRequiredError);
+    expect(error.args).toEqual(['account_urn']);
+  });
+});
+
+describe('BloqueApprovalRequiredError.waitForApproval()', () => {
+  it('polls the result route with the approval token and returns the header value', async () => {
+    const http = new HttpClient({
+      auth: { type: 'apiKey', apiKey: 'sk_test_abc' },
+      mode: 'sandbox',
+      retry: { enabled: false },
+    });
+    const calls = mockFetch([
+      () =>
+        json(200, {
+          status: 'ready',
+          header: OPERATION_APPROVAL_HEADER,
+          value: 'signed',
+        }),
+    ]);
+
+    const approval = await requiredError(http).waitForApproval();
+
+    expect(approval).toBe('signed');
+    expect(calls).toHaveLength(1);
+    expect(calls[0].method).toBe('GET');
+    expect(calls[0].url).toEndWith(RESULT_PATH);
+    expect(calls[0].headers.get('Authorization')).toBe(`Bearer ${TOKEN}`);
+  });
+
+  it('keeps polling on delivered, never faster than every 2s', async () => {
+    const calls = mockFetch([
+      () => json(200, { status: 'delivered' }),
+      () =>
+        json(200, {
+          status: 'ready',
+          header: OPERATION_APPROVAL_HEADER,
+          value: 'signed',
+        }),
+    ]);
+    const started = Date.now();
+
+    const approval = await requiredError(client()).waitForApproval({
+      intervalMs: 10,
+    });
+
+    expect(approval).toBe('signed');
+    expect(calls).toHaveLength(2);
+    expect(Date.now() - started).toBeGreaterThanOrEqual(1900);
+  });
+
+  it('stops at expiresAt with BloqueApprovalExpiredError', async () => {
+    const calls = mockFetch([() => json(200, { status: 'pending' })]);
+
+    const error = await requiredError(client(), Date.now() + 200)
+      .waitForApproval()
+      .catch((e) => e);
+
+    expect(error).toBeInstanceOf(BloqueApprovalExpiredError);
+    expect(calls).toHaveLength(1);
+  });
+
+  it('does not poll an already expired approval', async () => {
+    const calls = mockFetch([() => json(200, { status: 'pending' })]);
+
+    const error = await requiredError(client(), Date.now() - 1)
+      .waitForApproval()
+      .catch((e) => e);
+
+    expect(error).toBeInstanceOf(BloqueApprovalExpiredError);
+    expect(calls).toHaveLength(0);
+  });
+
+  it('honors the abort signal', async () => {
+    mockFetch([() => json(200, { status: 'pending' })]);
+    const controller = new AbortController();
+    setTimeout(() => controller.abort(new Error('stop')), 50);
+
+    const error = await requiredError(client())
+      .waitForApproval({ signal: controller.signal })
+      .catch((e) => e);
+
+    expect(error.message).toBe('stop');
+  });
+
+  it('surfaces a typed error from the result route', async () => {
+    mockFetch([
+      () =>
+        json(
+          403,
+          approvalError('E_APPROVAL_EXPIRED', {
+            reason: 'approval_token_expired',
+          }),
+        ),
+    ]);
+
+    const error = await requiredError(client())
+      .waitForApproval()
+      .catch((e) => e);
+
+    expect(error).toBeInstanceOf(BloqueApprovalExpiredError);
+  });
+});
+
+describe('withApproval()', () => {
+  it('waits for the approval and repeats the call exactly once with it', async () => {
+    const http = client();
+    mockFetch([
+      () =>
+        json(200, {
+          status: 'ready',
+          header: OPERATION_APPROVAL_HEADER,
+          value: 'signed',
+        }),
+    ]);
+    const run = mock(async (approval?: string) => {
+      if (!approval) throw requiredError(http);
+      return { ok: true, approval };
+    });
+    const onApprovalRequired = mock(() => {});
+
+    const result = await withApproval(run, { onApprovalRequired });
+
+    expect(result).toEqual({ ok: true, approval: 'signed' });
+    expect(run).toHaveBeenCalledTimes(2);
+    expect(onApprovalRequired).toHaveBeenCalledTimes(1);
+  });
+
+  it('throws a second BloqueApprovalRequiredError instead of looping', async () => {
+    const http = client();
+    mockFetch([
+      () =>
+        json(200, {
+          status: 'ready',
+          header: OPERATION_APPROVAL_HEADER,
+          value: 'signed',
+        }),
+    ]);
+    const run = mock(async () => {
+      throw requiredError(http);
+    });
+
+    const error = await withApproval(run, {
+      onApprovalRequired: () => {},
+    }).catch((e) => e);
+
+    expect(error).toBeInstanceOf(BloqueApprovalRequiredError);
+    expect(run).toHaveBeenCalledTimes(2);
+  });
+
+  it('passes other errors through without waiting', async () => {
+    const run = mock(async () => {
+      throw new BloqueApprovalUnavailableError('', { status: 503 });
+    });
+    const onApprovalRequired = mock(() => {});
+
+    const error = await withApproval(run, { onApprovalRequired }).catch(
+      (e) => e,
+    );
+
+    expect(error).toBeInstanceOf(BloqueApprovalUnavailableError);
+    expect(run).toHaveBeenCalledTimes(1);
+    expect(onApprovalRequired).not.toHaveBeenCalled();
+  });
+});
+
+describe('operationApprovalHeaders()', () => {
+  it('sets only the headers it is given', () => {
+    expect(operationApprovalHeaders()).toEqual({});
+    expect(
+      operationApprovalHeaders({ idempotencyKey: 'k', approval: 'signed' }),
+    ).toEqual({
+      'Idempotency-Key': 'k',
+      [OPERATION_APPROVAL_HEADER]: 'signed',
+    });
+  });
+});
+
+describe('HttpClient retries', () => {
+  it('retries 503 E_APPROVAL_UNAVAILABLE, then surfaces it typed', async () => {
+    const http = new HttpClient({
+      origin: 'test-origin',
+      auth: { type: 'originKey', originKey: 'sk_dev_origin' },
+      mode: 'sandbox',
+      retry: { enabled: true, maxRetries: 1, initialDelay: 0, maxDelay: 0 },
+    });
+    http.setAccessToken('test_access_token');
+    const calls = mockFetch([
+      () =>
+        json(
+          503,
+          approvalError('E_APPROVAL_UNAVAILABLE', {
+            reason: 'passkey_verification_unavailable',
+          }),
+        ),
+    ]);
+
+    const error = await http
+      .request({ method: 'POST', path: '/api/accounts/x/transfer', body: {} })
+      .catch((e) => e);
+
+    expect(calls).toHaveLength(2);
+    expect(error).toBeInstanceOf(BloqueApprovalUnavailableError);
+    expect(error.reason).toBe('passkey_verification_unavailable');
+  });
+});

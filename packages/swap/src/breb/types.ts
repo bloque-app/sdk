@@ -1,3 +1,4 @@
+import type { OperationApprovalOptions } from '@bloque/sdk-core';
 import type {
   ExecutionHow,
   ExecutionResult,
@@ -107,7 +108,7 @@ export interface CreateBrebOrderParams {
   metadata?: Record<string, unknown>;
 }
 
-export interface CreateBrebOrderOptions {
+export interface CreateBrebOrderOptions extends OperationApprovalOptions {
   /**
    * Optional custom idempotency key sent as `Idempotency-Key` header.
    */
@@ -182,7 +183,7 @@ export interface CreateBrebDepositParams {
   metadata?: Record<string, unknown>;
 }
 
-export interface CreateBrebDepositOptions {
+export interface CreateBrebDepositOptions extends OperationApprovalOptions {
   /**
    * Optional custom idempotency key sent as `Idempotency-Key` header.
    */
