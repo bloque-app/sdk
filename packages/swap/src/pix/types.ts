@@ -15,7 +15,7 @@ export interface PixDepositInformation {
   payerName: string;
   /** Payer CPF or CNPJ. */
   payerDocumentNumber: string;
-  /** Optional explicit document type; inferred by the backend when omitted. */
+  /** Optional payer document type accepted by the backend. */
   payerDocumentType?: PixDocumentType;
 }
 

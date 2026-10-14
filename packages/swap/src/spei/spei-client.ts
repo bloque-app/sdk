@@ -26,6 +26,7 @@ export class SpeiClient extends BaseClient {
     params: CreateSpeiDepositParams,
     options?: CreateSpeiOrderOptions,
   ): Promise<CreateSpeiOrderResult> {
+    this._validateOrderParams(params);
     this._validateDepositInformation(params.depositInformation);
     return this._create(
       params,
@@ -49,6 +50,7 @@ export class SpeiClient extends BaseClient {
     params: CreateSpeiOrderParams,
     options?: CreateSpeiOrderOptions,
   ): Promise<CreateSpeiOrderResult> {
+    this._validateOrderParams(params);
     this._validatePayoutInformation(params.depositInformation);
     return this._create(
       params,
@@ -72,7 +74,6 @@ export class SpeiClient extends BaseClient {
     toMedium: 'kusama' | 'spei',
     options?: CreateSpeiOrderOptions,
   ): Promise<CreateSpeiOrderResult> {
-    this._validateOrderParams(params);
     const takerUrn = this.httpClient.urn;
     if (!takerUrn) {
       throw new BloqueConfigError(
@@ -114,14 +115,24 @@ export class SpeiClient extends BaseClient {
   }
 
   private _validateOrderParams(
-    params: CreateSpeiDepositParams | CreateSpeiOrderParams,
+    params: CreateSpeiDepositParams | CreateSpeiOrderParams | null | undefined,
   ): void {
-    if (!params.rateSig.trim()) {
+    if (!params || typeof params !== 'object') {
+      throw new BloqueConfigError('order params are required');
+    }
+    if (typeof params.rateSig !== 'string' || !params.rateSig.trim()) {
       throw new BloqueConfigError('rateSig is required');
     }
     const type = params.type ?? 'src';
+    if (type !== 'src' && type !== 'dst') {
+      throw new BloqueConfigError('type must be "src" or "dst"');
+    }
     const amount = type === 'src' ? params.amountSrc : params.amountDst;
-    if (!amount || !/^\d+$/.test(amount) || BigInt(amount) <= 0n) {
+    if (
+      typeof amount !== 'string' ||
+      !/^\d+$/.test(amount) ||
+      BigInt(amount) <= 0n
+    ) {
       throw new BloqueConfigError(
         type === 'src'
           ? 'amountSrc must be a positive integer string when type is "src"'
@@ -130,26 +141,53 @@ export class SpeiClient extends BaseClient {
     }
   }
 
-  private _validateDepositInformation(info: SpeiDepositInformation): void {
-    if (!info.urn.trim())
+  private _validateDepositInformation(
+    info: SpeiDepositInformation | null | undefined,
+  ): void {
+    if (!info || typeof info !== 'object') {
+      throw new BloqueConfigError('depositInformation is required');
+    }
+    if (typeof info.urn !== 'string' || !info.urn.trim())
       throw new BloqueConfigError('depositInformation.urn is required');
-    if (info.payerName.trim().length < 2) {
+    if (
+      typeof info.payerName !== 'string' ||
+      info.payerName.trim().length < 2
+    ) {
       throw new BloqueConfigError(
         'depositInformation.payerName must be at least 2 characters',
       );
     }
+    if (
+      info.payerDocumentNumber !== undefined &&
+      typeof info.payerDocumentNumber !== 'string'
+    ) {
+      throw new BloqueConfigError(
+        'depositInformation.payerDocumentNumber must be a string',
+      );
+    }
   }
 
-  private _validatePayoutInformation(info: SpeiPayoutInformation): void {
+  private _validatePayoutInformation(
+    info: SpeiPayoutInformation | null | undefined,
+  ): void {
+    if (!info || typeof info !== 'object') {
+      throw new BloqueConfigError('depositInformation is required');
+    }
     if (!/^\d{18}$/.test(info.clabe)) {
       throw new BloqueConfigError(
         'depositInformation.clabe must be an 18-digit CLABE',
       );
     }
-    if (info.beneficiaryName.trim().length < 2) {
+    if (
+      typeof info.beneficiaryName !== 'string' ||
+      info.beneficiaryName.trim().length < 2
+    ) {
       throw new BloqueConfigError(
         'depositInformation.beneficiaryName must be at least 2 characters',
       );
+    }
+    if (info.rfc !== undefined && typeof info.rfc !== 'string') {
+      throw new BloqueConfigError('depositInformation.rfc must be a string');
     }
   }
 
