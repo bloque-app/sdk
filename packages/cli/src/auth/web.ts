@@ -1,5 +1,6 @@
 import { exec } from 'node:child_process';
 import crypto from 'node:crypto';
+import type { EventEmitter } from 'node:events';
 import http from 'node:http';
 
 import { SessionStore } from '../session/store.ts';
@@ -99,7 +100,11 @@ function startCallbackServer(
           res.writeHead(200, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify({ success: true }));
 
-          resolveToken({ apiKey: data.api_key, token: data.token, apiUrl: data.api_url });
+          resolveToken({
+            apiKey: data.api_key,
+            token: data.token,
+            apiUrl: data.api_url,
+          });
         } catch {
           res.writeHead(400, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify({ error: 'invalid_body' }));
@@ -174,7 +179,10 @@ export async function startWebAuth(
     ]);
 
     cleanup();
-    process.removeListener('SIGINT', sigintHandler);
+    (process as unknown as EventEmitter).removeListener(
+      'SIGINT',
+      sigintHandler,
+    );
 
     const store = new SessionStore();
 
@@ -217,7 +225,10 @@ export async function startWebAuth(
     return session;
   } catch (err: unknown) {
     cleanup();
-    process.removeListener('SIGINT', sigintHandler);
+    (process as unknown as EventEmitter).removeListener(
+      'SIGINT',
+      sigintHandler,
+    );
 
     if (err instanceof Error && err.message === 'timeout') {
       console.error('\n✗ Authorization timed out. Please try again.\n');
