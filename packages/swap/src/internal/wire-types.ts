@@ -91,6 +91,22 @@ export type OrderType = 'src' | 'dst';
 export interface DepositInformation {
   /** PSE / BRE-B on-ramp deposit URN */
   urn?: string;
+  /** SPEI / PIX payer name */
+  payer_name?: string;
+  /** SPEI RFC (optional) or PIX CPF/CNPJ (required by the PIX corridor) */
+  payer_document_number?: string;
+  /** PIX payer document type */
+  payer_document_type?: 'CPF' | 'CNPJ';
+  /** SPEI payout destination CLABE */
+  clabe?: string;
+  /** SPEI / PIX payout beneficiary name */
+  beneficiary_name?: string;
+  /** Optional SPEI payout beneficiary RFC */
+  rfc?: string;
+  /** PIX payout key type */
+  pix_key_type?: 'CPF' | 'CNPJ' | 'EMAIL' | 'PHONE' | 'EVP';
+  /** PIX payout key value */
+  pix_key_value?: string;
   /** BRE-B payout resolution id */
   resolution_id?: string;
   /** BRE-B payout recipient, identified by their key */
@@ -251,6 +267,34 @@ export interface ExecutionHowBrebDeposit {
 
 /**
  * @internal
+ * SPEI deposit instructions returned when the graph pauses
+ */
+export interface ExecutionHowSpeiDeposit {
+  type: 'SPEI_DEPOSIT';
+  medium: 'spei';
+  clabe: string;
+  amount: string;
+  currency: 'MXN';
+  reference: string;
+  expires_at?: string;
+}
+
+/**
+ * @internal
+ * PIX deposit instructions returned when the graph pauses
+ */
+export interface ExecutionHowPixDeposit {
+  type: 'PIX_DEPOSIT';
+  medium: 'pix';
+  qr_code_payload: string;
+  amount: string;
+  currency: 'BRL';
+  reference: string;
+  expires_at?: string;
+}
+
+/**
+ * @internal
  * Base USDC inbox transfer instructions when the graph pauses
  */
 export interface ExecutionHowWalletTransfer {
@@ -274,6 +318,8 @@ export type ExecutionHow =
   | ExecutionHowCallback
   | ExecutionHowIframe
   | ExecutionHowBrebDeposit
+  | ExecutionHowSpeiDeposit
+  | ExecutionHowPixDeposit
   | ExecutionHowWalletTransfer;
 
 /**

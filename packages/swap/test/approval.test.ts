@@ -7,8 +7,10 @@ import {
 import { BankTransferClient } from '../src/bank-transfer/bank-transfer-client';
 import { BrebClient } from '../src/breb/breb-client';
 import { ExternalUsBankSwapClient } from '../src/external-us-bank/external-us-bank-client';
+import { PixClient } from '../src/pix/pix-client';
 import { PseClient } from '../src/pse/pse-client';
 import { RtpClient } from '../src/rtp/rtp-client';
+import { SpeiClient } from '../src/spei/spei-client';
 
 const originalFetch = globalThis.fetch;
 
@@ -180,11 +182,72 @@ const orderCreates: Array<
         { idempotencyKey: 'k', approval },
       ),
   ],
+  [
+    'spei.createDeposit',
+    (http, approval) =>
+      new SpeiClient(http).createDeposit(
+        {
+          rateSig: 'rate-sig',
+          amountSrc: '1000',
+          depositInformation: {
+            urn: 'did:bloque:account:virtual:acc-1',
+            payerName: 'Owner Name',
+          },
+        },
+        { idempotencyKey: 'k', approval },
+      ),
+  ],
+  [
+    'spei.create',
+    (http, approval) =>
+      new SpeiClient(http).create(
+        {
+          rateSig: 'rate-sig',
+          amountSrc: '1000',
+          depositInformation: {
+            clabe: '646180157034181180',
+            beneficiaryName: 'Owner Name',
+          },
+        },
+        { idempotencyKey: 'k', approval },
+      ),
+  ],
+  [
+    'pix.createDeposit',
+    (http, approval) =>
+      new PixClient(http).createDeposit(
+        {
+          rateSig: 'rate-sig',
+          amountSrc: '1000',
+          depositInformation: {
+            urn: 'did:bloque:account:virtual:acc-1',
+            payerName: 'Owner Name',
+            payerDocumentNumber: '52998224725',
+          },
+        },
+        { idempotencyKey: 'k', approval },
+      ),
+  ],
+  [
+    'pix.create',
+    (http, approval) =>
+      new PixClient(http).create(
+        {
+          rateSig: 'rate-sig',
+          amountSrc: '1000',
+          depositInformation: {
+            pixKeyType: 'EMAIL',
+            pixKeyValue: 'owner@example.com',
+          },
+        },
+        { idempotencyKey: 'k', approval },
+      ),
+  ],
 ];
 
 describe('swap order approval', () => {
   it('covers every order create', () => {
-    expect(orderCreates).toHaveLength(6);
+    expect(orderCreates).toHaveLength(10);
   });
 
   it.each(orderCreates)(

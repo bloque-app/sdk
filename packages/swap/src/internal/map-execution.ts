@@ -4,6 +4,8 @@ import type {
   ExecutionHowBrebDeposit as WireExecutionHowBrebDeposit,
   ExecutionHowCallback as WireExecutionHowCallback,
   ExecutionHowIframe as WireExecutionHowIframe,
+  ExecutionHowPixDeposit as WireExecutionHowPixDeposit,
+  ExecutionHowSpeiDeposit as WireExecutionHowSpeiDeposit,
   ExecutionHowWalletTransfer as WireExecutionHowWalletTransfer,
 } from './wire-types';
 
@@ -11,6 +13,18 @@ function isWireBrebDepositHow(
   how: WireExecutionHow,
 ): how is WireExecutionHowBrebDeposit {
   return how.type === 'BREB_DEPOSIT';
+}
+
+function isWireSpeiDepositHow(
+  how: WireExecutionHow,
+): how is WireExecutionHowSpeiDeposit {
+  return how.type === 'SPEI_DEPOSIT';
+}
+
+function isWirePixDepositHow(
+  how: WireExecutionHow,
+): how is WireExecutionHowPixDeposit {
+  return how.type === 'PIX_DEPOSIT';
 }
 
 // `ExecutionHowRedirect.type` is a plain `string`, not a literal, so a
@@ -51,6 +65,30 @@ export function mapExecutionHow(how: WireExecutionHow): PublicExecutionHow {
       receivedAmount: how.received_amount,
       remainingAmount: how.remaining_amount,
       depositStatus: how.deposit_status,
+    };
+  }
+
+  if (isWireSpeiDepositHow(how)) {
+    return {
+      type: 'SPEI_DEPOSIT',
+      medium: how.medium,
+      clabe: how.clabe,
+      amount: how.amount,
+      currency: how.currency,
+      reference: how.reference,
+      expiresAt: how.expires_at,
+    };
+  }
+
+  if (isWirePixDepositHow(how)) {
+    return {
+      type: 'PIX_DEPOSIT',
+      medium: how.medium,
+      qrCodePayload: how.qr_code_payload,
+      amount: how.amount,
+      currency: how.currency,
+      reference: how.reference,
+      expiresAt: how.expires_at,
     };
   }
 

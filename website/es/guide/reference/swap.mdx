@@ -163,6 +163,70 @@ consultarTasas();
 4. Consulta tasas justo antes de realizar una operación para evitar expiraciones.
 5. Revisa el campo `until` para saber hasta cuándo es válida la tasa.
 
+## SPEI: recarga y envío en México
+
+`swap.spei` cubre ambos corredores con montos en unidades mínimas (2 decimales):
+
+- `createDeposit()`: `MXN/2` vía SPEI → `MXNB/2` en una cuenta Bloque.
+- `create()`: `MXNB/2` en Kusama → `MXN/2` a una CLABE.
+
+```typescript
+const recarga = await session.swap.spei.createDeposit({
+  rateSig: rate.sig,
+  amountSrc: '100000', // MXN 1.000,00
+  depositInformation: {
+    urn: cuenta.urn,
+    payerName: 'María López',
+    payerDocumentNumber: 'LOPM800101ABC', // RFC opcional
+  },
+});
+
+if (recarga.execution?.result.how?.type === 'SPEI_DEPOSIT') {
+  console.log(recarga.execution.result.how.clabe);
+}
+
+await session.swap.spei.create({
+  rateSig: payoutRate.sig,
+  amountSrc: '100000',
+  depositInformation: {
+    clabe: '646180157034181180', // exactamente 18 dígitos
+    beneficiaryName: 'José Pérez',
+    rfc: 'PEPJ8001019Q8', // opcional
+  },
+});
+```
+
+## PIX: recarga y envío en Brasil
+
+`swap.pix.createDeposit()` requiere CPF/CNPJ del pagador y retorna `PIX_DEPOSIT` con `qrCodePayload`. `swap.pix.create()` paga a llaves `CPF`, `CNPJ`, `EMAIL`, `PHONE` o `EVP`.
+
+```typescript
+const recarga = await session.swap.pix.createDeposit({
+  rateSig: rate.sig,
+  amountSrc: '10000', // BRL 100,00
+  depositInformation: {
+    urn: cuenta.urn,
+    payerName: 'Ana Silva',
+    payerDocumentNumber: '52998224725',
+    payerDocumentType: 'CPF',
+  },
+});
+
+if (recarga.execution?.result.how?.type === 'PIX_DEPOSIT') {
+  console.log(recarga.execution.result.how.qrCodePayload);
+}
+
+await session.swap.pix.create({
+  rateSig: payoutRate.sig,
+  amountSrc: '10000',
+  depositInformation: {
+    pixKeyType: 'EMAIL',
+    pixKeyValue: 'ana@example.com',
+    beneficiaryName: 'Ana Silva', // opcional
+  },
+});
+```
+
 ## Próximos Pasos
 
 ## Listar Bancos PSE
