@@ -375,6 +375,36 @@ export interface ExecutionHowBrebDeposit {
   depositStatus?: 'awaiting' | 'partial';
 }
 
+/** Instructions for sending MXN to a dedicated SPEI CLABE. */
+export interface ExecutionHowSpeiDeposit {
+  type: 'SPEI_DEPOSIT';
+  medium: 'spei';
+  /** 18-digit CLABE that receives this deposit. */
+  clabe: string;
+  /** Amount in MXN minor units (MXN/2). */
+  amount: string;
+  currency: 'MXN';
+  /** Order reference for reconciliation. */
+  reference: string;
+  /** Provider expiration timestamp, when supplied. */
+  expiresAt?: string;
+}
+
+/** Instructions for paying BRL using a PIX copy-and-paste QR payload. */
+export interface ExecutionHowPixDeposit {
+  type: 'PIX_DEPOSIT';
+  medium: 'pix';
+  /** PIX copia e cola payload; it can also be rendered as a QR code. */
+  qrCodePayload: string;
+  /** Amount in BRL minor units (BRL/2). */
+  amount: string;
+  currency: 'BRL';
+  /** Order reference for reconciliation. */
+  reference: string;
+  /** Provider expiration timestamp, when supplied. */
+  expiresAt?: string;
+}
+
 /**
  * Instruct the payer to send native USDC on Base to a deposit 0x
  * (base → rtp inbox pause).
@@ -401,6 +431,8 @@ export type ExecutionHow =
   | ExecutionHowCallback
   | ExecutionHowIframe
   | ExecutionHowBrebDeposit
+  | ExecutionHowSpeiDeposit
+  | ExecutionHowPixDeposit
   | ExecutionHowWalletTransfer;
 
 /**

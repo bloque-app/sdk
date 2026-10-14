@@ -12,7 +12,9 @@ export type {
   ExecutionHowBrebDeposit,
   ExecutionHowCallback,
   ExecutionHowIframe,
+  ExecutionHowPixDeposit,
   ExecutionHowRedirect,
+  ExecutionHowSpeiDeposit,
   ExecutionHowWalletTransfer,
   ExecutionResult,
   IdentificationType,
@@ -46,6 +48,17 @@ export type {
   ExternalUsBankDepositInformation,
   ExternalUsBankDestination,
 } from './external-us-bank/types';
+export { PixClient } from './pix/pix-client';
+export type {
+  CreatePixDepositParams,
+  CreatePixOrderOptions,
+  CreatePixOrderParams,
+  CreatePixOrderResult,
+  PixDepositInformation,
+  PixDocumentType,
+  PixKeyType,
+  PixPayoutInformation,
+} from './pix/types';
 export { PseClient } from './pse/pse-client';
 // PSE — only unique types
 export type {
@@ -70,6 +83,15 @@ export type {
   RtpSourceMedium,
   RtpSwapArgs,
 } from './rtp/types';
+export { SpeiClient } from './spei/spei-client';
+export type {
+  CreateSpeiDepositParams,
+  CreateSpeiOrderOptions,
+  CreateSpeiOrderParams,
+  CreateSpeiOrderResult,
+  SpeiDepositInformation,
+  SpeiPayoutInformation,
+} from './spei/types';
 
 // Swap client + top-level types
 export { SwapClient } from './swap-client';

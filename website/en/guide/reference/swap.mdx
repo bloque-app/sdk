@@ -201,6 +201,70 @@ try {
 }
 ```
 
+## SPEI: Mexico pay-in and payout
+
+`swap.spei` covers both corridors with amounts in minor units (2 decimals):
+
+- `createDeposit()`: `MXN/2` via SPEI → `MXNB/2` in a Bloque account.
+- `create()`: `MXNB/2` on Kusama → `MXN/2` to a CLABE.
+
+```typescript
+const deposit = await session.swap.spei.createDeposit({
+  rateSig: rate.sig,
+  amountSrc: '100000', // MXN 1,000.00
+  depositInformation: {
+    urn: account.urn,
+    payerName: 'María López',
+    payerDocumentNumber: 'LOPM800101ABC', // optional RFC
+  },
+});
+
+if (deposit.execution?.result.how?.type === 'SPEI_DEPOSIT') {
+  console.log(deposit.execution.result.how.clabe);
+}
+
+await session.swap.spei.create({
+  rateSig: payoutRate.sig,
+  amountSrc: '100000',
+  depositInformation: {
+    clabe: '646180157034181180', // exactly 18 digits
+    beneficiaryName: 'José Pérez',
+    rfc: 'PEPJ8001019Q8', // optional
+  },
+});
+```
+
+## PIX: Brazil pay-in and payout
+
+`swap.pix.createDeposit()` requires the payer CPF/CNPJ and returns `PIX_DEPOSIT` with `qrCodePayload`. `swap.pix.create()` pays keys of type `CPF`, `CNPJ`, `EMAIL`, `PHONE`, or `EVP`.
+
+```typescript
+const deposit = await session.swap.pix.createDeposit({
+  rateSig: rate.sig,
+  amountSrc: '10000', // BRL 100.00
+  depositInformation: {
+    urn: account.urn,
+    payerName: 'Ana Silva',
+    payerDocumentNumber: '52998224725',
+    payerDocumentType: 'CPF',
+  },
+});
+
+if (deposit.execution?.result.how?.type === 'PIX_DEPOSIT') {
+  console.log(deposit.execution.result.how.qrCodePayload);
+}
+
+await session.swap.pix.create({
+  rateSig: payoutRate.sig,
+  amountSrc: '10000',
+  depositInformation: {
+    pixKeyType: 'EMAIL',
+    pixKeyValue: 'ana@example.com',
+    beneficiaryName: 'Ana Silva', // optional
+  },
+});
+```
+
 ## Next Steps
 
 ## Listing PSE Banks
