@@ -1,5 +1,21 @@
 # @bloque/sdk
 
+## 0.16.0
+
+### Minor Changes
+
+- 3c07050: Add typed SPEI and PIX pay-in and payout clients, including deposit execution instructions.
+
+### Patch Changes
+
+- Updated dependencies [3c07050]
+  - @bloque/sdk-swap@0.16.0
+  - @bloque/sdk-core@0.16.0
+  - @bloque/sdk-accounts@0.16.0
+  - @bloque/sdk-compliance@0.16.0
+  - @bloque/sdk-identity@0.16.0
+  - @bloque/sdk-orgs@0.16.0
+
 ## 0.15.1
 
 ### Patch Changes
