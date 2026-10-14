@@ -26,6 +26,7 @@ export class PixClient extends BaseClient {
     params: CreatePixDepositParams,
     options?: CreatePixOrderOptions,
   ): Promise<CreatePixOrderResult> {
+    this._validateOrderParams(params);
     this._validateDepositInformation(params.depositInformation);
     return this._create(
       params,
@@ -50,6 +51,7 @@ export class PixClient extends BaseClient {
     params: CreatePixOrderParams,
     options?: CreatePixOrderOptions,
   ): Promise<CreatePixOrderResult> {
+    this._validateOrderParams(params);
     this._validatePayoutInformation(params.depositInformation);
     return this._create(
       params,
@@ -76,7 +78,6 @@ export class PixClient extends BaseClient {
     toMedium: 'kusama' | 'pix',
     options?: CreatePixOrderOptions,
   ): Promise<CreatePixOrderResult> {
-    this._validateOrderParams(params);
     const takerUrn = this.httpClient.urn;
     if (!takerUrn) {
       throw new BloqueConfigError(
@@ -118,14 +119,24 @@ export class PixClient extends BaseClient {
   }
 
   private _validateOrderParams(
-    params: CreatePixDepositParams | CreatePixOrderParams,
+    params: CreatePixDepositParams | CreatePixOrderParams | null | undefined,
   ): void {
-    if (!params.rateSig.trim()) {
+    if (!params || typeof params !== 'object') {
+      throw new BloqueConfigError('order params are required');
+    }
+    if (typeof params.rateSig !== 'string' || !params.rateSig.trim()) {
       throw new BloqueConfigError('rateSig is required');
     }
     const type = params.type ?? 'src';
+    if (type !== 'src' && type !== 'dst') {
+      throw new BloqueConfigError('type must be "src" or "dst"');
+    }
     const amount = type === 'src' ? params.amountSrc : params.amountDst;
-    if (!amount || !/^\d+$/.test(amount) || BigInt(amount) <= 0n) {
+    if (
+      typeof amount !== 'string' ||
+      !/^\d+$/.test(amount) ||
+      BigInt(amount) <= 0n
+    ) {
       throw new BloqueConfigError(
         type === 'src'
           ? 'amountSrc must be a positive integer string when type is "src"'
@@ -134,15 +145,26 @@ export class PixClient extends BaseClient {
     }
   }
 
-  private _validateDepositInformation(info: PixDepositInformation): void {
-    if (!info.urn.trim())
+  private _validateDepositInformation(
+    info: PixDepositInformation | null | undefined,
+  ): void {
+    if (!info || typeof info !== 'object') {
+      throw new BloqueConfigError('depositInformation is required');
+    }
+    if (typeof info.urn !== 'string' || !info.urn.trim())
       throw new BloqueConfigError('depositInformation.urn is required');
-    if (info.payerName.trim().length < 2) {
+    if (
+      typeof info.payerName !== 'string' ||
+      info.payerName.trim().length < 2
+    ) {
       throw new BloqueConfigError(
         'depositInformation.payerName must be at least 2 characters',
       );
     }
-    if (!info.payerDocumentNumber.trim()) {
+    if (
+      typeof info.payerDocumentNumber !== 'string' ||
+      !info.payerDocumentNumber.trim()
+    ) {
       throw new BloqueConfigError(
         'depositInformation.payerDocumentNumber is required',
       );
@@ -158,18 +180,24 @@ export class PixClient extends BaseClient {
     }
   }
 
-  private _validatePayoutInformation(info: PixPayoutInformation): void {
+  private _validatePayoutInformation(
+    info: PixPayoutInformation | null | undefined,
+  ): void {
+    if (!info || typeof info !== 'object') {
+      throw new BloqueConfigError('depositInformation is required');
+    }
     if (!['CPF', 'CNPJ', 'EMAIL', 'PHONE', 'EVP'].includes(info.pixKeyType)) {
       throw new BloqueConfigError(
         'depositInformation.pixKeyType must be CPF, CNPJ, EMAIL, PHONE, or EVP',
       );
     }
-    if (!info.pixKeyValue.trim()) {
+    if (typeof info.pixKeyValue !== 'string' || !info.pixKeyValue.trim()) {
       throw new BloqueConfigError('depositInformation.pixKeyValue is required');
     }
     if (
       info.beneficiaryName !== undefined &&
-      info.beneficiaryName.trim().length < 2
+      (typeof info.beneficiaryName !== 'string' ||
+        info.beneficiaryName.trim().length < 2)
     ) {
       throw new BloqueConfigError(
         'depositInformation.beneficiaryName must be at least 2 characters',

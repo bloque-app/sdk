@@ -159,6 +159,52 @@ describe('SPEI contract', () => {
       }),
     ).rejects.toBeInstanceOf(BloqueConfigError);
   });
+
+  it.each([
+    [
+      'missing params',
+      () => new SpeiClient(authedClient()).createDeposit(undefined as never),
+    ],
+    [
+      'missing rateSig',
+      () =>
+        new SpeiClient(authedClient()).createDeposit({
+          amountSrc: '1000',
+          depositInformation: { urn: 'account', payerName: 'Owner' },
+        } as never),
+    ],
+    [
+      'missing depositInformation',
+      () =>
+        new SpeiClient(authedClient()).createDeposit({
+          rateSig: 'rate-sig',
+          amountSrc: '1000',
+        } as never),
+    ],
+    [
+      'missing payerName',
+      () =>
+        new SpeiClient(authedClient()).createDeposit({
+          rateSig: 'rate-sig',
+          amountSrc: '1000',
+          depositInformation: { urn: 'account' },
+        } as never),
+    ],
+    [
+      'null beneficiaryName',
+      () =>
+        new SpeiClient(authedClient()).create({
+          rateSig: 'rate-sig',
+          amountSrc: '1000',
+          depositInformation: {
+            clabe: '646180157034181180',
+            beneficiaryName: null,
+          },
+        } as never),
+    ],
+  ])('returns BloqueConfigError for %s', async (_label, call) => {
+    await expect(call()).rejects.toBeInstanceOf(BloqueConfigError);
+  });
 });
 
 describe('PIX contract', () => {
@@ -229,5 +275,85 @@ describe('PIX contract', () => {
         beneficiary_name: 'Ana Silva',
       },
     });
+  });
+
+  it('keeps payerDocumentType optional without claiming inference', async () => {
+    const body = captureBody();
+
+    await new PixClient(authedClient()).createDeposit({
+      rateSig: 'rate-sig',
+      amountSrc: '10000',
+      depositInformation: {
+        urn: 'did:bloque:account:virtual:destination',
+        payerName: 'Ana Silva',
+        payerDocumentNumber: '52998224725',
+      },
+    });
+
+    expect(body()).toMatchObject({
+      deposit_information: {
+        urn: 'did:bloque:account:virtual:destination',
+        payer_name: 'Ana Silva',
+        payer_document_number: '52998224725',
+      },
+    });
+    const requestBody = body();
+    if (!requestBody) throw new Error('Expected captured request body.');
+    expect(
+      (requestBody.deposit_information as Record<string, unknown>)
+        .payer_document_type,
+    ).toBeUndefined();
+  });
+
+  it.each([
+    [
+      'missing params',
+      () => new PixClient(authedClient()).createDeposit(undefined as never),
+    ],
+    [
+      'missing urn',
+      () =>
+        new PixClient(authedClient()).createDeposit({
+          rateSig: 'rate-sig',
+          amountSrc: '1000',
+          depositInformation: {
+            payerName: 'Owner',
+            payerDocumentNumber: '52998224725',
+          },
+        } as never),
+    ],
+    [
+      'null payerName',
+      () =>
+        new PixClient(authedClient()).createDeposit({
+          rateSig: 'rate-sig',
+          amountSrc: '1000',
+          depositInformation: {
+            urn: 'account',
+            payerName: null,
+            payerDocumentNumber: '52998224725',
+          },
+        } as never),
+    ],
+    [
+      'missing payerDocumentNumber',
+      () =>
+        new PixClient(authedClient()).createDeposit({
+          rateSig: 'rate-sig',
+          amountSrc: '1000',
+          depositInformation: { urn: 'account', payerName: 'Owner' },
+        } as never),
+    ],
+    [
+      'null pixKeyValue',
+      () =>
+        new PixClient(authedClient()).create({
+          rateSig: 'rate-sig',
+          amountSrc: '1000',
+          depositInformation: { pixKeyType: 'EMAIL', pixKeyValue: null },
+        } as never),
+    ],
+  ])('returns BloqueConfigError for %s', async (_label, call) => {
+    await expect(call()).rejects.toBeInstanceOf(BloqueConfigError);
   });
 });
