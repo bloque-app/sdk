@@ -1,11 +1,22 @@
-import type { SupportedAsset } from '@bloque/sdk';
+import { randomUUID } from 'node:crypto';
+import type { SupportedAsset, TransferResult } from '@bloque/sdk';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod/v4';
+import type { ApprovalOutcome } from '../../../approvals/approval-gate.ts';
+import {
+  APPROVAL_LINK_RULE,
+  repeatStepWith,
+  runWithApproval,
+  splitOutcome,
+} from '../../approvals.ts';
 import { resolveMccs } from '../../categories.ts';
 import { toRaw } from '../../currency.ts';
 import type { BloqueClients } from '../../types.ts';
 
-export function registerSpendingRulesWorkflows(server: McpServer, clients: BloqueClients) {
+export function registerSpendingRulesWorkflows(
+  server: McpServer,
+  clients: BloqueClients,
+) {
   server.registerTool(
     'configure_spending_rules',
     {
@@ -24,7 +35,10 @@ export function registerSpendingRulesWorkflows(server: McpServer, clients: Bloqu
     },
     async ({ cardUrn, routes }) => {
       const allMccs: string[] = [];
-      const priorityMcc: Record<string, { asset: string; account_urn: string }> = {};
+      const priorityMcc: Record<
+        string,
+        { asset: string; account_urn: string }
+      > = {};
       let defaultAccountUrn: string | undefined;
 
       for (const route of routes) {
@@ -74,8 +88,7 @@ export function registerSpendingRulesWorkflows(server: McpServer, clients: Bloqu
   server.registerTool(
     'add_spending_category',
     {
-      description:
-        "Add a new spending category to a card's smart routing. Creates a new account for the category and wires it into the routing rules. If the card doesn't have smart routing yet, it is automatically enabled.",
+      description: `Add a new spending category to a card's smart routing. Creates a new account for the category and wires it into the routing rules. If the card doesn't have smart routing yet, it is automatically enabled. If funding needs the account owner's passkey approval, the category account is still created and fundingApproval carries the approvalUrl and approvalId (see check_approval); if that approval expires or is rejected, repeat only the funding step as fundingApproval.nextStep says, never this whole call. ${APPROVAL_LINK_RULE}`,
       inputSchema: {
         cardUrn: z.string(),
         categoryName: z.string(),
@@ -86,8 +99,21 @@ export function registerSpendingRulesWorkflows(server: McpServer, clients: Bloqu
         currency: z.string().optional().default('USD'),
       },
     },
-    async ({ cardUrn, categoryName, categories, mccs, fundFromUrn, fundAmount, currency }) => {
-      const pocket = await clients.accounts.virtual.create({ name: categoryName });
+    async (
+      {
+        cardUrn,
+        categoryName,
+        categories,
+        mccs,
+        fundFromUrn,
+        fundAmount,
+        currency,
+      },
+      extra,
+    ) => {
+      const pocket = await clients.accounts.virtual.create({
+        name: categoryName,
+      });
       const polygon = await clients.accounts.polygon.create({
         ledgerId: pocket.ledgerId,
         name: categoryName,
@@ -97,7 +123,8 @@ export function registerSpendingRulesWorkflows(server: McpServer, clients: Bloqu
       const existing = card.metadata ?? {};
       const newMccs = resolveMccs(categories, mccs);
       const existingWhitelist: string[] = existing.mcc_whitelist ?? [];
-      const existingPriority: Record<string, unknown> = existing.priority_mcc ?? {};
+      const existingPriority: Record<string, unknown> =
+        existing.priority_mcc ?? {};
 
       const mergedWhitelist = [...new Set([...existingWhitelist, ...newMccs])];
       const mergedPriority: Record<string, unknown> = { ...existingPriority };
@@ -119,16 +146,38 @@ export function registerSpendingRulesWorkflows(server: McpServer, clients: Bloqu
         metadata: mergedMetadata,
       });
 
-      let transferResult;
+      let funding: ApprovalOutcome<TransferResult> | undefined;
       if (fundFromUrn && fundAmount) {
         const { amount: rawAmount, asset } = toRaw(fundAmount, currency);
-        transferResult = await clients.accounts.transfer({
-          sourceUrn: fundFromUrn,
-          destinationUrn: pocket.urn,
-          amount: rawAmount,
-          asset: asset as SupportedAsset,
-        });
+        const idempotencyKey = randomUUID();
+        funding = await runWithApproval(
+          extra,
+          `Fund "${categoryName}" account ${pocket.urn} with ${fundAmount} ${currency} from ${fundFromUrn}`,
+          (approval) =>
+            clients.accounts.transfer(
+              {
+                sourceUrn: fundFromUrn,
+                destinationUrn: pocket.urn,
+                amount: rawAmount,
+                asset: asset as SupportedAsset,
+              },
+              { idempotencyKey, approval },
+            ),
+          {
+            repeatWith: repeatStepWith(
+              'transfer',
+              {
+                sourceUrn: fundFromUrn,
+                destinationUrn: pocket.urn,
+                amount: fundAmount,
+                currency,
+              },
+              `The "${categoryName}" account ${pocket.urn} was already created and wired into card ${cardUrn}`,
+            ),
+          },
+        );
       }
+      const { result: transferResult, approval } = splitOutcome(funding);
 
       const result = {
         account: { urn: pocket.urn, ledgerId: pocket.ledgerId },
@@ -136,6 +185,7 @@ export function registerSpendingRulesWorkflows(server: McpServer, clients: Bloqu
         updatedCard,
         funded: !!transferResult,
         transferResult,
+        fundingApproval: approval,
       };
       return {
         content: [{ type: 'text', text: JSON.stringify(result, null, 2) }],

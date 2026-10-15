@@ -4,6 +4,7 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import type { PersistedSession } from '../session/types.ts';
+import { registerApprovalTools } from './approvals.ts';
 import { mcpDebug } from './debug-log.ts';
 
 import { registerAccountTools } from './tools/primitives/accounts.ts';
@@ -40,6 +41,7 @@ export function createBloqueServer(
   registerHistoryTools(server, clients);
   registerSwapTools(server, clients);
   registerApiKeyTools(server, clients, session);
+  registerApprovalTools(server);
 
   registerIdentityWorkflows(server, clients);
   registerAccountWorkflows(server, clients);

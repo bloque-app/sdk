@@ -1,14 +1,23 @@
+import { randomUUID } from 'node:crypto';
 import type { SupportedAsset } from '@bloque/sdk';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod/v4';
+import {
+  APPROVAL_TOOL_NOTE,
+  approvalToolResult,
+  runWithApproval,
+} from '../../approvals.ts';
 import { toHuman, toRaw } from '../../currency.ts';
 import type { BloqueClients } from '../../types.ts';
 
-export function registerTransferTools(server: McpServer, clients: BloqueClients) {
+export function registerTransferTools(
+  server: McpServer,
+  clients: BloqueClients,
+) {
   server.registerTool(
     'transfer',
     {
-      description: "Transfer funds between two accounts. Specify source/destination URN, amount in human-readable format (e.g. '100' for $100), and currency ('USD' or 'COP'). The transfer is queued asynchronously. Returns a queueId to track.",
+      description: `Transfer funds between two accounts. Specify source/destination URN, amount in human-readable format (e.g. '100' for $100), and currency ('USD' or 'COP'). The transfer is queued asynchronously. Returns a queueId to track. ${APPROVAL_TOOL_NOTE}`,
       inputSchema: {
         sourceUrn: z.string(),
         destinationUrn: z.string(),
@@ -17,30 +26,39 @@ export function registerTransferTools(server: McpServer, clients: BloqueClients)
         metadata: z.record(z.string(), z.unknown()).optional(),
       },
     },
-    async ({ sourceUrn, destinationUrn, amount, currency, metadata }) => {
+    async (
+      { sourceUrn, destinationUrn, amount, currency, metadata },
+      extra,
+    ) => {
       const { amount: rawAmount, asset } = toRaw(amount, currency);
-      const result = await clients.accounts.transfer({
-        sourceUrn,
-        destinationUrn,
-        amount: rawAmount,
-        asset: asset as SupportedAsset,
-        metadata,
-      });
-      const humanized = {
-        ...result,
-        amount: toHuman(rawAmount, asset).amount,
-        currency: toHuman(rawAmount, asset).currency,
-      };
-      return {
-        content: [{ type: 'text', text: JSON.stringify(humanized, null, 2) }],
-      };
+      // Same key on the first call and on the approved repeat.
+      const idempotencyKey = randomUUID();
+      const outcome = await runWithApproval(
+        extra,
+        `Transfer ${amount} ${currency} from ${sourceUrn} to ${destinationUrn}`,
+        async (approval) => {
+          const result = await clients.accounts.transfer(
+            {
+              sourceUrn,
+              destinationUrn,
+              amount: rawAmount,
+              asset: asset as SupportedAsset,
+              metadata,
+            },
+            { idempotencyKey, approval },
+          );
+          const human = toHuman(rawAmount, asset);
+          return { ...result, amount: human.amount, currency: human.currency };
+        },
+      );
+      return approvalToolResult(outcome);
     },
   );
 
   server.registerTool(
     'batch_transfer',
     {
-      description: 'Execute multiple transfers in a single batch. Useful for payroll, distributions. Operations are auto-chunked into groups of 80.',
+      description: `Execute multiple transfers in a single batch. Useful for payroll, distributions. Operations are auto-chunked into groups of 80. ${APPROVAL_TOOL_NOTE}`,
       inputSchema: {
         reference: z.string(),
         operations: z.array(
@@ -57,7 +75,7 @@ export function registerTransferTools(server: McpServer, clients: BloqueClients)
         webhookUrl: z.string().optional(),
       },
     },
-    async ({ reference, operations, metadata, webhookUrl }) => {
+    async ({ reference, operations, metadata, webhookUrl }, extra) => {
       const mappedOps = operations.map((op) => {
         const { amount, asset } = toRaw(op.amount, op.currency);
         return {
@@ -69,15 +87,17 @@ export function registerTransferTools(server: McpServer, clients: BloqueClients)
           metadata: op.metadata,
         };
       });
-      const result = await clients.accounts.batchTransfer({
-        reference,
-        operations: mappedOps,
-        metadata,
-        webhookUrl,
-      });
-      return {
-        content: [{ type: 'text', text: JSON.stringify(result, null, 2) }],
-      };
+      const idempotencyKey = randomUUID();
+      const outcome = await runWithApproval(
+        extra,
+        `Batch transfer "${reference}" (${operations.length} operations)`,
+        (approval) =>
+          clients.accounts.batchTransfer(
+            { reference, operations: mappedOps, metadata, webhookUrl },
+            { idempotencyKey, approval },
+          ),
+      );
+      return approvalToolResult(outcome);
     },
   );
 }
