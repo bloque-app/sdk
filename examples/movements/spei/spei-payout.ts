@@ -15,6 +15,8 @@ const bloque = new SDK({
 
 const user = await bloque.connect(process.env.USER_HANDLE ?? 'mexico-user');
 const amountSrc = process.env.AMOUNT_SRC ?? '100000'; // MXNB 1,000.00
+const sourceAccountUrn = process.env.SOURCE_ACCOUNT_URN;
+if (!sourceAccountUrn) throw new Error('SOURCE_ACCOUNT_URN is required.');
 
 const { rates } = await user.swap.findRates({
   fromAsset: 'MXNB/2',
@@ -35,6 +37,7 @@ const result = await user.swap.spei.create(
       beneficiaryName: process.env.BENEFICIARY_NAME ?? 'José Pérez',
       rfc: process.env.BENEFICIARY_RFC,
     },
+    args: { sourceAccountUrn },
   },
   { idempotencyKey: `spei-payout-${rates[0].sig}-${amountSrc}` },
 );

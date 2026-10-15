@@ -16,6 +16,8 @@ const bloque = new SDK({
 const user = await bloque.connect(process.env.USER_HANDLE ?? 'brazil-user');
 const amountSrc = process.env.AMOUNT_SRC ?? '10000'; // BRLB 100.00
 const pixKeyType = (process.env.PIX_KEY_TYPE ?? 'EMAIL') as PixKeyType;
+const sourceAccountUrn = process.env.SOURCE_ACCOUNT_URN;
+if (!sourceAccountUrn) throw new Error('SOURCE_ACCOUNT_URN is required.');
 
 const { rates } = await user.swap.findRates({
   fromAsset: 'BRLB/2',
@@ -36,6 +38,7 @@ const result = await user.swap.pix.create(
       pixKeyValue: process.env.PIX_KEY_VALUE ?? 'ana@example.com',
       beneficiaryName: process.env.BENEFICIARY_NAME,
     },
+    args: { sourceAccountUrn },
   },
   { idempotencyKey: `pix-payout-${rates[0].sig}-${amountSrc}` },
 );

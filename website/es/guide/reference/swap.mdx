@@ -193,6 +193,7 @@ await session.swap.spei.create({
     beneficiaryName: 'José Pérez',
     rfc: 'PEPJ8001019Q8', // opcional
   },
+  args: { sourceAccountUrn: cuentaOrigen.urn },
 });
 ```
 
@@ -224,6 +225,7 @@ await session.swap.pix.create({
     pixKeyValue: 'ana@example.com',
     beneficiaryName: 'Ana Silva', // opcional
   },
+  args: { sourceAccountUrn: cuentaOrigen.urn },
 });
 ```
 
