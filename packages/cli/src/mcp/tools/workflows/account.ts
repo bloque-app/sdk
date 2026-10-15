@@ -7,7 +7,10 @@ import { runWithApproval, splitOutcome } from '../../approvals.ts';
 import { toRaw } from '../../currency.ts';
 import type { BloqueClients } from '../../types.ts';
 
-export function registerAccountWorkflows(server: McpServer, clients: BloqueClients) {
+export function registerAccountWorkflows(
+  server: McpServer,
+  clients: BloqueClients,
+) {
   server.registerTool(
     'create_account',
     {
@@ -22,7 +25,10 @@ export function registerAccountWorkflows(server: McpServer, clients: BloqueClien
     },
     async ({ name, fundFromUrn, fundAmount, currency }, extra) => {
       const pocket = await clients.accounts.virtual.create({ name });
-      const polygon = await clients.accounts.polygon.create({ ledgerId: pocket.ledgerId, name });
+      const polygon = await clients.accounts.polygon.create({
+        ledgerId: pocket.ledgerId,
+        name,
+      });
 
       let funding: ApprovalOutcome<TransferResult> | undefined;
       if (fundFromUrn && fundAmount) {
@@ -47,7 +53,11 @@ export function registerAccountWorkflows(server: McpServer, clients: BloqueClien
 
       const result = {
         account: { urn: pocket.urn, ledgerId: pocket.ledgerId },
-        polygon: { urn: polygon.urn, address: polygon.address, network: polygon.network },
+        polygon: {
+          urn: polygon.urn,
+          address: polygon.address,
+          network: polygon.network,
+        },
         funded: !!transferResult,
         transferResult,
         fundingApproval: approval,

@@ -9,7 +9,8 @@ export function registerSwapTools(server: McpServer, clients: BloqueClients) {
   server.registerTool(
     'find_rates',
     {
-      description: 'Find exchange rates between two assets. Returns rates with fees, limits, and a rateSig needed to create swap orders. Use this before topup_via_pse or cashout_to_bank.',
+      description:
+        'Find exchange rates between two assets. Returns rates with fees, limits, and a rateSig needed to create swap orders. Use this before topup_via_pse or cashout_to_bank.',
       inputSchema: {
         fromAsset: z.string(),
         toAsset: z.string(),
@@ -30,7 +31,8 @@ export function registerSwapTools(server: McpServer, clients: BloqueClients) {
   server.registerTool(
     'list_pse_banks',
     {
-      description: 'List Colombian banks available for PSE payments. Returns bank code and name.',
+      description:
+        'List Colombian banks available for PSE payments. Returns bank code and name.',
     },
     async () => {
       const result = await clients.swap.pse.banks();
@@ -43,7 +45,8 @@ export function registerSwapTools(server: McpServer, clients: BloqueClients) {
   server.registerTool(
     'create_pse_order',
     {
-      description: "Low-level: create a PSE swap order to convert COP into DUSD. For a simpler flow, use 'topup_via_pse' workflow.",
+      description:
+        "Low-level: create a PSE swap order to convert COP into DUSD. For a simpler flow, use 'topup_via_pse' workflow.",
       inputSchema: {
         rateSig: z.string(),
         toMedium: z.string(),
@@ -63,32 +66,50 @@ export function registerSwapTools(server: McpServer, clients: BloqueClients) {
         webhookUrl: z.string().optional(),
       },
     },
-    async ({
-      rateSig, toMedium, amountSrc, amountDst, depositUrn,
-      bankCode, userType, customerEmail, userLegalIdType,
-      userLegalId, fullName, phoneNumber, redirectUrl, webhookUrl,
-    }, extra) => {
+    async (
+      {
+        rateSig,
+        toMedium,
+        amountSrc,
+        amountDst,
+        depositUrn,
+        bankCode,
+        userType,
+        customerEmail,
+        userLegalIdType,
+        userLegalId,
+        fullName,
+        phoneNumber,
+        redirectUrl,
+        webhookUrl,
+      },
+      extra,
+    ) => {
       const idempotencyKey = randomUUID();
       const outcome = await runWithApproval(
         extra,
         `PSE order: ${amountSrc ?? amountDst} into ${depositUrn}`,
-        (approval) => clients.swap.pse.create({
-        rateSig,
-        toMedium,
-        webhookUrl,
-        amountSrc,
-        amountDst,
-        depositInformation: { urn: depositUrn },
-        args: {
-          bankCode,
-          userType,
-          customerEmail,
-          userLegalIdType,
-          userLegalId,
-          customerData: { fullName, phoneNumber: phoneNumber ?? '' },
-          redirectUrl,
-        },
-      }, { idempotencyKey, approval }),
+        (approval) =>
+          clients.swap.pse.create(
+            {
+              rateSig,
+              toMedium,
+              webhookUrl,
+              amountSrc,
+              amountDst,
+              depositInformation: { urn: depositUrn },
+              args: {
+                bankCode,
+                userType,
+                customerEmail,
+                userLegalIdType,
+                userLegalId,
+                customerData: { fullName, phoneNumber: phoneNumber ?? '' },
+                redirectUrl,
+              },
+            },
+            { idempotencyKey, approval },
+          ),
       );
       return approvalToolResult(outcome);
     },
@@ -97,7 +118,8 @@ export function registerSwapTools(server: McpServer, clients: BloqueClients) {
   server.registerTool(
     'create_bank_transfer_order',
     {
-      description: "Low-level: create a bank transfer order to cash out DUSD to COP. For a simpler flow, use 'cashout_to_bank' workflow.",
+      description:
+        "Low-level: create a bank transfer order to cash out DUSD to COP. For a simpler flow, use 'cashout_to_bank' workflow.",
       inputSchema: {
         rateSig: z.string(),
         toMedium: z.string(),
@@ -107,36 +129,55 @@ export function registerSwapTools(server: McpServer, clients: BloqueClients) {
         bankAccountType: z.enum(['savings', 'checkings']),
         bankAccountNumber: z.string(),
         bankAccountHolderName: z.string(),
-        bankAccountHolderIdentificationType: z.enum(['CC', 'CE', 'NIT', 'PASSPORT']),
+        bankAccountHolderIdentificationType: z.enum([
+          'CC',
+          'CE',
+          'NIT',
+          'PASSPORT',
+        ]),
         bankAccountHolderIdentificationValue: z.string(),
         webhookUrl: z.string().optional(),
       },
     },
-    async ({
-      rateSig, toMedium, amountSrc, amountDst, sourceAccountUrn,
-      bankAccountType, bankAccountNumber, bankAccountHolderName,
-      bankAccountHolderIdentificationType, bankAccountHolderIdentificationValue,
-      webhookUrl,
-    }, extra) => {
+    async (
+      {
+        rateSig,
+        toMedium,
+        amountSrc,
+        amountDst,
+        sourceAccountUrn,
+        bankAccountType,
+        bankAccountNumber,
+        bankAccountHolderName,
+        bankAccountHolderIdentificationType,
+        bankAccountHolderIdentificationValue,
+        webhookUrl,
+      },
+      extra,
+    ) => {
       const idempotencyKey = randomUUID();
       const outcome = await runWithApproval(
         extra,
         `Bank transfer order: ${amountSrc ?? amountDst} from ${sourceAccountUrn} to ${toMedium} account ${bankAccountNumber}`,
-        (approval) => clients.swap.bankTransfer.create({
-        rateSig,
-        toMedium: toMedium as SupportedBank,
-        webhookUrl,
-        amountSrc,
-        amountDst,
-        depositInformation: {
-          bankAccountType,
-          bankAccountNumber,
-          bankAccountHolderName,
-          bankAccountHolderIdentificationType,
-          bankAccountHolderIdentificationValue,
-        },
-        args: { sourceAccountUrn },
-      }, { idempotencyKey, approval }),
+        (approval) =>
+          clients.swap.bankTransfer.create(
+            {
+              rateSig,
+              toMedium: toMedium as SupportedBank,
+              webhookUrl,
+              amountSrc,
+              amountDst,
+              depositInformation: {
+                bankAccountType,
+                bankAccountNumber,
+                bankAccountHolderName,
+                bankAccountHolderIdentificationType,
+                bankAccountHolderIdentificationValue,
+              },
+              args: { sourceAccountUrn },
+            },
+            { idempotencyKey, approval },
+          ),
       );
       return approvalToolResult(outcome);
     },
@@ -145,7 +186,8 @@ export function registerSwapTools(server: McpServer, clients: BloqueClients) {
   server.registerTool(
     'create_breb_order',
     {
-      description: "Low-level: create a BRE-B payout order to a recipient key (keyValue, optional keyType) with a unique resolutionId. Use 'send_to_breb_key' workflow for a simpler flow.",
+      description:
+        "Low-level: create a BRE-B payout order to a recipient key (keyValue, optional keyType) with a unique resolutionId. Use 'send_to_breb_key' workflow for a simpler flow.",
       inputSchema: {
         rateSig: z.string(),
         amountSrc: z.string().optional(),
@@ -162,37 +204,44 @@ export function registerSwapTools(server: McpServer, clients: BloqueClients) {
         metadata: z.record(z.string(), z.unknown()).optional(),
       },
     },
-    async ({
-      rateSig,
-      amountSrc,
-      amountDst,
-      type,
-      resolutionId,
-      keyValue,
-      keyType,
-      sourceAccountUrn,
-      webhookUrl,
-      nodeId,
-      metadata,
-    }, extra) => {
-      const idempotencyKey = randomUUID();
-      const outcome = await runWithApproval(
-        extra,
-        `BRE-B payout: ${amountSrc ?? amountDst} from ${sourceAccountUrn} to key ${keyValue}`,
-        (approval) => clients.swap.breb.create({
+    async (
+      {
         rateSig,
         amountSrc,
         amountDst,
         type,
+        resolutionId,
+        keyValue,
+        keyType,
+        sourceAccountUrn,
         webhookUrl,
         nodeId,
         metadata,
-        depositInformation: {
-          resolutionId,
-          destinationKey: { keyValue, ...(keyType && { keyType }) },
-        },
-        args: { sourceAccountUrn },
-      }, { idempotencyKey, approval }),
+      },
+      extra,
+    ) => {
+      const idempotencyKey = randomUUID();
+      const outcome = await runWithApproval(
+        extra,
+        `BRE-B payout: ${amountSrc ?? amountDst} from ${sourceAccountUrn} to key ${keyValue}`,
+        (approval) =>
+          clients.swap.breb.create(
+            {
+              rateSig,
+              amountSrc,
+              amountDst,
+              type,
+              webhookUrl,
+              nodeId,
+              metadata,
+              depositInformation: {
+                resolutionId,
+                destinationKey: { keyValue, ...(keyType && { keyType }) },
+              },
+              args: { sourceAccountUrn },
+            },
+            { idempotencyKey, approval },
+          ),
       );
       return approvalToolResult(outcome);
     },

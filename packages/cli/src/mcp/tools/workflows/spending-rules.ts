@@ -8,7 +8,10 @@ import { resolveMccs } from '../../categories.ts';
 import { toRaw } from '../../currency.ts';
 import type { BloqueClients } from '../../types.ts';
 
-export function registerSpendingRulesWorkflows(server: McpServer, clients: BloqueClients) {
+export function registerSpendingRulesWorkflows(
+  server: McpServer,
+  clients: BloqueClients,
+) {
   server.registerTool(
     'configure_spending_rules',
     {
@@ -27,7 +30,10 @@ export function registerSpendingRulesWorkflows(server: McpServer, clients: Bloqu
     },
     async ({ cardUrn, routes }) => {
       const allMccs: string[] = [];
-      const priorityMcc: Record<string, { asset: string; account_urn: string }> = {};
+      const priorityMcc: Record<
+        string,
+        { asset: string; account_urn: string }
+      > = {};
       let defaultAccountUrn: string | undefined;
 
       for (const route of routes) {
@@ -89,8 +95,21 @@ export function registerSpendingRulesWorkflows(server: McpServer, clients: Bloqu
         currency: z.string().optional().default('USD'),
       },
     },
-    async ({ cardUrn, categoryName, categories, mccs, fundFromUrn, fundAmount, currency }, extra) => {
-      const pocket = await clients.accounts.virtual.create({ name: categoryName });
+    async (
+      {
+        cardUrn,
+        categoryName,
+        categories,
+        mccs,
+        fundFromUrn,
+        fundAmount,
+        currency,
+      },
+      extra,
+    ) => {
+      const pocket = await clients.accounts.virtual.create({
+        name: categoryName,
+      });
       const polygon = await clients.accounts.polygon.create({
         ledgerId: pocket.ledgerId,
         name: categoryName,
@@ -100,7 +119,8 @@ export function registerSpendingRulesWorkflows(server: McpServer, clients: Bloqu
       const existing = card.metadata ?? {};
       const newMccs = resolveMccs(categories, mccs);
       const existingWhitelist: string[] = existing.mcc_whitelist ?? [];
-      const existingPriority: Record<string, unknown> = existing.priority_mcc ?? {};
+      const existingPriority: Record<string, unknown> =
+        existing.priority_mcc ?? {};
 
       const mergedWhitelist = [...new Set([...existingWhitelist, ...newMccs])];
       const mergedPriority: Record<string, unknown> = { ...existingPriority };

@@ -91,17 +91,20 @@ export function registerCardWorkflows(
         webhookUrl: z.string().optional(),
       },
     },
-    async ({
-      name,
-      accountUrn,
-      allowedCategories,
-      allowedMccs,
-      websites,
-      fundFromUrn,
-      fundAmount,
-      currency,
-      webhookUrl,
-    }, extra) => {
+    async (
+      {
+        name,
+        accountUrn,
+        allowedCategories,
+        allowedMccs,
+        websites,
+        fundFromUrn,
+        fundAmount,
+        currency,
+        webhookUrl,
+      },
+      extra,
+    ) => {
       try {
         mcpDebug('tool create_card invoked', {
           name,
@@ -257,16 +260,19 @@ export function registerCardWorkflows(
         webhookUrl: z.string().optional(),
       },
     },
-    async ({
-      name,
-      sourceUrn,
-      amount,
-      currency,
-      allowedCategories,
-      allowedMccs,
-      websites,
-      webhookUrl,
-    }, extra) => {
+    async (
+      {
+        name,
+        sourceUrn,
+        amount,
+        currency,
+        allowedCategories,
+        allowedMccs,
+        websites,
+        webhookUrl,
+      },
+      extra,
+    ) => {
       try {
         mcpDebug('tool create_disposable_card invoked', { name, sourceUrn });
         const me = await clients.identity.me();

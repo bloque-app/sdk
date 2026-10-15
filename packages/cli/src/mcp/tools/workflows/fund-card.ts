@@ -6,7 +6,10 @@ import { approvalToolResult, runWithApproval } from '../../approvals.ts';
 import { humanizeBalance, toRaw } from '../../currency.ts';
 import type { BloqueClients } from '../../types.ts';
 
-export function registerFundCardWorkflows(server: McpServer, clients: BloqueClients) {
+export function registerFundCardWorkflows(
+  server: McpServer,
+  clients: BloqueClients,
+) {
   server.registerTool(
     'fund_card',
     {
@@ -22,18 +25,25 @@ export function registerFundCardWorkflows(server: McpServer, clients: BloqueClie
     async ({ cardUrn, sourceUrn, amount, currency }, extra) => {
       const cardAccount = await clients.accounts.get(cardUrn);
       const { ledgerId } = cardAccount;
-      const { accounts: virtualAccounts } = await clients.accounts.list({ medium: 'virtual' } as any);
+      const { accounts: virtualAccounts } = await clients.accounts.list({
+        medium: 'virtual',
+      } as any);
       const pocket = virtualAccounts.find((a: any) => a.ledgerId === ledgerId);
 
       if (!pocket) {
         return {
-          content: [{
-            type: 'text',
-            text: JSON.stringify(
-              { error: `No virtual pocket found with ledgerId ${ledgerId} for card ${cardUrn}` },
-              null, 2,
-            ),
-          }],
+          content: [
+            {
+              type: 'text',
+              text: JSON.stringify(
+                {
+                  error: `No virtual pocket found with ledgerId ${ledgerId} for card ${cardUrn}`,
+                },
+                null,
+                2,
+              ),
+            },
+          ],
         };
       }
 

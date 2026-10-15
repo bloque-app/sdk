@@ -6,7 +6,10 @@ import { describeOutcome, runWithApproval } from '../../approvals.ts';
 import { toRaw } from '../../currency.ts';
 import type { BloqueClients } from '../../types.ts';
 
-export function registerTopupWorkflows(server: McpServer, clients: BloqueClients) {
+export function registerTopupWorkflows(
+  server: McpServer,
+  clients: BloqueClients,
+) {
   server.registerTool(
     'topup_via_pse',
     {
@@ -28,11 +31,22 @@ export function registerTopupWorkflows(server: McpServer, clients: BloqueClients
         webhookUrl: z.string().optional(),
       },
     },
-    async ({
-      accountUrn, amount, bankCode, userType,
-      customerEmail, userLegalIdType, userLegalId,
-      fullName, phoneNumber, redirectUrl, webhookUrl,
-    }, extra) => {
+    async (
+      {
+        accountUrn,
+        amount,
+        bankCode,
+        userType,
+        customerEmail,
+        userLegalIdType,
+        userLegalId,
+        fullName,
+        phoneNumber,
+        redirectUrl,
+        webhookUrl,
+      },
+      extra,
+    ) => {
       const { amount: rawAmount } = toRaw(amount, 'COP');
       const ratesResult = await clients.swap.findRates({
         fromAsset: 'COP/2',
@@ -44,10 +58,16 @@ export function registerTopupWorkflows(server: McpServer, clients: BloqueClients
       const rate = ratesResult.rates[0];
       if (!rate) {
         return {
-          content: [{
-            type: 'text',
-            text: JSON.stringify({ error: 'No exchange rates available for COP → USD via PSE' }, null, 2),
-          }],
+          content: [
+            {
+              type: 'text',
+              text: JSON.stringify(
+                { error: 'No exchange rates available for COP → USD via PSE' },
+                null,
+                2,
+              ),
+            },
+          ],
         };
       }
 
@@ -92,7 +112,10 @@ export function registerTopupWorkflows(server: McpServer, clients: BloqueClients
       const result =
         outcome.status === 'completed'
           ? outcome.result
-          : { ...describeOutcome(outcome), rate: { ratio: rate.ratio, fee: rate.fee } };
+          : {
+              ...describeOutcome(outcome),
+              rate: { ratio: rate.ratio, fee: rate.fee },
+            };
       return {
         content: [{ type: 'text', text: JSON.stringify(result, null, 2) }],
       };
@@ -117,11 +140,21 @@ export function registerTopupWorkflows(server: McpServer, clients: BloqueClients
         webhookUrl: z.string().optional(),
       },
     },
-    async ({
-      sourceAccountUrn, amount, currency, bankName,
-      bankAccountType, bankAccountNumber, bankAccountHolderName,
-      idType, idNumber, webhookUrl,
-    }, extra) => {
+    async (
+      {
+        sourceAccountUrn,
+        amount,
+        currency,
+        bankName,
+        bankAccountType,
+        bankAccountNumber,
+        bankAccountHolderName,
+        idType,
+        idNumber,
+        webhookUrl,
+      },
+      extra,
+    ) => {
       const { amount: rawAmount } = toRaw(amount, currency);
       const ratesResult = await clients.swap.findRates({
         fromAsset: 'DUSD/6',
@@ -133,13 +166,18 @@ export function registerTopupWorkflows(server: McpServer, clients: BloqueClients
       const rate = ratesResult.rates[0];
       if (!rate) {
         return {
-          content: [{
-            type: 'text',
-            text: JSON.stringify(
-              { error: `No exchange rates available for USD → COP via ${bankName}` },
-              null, 2,
-            ),
-          }],
+          content: [
+            {
+              type: 'text',
+              text: JSON.stringify(
+                {
+                  error: `No exchange rates available for USD → COP via ${bankName}`,
+                },
+                null,
+                2,
+              ),
+            },
+          ],
         };
       }
 
@@ -179,7 +217,10 @@ export function registerTopupWorkflows(server: McpServer, clients: BloqueClients
       const result =
         outcome.status === 'completed'
           ? outcome.result
-          : { ...describeOutcome(outcome), rate: { ratio: rate.ratio, fee: rate.fee } };
+          : {
+              ...describeOutcome(outcome),
+              rate: { ratio: rate.ratio, fee: rate.fee },
+            };
       return {
         content: [{ type: 'text', text: JSON.stringify(result, null, 2) }],
       };
@@ -204,34 +245,45 @@ export function registerTopupWorkflows(server: McpServer, clients: BloqueClients
         webhookUrl: z.string().optional(),
       },
     },
-    async ({
-      sourceAccountUrn,
-      amount,
-      sourceCurrency,
-      targetCurrency,
-      sourceMedium,
-      keyType,
-      key,
-      webhookUrl,
-    }, extra) => {
+    async (
+      {
+        sourceAccountUrn,
+        amount,
+        sourceCurrency,
+        targetCurrency,
+        sourceMedium,
+        keyType,
+        key,
+        webhookUrl,
+      },
+      extra,
+    ) => {
       const resolution = await clients.accounts.breb.resolveKey({
         key,
         ...(keyType && { keyType }),
       });
       if (resolution.error || !resolution.data) {
         return {
-          content: [{
-            type: 'text',
-            text: JSON.stringify(
-              { error: resolution.error?.message ?? 'Failed to resolve BRE-B key' },
-              null,
-              2,
-            ),
-          }],
+          content: [
+            {
+              type: 'text',
+              text: JSON.stringify(
+                {
+                  error:
+                    resolution.error?.message ?? 'Failed to resolve BRE-B key',
+                },
+                null,
+                2,
+              ),
+            },
+          ],
         };
       }
 
-      const { amount: rawAmount, asset: fromAsset } = toRaw(amount, sourceCurrency);
+      const { amount: rawAmount, asset: fromAsset } = toRaw(
+        amount,
+        sourceCurrency,
+      );
       const { asset: toAsset } = toRaw('1', targetCurrency);
 
       const ratesResult = await clients.swap.findRates({
@@ -244,16 +296,18 @@ export function registerTopupWorkflows(server: McpServer, clients: BloqueClients
       const rate = ratesResult.rates[0];
       if (!rate) {
         return {
-          content: [{
-            type: 'text',
-            text: JSON.stringify(
-              {
-                error: `No exchange rates available for ${fromAsset} → ${toAsset} via ${sourceMedium} -> breb`,
-              },
-              null,
-              2,
-            ),
-          }],
+          content: [
+            {
+              type: 'text',
+              text: JSON.stringify(
+                {
+                  error: `No exchange rates available for ${fromAsset} → ${toAsset} via ${sourceMedium} -> breb`,
+                },
+                null,
+                2,
+              ),
+            },
+          ],
         };
       }
 

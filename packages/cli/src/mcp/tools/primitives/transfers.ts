@@ -6,11 +6,15 @@ import { approvalToolResult, runWithApproval } from '../../approvals.ts';
 import { toHuman, toRaw } from '../../currency.ts';
 import type { BloqueClients } from '../../types.ts';
 
-export function registerTransferTools(server: McpServer, clients: BloqueClients) {
+export function registerTransferTools(
+  server: McpServer,
+  clients: BloqueClients,
+) {
   server.registerTool(
     'transfer',
     {
-      description: "Transfer funds between two accounts. Specify source/destination URN, amount in human-readable format (e.g. '100' for $100), and currency ('USD' or 'COP'). The transfer is queued asynchronously. Returns a queueId to track. If the account owner must approve it with their passkey, returns status 'approval_required' with an approvalUrl to share and an approvalId for check_approval.",
+      description:
+        "Transfer funds between two accounts. Specify source/destination URN, amount in human-readable format (e.g. '100' for $100), and currency ('USD' or 'COP'). The transfer is queued asynchronously. Returns a queueId to track. If the account owner must approve it with their passkey, returns status 'approval_required' with an approvalUrl to share and an approvalId for check_approval.",
       inputSchema: {
         sourceUrn: z.string(),
         destinationUrn: z.string(),
@@ -19,7 +23,10 @@ export function registerTransferTools(server: McpServer, clients: BloqueClients)
         metadata: z.record(z.string(), z.unknown()).optional(),
       },
     },
-    async ({ sourceUrn, destinationUrn, amount, currency, metadata }, extra) => {
+    async (
+      { sourceUrn, destinationUrn, amount, currency, metadata },
+      extra,
+    ) => {
       const { amount: rawAmount, asset } = toRaw(amount, currency);
       // Same key on the first call and on the approved repeat.
       const idempotencyKey = randomUUID();
@@ -48,7 +55,8 @@ export function registerTransferTools(server: McpServer, clients: BloqueClients)
   server.registerTool(
     'batch_transfer',
     {
-      description: 'Execute multiple transfers in a single batch. Useful for payroll, distributions. Operations are auto-chunked into groups of 80. May return status "approval_required" (see check_approval).',
+      description:
+        'Execute multiple transfers in a single batch. Useful for payroll, distributions. Operations are auto-chunked into groups of 80. May return status "approval_required" (see check_approval).',
       inputSchema: {
         reference: z.string(),
         operations: z.array(
