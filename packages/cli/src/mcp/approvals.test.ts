@@ -154,13 +154,27 @@ describe('transfer tool with passkey approvals', () => {
     expect(rejected.reason).toBe('passkey_rejected');
     expect(rejected.nextStep).toContain('Nothing has moved');
 
-    const missing = parse(
+    // Checking again gives the same answer; nothing is sent again.
+    const calls = mockFetch([approvalReady, transferOk]);
+    const again = parse(
       await client.callTool({
         name: 'check_approval',
         arguments: { approvalId: pending.approvalId },
       }),
     );
+    expect(again.status).toBe('approval_rejected');
+    expect(calls).toHaveLength(0);
+
+    const missing = parse(
+      await client.callTool({
+        name: 'check_approval',
+        arguments: { approvalId: 'apr_unknown' },
+      }),
+    );
     expect(missing.status).toBe('approval_not_found');
+    // It cannot know whether the operation ran: never repeat blindly.
+    expect(missing.nextStep).toContain('movements');
+    expect(missing.nextStep).not.toContain('Repeat the original operation');
   });
 
   it('check_approval stays approval_required while the owner has not approved', async () => {

@@ -69,7 +69,9 @@ const meOk = () =>
  * Mocks `fetch`. `/api/identities/me` always answers; every other request
  * takes the next response from `responses` (the last one repeats).
  */
-export function mockFetch(responses: Array<() => Response>): Call[] {
+export function mockFetch(
+  responses: Array<() => Response | Promise<Response>>,
+): Call[] {
   const calls: Call[] = [];
   globalThis.fetch = mock((url: string | URL | Request, init?: RequestInit) => {
     if (String(url).endsWith('/api/identities/me')) {
@@ -83,7 +85,7 @@ export function mockFetch(responses: Array<() => Response>): Call[] {
     });
     const next = responses[Math.min(calls.length - 1, responses.length - 1)];
     if (!next) throw new Error('mockFetch: no responses');
-    return Promise.resolve(next());
+    return Promise.resolve().then(next);
   }) as unknown as typeof fetch;
   return calls;
 }
@@ -117,3 +119,29 @@ export const transferParams = {
   amount: '1000000',
   asset: 'DUSD/6' as const,
 };
+
+/** A response held back until `release()`: an approved request in flight. */
+export function held(response: () => Response) {
+  let release!: () => void;
+  const gate = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  return { respond: () => gate.then(response), release };
+}
+
+/** The reply never arrives: the connection drops after the request went out. */
+export const connectionLost = (): Response => {
+  throw new TypeError('fetch failed: socket hang up');
+};
+
+/** Waits until `condition()` holds (fails the test after `timeoutMs`). */
+export async function eventually(
+  condition: () => boolean,
+  timeoutMs = 2000,
+): Promise<void> {
+  const deadline = Date.now() + timeoutMs;
+  while (!condition()) {
+    if (Date.now() > deadline) throw new Error('condition not met in time');
+    await Bun.sleep(5);
+  }
+}

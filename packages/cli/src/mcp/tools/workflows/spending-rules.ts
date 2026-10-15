@@ -3,7 +3,12 @@ import type { SupportedAsset, TransferResult } from '@bloque/sdk';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod/v4';
 import type { ApprovalOutcome } from '../../../approvals/approval-gate.ts';
-import { runWithApproval, splitOutcome } from '../../approvals.ts';
+import {
+  APPROVAL_LINK_RULE,
+  repeatStepWith,
+  runWithApproval,
+  splitOutcome,
+} from '../../approvals.ts';
 import { resolveMccs } from '../../categories.ts';
 import { toRaw } from '../../currency.ts';
 import type { BloqueClients } from '../../types.ts';
@@ -83,8 +88,7 @@ export function registerSpendingRulesWorkflows(
   server.registerTool(
     'add_spending_category',
     {
-      description:
-        "Add a new spending category to a card's smart routing. Creates a new account for the category and wires it into the routing rules. If the card doesn't have smart routing yet, it is automatically enabled. If funding needs the account owner's passkey approval, fundingApproval carries the approvalUrl and approvalId (see check_approval).",
+      description: `Add a new spending category to a card's smart routing. Creates a new account for the category and wires it into the routing rules. If the card doesn't have smart routing yet, it is automatically enabled. If funding needs the account owner's passkey approval, the category account is still created and fundingApproval carries the approvalUrl and approvalId (see check_approval); if that approval expires or is rejected, repeat only the funding step as fundingApproval.nextStep says, never this whole call. ${APPROVAL_LINK_RULE}`,
       inputSchema: {
         cardUrn: z.string(),
         categoryName: z.string(),
@@ -159,6 +163,18 @@ export function registerSpendingRulesWorkflows(
               },
               { idempotencyKey, approval },
             ),
+          {
+            repeatWith: repeatStepWith(
+              'transfer',
+              {
+                sourceUrn: fundFromUrn,
+                destinationUrn: pocket.urn,
+                amount: fundAmount,
+                currency,
+              },
+              `The "${categoryName}" account ${pocket.urn} was already created and wired into card ${cardUrn}`,
+            ),
+          },
         );
       }
       const { result: transferResult, approval } = splitOutcome(funding);

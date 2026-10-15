@@ -3,7 +3,12 @@ import type { SupportedAsset, TransferResult } from '@bloque/sdk';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod/v4';
 import type { ApprovalOutcome } from '../../../approvals/approval-gate.ts';
-import { runWithApproval, splitOutcome } from '../../approvals.ts';
+import {
+  APPROVAL_LINK_RULE,
+  repeatStepWith,
+  runWithApproval,
+  splitOutcome,
+} from '../../approvals.ts';
 import { logAndFormatToolError } from '../../bloque-error-mcp.ts';
 import { resolveMccs } from '../../categories.ts';
 import { humanizeBalance, toRaw } from '../../currency.ts';
@@ -72,8 +77,7 @@ export function registerCardWorkflows(
   server.registerTool(
     'create_card',
     {
-      description:
-        "Create a card for spending. If accountUrn is provided, the card is attached to that existing account (sharing its balance). If accountUrn is omitted, a new account (pocket + polygon) is created automatically. Optionally restrict to merchant categories using allowedCategories (e.g. 'food', 'transport', 'ads') or allowedMccs (raw MCC codes). Optionally fund the backing account on creation. If funding needs the account owner's passkey approval, the card is still created and fundingApproval carries the approvalUrl and approvalId (see check_approval).",
+      description: `Create a card for spending. If accountUrn is provided, the card is attached to that existing account (sharing its balance). If accountUrn is omitted, a new account (pocket + polygon) is created automatically. Optionally restrict to merchant categories using allowedCategories (e.g. 'food', 'transport', 'ads') or allowedMccs (raw MCC codes). Optionally fund the backing account on creation. If funding needs the account owner's passkey approval, the card is still created and fundingApproval carries the approvalUrl and approvalId (see check_approval); if that approval expires or is rejected, repeat only the funding step as fundingApproval.nextStep says, never this whole call. ${APPROVAL_LINK_RULE}`,
       inputSchema: {
         name: z.string().optional().default('Card'),
         accountUrn: z.string().optional(),
@@ -210,6 +214,18 @@ export function registerCardWorkflows(
                 },
                 { idempotencyKey, approval },
               ),
+            {
+              repeatWith: repeatStepWith(
+                'fund_card',
+                {
+                  cardUrn: card.urn,
+                  sourceUrn: fundFromUrn,
+                  amount: fundAmount,
+                  currency,
+                },
+                `Card ${card.urn} was already created`,
+              ),
+            },
           );
         }
         const { result: transferResult, approval } = splitOutcome(funding);
@@ -244,8 +260,7 @@ export function registerCardWorkflows(
   server.registerTool(
     'create_disposable_card',
     {
-      description:
-        'Create a one-time disposable card with an exact funded amount. Creates an isolated account + card, funds it with the exact amount, so the card can never be charged more. Perfect for untrusted online purchases. Call disable_card after use. If funding needs the account owner passkey approval, the card is created unfunded and fundingApproval carries the approvalUrl and approvalId (see check_approval).',
+      description: `Create a one-time disposable card with an exact funded amount. Creates an isolated account + card, funds it with the exact amount, so the card can never be charged more. Perfect for untrusted online purchases. Call disable_card after use. If funding needs the account owner's passkey approval, the card is still created (unfunded) and fundingApproval carries the approvalUrl and approvalId (see check_approval); if that approval expires or is rejected, repeat only the funding step as fundingApproval.nextStep says, never this whole call. ${APPROVAL_LINK_RULE}`,
       inputSchema: {
         name: z.string().optional().default('Disposable Card'),
         sourceUrn: z.string(),
@@ -323,6 +338,13 @@ export function registerCardWorkflows(
               },
               { idempotencyKey, approval },
             ),
+          {
+            repeatWith: repeatStepWith(
+              'fund_card',
+              { cardUrn: card.urn, sourceUrn, amount, currency },
+              `Disposable card ${card.urn} was already created`,
+            ),
+          },
         );
         const { result: transferResult, approval } = splitOutcome(funding);
 

@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import {
+  BloqueAPIError,
   BloqueApprovalExpiredError,
   BloqueApprovalInvalidError,
   BloqueApprovalRequiredError,
@@ -36,12 +37,23 @@ export type ApprovalOutcome<T> =
   | { status: 'completed'; result: T }
   /** Waiting for the owner. Nothing moved yet; it can still be resumed. */
   | ({ status: 'approval_required' } & PendingApprovalInfo)
+  /**
+   * The owner approved and the approved request is being sent right now.
+   * Check again for its result; never repeat the operation.
+   */
+  | {
+      status: 'in_progress';
+      approvalId: string;
+      operation: string;
+      message: string;
+    }
   /** No approval arrived before it expired. Nothing moved. */
   | {
       status: 'approval_expired';
       operation: string;
       reason?: string;
       message: string;
+      repeatWith?: string;
     }
   /** The server refused the approval (e.g. passkey rejected). Nothing moved. */
   | {
@@ -49,20 +61,41 @@ export type ApprovalOutcome<T> =
       operation: string;
       reason?: string;
       message: string;
+      repeatWith?: string;
     }
-  /** No pending approval with that id: unknown, finished or expired. */
+  /**
+   * The approved request was sent but did not return a result: it failed,
+   * or its reply was lost. It may or may not have moved money.
+   */
+  | {
+      status: 'failed';
+      approvalId: string;
+      operation: string;
+      code?: string;
+      message: string;
+    }
+  /** No approval with that id in this session. */
   | { status: 'approval_not_found'; approvalId: string; message: string };
+
+type FinalOutcome = Extract<
+  ApprovalOutcome<unknown>,
+  { status: 'completed' | 'approval_expired' | 'approval_rejected' }
+>;
 
 export interface ApprovalWaitOptions {
   /**
-   * How long to wait for the owner's approval in this call, in milliseconds.
-   * `0` returns `approval_required` straight away. The operation stays
-   * resumable after the wait ends.
+   * How long to wait in this call, in milliseconds: for the owner's approval
+   * and then for the approved request. `0` answers with the current state
+   * straight away. The operation is kept either way.
    */
   waitMs?: number;
   /** Poll interval. The SDK never polls faster than every 2 s. */
   intervalMs?: number;
-  /** Stops waiting (the operation stays resumable). */
+  /**
+   * Stops waiting. The operation is kept: an approval not given yet can
+   * still be resumed, and an approved request already sent still finishes
+   * and keeps its result.
+   */
   signal?: AbortSignal;
   /**
    * Called once the operation is known to need approval, before waiting:
@@ -71,195 +104,397 @@ export interface ApprovalWaitOptions {
   onApprovalRequired?: (pending: PendingApprovalInfo) => void | Promise<void>;
 }
 
-interface PendingEntry {
-  id: string;
-  operation: string;
-  error: BloqueApprovalRequiredError;
-  run: GatedOperation<unknown>;
-  inFlight?: Promise<ApprovalOutcome<unknown>>;
+export interface ApprovalRunOptions extends ApprovalWaitOptions {
+  /**
+   * What to repeat, in plain words, if the approval expires or is rejected,
+   * when that is not the whole original call (e.g. a workflow that already
+   * created a card and only needs its funding step repeated).
+   */
+  repeatWith?: string;
+}
+
+/** A finished entry is kept at least this long, so a re-check finds it. */
+export const SETTLED_MIN_RETENTION_MS = 15 * 60_000;
+/** ...and never longer than this, whatever the approval's expiry. */
+export const SETTLED_MAX_RETENTION_MS = 60 * 60_000;
+/** At most this many finished entries are kept; the oldest go first. */
+export const SETTLED_MAX_ENTRIES = 500;
+
+interface Poll {
+  promise: Promise<void>;
+  controller: AbortController;
+  waiters: number;
 }
 
 /**
- * Turns the SDK's passkey approval flow into plain outcomes, and keeps the
- * operations that are still waiting so they can be resumed by id.
+ * - `pending`: waiting for the owner's approval.
+ * - `running`: approved; the approved request is in flight.
+ * - `completed`: finished with a final outcome (ran, expired or rejected).
+ * - `failed`: the approved request threw; kept so it is never sent again.
+ */
+type EntryState =
+  | { kind: 'pending'; poll?: Poll }
+  | { kind: 'running'; done: Promise<void> }
+  | { kind: 'completed'; outcome: FinalOutcome; retainUntil: number }
+  | { kind: 'failed'; error: unknown; retainUntil: number };
+
+interface Entry {
+  id: string;
+  operation: string;
+  repeatWith?: string;
+  /** The current approval request (renewed if the server asks again). */
+  request: BloqueApprovalRequiredError;
+  run: GatedOperation<unknown>;
+  state: EntryState;
+}
+
+/**
+ * Turns the SDK's passkey approval flow into plain outcomes, and keeps every
+ * gated operation by id so it can be resumed, and so its approved request is
+ * sent at most once.
  *
  * One gate is shared by every money-moving call in the CLI, so the approval
  * behavior (wait, time out, expire, reject, resume) is the same everywhere.
  */
 export class ApprovalGate {
-  private readonly pending = new Map<string, PendingEntry>();
+  private readonly entries = new Map<string, Entry>();
 
   /**
    * Runs `run()`. If the server asks for the owner's approval, registers the
    * operation, calls `onApprovalRequired`, waits up to `waitMs` and, once
    * approved, runs it again with the approval.
    *
-   * Errors other than the approval ones are thrown as they are.
+   * Errors from the first call, other than the approval request, are thrown
+   * as they are. After an approval, errors become a `failed` outcome.
    */
   async run<T>(
     operation: string,
     run: GatedOperation<T>,
-    options: ApprovalWaitOptions = {},
+    options: ApprovalRunOptions = {},
   ): Promise<ApprovalOutcome<T>> {
-    let error: BloqueApprovalRequiredError;
+    let request: BloqueApprovalRequiredError;
     try {
       return { status: 'completed', result: await run() };
     } catch (err) {
       if (!(err instanceof BloqueApprovalRequiredError)) throw err;
-      error = err;
+      request = err;
     }
 
-    const entry = this.register(operation, error, run);
+    const entry = this.register(operation, request, run, options.repeatWith);
     await options.onApprovalRequired?.(this.info(entry));
     return (await this.settle(entry, options)) as ApprovalOutcome<T>;
   }
 
   /**
-   * Waits up to `waitMs` for a pending operation's approval and runs it once
-   * approved. Resuming an id that is already being waited on joins that wait.
+   * Checks an operation by id, waiting up to `waitMs` for its approval or
+   * its approved request. Never sends the approved request twice: a check
+   * while it is in flight waits for it, and a check after it finished gets
+   * the result it already had.
    */
   async resume(
     approvalId: string,
     options: Omit<ApprovalWaitOptions, 'onApprovalRequired'> = {},
   ): Promise<ApprovalOutcome<unknown>> {
-    const entry = this.pending.get(approvalId);
+    this.prune();
+    const entry = this.entries.get(approvalId);
     if (!entry) {
       return {
         status: 'approval_not_found',
         approvalId,
         message:
-          'No pending approval with this id. It already finished, expired, or belongs to another session. Repeat the operation to request a new approval.',
+          'No approval with this id in this session: it is unknown, belongs to another session, or finished too long ago to be kept.',
       };
     }
     return await this.settle(entry, options);
   }
 
-  /** Operations still waiting for approval. */
+  /** Operations still waiting for the owner's approval. */
   list(): PendingApprovalInfo[] {
     this.prune();
-    return [...this.pending.values()].map((entry) => this.info(entry));
+    return [...this.entries.values()]
+      .filter((entry) => entry.state.kind === 'pending')
+      .map((entry) => this.info(entry));
   }
 
-  private settle(
-    entry: PendingEntry,
+  private async settle(
+    entry: Entry,
     options: ApprovalWaitOptions,
   ): Promise<ApprovalOutcome<unknown>> {
-    if (!options.waitMs || options.waitMs <= 0) {
-      return Promise.resolve(this.pendingOutcome(entry));
+    const deadline = Date.now() + Math.max(0, options.waitMs ?? 0);
+    const request = entry.request;
+    const stop = () =>
+      Date.now() >= deadline || options.signal?.aborted === true;
+
+    for (;;) {
+      const state = entry.state;
+      switch (state.kind) {
+        case 'completed':
+          return state.outcome;
+        case 'failed':
+          return this.failedOutcome(entry, state.error);
+        case 'running':
+          if (stop()) return this.inProgressOutcome(entry);
+          await until(state.done, deadline, options.signal);
+          break;
+        case 'pending': {
+          // The approved repeat asked for a new approval: show the new link.
+          if (entry.request !== request || stop()) {
+            return this.pendingOutcome(entry);
+          }
+          const poll = this.joinPoll(entry, state, options.intervalMs);
+          try {
+            await until(poll.promise, deadline, options.signal);
+          } finally {
+            this.leavePoll(entry, poll);
+          }
+          break;
+        }
+      }
     }
-    if (!entry.inFlight) {
-      entry.inFlight = this.waitAndRun(entry, options).finally(() => {
-        entry.inFlight = undefined;
-      });
-    }
-    return entry.inFlight;
   }
 
-  private async waitAndRun(
-    entry: PendingEntry,
-    options: ApprovalWaitOptions,
-  ): Promise<ApprovalOutcome<unknown>> {
+  /** One poll per approval, shared by every caller waiting on it. */
+  private joinPoll(
+    entry: Entry,
+    state: Extract<EntryState, { kind: 'pending' }>,
+    intervalMs?: number,
+  ): Poll {
+    if (!state.poll) state.poll = this.startPoll(entry, intervalMs);
+    state.poll.waiters++;
+    return state.poll;
+  }
+
+  /** Stops polling once nobody waits; the entry stays pending. */
+  private leavePoll(entry: Entry, poll: Poll): void {
+    poll.waiters--;
+    if (poll.waiters > 0) return;
+    poll.controller.abort();
+    if (entry.state.kind === 'pending' && entry.state.poll === poll) {
+      entry.state.poll = undefined;
+    }
+  }
+
+  private startPoll(entry: Entry, intervalMs?: number): Poll {
     const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), options.waitMs);
-    const onAbort = () => controller.abort();
-    options.signal?.addEventListener('abort', onAbort, { once: true });
-    if (options.signal?.aborted) controller.abort();
+    const request = entry.request;
+    const isCurrent = () =>
+      entry.state.kind === 'pending' && entry.request === request;
+    const promise = (async () => {
+      let approval: string;
+      try {
+        approval = await request.waitForApproval({
+          intervalMs,
+          signal: controller.signal,
+        });
+      } catch (err) {
+        if (!isCurrent()) return;
+        if (err instanceof BloqueApprovalExpiredError) {
+          this.finish(entry, this.expiredOutcome(entry, err));
+          return;
+        }
+        // Nobody is waiting any more: still pending, still resumable.
+        if (controller.signal.aborted) return;
+        throw err;
+      }
+      if (isCurrent()) this.execute(entry, approval);
+    })();
+    // Waiters see the rejection; this only keeps it from being unhandled.
+    promise.catch(() => {});
+    return { promise, controller, waiters: 0 };
+  }
 
-    let approval: string;
-    try {
-      approval = await entry.error.waitForApproval({
-        intervalMs: options.intervalMs,
-        signal: controller.signal,
-      });
-    } catch (err) {
-      if (err instanceof BloqueApprovalExpiredError) {
-        this.pending.delete(entry.id);
-        return {
-          status: 'approval_expired',
-          operation: entry.operation,
-          reason: err.reason,
-          message: err.message,
-        };
+  /**
+   * Sends the approved request. It runs to the end whoever is waiting, and
+   * its result is kept on the entry, so it is sent once.
+   */
+  private execute(entry: Entry, approval: string): void {
+    const done = (async () => {
+      try {
+        const result = await entry.run(approval);
+        this.finish(entry, { status: 'completed', result });
+      } catch (err) {
+        if (err instanceof BloqueApprovalInvalidError) {
+          this.finish(entry, {
+            status: 'approval_rejected',
+            operation: entry.operation,
+            reason: err.reason,
+            message: err.message,
+            repeatWith: entry.repeatWith,
+          });
+        } else if (err instanceof BloqueApprovalExpiredError) {
+          this.finish(entry, this.expiredOutcome(entry, err));
+        } else if (err instanceof BloqueApprovalRequiredError) {
+          // The server wants a fresh approval: same id, new link.
+          entry.request = err;
+          entry.state = { kind: 'pending' };
+        } else {
+          entry.state = {
+            kind: 'failed',
+            error: err,
+            retainUntil: this.retainUntil(entry),
+          };
+          this.capSettled();
+        }
       }
-      // Our own time limit, or the caller gave up: still resumable.
-      if (controller.signal.aborted) return this.pendingOutcome(entry);
-      throw err;
-    } finally {
-      clearTimeout(timer);
-      options.signal?.removeEventListener('abort', onAbort);
-    }
+    })();
+    // Set before the request settles: the body above only gets past its
+    // first `await` after this line.
+    entry.state = { kind: 'running', done };
+  }
 
-    // The approval is single-use: whatever happens next, this entry is done.
-    this.pending.delete(entry.id);
-    try {
-      return { status: 'completed', result: await entry.run(approval) };
-    } catch (err) {
-      if (err instanceof BloqueApprovalInvalidError) {
-        return {
-          status: 'approval_rejected',
-          operation: entry.operation,
-          reason: err.reason,
-          message: err.message,
-        };
-      }
-      if (err instanceof BloqueApprovalExpiredError) {
-        return {
-          status: 'approval_expired',
-          operation: entry.operation,
-          reason: err.reason,
-          message: err.message,
-        };
-      }
-      if (err instanceof BloqueApprovalRequiredError) {
-        // The server wants a fresh approval: start over with the new link.
-        return this.pendingOutcome(
-          this.register(entry.operation, err, entry.run),
-        );
-      }
-      throw err;
-    }
+  private finish(entry: Entry, outcome: FinalOutcome): void {
+    entry.state = {
+      kind: 'completed',
+      outcome,
+      retainUntil: this.retainUntil(entry),
+    };
+    this.capSettled();
+  }
+
+  /** Until the approval's expiry, within the retention bounds. */
+  private retainUntil(entry: Entry): number {
+    const now = Date.now();
+    const expiresAt = entry.request.expiresAt.getTime();
+    const wanted = Number.isNaN(expiresAt) ? now : expiresAt;
+    return Math.min(
+      Math.max(wanted, now + SETTLED_MIN_RETENTION_MS),
+      now + SETTLED_MAX_RETENTION_MS,
+    );
   }
 
   private register(
     operation: string,
-    error: BloqueApprovalRequiredError,
+    request: BloqueApprovalRequiredError,
     run: GatedOperation<unknown>,
-  ): PendingEntry {
+    repeatWith?: string,
+  ): Entry {
     this.prune();
-    const entry: PendingEntry = {
+    const entry: Entry = {
       id: `apr_${randomUUID()}`,
       operation,
-      error,
+      repeatWith,
+      request,
       run,
+      state: { kind: 'pending' },
     };
-    this.pending.set(entry.id, entry);
+    this.entries.set(entry.id, entry);
     return entry;
   }
 
-  /** Drops entries past their expiry that nobody is waiting on. */
+  /**
+   * Expires pending entries past their expiry that nobody is waiting on
+   * (they never ran, so nothing moved), and drops finished entries past
+   * their retention.
+   */
   private prune(): void {
     const now = Date.now();
-    for (const [id, entry] of this.pending) {
-      if (!entry.inFlight && entry.error.expiresAt.getTime() <= now) {
-        this.pending.delete(id);
+    for (const [id, entry] of this.entries) {
+      const state = entry.state;
+      if (state.kind === 'pending') {
+        if (!state.poll && entry.request.expiresAt.getTime() <= now) {
+          this.finish(entry, {
+            status: 'approval_expired',
+            operation: entry.operation,
+            reason: 'approval_not_received',
+            message:
+              'The operation approval expired. Repeat the operation to request a new approval.',
+            repeatWith: entry.repeatWith,
+          });
+        }
+      } else if (
+        (state.kind === 'completed' || state.kind === 'failed') &&
+        state.retainUntil <= now
+      ) {
+        this.entries.delete(id);
       }
     }
   }
 
-  private info(entry: PendingEntry): PendingApprovalInfo {
-    const expiresAt = entry.error.expiresAt;
+  private capSettled(): void {
+    const settled = [...this.entries.values()].filter(
+      (entry) =>
+        entry.state.kind === 'completed' || entry.state.kind === 'failed',
+    );
+    // Map order is insertion order: the first ones are the oldest.
+    for (const entry of settled.slice(
+      0,
+      Math.max(0, settled.length - SETTLED_MAX_ENTRIES),
+    )) {
+      this.entries.delete(entry.id);
+    }
+  }
+
+  private info(entry: Entry): PendingApprovalInfo {
+    const expiresAt = entry.request.expiresAt;
     return {
       approvalId: entry.id,
       operation: entry.operation,
-      approvalUrl: entry.error.approvalUrl,
+      approvalUrl: entry.request.approvalUrl,
       expiresAt: Number.isNaN(expiresAt.getTime())
         ? undefined
         : expiresAt.toISOString(),
-      summary: entry.error.summary,
+      summary: entry.request.summary,
     };
   }
 
-  private pendingOutcome(entry: PendingEntry): ApprovalOutcome<never> {
+  private pendingOutcome(entry: Entry): ApprovalOutcome<never> {
     return { status: 'approval_required', ...this.info(entry) };
+  }
+
+  private inProgressOutcome(entry: Entry): ApprovalOutcome<never> {
+    return {
+      status: 'in_progress',
+      approvalId: entry.id,
+      operation: entry.operation,
+      message:
+        'The owner approved and the approved request is being sent. Its result is kept under this approvalId.',
+    };
+  }
+
+  private failedOutcome(entry: Entry, error: unknown): ApprovalOutcome<never> {
+    return {
+      status: 'failed',
+      approvalId: entry.id,
+      operation: entry.operation,
+      code: error instanceof BloqueAPIError ? error.code : undefined,
+      message: error instanceof Error ? error.message : String(error),
+    };
+  }
+
+  private expiredOutcome(
+    entry: Entry,
+    err: BloqueApprovalExpiredError,
+  ): FinalOutcome {
+    return {
+      status: 'approval_expired',
+      operation: entry.operation,
+      reason: err.reason,
+      message: err.message,
+      repeatWith: entry.repeatWith,
+    };
+  }
+}
+
+/**
+ * Waits for `promise`, but no later than `deadline` or `signal`. Rejects
+ * when `promise` does; resolves either way otherwise.
+ */
+async function until(
+  promise: Promise<unknown>,
+  deadline: number,
+  signal?: AbortSignal,
+): Promise<void> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  let onAbort: (() => void) | undefined;
+  const stopped = new Promise<void>((resolve) => {
+    timer = setTimeout(resolve, Math.max(0, deadline - Date.now()));
+    onAbort = () => resolve();
+    signal?.addEventListener('abort', onAbort, { once: true });
+  });
+  try {
+    await Promise.race([promise, stopped]);
+  } finally {
+    clearTimeout(timer);
+    if (onAbort) signal?.removeEventListener('abort', onAbort);
   }
 }

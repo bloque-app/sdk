@@ -193,10 +193,12 @@ Nothing has moved at this point. Your agent shares `approvalUrl` with you, and y
 - **Agents that show tool progress** (they send an MCP progress token) get the link as a progress message, and the tool itself waits up to 45 seconds, so a quick approval finishes in the same call.
 - **`approval_expired`**: no approval arrived before `expiresAt`. Nothing moved; ask again to get a new link.
 - **`approval_rejected`**: the approval was refused, for example because the passkey is not registered for approvals. Nothing moved.
-- **Workflows that create something and then fund it** (`create_card`, `create_disposable_card`, `create_account`, `add_spending_category`) still create it; the funding step comes back in `fundingApproval`, to finish with `check_approval`.
-- **`check_approval` without an `approvalId`** lists the approvals still pending. They live in the running `bloque mcp` process: restarting it drops them, and the operation has to be asked for again.
+- **`in_progress`**: you approved and the operation is being sent. Checking again returns its result. `check_approval` never sends an approved operation twice: a check while it is in flight waits for it, and a check after it finished returns the same result.
+- **`failed`**: the approved operation was sent but returned an error, or its reply was lost, so it may or may not have moved money. The agent checks the account's movements before trying again.
+- **Workflows that create something and then fund it** (`create_card`, `create_disposable_card`, `create_account`, `add_spending_category`) still create it; the funding step comes back in `fundingApproval`, to finish with `check_approval`. If that approval expires or is rejected, only the funding step is repeated (`fund_card` or `transfer` on what was already created), never the whole workflow.
+- **`check_approval` without an `approvalId`** lists the approvals still pending. They live in the running `bloque mcp` process: restarting it drops them. Finished operations are kept for a while (at least 15 minutes, at most an hour) so a repeated check still gets their result. When the process no longer knows an approval (`approval_not_found`), the agent checks the account's movements before asking again, and never repeats a payment blindly.
 
-The approval link carries a one-time token. Share it only with the account owner.
+The approval link carries a one-time token. Share it only with the account owner: they open it and approve with their own passkey. Agents are told never to open, approve or complete it on the owner's behalf.
 
 ## Tools Reference
 

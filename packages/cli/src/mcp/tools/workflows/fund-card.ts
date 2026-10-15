@@ -2,7 +2,11 @@ import { randomUUID } from 'node:crypto';
 import type { SupportedAsset } from '@bloque/sdk';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod/v4';
-import { approvalToolResult, runWithApproval } from '../../approvals.ts';
+import {
+  APPROVAL_TOOL_NOTE,
+  approvalToolResult,
+  runWithApproval,
+} from '../../approvals.ts';
 import { humanizeBalance, toRaw } from '../../currency.ts';
 import type { BloqueClients } from '../../types.ts';
 
@@ -13,8 +17,7 @@ export function registerFundCardWorkflows(
   server.registerTool(
     'fund_card',
     {
-      description:
-        "Add funds to a card (tops up its backing account). Provide the card URN and a source — the tool resolves the card's backing account automatically. If multiple cards share the same account, all see the updated balance. May return status 'approval_required' with an approvalUrl for the account owner (see check_approval).",
+      description: `Add funds to a card (tops up its backing account). Provide the card URN and a source — the tool resolves the card's backing account automatically. If multiple cards share the same account, all see the updated balance. ${APPROVAL_TOOL_NOTE}`,
       inputSchema: {
         cardUrn: z.string(),
         sourceUrn: z.string(),
@@ -52,8 +55,8 @@ export function registerFundCardWorkflows(
       const outcome = await runWithApproval(
         extra,
         `Fund card ${cardUrn} with ${amount} ${currency} from ${sourceUrn}`,
-        async (approval) => {
-          const transferResult = await clients.accounts.transfer(
+        async (approval) => ({
+          transferResult: await clients.accounts.transfer(
             {
               sourceUrn,
               destinationUrn: pocket.urn,
@@ -61,12 +64,25 @@ export function registerFundCardWorkflows(
               asset: asset as SupportedAsset,
             },
             { idempotencyKey, approval },
-          );
-          const balance = await clients.accounts.balance(pocket.urn);
-          return { transferResult, accountBalance: humanizeBalance(balance) };
-        },
+          ),
+        }),
       );
-      return approvalToolResult(outcome);
+      if (outcome.status !== 'completed') return approvalToolResult(outcome);
+
+      // Outside the gated step: the transfer already went through, so a
+      // failed balance read must not turn it into an error.
+      let accountBalance: ReturnType<typeof humanizeBalance> | undefined;
+      try {
+        accountBalance = humanizeBalance(
+          await clients.accounts.balance(pocket.urn),
+        );
+      } catch {
+        // Best effort: the caller can read it with get_balance.
+      }
+      return approvalToolResult({
+        status: 'completed',
+        result: { ...outcome.result, accountBalance },
+      });
     },
   );
 }

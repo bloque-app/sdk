@@ -2,7 +2,11 @@ import { randomUUID } from 'node:crypto';
 import type { SupportedBank } from '@bloque/sdk';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod/v4';
-import { describeOutcome, runWithApproval } from '../../approvals.ts';
+import {
+  APPROVAL_TOOL_NOTE,
+  describeOutcome,
+  runWithApproval,
+} from '../../approvals.ts';
 import { toRaw } from '../../currency.ts';
 import type { BloqueClients } from '../../types.ts';
 
@@ -13,8 +17,7 @@ export function registerTopupWorkflows(
   server.registerTool(
     'topup_via_pse',
     {
-      description:
-        'Top up an account with Colombian pesos (COP) via PSE bank transfer. Finds the best exchange rate, creates the PSE order, and returns a checkout URL for the user to complete payment at their bank. If the account owner must approve it with their passkey, returns status "approval_required" with an approvalUrl and approvalId first (see check_approval).',
+      description: `Top up an account with Colombian pesos (COP) via PSE bank transfer. Finds the best exchange rate, creates the PSE order, and returns a checkout URL for the user to complete payment at their bank. ${APPROVAL_TOOL_NOTE}`,
       inputSchema: {
         accountUrn: z.string(),
         amount: z.string(),
@@ -125,8 +128,7 @@ export function registerTopupWorkflows(
   server.registerTool(
     'cashout_to_bank',
     {
-      description:
-        'Cash out USD to Colombian pesos via bank transfer. Converts from a Bloque account and deposits COP into any Colombian bank account. Handles rate lookup and order creation. May return status "approval_required" with an approvalUrl for the account owner (see check_approval).',
+      description: `Cash out USD to Colombian pesos via bank transfer. Converts from a Bloque account and deposits COP into any Colombian bank account. Handles rate lookup and order creation. ${APPROVAL_TOOL_NOTE}`,
       inputSchema: {
         sourceAccountUrn: z.string(),
         amount: z.string(),
@@ -230,8 +232,7 @@ export function registerTopupWorkflows(
   server.registerTool(
     'send_to_breb_key',
     {
-      description:
-        'Send money to a BRE-B key in one step. Resolves the key, finds exchange rates, and creates the BRE-B payout order. May return status "approval_required" with an approvalUrl for the account owner (see check_approval).',
+      description: `Send money to a BRE-B key in one step. Resolves the key, finds exchange rates, and creates the BRE-B payout order. ${APPROVAL_TOOL_NOTE}`,
       inputSchema: {
         sourceAccountUrn: z.string(),
         amount: z.string(),

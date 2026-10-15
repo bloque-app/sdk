@@ -2,7 +2,11 @@ import { randomUUID } from 'node:crypto';
 import type { SupportedAsset } from '@bloque/sdk';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod/v4';
-import { approvalToolResult, runWithApproval } from '../../approvals.ts';
+import {
+  APPROVAL_TOOL_NOTE,
+  approvalToolResult,
+  runWithApproval,
+} from '../../approvals.ts';
 import { toHuman, toRaw } from '../../currency.ts';
 import type { BloqueClients } from '../../types.ts';
 
@@ -13,8 +17,7 @@ export function registerTransferTools(
   server.registerTool(
     'transfer',
     {
-      description:
-        "Transfer funds between two accounts. Specify source/destination URN, amount in human-readable format (e.g. '100' for $100), and currency ('USD' or 'COP'). The transfer is queued asynchronously. Returns a queueId to track. If the account owner must approve it with their passkey, returns status 'approval_required' with an approvalUrl to share and an approvalId for check_approval.",
+      description: `Transfer funds between two accounts. Specify source/destination URN, amount in human-readable format (e.g. '100' for $100), and currency ('USD' or 'COP'). The transfer is queued asynchronously. Returns a queueId to track. ${APPROVAL_TOOL_NOTE}`,
       inputSchema: {
         sourceUrn: z.string(),
         destinationUrn: z.string(),
@@ -55,8 +58,7 @@ export function registerTransferTools(
   server.registerTool(
     'batch_transfer',
     {
-      description:
-        'Execute multiple transfers in a single batch. Useful for payroll, distributions. Operations are auto-chunked into groups of 80. May return status "approval_required" (see check_approval).',
+      description: `Execute multiple transfers in a single batch. Useful for payroll, distributions. Operations are auto-chunked into groups of 80. ${APPROVAL_TOOL_NOTE}`,
       inputSchema: {
         reference: z.string(),
         operations: z.array(

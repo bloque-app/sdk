@@ -193,10 +193,12 @@ En este punto no se ha movido nada. Tu agente te comparte `approvalUrl`, tú lo 
 - **Agentes que muestran el progreso de las herramientas** (envían un progress token de MCP) reciben el enlace como mensaje de progreso, y la herramienta misma espera hasta 45 segundos, así que una aprobación rápida termina en la misma llamada.
 - **`approval_expired`**: no llegó ninguna aprobación antes de `expiresAt`. No se movió nada; vuelve a pedirla para obtener un enlace nuevo.
 - **`approval_rejected`**: la aprobación fue rechazada, por ejemplo porque la passkey no está registrada para aprobaciones. No se movió nada.
-- **Workflows que crean algo y luego lo fondean** (`create_card`, `create_disposable_card`, `create_account`, `add_spending_category`) igual lo crean; el paso de fondeo vuelve en `fundingApproval`, para terminarlo con `check_approval`.
-- **`check_approval` sin `approvalId`** lista las aprobaciones pendientes. Viven en el proceso de `bloque mcp` en ejecución: si lo reinicias se pierden, y hay que volver a pedir la operación.
+- **`in_progress`**: aprobaste y la operación se está enviando. Al consultar de nuevo se obtiene su resultado. `check_approval` nunca envía dos veces una operación aprobada: una consulta mientras está en curso la espera, y una consulta después de terminada devuelve el mismo resultado.
+- **`failed`**: la operación aprobada se envió pero devolvió un error, o su respuesta se perdió, así que puede haber movido dinero o no. El agente revisa los movimientos de la cuenta antes de intentarlo de nuevo.
+- **Workflows que crean algo y luego lo fondean** (`create_card`, `create_disposable_card`, `create_account`, `add_spending_category`) igual lo crean; el paso de fondeo vuelve en `fundingApproval`, para terminarlo con `check_approval`. Si esa aprobación vence o es rechazada, sólo se repite el paso de fondeo (`fund_card` o `transfer` sobre lo que ya se creó), nunca el workflow completo.
+- **`check_approval` sin `approvalId`** lista las aprobaciones pendientes. Viven en el proceso de `bloque mcp` en ejecución: si lo reinicias se pierden. Las operaciones terminadas se guardan un tiempo (al menos 15 minutos, como mucho una hora) para que una consulta repetida aún obtenga su resultado. Cuando el proceso ya no conoce una aprobación (`approval_not_found`), el agente revisa los movimientos de la cuenta antes de volver a pedirla, y nunca repite un pago a ciegas.
 
-El enlace de aprobación lleva un token de un solo uso. Compártelo sólo con el titular de la cuenta.
+El enlace de aprobación lleva un token de un solo uso. Compártelo sólo con el titular de la cuenta: él lo abre y aprueba con su propia passkey. Los agentes tienen instrucciones de nunca abrirlo, aprobarlo ni completarlo en su nombre.
 
 ## Referencia de Herramientas
 

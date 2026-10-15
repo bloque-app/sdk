@@ -3,7 +3,12 @@ import type { SupportedAsset, TransferResult } from '@bloque/sdk';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod/v4';
 import type { ApprovalOutcome } from '../../../approvals/approval-gate.ts';
-import { runWithApproval, splitOutcome } from '../../approvals.ts';
+import {
+  APPROVAL_LINK_RULE,
+  repeatStepWith,
+  runWithApproval,
+  splitOutcome,
+} from '../../approvals.ts';
 import { toRaw } from '../../currency.ts';
 import type { BloqueClients } from '../../types.ts';
 
@@ -14,8 +19,7 @@ export function registerAccountWorkflows(
   server.registerTool(
     'create_account',
     {
-      description:
-        'Create a financial account — the place where money lives. Sets up a virtual pocket (holds the balance) and a Polygon blockchain address (for receiving USDC/crypto) sharing the same ledger. Use this when you need a shared balance that multiple cards will draw from. The account can receive funds immediately; sending becomes possible once its ledger account finishes registering and the pocket reports status "active". For a single-card setup, use create_card directly (it creates the account automatically). If funding needs the account owner passkey approval, the account is still created and fundingApproval carries the approvalUrl and approvalId (see check_approval).',
+      description: `Create a financial account — the place where money lives. Sets up a virtual pocket (holds the balance) and a Polygon blockchain address (for receiving USDC/crypto) sharing the same ledger. Use this when you need a shared balance that multiple cards will draw from. The account can receive funds immediately; sending becomes possible once its ledger account finishes registering and the pocket reports status "active". For a single-card setup, use create_card directly (it creates the account automatically). If funding needs the account owner's passkey approval, the account is still created and fundingApproval carries the approvalUrl and approvalId (see check_approval); if that approval expires or is rejected, repeat only the funding step as fundingApproval.nextStep says, never this whole call. ${APPROVAL_LINK_RULE}`,
       inputSchema: {
         name: z.string().optional().default('Account'),
         fundFromUrn: z.string().optional(),
@@ -47,6 +51,18 @@ export function registerAccountWorkflows(
               },
               { idempotencyKey, approval },
             ),
+          {
+            repeatWith: repeatStepWith(
+              'transfer',
+              {
+                sourceUrn: fundFromUrn,
+                destinationUrn: pocket.urn,
+                amount: fundAmount,
+                currency,
+              },
+              `Account ${pocket.urn} was already created`,
+            ),
+          },
         );
       }
       const { result: transferResult, approval } = splitOutcome(funding);

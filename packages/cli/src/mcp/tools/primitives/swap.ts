@@ -2,7 +2,11 @@ import { randomUUID } from 'node:crypto';
 import type { SupportedBank } from '@bloque/sdk';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod/v4';
-import { approvalToolResult, runWithApproval } from '../../approvals.ts';
+import {
+  APPROVAL_TOOL_NOTE,
+  approvalToolResult,
+  runWithApproval,
+} from '../../approvals.ts';
 import type { BloqueClients } from '../../types.ts';
 
 export function registerSwapTools(server: McpServer, clients: BloqueClients) {
@@ -45,8 +49,7 @@ export function registerSwapTools(server: McpServer, clients: BloqueClients) {
   server.registerTool(
     'create_pse_order',
     {
-      description:
-        "Low-level: create a PSE swap order to convert COP into DUSD. For a simpler flow, use 'topup_via_pse' workflow.",
+      description: `Low-level: create a PSE swap order to convert COP into DUSD. For a simpler flow, use 'topup_via_pse' workflow. ${APPROVAL_TOOL_NOTE}`,
       inputSchema: {
         rateSig: z.string(),
         toMedium: z.string(),
@@ -118,8 +121,7 @@ export function registerSwapTools(server: McpServer, clients: BloqueClients) {
   server.registerTool(
     'create_bank_transfer_order',
     {
-      description:
-        "Low-level: create a bank transfer order to cash out DUSD to COP. For a simpler flow, use 'cashout_to_bank' workflow.",
+      description: `Low-level: create a bank transfer order to cash out DUSD to COP. For a simpler flow, use 'cashout_to_bank' workflow. ${APPROVAL_TOOL_NOTE}`,
       inputSchema: {
         rateSig: z.string(),
         toMedium: z.string(),
@@ -186,8 +188,7 @@ export function registerSwapTools(server: McpServer, clients: BloqueClients) {
   server.registerTool(
     'create_breb_order',
     {
-      description:
-        "Low-level: create a BRE-B payout order to a recipient key (keyValue, optional keyType) with a unique resolutionId. Use 'send_to_breb_key' workflow for a simpler flow.",
+      description: `Low-level: create a BRE-B payout order to a recipient key (keyValue, optional keyType) with a unique resolutionId. Use 'send_to_breb_key' workflow for a simpler flow. ${APPROVAL_TOOL_NOTE}`,
       inputSchema: {
         rateSig: z.string(),
         amountSrc: z.string().optional(),

@@ -8,6 +8,9 @@ import {
   approvalReady,
   approvalRequired,
   callAt,
+  connectionLost,
+  eventually,
+  held,
   json,
   mockFetch,
   testClients,
@@ -127,9 +130,6 @@ describe('ApprovalGate.run', () => {
       result: { queueId: 'q_1', status: 'queued', message: 'queued' },
     });
     expect(gate.list()).toEqual([]);
-    expect((await gate.resume(outcome.approvalId)).status).toBe(
-      'approval_not_found',
-    );
   });
 
   it('reports approval_expired when no approval arrives in time', async () => {
@@ -170,6 +170,9 @@ describe('ApprovalGate.run', () => {
 
     expect(outcome.status).toBe('approval_required');
     expect(gate.list()).toHaveLength(1);
+    if (outcome.status !== 'approval_required') throw new Error();
+    // Same id: the agent keeps checking the one it already has.
+    expect(gate.list()[0]?.approvalId).toBe(outcome.approvalId);
   });
 
   it('throws other errors as they are', async () => {
@@ -188,5 +191,118 @@ describe('ApprovalGate.run', () => {
       .catch((e) => e);
 
     expect(error).toBeInstanceOf(BloqueValidationError);
+  });
+});
+
+describe('ApprovalGate sends the approved request at most once', () => {
+  /** A transfer waiting for approval, with the ids to resume it. */
+  async function pendingTransfer(gate: ApprovalGate, expiresInMs?: number) {
+    mockFetch([() => approvalRequired(expiresInMs)]);
+    const outcome = await gate.run('transfer', await transferRun(), {
+      waitMs: 0,
+    });
+    if (outcome.status !== 'approval_required') throw new Error();
+    return outcome.approvalId;
+  }
+
+  const transfers = (calls: { url: string }[]) =>
+    calls.filter((call) => call.url.endsWith('/transfer'));
+
+  it('two concurrent checks send one request and get the same result', async () => {
+    const gate = new ApprovalGate();
+    const approvalId = await pendingTransfer(gate);
+    const reply = held(transferOk);
+    const calls = mockFetch([approvalReady, reply.respond]);
+
+    const first = gate.resume(approvalId, { waitMs: 5000 });
+    const second = gate.resume(approvalId, { waitMs: 5000 });
+    await eventually(() => transfers(calls).length === 1);
+
+    // While the approved request is in flight, a check does not send it again.
+    expect((await gate.resume(approvalId, { waitMs: 0 })).status).toBe(
+      'in_progress',
+    );
+    reply.release();
+
+    const results = await Promise.all([first, second]);
+    expect(results.map((r) => r.status)).toEqual(['completed', 'completed']);
+    expect(results[0]).toEqual(results[1]);
+    // One shared poll and one approved request.
+    expect(calls).toHaveLength(2);
+    expect(transfers(calls)).toHaveLength(1);
+  });
+
+  it('a check after completion returns the stored result', async () => {
+    const gate = new ApprovalGate();
+    const approvalId = await pendingTransfer(gate);
+    mockFetch([approvalReady, transferOk]);
+    const completed = await gate.resume(approvalId, { waitMs: 5000 });
+    expect(completed.status).toBe('completed');
+
+    const calls = mockFetch([transferOk]);
+    expect(await gate.resume(approvalId, { waitMs: 5000 })).toEqual(completed);
+    expect(calls).toHaveLength(0);
+  });
+
+  it('a lost reply followed by a re-check does not send a second request', async () => {
+    const gate = new ApprovalGate();
+    const approvalId = await pendingTransfer(gate);
+    const calls = mockFetch([approvalReady, connectionLost, transferOk]);
+
+    const lost = await gate.resume(approvalId, { waitMs: 5000 });
+    expect(lost.status).toBe('failed');
+    if (lost.status !== 'failed') throw new Error();
+    expect(lost.approvalId).toBe(approvalId);
+
+    const again = await gate.resume(approvalId, { waitMs: 5000 });
+    expect(again).toEqual(lost);
+    expect(transfers(calls)).toHaveLength(1);
+    expect(calls).toHaveLength(2);
+  });
+
+  it('a cancelled check keeps the entry, and the request still finishes', async () => {
+    const gate = new ApprovalGate();
+    const approvalId = await pendingTransfer(gate);
+    const reply = held(transferOk);
+    const calls = mockFetch([approvalReady, reply.respond]);
+    const controller = new AbortController();
+
+    const cancelled = gate.resume(approvalId, {
+      waitMs: 5000,
+      signal: controller.signal,
+    });
+    await eventually(() => transfers(calls).length === 1);
+    controller.abort();
+    expect((await cancelled).status).toBe('in_progress');
+
+    reply.release();
+    const later = await gate.resume(approvalId, { waitMs: 5000 });
+    expect(later.status).toBe('completed');
+    expect(transfers(calls)).toHaveLength(1);
+  });
+
+  it('a cancelled wait for the approval keeps it resumable', async () => {
+    const gate = new ApprovalGate();
+    const approvalId = await pendingTransfer(gate);
+    mockFetch([approvalPending]);
+    const controller = new AbortController();
+    setTimeout(() => controller.abort(), 20);
+
+    const cancelled = await gate.resume(approvalId, {
+      waitMs: 5000,
+      signal: controller.signal,
+    });
+    expect(cancelled.status).toBe('approval_required');
+    expect(gate.list().map((p) => p.approvalId)).toEqual([approvalId]);
+  });
+
+  it('reports an approval nobody collected before its expiry as expired', async () => {
+    const gate = new ApprovalGate();
+    const approvalId = await pendingTransfer(gate, 1);
+    await Bun.sleep(5);
+
+    const expired = await gate.resume(approvalId);
+    expect(expired.status).toBe('approval_expired');
+    expect(gate.list()).toEqual([]);
   });
 });
