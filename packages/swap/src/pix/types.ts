@@ -44,6 +44,8 @@ export interface CreatePixDepositParams extends CreatePixOrderParamsBase {
 /** BRLB/2 on Kusama → BRL/2 via PIX. */
 export interface CreatePixOrderParams extends CreatePixOrderParamsBase {
   depositInformation: PixPayoutInformation;
+  /** Bloque account whose BRLB/2 balance funds the payout. */
+  args: { sourceAccountUrn: string };
 }
 
 export interface CreatePixOrderOptions extends OperationApprovalOptions {

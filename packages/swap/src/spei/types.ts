@@ -41,6 +41,8 @@ export interface CreateSpeiDepositParams extends CreateSpeiOrderParamsBase {
 /** MXNB/2 on Kusama → MXN/2 via SPEI. */
 export interface CreateSpeiOrderParams extends CreateSpeiOrderParamsBase {
   depositInformation: SpeiPayoutInformation;
+  /** Bloque account whose MXNB/2 balance funds the payout. */
+  args: { sourceAccountUrn: string };
 }
 
 export interface CreateSpeiOrderOptions extends OperationApprovalOptions {
