@@ -36,7 +36,7 @@ function unavailableResponse() {
 
 function mockFetch(responses: Array<() => Response>) {
   const calls: Array<{
-    body: { metadata: Record<string, string> };
+    body: { asset: string; metadata: Record<string, string> };
     headers: Headers;
   }> = [];
   globalThis.fetch = mock(
@@ -128,4 +128,16 @@ describe('AccountsClient.transfer reference', () => {
     expect(calls[0].body.metadata.reference).toBe('payout-inv-1');
     expect(calls[0].headers.get('Idempotency-Key')).toBe('payout-inv-1');
   });
+
+  it.each(['MXNB/2', 'BRLB/2'] as const)(
+    'forwards the %s account asset',
+    async (asset) => {
+      const calls = mockFetch([okResponse]);
+      const accounts = new AccountsClient(authedClient());
+
+      await accounts.transfer({ ...params, asset });
+
+      expect(calls[0].body.asset).toBe(asset);
+    },
+  );
 });

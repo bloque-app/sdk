@@ -19,6 +19,8 @@ export const SUPPORTED_ASSETS = [
   'DUSD/6',
   'COPB/6',
   'COPM/2',
+  'MXNB/2',
+  'BRLB/2',
   'KSM/12',
 ] as const;
 
