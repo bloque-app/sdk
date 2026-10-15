@@ -310,7 +310,9 @@ export class ApprovalGate {
   private execute(entry: Entry, approval: string): void {
     const done = (async () => {
       try {
-        const result = await entry.run(approval);
+        // Started from a resolved promise: even an operation that throws
+        // synchronously settles after `running` is set below, never before.
+        const result = await Promise.resolve().then(() => entry.run(approval));
         this.finish(entry, { status: 'completed', result });
       } catch (err) {
         if (err instanceof BloqueApprovalInvalidError) {
