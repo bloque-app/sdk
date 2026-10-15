@@ -62,7 +62,7 @@ interface CreateCardParams {
   cardAddress?: CardMailingAddress;  // Required when cardType is 'PHYSICAL'
   webhookUrl?: string;     // Optional webhook for events
   ledgerId?: string;       // Optional ledger account ID
-  defaultAsset?: SupportedAsset; // Primary settlement asset, e.g. "DUSD/6"
+  defaultAsset?: SupportedCardAsset; // Primary settlement asset, e.g. "DUSD/6"
   metadata?: Record<string, unknown>; // Custom metadata
 }
 
@@ -99,7 +99,7 @@ interface CardAccount {
   ledgerId: string;
   webhookUrl: string | null;
   metadata?: Record<string, unknown>;
-  defaultAsset?: SupportedAsset;  // Read back from metadata.default_asset
+  defaultAsset?: SupportedCardAsset;  // Read back from metadata.default_asset
   createdAt: string;
   updatedAt: string;
   balance?: Record<string, TokenBalance>; // Only in list responses
@@ -505,7 +505,7 @@ const card = await userSession.accounts.card.create({
 ```
 
 :::info
-`defaultAsset` and `metadata.default_asset` write to the same place — `defaultAsset` just gives you type-checking and validates against `SupportedAsset`. If both are set, `defaultAsset` wins.
+`defaultAsset` and `metadata.default_asset` write to the same place — `defaultAsset` just gives you type-checking and validates against `SupportedCardAsset` (`DUSD/6`, `COPB/6`, `COPM/2`, or `KSM/12`). If both are set, `defaultAsset` wins.
 :::
 
 | Field | Type | Required | Description |

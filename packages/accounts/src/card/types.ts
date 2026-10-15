@@ -1,3 +1,4 @@
+import type { SupportedCardAsset } from '@bloque/sdk-core';
 import type {
   CardType,
   TokenBalance,
@@ -143,7 +144,7 @@ export type MccWhitelistSource = string | string[];
 export type MccWhitelist = Record<string, MccWhitelistSource>;
 
 /** Maps an ISO 4217 currency code to preferred settlement assets, in priority order. */
-export type CurrencyAssetMap = Record<string, SupportedAsset[]>;
+export type CurrencyAssetMap = Record<string, SupportedCardAsset[]>;
 
 export type CashbackProgramType = 'extra_savings' | 'round_up';
 export type CashbackFeeType = 'percentage' | 'flat';
@@ -199,7 +200,7 @@ export interface CardSpendingControlMetadata {
   /** Fee overrides, merged by `feeName` on top of the defaults. */
   spendingFees?: SpendingFee[];
   /** Asset to fall back to when `defaultAsset`/currency matching can't resolve one. */
-  fallbackAsset?: SupportedAsset;
+  fallbackAsset?: SupportedCardAsset;
   /** Whether to send a WhatsApp notification on purchase. Defaults to enabled. */
   whatsappNotification?: boolean;
   /** ISO 4217 currency code → preferred settlement assets, for direct-match resolution. */
@@ -262,7 +263,7 @@ export interface CreateCardParams {
    * docs. Takes precedence over a `default_asset` key passed via `metadata`.
    * @example "DUSD/6"
    */
-  defaultAsset?: SupportedAsset;
+  defaultAsset?: SupportedCardAsset;
   /**
    * Spending-control, cashback, and fee configuration. Each field is
    * stored under its own `metadata` key and takes precedence over the
@@ -316,7 +317,7 @@ export interface UpdateCardMetadataParams {
    * `default_asset` key passed via `metadata`.
    * @example "DUSD/6"
    */
-  defaultAsset?: SupportedAsset;
+  defaultAsset?: SupportedCardAsset;
   /**
    * Spending-control, cashback, and fee configuration. Each field is
    * stored under its own `metadata` key and takes precedence over the
@@ -440,7 +441,7 @@ export interface CardAccount {
    * `metadata.default_asset` for convenience.
    * @example "DUSD/6"
    */
-  defaultAsset?: SupportedAsset;
+  defaultAsset?: SupportedCardAsset;
   /**
    * Spending-control, cashback, and fee configuration, read back from
    * `metadata` for convenience. `undefined` when none of those keys are set.
