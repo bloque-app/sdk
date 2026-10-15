@@ -60,7 +60,7 @@ interface CreateCardParams {
   name?: string;           // Optional card name
   webhookUrl?: string;     // Optional webhook for events
   ledgerId?: string;       // Optional ledger account ID
-  defaultAsset?: SupportedAsset; // Activo principal de liquidación, ej. "DUSD/6"
+  defaultAsset?: SupportedCardAsset; // Activo principal de liquidación, ej. "DUSD/6"
   metadata?: Record<string, unknown>; // Custom metadata
 }
 ```
@@ -84,7 +84,7 @@ interface CardAccount {
   ledgerId: string;
   webhookUrl: string | null;
   metadata?: Record<string, unknown>;
-  defaultAsset?: SupportedAsset;  // Leído desde metadata.default_asset
+  defaultAsset?: SupportedCardAsset;  // Leído desde metadata.default_asset
   createdAt: string;
   updatedAt: string;
   balance?: Record<string, TokenBalance>; // Only in list responses
@@ -448,7 +448,7 @@ const card = await userSession.accounts.card.create({
 ```
 
 :::info
-`defaultAsset` y `metadata.default_asset` escriben en el mismo lugar — `defaultAsset` solo añade validación de tipos contra `SupportedAsset`. Si ambos están definidos, `defaultAsset` tiene prioridad.
+`defaultAsset` y `metadata.default_asset` escriben en el mismo lugar — `defaultAsset` solo añade validación de tipos contra `SupportedCardAsset` (`DUSD/6`, `COPB/6`, `COPM/2` o `KSM/12`). Si ambos están definidos, `defaultAsset` tiene prioridad.
 :::
 
 | Campo | Tipo | Requerido | Descripción |

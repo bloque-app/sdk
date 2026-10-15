@@ -1,7 +1,9 @@
 import {
   BaseClient,
   isSupportedAsset,
+  isSupportedCardAsset,
   SUPPORTED_ASSETS,
+  SUPPORTED_CARD_ASSETS,
 } from '@bloque/sdk-core';
 import type {
   AccountStatus,
@@ -190,7 +192,7 @@ export function mapCardAccountFromWire(
     webhookUrl: account.webhook_url,
     metadata: account.metadata,
     defaultAsset:
-      typeof defaultAsset === 'string' && isSupportedAsset(defaultAsset)
+      typeof defaultAsset === 'string' && isSupportedCardAsset(defaultAsset)
         ? defaultAsset
         : undefined,
     spendingControlMetadata: mapSpendingControlMetadataFromRaw(
@@ -230,9 +232,9 @@ export class CardClient extends BaseClient {
     params: CreateCardParams = {},
     options?: CreateAccountOptions,
   ): Promise<CardAccount> {
-    if (params.defaultAsset && !isSupportedAsset(params.defaultAsset)) {
+    if (params.defaultAsset && !isSupportedCardAsset(params.defaultAsset)) {
       throw new Error(
-        `Invalid asset type "${params.defaultAsset}". Supported assets: ${SUPPORTED_ASSETS.join(', ')}`,
+        `Invalid card settlement asset "${params.defaultAsset}". Supported card assets: ${SUPPORTED_CARD_ASSETS.join(', ')}`,
       );
     }
 
@@ -580,9 +582,9 @@ export class CardClient extends BaseClient {
    * ```
    */
   async updateMetadata(params: UpdateCardMetadataParams): Promise<CardAccount> {
-    if (params.defaultAsset && !isSupportedAsset(params.defaultAsset)) {
+    if (params.defaultAsset && !isSupportedCardAsset(params.defaultAsset)) {
       throw new Error(
-        `Invalid asset type "${params.defaultAsset}". Supported assets: ${SUPPORTED_ASSETS.join(', ')}`,
+        `Invalid card settlement asset "${params.defaultAsset}". Supported card assets: ${SUPPORTED_CARD_ASSETS.join(', ')}`,
       );
     }
 

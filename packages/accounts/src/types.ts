@@ -9,7 +9,7 @@ import type {
 import type { TransactionStatus } from './internal/wire-types';
 
 // Re-export SupportedAsset from core
-export type { SupportedAsset } from '@bloque/sdk-core';
+export type { SupportedAsset, SupportedCardAsset } from '@bloque/sdk-core';
 
 /**
  * Options for account creation
