@@ -77,10 +77,10 @@ interface TransferParams {
 
   /**
    * Asset to transfer
-   * Supported: 'DUSD/6' | 'KSM/12'
+   * Soportados: 'DUSD/6' | 'COPB/6' | 'COPM/2' | 'MXNB/2' | 'BRLB/2' | 'KSM/12'
    * @example "KSM/12"
    */
-  asset: 'DUSD/6' | 'KSM/12';
+  asset: SupportedAsset;
 
   /**
    * Optional metadata
@@ -185,11 +185,17 @@ const transfer = await bloque.accounts.transfer({
 | Activo | Descripción | Decimales | Ejemplo de Cantidad |
 |-------|-------------|----------|----------------|
 | `DUSD/6` | Dólar Digital | 6 | `1000000` = 1 DUSD |
+| `COPB/6` | Peso colombiano (banco) | 6 | `1000000` = 1 COPB |
+| `COPM/2` | Peso colombiano (móvil) | 2 | `100` = 1 COPM |
+| `MXNB/2` | Peso mexicano (cuenta Bloque) | 2 | `100` = 1 MXNB |
+| `BRLB/2` | Real brasileño (cuenta Bloque) | 2 | `100` = 1 BRLB |
 | `KSM/12` | Kusama | 12 | `1000000000000` = 1 KSM |
 
 :::tip Conversión de Decimales
 Siempre ten en cuenta los decimales al especificar cantidades:
 - DUSD/6: Multiplica por 10^6 (1 DUSD = 1,000,000)
+- COPB/6: Multiplica por 10^6 (1 COPB = 1,000,000)
+- COPM/2, MXNB/2, BRLB/2: Multiplica por 10^2 (1 unidad = 100)
 - KSM/12: Multiplica por 10^12 (1 KSM = 1,000,000,000,000)
 :::
 
@@ -306,7 +312,7 @@ try {
 ## Ejemplo Completo
 
 ```typescript title="complete-transfer.ts"
-import { SDK } from '@bloque/sdk';
+import { SDK, type SupportedAsset } from '@bloque/sdk';
 
 const bloque = new SDK({
   origin: 'your-origin',
@@ -321,7 +327,7 @@ async function transferFunds(
   fromUrn: string,
   toUrn: string,
   amount: string,
-  asset: 'DUSD/6' | 'KSM/12'
+  asset: SupportedAsset
 ) {
   try {
     // Check source account balance first
@@ -379,7 +385,7 @@ Transfiere fondos a múltiples destinos:
 async function batchTransfer(
   sourceUrn: string,
   destinations: Array<{ urn: string; amount: string }>,
-  asset: 'DUSD/6' | 'KSM/12'
+  asset: SupportedAsset
 ) {
   const results = [];
 
