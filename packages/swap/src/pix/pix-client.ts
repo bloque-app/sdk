@@ -53,6 +53,7 @@ export class PixClient extends BaseClient {
   ): Promise<CreatePixOrderResult> {
     this._validateOrderParams(params);
     this._validatePayoutInformation(params.depositInformation);
+    this._validatePayoutArgs(params.args);
     return this._create(
       params,
       {
@@ -94,7 +95,10 @@ export class PixClient extends BaseClient {
       to_medium: toMedium,
       webhook_url: params.webhookUrl,
       deposit_information: depositInformation,
-      args: {},
+      args:
+        fromMedium === 'kusama' && 'args' in params
+          ? { account_urn: params.args.sourceAccountUrn.trim() }
+          : {},
     };
 
     if (type === 'src' && params.amountSrc) input.amount_src = params.amountSrc;
@@ -202,6 +206,19 @@ export class PixClient extends BaseClient {
       throw new BloqueConfigError(
         'depositInformation.beneficiaryName must be at least 2 characters',
       );
+    }
+  }
+
+  private _validatePayoutArgs(
+    args: CreatePixOrderParams['args'] | null | undefined,
+  ): void {
+    if (
+      !args ||
+      typeof args !== 'object' ||
+      typeof args.sourceAccountUrn !== 'string' ||
+      !args.sourceAccountUrn.trim()
+    ) {
+      throw new BloqueConfigError('args.sourceAccountUrn is required');
     }
   }
 

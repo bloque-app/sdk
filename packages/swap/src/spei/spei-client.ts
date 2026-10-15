@@ -52,6 +52,7 @@ export class SpeiClient extends BaseClient {
   ): Promise<CreateSpeiOrderResult> {
     this._validateOrderParams(params);
     this._validatePayoutInformation(params.depositInformation);
+    this._validatePayoutArgs(params.args);
     return this._create(
       params,
       {
@@ -90,7 +91,10 @@ export class SpeiClient extends BaseClient {
       to_medium: toMedium,
       webhook_url: params.webhookUrl,
       deposit_information: depositInformation,
-      args: {},
+      args:
+        fromMedium === 'kusama' && 'args' in params
+          ? { account_urn: params.args.sourceAccountUrn.trim() }
+          : {},
     };
 
     if (type === 'src' && params.amountSrc) input.amount_src = params.amountSrc;
@@ -188,6 +192,19 @@ export class SpeiClient extends BaseClient {
     }
     if (info.rfc !== undefined && typeof info.rfc !== 'string') {
       throw new BloqueConfigError('depositInformation.rfc must be a string');
+    }
+  }
+
+  private _validatePayoutArgs(
+    args: CreateSpeiOrderParams['args'] | null | undefined,
+  ): void {
+    if (
+      !args ||
+      typeof args !== 'object' ||
+      typeof args.sourceAccountUrn !== 'string' ||
+      !args.sourceAccountUrn.trim()
+    ) {
+      throw new BloqueConfigError('args.sourceAccountUrn is required');
     }
   }
 

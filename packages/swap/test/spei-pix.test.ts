@@ -134,6 +134,9 @@ describe('SPEI contract', () => {
         beneficiaryName: 'José Pérez',
         rfc: 'PEPJ8001019Q8',
       },
+      args: {
+        sourceAccountUrn: 'did:bloque:account:virtual:mexico-source',
+      },
     });
 
     expect(body()).toMatchObject({
@@ -141,7 +144,9 @@ describe('SPEI contract', () => {
       from_medium: 'kusama',
       to_medium: 'spei',
       amount_dst: '5000',
-      args: {},
+      args: {
+        account_urn: 'did:bloque:account:virtual:mexico-source',
+      },
       deposit_information: {
         clabe: '646180157034181180',
         beneficiary_name: 'José Pérez',
@@ -156,11 +161,24 @@ describe('SPEI contract', () => {
           clabe: '123',
           beneficiaryName: 'José Pérez',
         },
+        args: { sourceAccountUrn: 'did:bloque:account:virtual:source' },
       }),
     ).rejects.toBeInstanceOf(BloqueConfigError);
   });
 
   it.each([
+    [
+      'missing payout source account',
+      () =>
+        new SpeiClient(authedClient()).create({
+          rateSig: 'rate-sig',
+          amountSrc: '1000',
+          depositInformation: {
+            clabe: '646180157034181180',
+            beneficiaryName: 'José Pérez',
+          },
+        } as never),
+    ],
     [
       'missing params',
       () => new SpeiClient(authedClient()).createDeposit(undefined as never),
@@ -263,12 +281,17 @@ describe('PIX contract', () => {
         pixKeyValue: 'ana@example.com',
         beneficiaryName: 'Ana Silva',
       },
+      args: {
+        sourceAccountUrn: 'did:bloque:account:virtual:brazil-source',
+      },
     });
 
     expect(body()).toMatchObject({
       from_medium: 'kusama',
       to_medium: 'pix',
-      args: {},
+      args: {
+        account_urn: 'did:bloque:account:virtual:brazil-source',
+      },
       deposit_information: {
         pix_key_type: 'EMAIL',
         pix_key_value: 'ana@example.com',
@@ -306,6 +329,18 @@ describe('PIX contract', () => {
   });
 
   it.each([
+    [
+      'missing payout source account',
+      () =>
+        new PixClient(authedClient()).create({
+          rateSig: 'rate-sig',
+          amountSrc: '1000',
+          depositInformation: {
+            pixKeyType: 'EMAIL',
+            pixKeyValue: 'ana@example.com',
+          },
+        } as never),
+    ],
     [
       'missing params',
       () => new PixClient(authedClient()).createDeposit(undefined as never),
@@ -351,6 +386,7 @@ describe('PIX contract', () => {
           rateSig: 'rate-sig',
           amountSrc: '1000',
           depositInformation: { pixKeyType: 'EMAIL', pixKeyValue: null },
+          args: { sourceAccountUrn: 'did:bloque:account:virtual:source' },
         } as never),
     ],
   ])('returns BloqueConfigError for %s', async (_label, call) => {
