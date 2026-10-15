@@ -174,6 +174,32 @@ claude mcp add bloque -- npx -y @bloque/cli mcp
 
 3. Restart your agent.
 
+## Operation Approvals
+
+Some operations that move money need the account owner to approve them with their passkey before they run: transfers, batch transfers, funding a card or account, and swap orders (PSE top-ups, bank cash-outs, BRE-B payouts). When that happens the tool does not fail. It returns the approval request instead:
+
+```json
+{
+  "status": "approval_required",
+  "approvalId": "apr_…",
+  "operation": "Transfer 100 USD from did:bloque:… to did:bloque:…",
+  "approvalUrl": "https://…",
+  "expiresAt": "2026-10-15T15:04:05.000Z",
+  "summary": { "operation": "accounts.transfer", "fields": { "amount": "100000000" } },
+  "nextStep": "Nothing has moved yet. Share approvalUrl with the account owner…"
+}
+```
+
+Nothing has moved at this point. Your agent shares `approvalUrl` with you, and you open it and approve with your passkey. The agent then calls `check_approval` with the `approvalId`: it waits up to 45 seconds for your approval and, once you approve, runs the exact same operation and returns `"status": "completed"` with its result. If you have not approved yet it returns `approval_required` again, and the agent can check again until `expiresAt`.
+
+- **Agents that show tool progress** (they send an MCP progress token) get the link as a progress message, and the tool itself waits up to 45 seconds, so a quick approval finishes in the same call.
+- **`approval_expired`**: no approval arrived before `expiresAt`. Nothing moved; ask again to get a new link.
+- **`approval_rejected`**: the approval was refused, for example because the passkey is not registered for approvals. Nothing moved.
+- **Workflows that create something and then fund it** (`create_card`, `create_disposable_card`, `create_account`, `add_spending_category`) still create it; the funding step comes back in `fundingApproval`, to finish with `check_approval`.
+- **`check_approval` without an `approvalId`** lists the approvals still pending. They live in the running `bloque mcp` process: restarting it drops them, and the operation has to be asked for again.
+
+The approval link carries a one-time token. Share it only with the account owner.
+
 ## Tools Reference
 
 <details>
@@ -200,7 +226,7 @@ claude mcp add bloque -- npx -y @bloque/cli mcp
 </details>
 
 <details>
-<summary>Primitives — 37 low-level tools (click to expand)</summary>
+<summary>Primitives — 38 low-level tools (click to expand)</summary>
 
 | Domain | Tools |
 |--------|-------|
@@ -214,6 +240,7 @@ claude mcp add bloque -- npx -y @bloque/cli mcp
 | Transfers | `transfer`, `batch_transfer` |
 | History | `list_transactions`, `list_account_movements` |
 | Swap | `find_rates`, `list_pse_banks`, `create_pse_order`, `create_bank_transfer_order`, `create_breb_order` |
+| Approvals | `check_approval` |
 
 </details>
 

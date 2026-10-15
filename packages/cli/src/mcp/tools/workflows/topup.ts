@@ -1,6 +1,8 @@
+import { randomUUID } from 'node:crypto';
 import type { SupportedBank } from '@bloque/sdk';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod/v4';
+import { describeOutcome, runWithApproval } from '../../approvals.ts';
 import { toRaw } from '../../currency.ts';
 import type { BloqueClients } from '../../types.ts';
 
@@ -9,7 +11,7 @@ export function registerTopupWorkflows(server: McpServer, clients: BloqueClients
     'topup_via_pse',
     {
       description:
-        'Top up an account with Colombian pesos (COP) via PSE bank transfer. Finds the best exchange rate, creates the PSE order, and returns a checkout URL for the user to complete payment at their bank.',
+        'Top up an account with Colombian pesos (COP) via PSE bank transfer. Finds the best exchange rate, creates the PSE order, and returns a checkout URL for the user to complete payment at their bank. If the account owner must approve it with their passkey, returns status "approval_required" with an approvalUrl and approvalId first (see check_approval).',
       inputSchema: {
         accountUrn: z.string(),
         amount: z.string(),
@@ -30,7 +32,7 @@ export function registerTopupWorkflows(server: McpServer, clients: BloqueClients
       accountUrn, amount, bankCode, userType,
       customerEmail, userLegalIdType, userLegalId,
       fullName, phoneNumber, redirectUrl, webhookUrl,
-    }) => {
+    }, extra) => {
       const { amount: rawAmount } = toRaw(amount, 'COP');
       const ratesResult = await clients.swap.findRates({
         fromAsset: 'COP/2',
@@ -49,35 +51,48 @@ export function registerTopupWorkflows(server: McpServer, clients: BloqueClients
         };
       }
 
-      const orderResult = await clients.swap.pse.create({
-        rateSig: rate.sig,
-        toMedium: 'kusama',
-        amountSrc: rawAmount,
-        webhookUrl,
-        depositInformation: { urn: accountUrn },
-        args: {
-          bankCode,
-          userType,
-          customerEmail,
-          userLegalIdType,
-          userLegalId,
-          customerData: { fullName, phoneNumber: phoneNumber ?? '' },
-          redirectUrl,
+      const idempotencyKey = randomUUID();
+      const outcome = await runWithApproval(
+        extra,
+        `PSE top-up of ${amount} COP into ${accountUrn}`,
+        async (approval) => {
+          const orderResult = await clients.swap.pse.create(
+            {
+              rateSig: rate.sig,
+              toMedium: 'kusama',
+              amountSrc: rawAmount,
+              webhookUrl,
+              depositInformation: { urn: accountUrn },
+              args: {
+                bankCode,
+                userType,
+                customerEmail,
+                userLegalIdType,
+                userLegalId,
+                customerData: { fullName, phoneNumber: phoneNumber ?? '' },
+                redirectUrl,
+              },
+            },
+            { idempotencyKey, approval },
+          );
+          const how = orderResult.execution?.result?.how;
+          const checkoutUrl = how && 'url' in how ? how.url : undefined;
+          return {
+            order: {
+              id: orderResult.order.id,
+              fromAmount: orderResult.order.fromAmount,
+              toAmount: orderResult.order.toAmount,
+              status: orderResult.order.status,
+            },
+            checkoutUrl,
+            rate: { ratio: rate.ratio, fee: rate.fee },
+          };
         },
-      });
-
-      const how = orderResult.execution?.result?.how;
-      const checkoutUrl = how && 'url' in how ? how.url : undefined;
-      const result = {
-        order: {
-          id: orderResult.order.id,
-          fromAmount: orderResult.order.fromAmount,
-          toAmount: orderResult.order.toAmount,
-          status: orderResult.order.status,
-        },
-        checkoutUrl,
-        rate: { ratio: rate.ratio, fee: rate.fee },
-      };
+      );
+      const result =
+        outcome.status === 'completed'
+          ? outcome.result
+          : { ...describeOutcome(outcome), rate: { ratio: rate.ratio, fee: rate.fee } };
       return {
         content: [{ type: 'text', text: JSON.stringify(result, null, 2) }],
       };
@@ -88,7 +103,7 @@ export function registerTopupWorkflows(server: McpServer, clients: BloqueClients
     'cashout_to_bank',
     {
       description:
-        'Cash out USD to Colombian pesos via bank transfer. Converts from a Bloque account and deposits COP into any Colombian bank account. Handles rate lookup and order creation.',
+        'Cash out USD to Colombian pesos via bank transfer. Converts from a Bloque account and deposits COP into any Colombian bank account. Handles rate lookup and order creation. May return status "approval_required" with an approvalUrl for the account owner (see check_approval).',
       inputSchema: {
         sourceAccountUrn: z.string(),
         amount: z.string(),
@@ -106,7 +121,7 @@ export function registerTopupWorkflows(server: McpServer, clients: BloqueClients
       sourceAccountUrn, amount, currency, bankName,
       bankAccountType, bankAccountNumber, bankAccountHolderName,
       idType, idNumber, webhookUrl,
-    }) => {
+    }, extra) => {
       const { amount: rawAmount } = toRaw(amount, currency);
       const ratesResult = await clients.swap.findRates({
         fromAsset: 'DUSD/6',
@@ -128,30 +143,43 @@ export function registerTopupWorkflows(server: McpServer, clients: BloqueClients
         };
       }
 
-      const orderResult = await clients.swap.bankTransfer.create({
-        rateSig: rate.sig,
-        toMedium: bankName as SupportedBank,
-        amountSrc: rawAmount,
-        webhookUrl,
-        depositInformation: {
-          bankAccountType,
-          bankAccountNumber,
-          bankAccountHolderName,
-          bankAccountHolderIdentificationType: idType,
-          bankAccountHolderIdentificationValue: idNumber,
+      const idempotencyKey = randomUUID();
+      const outcome = await runWithApproval(
+        extra,
+        `Cash out ${amount} ${currency} from ${sourceAccountUrn} to ${bankName} account ${bankAccountNumber}`,
+        async (approval) => {
+          const orderResult = await clients.swap.bankTransfer.create(
+            {
+              rateSig: rate.sig,
+              toMedium: bankName as SupportedBank,
+              amountSrc: rawAmount,
+              webhookUrl,
+              depositInformation: {
+                bankAccountType,
+                bankAccountNumber,
+                bankAccountHolderName,
+                bankAccountHolderIdentificationType: idType,
+                bankAccountHolderIdentificationValue: idNumber,
+              },
+              args: { sourceAccountUrn },
+            },
+            { idempotencyKey, approval },
+          );
+          return {
+            order: {
+              id: orderResult.order.id,
+              fromAmount: orderResult.order.fromAmount,
+              toAmount: orderResult.order.toAmount,
+              status: orderResult.order.status,
+            },
+            rate: { ratio: rate.ratio, fee: rate.fee },
+          };
         },
-        args: { sourceAccountUrn },
-      });
-
-      const result = {
-        order: {
-          id: orderResult.order.id,
-          fromAmount: orderResult.order.fromAmount,
-          toAmount: orderResult.order.toAmount,
-          status: orderResult.order.status,
-        },
-        rate: { ratio: rate.ratio, fee: rate.fee },
-      };
+      );
+      const result =
+        outcome.status === 'completed'
+          ? outcome.result
+          : { ...describeOutcome(outcome), rate: { ratio: rate.ratio, fee: rate.fee } };
       return {
         content: [{ type: 'text', text: JSON.stringify(result, null, 2) }],
       };
@@ -162,7 +190,7 @@ export function registerTopupWorkflows(server: McpServer, clients: BloqueClients
     'send_to_breb_key',
     {
       description:
-        'Send money to a BRE-B key in one step. Resolves the key, finds exchange rates, and creates the BRE-B payout order.',
+        'Send money to a BRE-B key in one step. Resolves the key, finds exchange rates, and creates the BRE-B payout order. May return status "approval_required" with an approvalUrl for the account owner (see check_approval).',
       inputSchema: {
         sourceAccountUrn: z.string(),
         amount: z.string(),
@@ -185,7 +213,7 @@ export function registerTopupWorkflows(server: McpServer, clients: BloqueClients
       keyType,
       key,
       webhookUrl,
-    }) => {
+    }, extra) => {
       const resolution = await clients.accounts.breb.resolveKey({
         key,
         ...(keyType && { keyType }),
@@ -229,33 +257,47 @@ export function registerTopupWorkflows(server: McpServer, clients: BloqueClients
         };
       }
 
-      const orderResult = await clients.swap.breb.create({
-        rateSig: rate.sig,
-        amountSrc: rawAmount,
-        webhookUrl,
-        depositInformation: {
-          resolutionId: resolution.data.resolutionId,
-          destinationKey: { keyValue: key, ...(keyType && { keyType }) },
+      const { resolutionId, owner, participant, account } = resolution.data;
+      const resolutionView = { resolutionId, owner, participant, account };
+      const idempotencyKey = randomUUID();
+      const outcome = await runWithApproval(
+        extra,
+        `BRE-B payout of ${amount} ${sourceCurrency} from ${sourceAccountUrn} to key ${key}`,
+        async (approval) => {
+          const orderResult = await clients.swap.breb.create(
+            {
+              rateSig: rate.sig,
+              amountSrc: rawAmount,
+              webhookUrl,
+              depositInformation: {
+                resolutionId,
+                destinationKey: { keyValue: key, ...(keyType && { keyType }) },
+              },
+              args: { sourceAccountUrn },
+            },
+            { idempotencyKey, approval },
+          );
+          return {
+            resolution: resolutionView,
+            order: {
+              id: orderResult.order.id,
+              fromAmount: orderResult.order.fromAmount,
+              toAmount: orderResult.order.toAmount,
+              status: orderResult.order.status,
+            },
+            execution: orderResult.execution,
+            rate: { ratio: rate.ratio, fee: rate.fee },
+          };
         },
-        args: { sourceAccountUrn },
-      });
-
-      const result = {
-        resolution: {
-          resolutionId: resolution.data.resolutionId,
-          owner: resolution.data.owner,
-          participant: resolution.data.participant,
-          account: resolution.data.account,
-        },
-        order: {
-          id: orderResult.order.id,
-          fromAmount: orderResult.order.fromAmount,
-          toAmount: orderResult.order.toAmount,
-          status: orderResult.order.status,
-        },
-        execution: orderResult.execution,
-        rate: { ratio: rate.ratio, fee: rate.fee },
-      };
+      );
+      const result =
+        outcome.status === 'completed'
+          ? outcome.result
+          : {
+              ...describeOutcome(outcome),
+              resolution: resolutionView,
+              rate: { ratio: rate.ratio, fee: rate.fee },
+            };
       return {
         content: [{ type: 'text', text: JSON.stringify(result, null, 2) }],
       };

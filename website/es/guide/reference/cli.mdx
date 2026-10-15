@@ -172,6 +172,32 @@ npx @bloque/cli login
 
 3. Reinicia tu agente.
 
+## Aprobación de Operaciones
+
+Algunas operaciones que mueven dinero necesitan que el titular de la cuenta las apruebe con su passkey antes de ejecutarse: transferencias, transferencias en lote, fondear una tarjeta o cuenta, y órdenes de swap (recargas PSE, retiros a banco, pagos BRE-B). Cuando eso pasa, la herramienta no falla. Devuelve la solicitud de aprobación:
+
+```json
+{
+  "status": "approval_required",
+  "approvalId": "apr_…",
+  "operation": "Transfer 100 USD from did:bloque:… to did:bloque:…",
+  "approvalUrl": "https://…",
+  "expiresAt": "2026-10-15T15:04:05.000Z",
+  "summary": { "operation": "accounts.transfer", "fields": { "amount": "100000000" } },
+  "nextStep": "Nothing has moved yet. Share approvalUrl with the account owner…"
+}
+```
+
+En este punto no se ha movido nada. Tu agente te comparte `approvalUrl`, tú lo abres y apruebas con tu passkey. Luego el agente llama a `check_approval` con el `approvalId`: espera hasta 45 segundos tu aprobación y, cuando apruebas, ejecuta exactamente la misma operación y devuelve `"status": "completed"` con su resultado. Si aún no has aprobado, devuelve `approval_required` otra vez, y el agente puede volver a consultar hasta `expiresAt`.
+
+- **Agentes que muestran el progreso de las herramientas** (envían un progress token de MCP) reciben el enlace como mensaje de progreso, y la herramienta misma espera hasta 45 segundos, así que una aprobación rápida termina en la misma llamada.
+- **`approval_expired`**: no llegó ninguna aprobación antes de `expiresAt`. No se movió nada; vuelve a pedirla para obtener un enlace nuevo.
+- **`approval_rejected`**: la aprobación fue rechazada, por ejemplo porque la passkey no está registrada para aprobaciones. No se movió nada.
+- **Workflows que crean algo y luego lo fondean** (`create_card`, `create_disposable_card`, `create_account`, `add_spending_category`) igual lo crean; el paso de fondeo vuelve en `fundingApproval`, para terminarlo con `check_approval`.
+- **`check_approval` sin `approvalId`** lista las aprobaciones pendientes. Viven en el proceso de `bloque mcp` en ejecución: si lo reinicias se pierden, y hay que volver a pedir la operación.
+
+El enlace de aprobación lleva un token de un solo uso. Compártelo sólo con el titular de la cuenta.
+
 ## Referencia de Herramientas
 
 ### Workflows (14 herramientas)
@@ -195,7 +221,7 @@ Herramientas de alto nivel. Una llamada maneja operaciones de múltiples pasos.
 | `wallet_overview` | Todas las cuentas, saldos y transacciones recientes |
 | `card_summary` | Todo sobre una tarjeta específica |
 
-### Primitivas (30 herramientas)
+### Primitivas (31 herramientas)
 
 Herramientas de bajo nivel. 1:1 con métodos del SDK para control total.
 
@@ -210,6 +236,7 @@ Herramientas de bajo nivel. 1:1 con métodos del SDK para control total.
 | Historial | `list_transactions`, `list_account_movements` |
 | Swap | `find_rates`, `list_pse_banks`, `create_pse_order`, `create_bank_transfer_order` |
 | Claves API | `list_api_keys`, `get_api_key`, `revoke_api_key`, `rotate_api_key` |
+| Aprobaciones | `check_approval` |
 
 ## Requisitos
 

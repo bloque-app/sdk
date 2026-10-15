@@ -1,6 +1,8 @@
+import { randomUUID } from 'node:crypto';
 import type { SupportedBank } from '@bloque/sdk';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod/v4';
+import { approvalToolResult, runWithApproval } from '../../approvals.ts';
 import type { BloqueClients } from '../../types.ts';
 
 export function registerSwapTools(server: McpServer, clients: BloqueClients) {
@@ -65,8 +67,12 @@ export function registerSwapTools(server: McpServer, clients: BloqueClients) {
       rateSig, toMedium, amountSrc, amountDst, depositUrn,
       bankCode, userType, customerEmail, userLegalIdType,
       userLegalId, fullName, phoneNumber, redirectUrl, webhookUrl,
-    }) => {
-      const result = await clients.swap.pse.create({
+    }, extra) => {
+      const idempotencyKey = randomUUID();
+      const outcome = await runWithApproval(
+        extra,
+        `PSE order: ${amountSrc ?? amountDst} into ${depositUrn}`,
+        (approval) => clients.swap.pse.create({
         rateSig,
         toMedium,
         webhookUrl,
@@ -82,10 +88,9 @@ export function registerSwapTools(server: McpServer, clients: BloqueClients) {
           customerData: { fullName, phoneNumber: phoneNumber ?? '' },
           redirectUrl,
         },
-      });
-      return {
-        content: [{ type: 'text', text: JSON.stringify(result, null, 2) }],
-      };
+      }, { idempotencyKey, approval }),
+      );
+      return approvalToolResult(outcome);
     },
   );
 
@@ -112,8 +117,12 @@ export function registerSwapTools(server: McpServer, clients: BloqueClients) {
       bankAccountType, bankAccountNumber, bankAccountHolderName,
       bankAccountHolderIdentificationType, bankAccountHolderIdentificationValue,
       webhookUrl,
-    }) => {
-      const result = await clients.swap.bankTransfer.create({
+    }, extra) => {
+      const idempotencyKey = randomUUID();
+      const outcome = await runWithApproval(
+        extra,
+        `Bank transfer order: ${amountSrc ?? amountDst} from ${sourceAccountUrn} to ${toMedium} account ${bankAccountNumber}`,
+        (approval) => clients.swap.bankTransfer.create({
         rateSig,
         toMedium: toMedium as SupportedBank,
         webhookUrl,
@@ -127,10 +136,9 @@ export function registerSwapTools(server: McpServer, clients: BloqueClients) {
           bankAccountHolderIdentificationValue,
         },
         args: { sourceAccountUrn },
-      });
-      return {
-        content: [{ type: 'text', text: JSON.stringify(result, null, 2) }],
-      };
+      }, { idempotencyKey, approval }),
+      );
+      return approvalToolResult(outcome);
     },
   );
 
@@ -166,8 +174,12 @@ export function registerSwapTools(server: McpServer, clients: BloqueClients) {
       webhookUrl,
       nodeId,
       metadata,
-    }) => {
-      const result = await clients.swap.breb.create({
+    }, extra) => {
+      const idempotencyKey = randomUUID();
+      const outcome = await runWithApproval(
+        extra,
+        `BRE-B payout: ${amountSrc ?? amountDst} from ${sourceAccountUrn} to key ${keyValue}`,
+        (approval) => clients.swap.breb.create({
         rateSig,
         amountSrc,
         amountDst,
@@ -180,10 +192,9 @@ export function registerSwapTools(server: McpServer, clients: BloqueClients) {
           destinationKey: { keyValue, ...(keyType && { keyType }) },
         },
         args: { sourceAccountUrn },
-      });
-      return {
-        content: [{ type: 'text', text: JSON.stringify(result, null, 2) }],
-      };
+      }, { idempotencyKey, approval }),
+      );
+      return approvalToolResult(outcome);
     },
   );
 }

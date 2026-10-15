@@ -1,6 +1,9 @@
-import type { SupportedAsset } from '@bloque/sdk';
+import { randomUUID } from 'node:crypto';
+import type { SupportedAsset, TransferResult } from '@bloque/sdk';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod/v4';
+import type { ApprovalOutcome } from '../../../approvals/approval-gate.ts';
+import { runWithApproval, splitOutcome } from '../../approvals.ts';
 import { logAndFormatToolError } from '../../bloque-error-mcp.ts';
 import { resolveMccs } from '../../categories.ts';
 import { humanizeBalance, toRaw } from '../../currency.ts';
@@ -70,7 +73,7 @@ export function registerCardWorkflows(
     'create_card',
     {
       description:
-        "Create a card for spending. If accountUrn is provided, the card is attached to that existing account (sharing its balance). If accountUrn is omitted, a new account (pocket + polygon) is created automatically. Optionally restrict to merchant categories using allowedCategories (e.g. 'food', 'transport', 'ads') or allowedMccs (raw MCC codes). Optionally fund the backing account on creation.",
+        "Create a card for spending. If accountUrn is provided, the card is attached to that existing account (sharing its balance). If accountUrn is omitted, a new account (pocket + polygon) is created automatically. Optionally restrict to merchant categories using allowedCategories (e.g. 'food', 'transport', 'ads') or allowedMccs (raw MCC codes). Optionally fund the backing account on creation. If funding needs the account owner's passkey approval, the card is still created and fundingApproval carries the approvalUrl and approvalId (see check_approval).",
       inputSchema: {
         name: z.string().optional().default('Card'),
         accountUrn: z.string().optional(),
@@ -98,7 +101,7 @@ export function registerCardWorkflows(
       fundAmount,
       currency,
       webhookUrl,
-    }) => {
+    }, extra) => {
       try {
         mcpDebug('tool create_card invoked', {
           name,
@@ -187,16 +190,26 @@ export function registerCardWorkflows(
           });
         }
 
-        let transferResult: unknown;
+        let funding: ApprovalOutcome<TransferResult> | undefined;
         if (fundFromUrn && fundAmount) {
           const { amount: rawAmount, asset } = toRaw(fundAmount, currency);
-          transferResult = await clients.accounts.transfer({
-            sourceUrn: fundFromUrn,
-            destinationUrn: virtualAccount.urn,
-            amount: rawAmount,
-            asset: asset as SupportedAsset,
-          });
+          const idempotencyKey = randomUUID();
+          funding = await runWithApproval(
+            extra,
+            `Fund card ${card.urn} (account ${virtualAccount.urn}) with ${fundAmount} ${currency} from ${fundFromUrn}`,
+            (approval) =>
+              clients.accounts.transfer(
+                {
+                  sourceUrn: fundFromUrn,
+                  destinationUrn: virtualAccount.urn,
+                  amount: rawAmount,
+                  asset: asset as SupportedAsset,
+                },
+                { idempotencyKey, approval },
+              ),
+          );
         }
+        const { result: transferResult, approval } = splitOutcome(funding);
 
         const result = {
           card: {
@@ -210,6 +223,7 @@ export function registerCardWorkflows(
           polygon,
           funded: !!transferResult,
           transferResult,
+          fundingApproval: approval,
         };
         mcpDebug('create_card success', {
           cardUrn: card.urn,
@@ -228,7 +242,7 @@ export function registerCardWorkflows(
     'create_disposable_card',
     {
       description:
-        'Create a one-time disposable card with an exact funded amount. Creates an isolated account + card, funds it with the exact amount, so the card can never be charged more. Perfect for untrusted online purchases. Call disable_card after use.',
+        'Create a one-time disposable card with an exact funded amount. Creates an isolated account + card, funds it with the exact amount, so the card can never be charged more. Perfect for untrusted online purchases. Call disable_card after use. If funding needs the account owner passkey approval, the card is created unfunded and fundingApproval carries the approvalUrl and approvalId (see check_approval).',
       inputSchema: {
         name: z.string().optional().default('Disposable Card'),
         sourceUrn: z.string(),
@@ -252,7 +266,7 @@ export function registerCardWorkflows(
       allowedMccs,
       websites,
       webhookUrl,
-    }) => {
+    }, extra) => {
       try {
         mcpDebug('tool create_disposable_card invoked', { name, sourceUrn });
         const me = await clients.identity.me();
@@ -289,12 +303,22 @@ export function registerCardWorkflows(
         await pollUntilActive(clients, card.urn);
 
         const { amount: rawAmount, asset } = toRaw(amount, currency);
-        const transferResult = await clients.accounts.transfer({
-          sourceUrn,
-          destinationUrn: pocket.urn,
-          amount: rawAmount,
-          asset: asset as SupportedAsset,
-        });
+        const idempotencyKey = randomUUID();
+        const funding = await runWithApproval(
+          extra,
+          `Fund disposable card ${card.urn} (account ${pocket.urn}) with ${amount} ${currency} from ${sourceUrn}`,
+          (approval) =>
+            clients.accounts.transfer(
+              {
+                sourceUrn,
+                destinationUrn: pocket.urn,
+                amount: rawAmount,
+                asset: asset as SupportedAsset,
+              },
+              { idempotencyKey, approval },
+            ),
+        );
+        const { result: transferResult, approval } = splitOutcome(funding);
 
         const mccs = resolveMccs(allowedCategories, allowedMccs);
         const normalizedWebsites = (websites ?? [])
@@ -332,8 +356,9 @@ export function registerCardWorkflows(
             address: polygon.address,
             network: polygon.network,
           },
-          funded: true,
+          funded: !!transferResult,
           transferResult,
+          fundingApproval: approval,
         };
         mcpDebug('create_disposable_card success', {
           cardUrn: card.urn,
