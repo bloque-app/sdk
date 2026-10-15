@@ -1,5 +1,18 @@
 # @bloque/sdk
 
+## 0.17.0
+
+### Patch Changes
+
+- 6451a8d: Require and serialize the source Bloque account for SPEI and PIX payouts.
+- Updated dependencies [6451a8d]
+  - @bloque/sdk-swap@0.17.0
+  - @bloque/sdk-core@0.17.0
+  - @bloque/sdk-accounts@0.17.0
+  - @bloque/sdk-compliance@0.17.0
+  - @bloque/sdk-identity@0.17.0
+  - @bloque/sdk-orgs@0.17.0
+
 ## 0.16.0
 
 ### Minor Changes
