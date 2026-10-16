@@ -1,5 +1,12 @@
 # @bloque/sdk-accounts
 
+## 0.17.2
+
+### Patch Changes
+
+- 0fb3110: Allow `BrebResolvedKey.customerId` to be `null` when a key resolution has no customer identifier.
+  - @bloque/sdk-core@0.17.2
+
 ## 0.17.1
 
 ### Patch Changes

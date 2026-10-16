@@ -1,5 +1,17 @@
 # @bloque/sdk
 
+## 0.17.2
+
+### Patch Changes
+
+- Updated dependencies [0fb3110]
+  - @bloque/sdk-accounts@0.17.2
+  - @bloque/sdk-core@0.17.2
+  - @bloque/sdk-compliance@0.17.2
+  - @bloque/sdk-identity@0.17.2
+  - @bloque/sdk-orgs@0.17.2
+  - @bloque/sdk-swap@0.17.2
+
 ## 0.17.1
 
 ### Patch Changes
