@@ -1,5 +1,13 @@
 # @bloque/sdk-accounts
 
+## 0.17.1
+
+### Patch Changes
+
+- 3e577b9: Support `MXNB/2` and `BRLB/2` in typed account transfers and movement queries while keeping card settlement configuration on its existing asset set.
+- Updated dependencies [3e577b9]
+  - @bloque/sdk-core@0.17.1
+
 ## 0.17.0
 
 ### Patch Changes
