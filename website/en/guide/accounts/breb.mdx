@@ -169,7 +169,7 @@ interface ResolveBrebKeyParams {
 interface BrebResolvedKey {
   id: string;
   resolutionId: string;
-  customerId: string;
+  customerId: string | null;
   key: {
     keyType: 'ID' | 'PHONE' | 'EMAIL' | 'ALPHA' | 'BCODE' | null;
     keyValue: string;
