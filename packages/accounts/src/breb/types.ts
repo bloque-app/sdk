@@ -272,9 +272,10 @@ export interface BrebResolvedKey {
   resolutionId: string;
 
   /**
-   * Customer who initiated the resolution.
+   * Customer identifier associated with the resolution, or null when the
+   * resolution source does not expose one.
    */
-  customerId: string;
+  customerId: string | null;
 
   /**
    * Resolved key information.
