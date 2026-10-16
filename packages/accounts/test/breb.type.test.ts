@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, mock } from 'bun:test';
 import { HttpClient } from '@bloque/sdk-core';
 import { AccountsClient } from '../src/accounts-client';
+import type { BrebResolvedKey } from '../src/breb/types';
 
 const originalFetch = globalThis.fetch;
 
@@ -15,29 +16,31 @@ function accountsClient(): AccountsClient {
   return new AccountsClient(http);
 }
 
-describe('BRE-B key resolution', () => {
+describe('BRE-B key resolution type contract', () => {
   afterEach(() => {
     globalThis.fetch = originalFetch;
   });
 
   it('preserves a null customerId returned by the API', async () => {
+    const resolution = {
+      id: 'resolution-1',
+      resolutionId: 'resolution-1',
+      customerId: null,
+      key: { keyType: 'ALPHA', keyValue: '@recipient' },
+      owner: null,
+      participant: null,
+      account: null,
+      receptorNode: null,
+      resolvedAt: null,
+      expiresAt: null,
+      raw: {},
+    } satisfies BrebResolvedKey;
+
     globalThis.fetch = mock(() =>
       Promise.resolve(
         Response.json({
           req_id: 'req-1',
-          result: {
-            id: 'resolution-1',
-            resolutionId: 'resolution-1',
-            customerId: null,
-            key: { keyType: 'ALPHA', keyValue: '@recipient' },
-            owner: null,
-            participant: null,
-            account: null,
-            receptorNode: null,
-            resolvedAt: null,
-            expiresAt: null,
-            raw: {},
-          },
+          result: resolution,
         }),
       ),
     ) as unknown as typeof fetch;

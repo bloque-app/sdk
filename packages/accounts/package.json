@@ -42,7 +42,7 @@
     "dev": "rslib build --watch",
     "clean": "rm -rf node_modules && rm -rf dist",
     "check": "biome check --write",
-    "typecheck": "tsgo --noEmit"
+    "typecheck": "tsgo --noEmit && tsgo --noEmit -p tsconfig.type-tests.json"
   },
   "dependencies": {
     "@bloque/sdk-core": "workspace:*"
