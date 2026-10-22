@@ -1,5 +1,10 @@
 import { z } from 'zod/v4';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import {
+  APPROVAL_TOOL_NOTE,
+  approvalToolResult,
+  runWithApproval,
+} from '../../approvals.ts';
 import type { BloqueClients } from '../../types.ts';
 import { humanizeBalance } from '../../currency.ts';
 
@@ -70,7 +75,7 @@ export function registerAccountTools(server: McpServer, clients: BloqueClients) 
   server.registerTool(
     'create_breb_key',
     {
-      description: 'Create a BRE-B key account linked to the authenticated user session. Returns { data, error } where data includes the created BRE-B account URN and key metadata.',
+      description: `Create a BRE-B key account linked to the authenticated user session. Returns { data, error } where data includes the created BRE-B account URN and key metadata. ${APPROVAL_TOOL_NOTE}`,
       inputSchema: {
         keyType: z.enum(['ID', 'PHONE', 'EMAIL', 'ALPHA', 'BCODE']),
         key: z.string(),
@@ -80,19 +85,18 @@ export function registerAccountTools(server: McpServer, clients: BloqueClients) 
         metadata: z.record(z.string(), z.unknown()).optional(),
       },
     },
-    async ({ keyType, key, displayName, ledgerId, webhookUrl, metadata }) => {
-      const result = await clients.accounts.breb.createKey({
-        keyType,
-        key,
-        displayName,
-        ledgerId,
-        webhookUrl,
-        metadata,
-      });
-      return {
-        content: [{ type: 'text', text: JSON.stringify(result, null, 2) }],
-      };
-    },
+    async (
+      { keyType, key, displayName, ledgerId, webhookUrl, metadata },
+      extra,
+    ) =>
+      approvalToolResult(
+        await runWithApproval(extra, `Create BRE-B key ${key}`, (approval) =>
+          clients.accounts.breb.createKey(
+            { keyType, key, displayName, ledgerId, webhookUrl, metadata },
+            { approval },
+          ),
+        ),
+      ),
   );
 
   server.registerTool(
@@ -150,28 +154,34 @@ export function registerAccountTools(server: McpServer, clients: BloqueClients) 
   server.registerTool(
     'activate_breb_key',
     {
-      description: 'Activate a previously suspended BRE-B key account by account URN.',
+      description: `Activate a previously suspended BRE-B key account by account URN. ${APPROVAL_TOOL_NOTE}`,
       inputSchema: { accountUrn: z.string() },
     },
-    async ({ accountUrn }) => {
-      const result = await clients.accounts.breb.activateKey({ accountUrn });
-      return {
-        content: [{ type: 'text', text: JSON.stringify(result, null, 2) }],
-      };
-    },
+    async ({ accountUrn }, extra) =>
+      approvalToolResult(
+        await runWithApproval(
+          extra,
+          `Activate BRE-B key ${accountUrn}`,
+          (approval) =>
+            clients.accounts.breb.activateKey({ accountUrn }, { approval }),
+        ),
+      ),
   );
 
   server.registerTool(
     'delete_breb_key',
     {
-      description: 'Delete a BRE-B key account by account URN.',
+      description: `Delete a BRE-B key account by account URN. ${APPROVAL_TOOL_NOTE}`,
       inputSchema: { accountUrn: z.string() },
     },
-    async ({ accountUrn }) => {
-      const result = await clients.accounts.breb.deleteKey({ accountUrn });
-      return {
-        content: [{ type: 'text', text: JSON.stringify(result, null, 2) }],
-      };
-    },
+    async ({ accountUrn }, extra) =>
+      approvalToolResult(
+        await runWithApproval(
+          extra,
+          `Delete BRE-B key ${accountUrn}`,
+          (approval) =>
+            clients.accounts.breb.deleteKey({ accountUrn }, { approval }),
+        ),
+      ),
   );
 }

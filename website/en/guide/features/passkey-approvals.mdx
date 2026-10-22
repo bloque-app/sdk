@@ -1,0 +1,87 @@
+# Passkey approvals for cards, accounts and API keys
+
+A person approves, with their own passkey, every operation they start that moves money, creates or unlocks a way to spend, or changes an account or a credential. The approval happens on Bloque's identity portal (`approvalUrl`). Your app never handles the passkey: it shares the link, waits for the approval, and repeats the same call with it.
+
+The general flow, error types and `withApproval` are described in [Getting started → Passkey Approvals](../start/getting-started#passkey-approvals). This page lists the card, account, BRE-B key and API-key methods that take an approval, and the points that differ from transfers.
+
+## Which methods take `approval`
+
+Each method below takes an `options` argument with `approval` (the value `waitForApproval()` returns). Account creation takes it in the existing `CreateAccountOptions`, next to `idempotencyKey`.
+
+| Method | Why it needs the owner |
+|---|---|
+| `accounts.card.create(params, options)` | Issues a new card: a new way to spend the balance |
+| `accounts.card.activate(urn, options)` / `updateStatus(urn, 'active', reason, options)` | Unfreezes a card: spending is possible again |
+| `accounts.card.update(params, options)` | Can change the PIN |
+| `accounts.card.updateMetadata(params, options)` | Changes which balance purchases debit, spending rules and cashback destinations |
+| `accounts.card.tokenizeApple(urn, params, options)` / `tokenizeGoogle(urn, params, options)` | Adds the card to a phone wallet |
+| `accounts.card.delete(urn, options)` | Deletes the card |
+| `accounts.virtual`, `polygon`, `bancolombia`, `us`: `create(params, options)`, `updateMetadata(params, options)`, `activate(urn, options)` | Opens, changes or unfreezes an account |
+| `accounts.virtual.delete(urn, options)` / `accounts.polygon.delete(urn, options)` | Deletes an account |
+| `accounts.us2.create(params, options)` / `accounts.externalUsBank.create(params, options)` / `externalUsBank.exchangePublicToken(params, options)` | Opens an account or links an external bank |
+| `accounts.breb.createKey(params, options)` / `activateKey(params, options)` / `deleteKey(params, options)` | A BRE-B key decides where deposits land, and can forward them to a wallet |
+| `identity.apiKeys.create(params, options)` / `identity.apiKeys.rotate(id, options)` | Mints a credential that acts as the person |
+
+Freezing and disabling (`card.freeze`, `card.disable`, `breb.suspendKey`) never ask for an approval: a lost card must be stoppable at once. Renaming (`updateName`) does not either.
+
+Whether a call asks for an approval is decided by the API's approval gate, not by the SDK, and depends on the mode the deployment runs it in: in `off` or `shadow` it refuses nothing, and in `enforce` it asks the person who owns the account (today, individuals; not businesses or service-to-service calls). Pass `approval` only when repeating a call that was refused with `BloqueApprovalRequiredError`.
+
+## Example: issue a card
+
+```typescript
+import { BloqueApprovalRequiredError, withApproval } from '@bloque/sdk';
+
+const card = await withApproval(
+  (approval) =>
+    bloque.accounts.card.create(
+      { name: 'Groceries' },
+      { idempotencyKey: `card-${orderId}`, approval },
+    ),
+  {
+    onApprovalRequired: (error: BloqueApprovalRequiredError) => {
+      // Show the owner what they approve (error.summary), then the link.
+      notifyOwner(error.approvalUrl);
+    },
+  },
+);
+```
+
+Keep `idempotencyKey` the same on the repeat: the approval covers the operation's fields, and the key makes a repeat after a lost response land on the same card.
+
+## Example: change spending rules
+
+```typescript
+const update = (approval?: string) =>
+  bloque.accounts.card.updateMetadata(
+    { urn: cardUrn, metadata: { priority_mcc: ['5411'] } },
+    { approval },
+  );
+
+const updated = await withApproval(update, {
+  onApprovalRequired: (error) => notifyOwner(error.approvalUrl),
+});
+```
+
+Repeat the call with exactly the same parameters. A different PIN, metadata value or status is a different operation and needs a new approval.
+
+## BRE-B keys
+
+`breb.createKey`, `activateKey` and `deleteKey` return their errors as `{ data: null, error }`, except the passkey-approval errors (`BloqueApprovalRequiredError`, `BloqueApprovalInvalidError`, `BloqueApprovalExpiredError`, `BloqueApprovalUnavailableError`), which are **thrown**, as on every other gated method. That lets you wait for the approval and repeat the call:
+
+```typescript
+const key = await withApproval(
+  (approval) =>
+    bloque.accounts.breb.createKey(
+      { keyType: 'BCODE', key: '0016027228', ledgerId },
+      { approval },
+    ),
+  { onApprovalRequired: (error) => notifyOwner(error.approvalUrl) },
+);
+if (key.error) {
+  // Any other refusal, returned as before.
+}
+```
+
+## Errors
+
+The error types are the same as for transfers, and every method on this page, the BRE-B key methods included, throws them: `BloqueApprovalRequiredError` (428), `BloqueApprovalInvalidError` (403), `BloqueApprovalExpiredError` (403) and `BloqueApprovalUnavailableError` (503). See the table in [Getting started](../start/getting-started#passkey-approvals).

@@ -122,7 +122,7 @@ export class ExternalUsBankClient extends BaseClient {
    */
   async create(
     params: CreateExternalUsBankAccountParams,
-    _options?: CreateAccountOptions,
+    options?: CreateAccountOptions,
   ): Promise<ExternalUsBankAccount> {
     const request: CreateAccountRequest<CreateExternalUsBankInput> = {
       holder_urn: params.holderUrn || this.httpClient.urn || '',
@@ -147,6 +147,7 @@ export class ExternalUsBankClient extends BaseClient {
     >({
       method: 'POST',
       path: '/api/mediums/external-us-bank',
+      headers: operationApprovalHeaders(options),
       body: request,
     });
 
@@ -166,6 +167,7 @@ export class ExternalUsBankClient extends BaseClient {
    */
   async exchangePublicToken(
     params: ExchangeExternalUsBankPublicTokenParams,
+    options?: OperationApprovalOptions,
   ): Promise<ExternalUsBankAccount> {
     const request: UpdateAccountRequest<ExchangeExternalUsBankInput> = {
       input: {
@@ -179,6 +181,7 @@ export class ExternalUsBankClient extends BaseClient {
     >({
       method: 'PATCH',
       path: `/api/accounts/${params.urn}`,
+      headers: operationApprovalHeaders(options),
       body: request,
     });
 

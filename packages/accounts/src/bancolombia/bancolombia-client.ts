@@ -1,4 +1,8 @@
-import { BaseClient } from '@bloque/sdk-core';
+import {
+  BaseClient,
+  type OperationApprovalOptions,
+  operationApprovalHeaders,
+} from '@bloque/sdk-core';
 import type {
   AccountStatus,
   AccountWithBalance,
@@ -150,9 +154,7 @@ export class BancolombiaClient extends BaseClient {
       method: 'POST',
       path: '/api/mediums/bancolombia',
       body: request,
-      headers: options?.idempotencyKey
-        ? { 'Idempotency-Key': options.idempotencyKey }
-        : undefined,
+      headers: operationApprovalHeaders(options),
     });
 
     const account = this._mapAccountResponse(response.result.account);
@@ -219,6 +221,7 @@ export class BancolombiaClient extends BaseClient {
    */
   async updateMetadata(
     params: UpdateBancolombiaMetadataParams,
+    options?: OperationApprovalOptions,
   ): Promise<BancolombiaAccount> {
     const request: UpdateAccountRequest = {
       metadata: params.metadata,
@@ -230,6 +233,7 @@ export class BancolombiaClient extends BaseClient {
     >({
       method: 'PATCH',
       path: `/api/accounts/${params.urn}`,
+      headers: operationApprovalHeaders(options),
       body: request,
     });
 
@@ -283,8 +287,11 @@ export class BancolombiaClient extends BaseClient {
    * );
    * ```
    */
-  async activate(urn: string): Promise<BancolombiaAccount> {
-    return this._updateStatus(urn, 'active');
+  async activate(
+    urn: string,
+    options?: OperationApprovalOptions,
+  ): Promise<BancolombiaAccount> {
+    return this._updateStatus(urn, 'active', options);
   }
 
   /**
@@ -327,6 +334,7 @@ export class BancolombiaClient extends BaseClient {
   private async _updateStatus(
     urn: string,
     status: AccountStatus,
+    options?: OperationApprovalOptions,
   ): Promise<BancolombiaAccount> {
     const request: UpdateAccountRequest = {
       status,
@@ -338,6 +346,7 @@ export class BancolombiaClient extends BaseClient {
     >({
       method: 'PATCH',
       path: `/api/accounts/${urn}`,
+      headers: operationApprovalHeaders(options),
       body: request,
     });
 

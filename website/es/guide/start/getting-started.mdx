@@ -201,7 +201,7 @@ Todos los errores incluyen metadata rica para debugging:
 
 ### Aprobaciones con Passkey
 
-Cuando las aprobaciones con passkey están activas, una operación que mueve dinero de la cuenta de una persona necesita que esa persona la apruebe con su passkey. Una aprobación cubre exactamente una operación. Aplica a `accounts.transfer`, `accounts.batchTransfer`, `accounts.externalUsBank.pull` y a todo `create` / `createDeposit` de órdenes de swap.
+Cuando las aprobaciones con passkey están activas, una operación que mueve dinero de la cuenta de una persona necesita que esa persona la apruebe con su passkey. Una aprobación cubre exactamente una operación. Aplica a `accounts.transfer`, `accounts.batchTransfer`, `accounts.externalUsBank.pull`, a todo `create` / `createDeposit` de órdenes de swap y a los métodos de tarjetas, cuentas, llaves BRE-B y API keys listados en [Aprobaciones con passkey](../features/passkey-approvals).
 
 La primera llamada lanza `BloqueApprovalRequiredError` (HTTP 428). Comparte `approvalUrl` con el dueño de la cuenta, espera su firma y repite **la misma llamada** con la aprobación. `withApproval` hace todo y repite la llamada exactamente una vez:
 

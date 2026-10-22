@@ -1,4 +1,4 @@
-import { BaseClient } from '@bloque/sdk-core';
+import { BaseClient, operationApprovalHeaders } from '@bloque/sdk-core';
 import type {
   AccountWithBalance,
   CreateAccountRequest,
@@ -42,7 +42,7 @@ export function mapUs2AccountFromWire(
 export class Us2Client extends BaseClient {
   async create(
     params: CreateUs2AccountParams,
-    _options?: CreateAccountOptions,
+    options?: CreateAccountOptions,
   ): Promise<Us2Account> {
     const input: CreateUs2AccountInput = {
       type: params.type,
@@ -79,6 +79,7 @@ export class Us2Client extends BaseClient {
     >({
       method: 'POST',
       path: '/api/mediums/us2-account',
+      headers: operationApprovalHeaders(options),
       body: request,
     });
 

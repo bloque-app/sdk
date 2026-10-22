@@ -5,6 +5,11 @@
     "label": "API Reference"
   },
   "compliance",
+  {
+    "type": "file",
+    "name": "passkey-approvals",
+    "label": "Passkey approvals"
+  },
   "organizations",
   {
     "type": "file",
