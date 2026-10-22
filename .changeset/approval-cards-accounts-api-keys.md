@@ -2,6 +2,7 @@
 "@bloque/sdk-accounts": minor
 "@bloque/sdk-identity": minor
 "@bloque/sdk": minor
+"@bloque/cli": minor
 ---
 
 Card, account, BRE-B key and API-key methods now take the account owner's
@@ -25,3 +26,10 @@ all of them):
 
 Freezing, disabling, suspending and renaming take no approval. New docs page:
 Features → Passkey approvals (en, es).
+
+MCP: `create_breb_key`, `activate_breb_key`, `delete_breb_key`,
+`create_raw_card`, `activate_card`, `update_card_metadata`,
+`create_polygon_account`, `create_virtual_account` and `rotate_api_key` go
+through the same approval gate as the money-moving tools: a 428 returns
+`approval_required` with the owner's `approvalUrl`, and `check_approval`
+repeats the same request once approved.

@@ -1,5 +1,10 @@
 import { z } from 'zod/v4';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import {
+  APPROVAL_TOOL_NOTE,
+  approvalToolResult,
+  runWithApproval,
+} from '../../approvals.ts';
 import type { BloqueClients } from '../../types.ts';
 import type { PersistedSession } from '../../../session/types.ts';
 
@@ -71,12 +76,12 @@ export function registerApiKeyTools(
     'rotate_api_key',
     {
       description:
-        'Rotate an API key secret by its ID. Returns the new secret key (shown only once). Cannot rotate the key used by this session.',
+        `Rotate an API key secret by its ID. Returns the new secret key (shown only once). Cannot rotate the key used by this session. ${APPROVAL_TOOL_NOTE}`,
       inputSchema: {
         id: z.string().describe('The API key ID to rotate'),
       },
     },
-    async ({ id }) => {
+    async ({ id }, extra) => {
       if (session?.authType === 'apiKey' && session.apiKey) {
         const keys = await clients.identity.apiKeys.list();
         const self = keys.find((k: any) => k.status === 'active' && session.apiKey?.startsWith(k.keyId));
@@ -88,10 +93,11 @@ export function registerApiKeyTools(
         }
       }
 
-      const result = await clients.identity.apiKeys.rotate(id);
-      return {
-        content: [{ type: 'text', text: JSON.stringify(result, null, 2) }],
-      };
+      return approvalToolResult(
+        await runWithApproval(extra, `Rotate API key ${id}`, (approval) =>
+          clients.identity.apiKeys.rotate(id, { approval }),
+        ),
+      );
     },
   );
 }
