@@ -20,11 +20,11 @@ Cada método de la tabla acepta un argumento `options` con `approval` (el valor 
 | `accounts.virtual.delete(urn, options)` / `accounts.polygon.delete(urn, options)` | Elimina una cuenta |
 | `accounts.us2.create(params, options)` / `accounts.externalUsBank.create(params, options)` / `externalUsBank.exchangePublicToken(params, options)` | Abre una cuenta o vincula un banco externo |
 | `accounts.breb.createKey(params, options)` / `activateKey(params, options)` / `deleteKey(params, options)` | Una llave BRE-B decide a dónde llegan los depósitos, y puede reenviarlos a una billetera |
-| `apiKeys.create(params, options)` / `apiKeys.rotate(id, options)` | Crea una credencial que actúa como la persona |
+| `identity.apiKeys.create(params, options)` / `identity.apiKeys.rotate(id, options)` | Crea una credencial que actúa como la persona |
 
 Congelar y deshabilitar (`card.freeze`, `card.disable`, `breb.suspendKey`) nunca piden aprobación: una tarjeta perdida debe poder detenerse de inmediato. Renombrar (`updateName`) tampoco.
 
-La API, no el SDK, decide si una llamada pide aprobación. Las empresas, los tokens de servicio y los despliegues con las aprobaciones apagadas nunca reciben un `428`. Pasa `approval` solo al repetir una llamada que fue rechazada con `BloqueApprovalRequiredError`.
+El gate de aprobaciones de la API, no el SDK, decide si una llamada pide aprobación, y depende del modo en que lo corre cada despliegue: en `off` o `shadow` no rechaza nada, y en `enforce` le pide la aprobación a la persona dueña de la cuenta (hoy, personas naturales; no empresas ni llamadas entre servicios). Pasa `approval` solo al repetir una llamada que fue rechazada con `BloqueApprovalRequiredError`.
 
 ## Ejemplo: emitir una tarjeta
 
@@ -66,7 +66,7 @@ Repite la llamada con exactamente los mismos parámetros. Otro PIN, otro valor d
 
 ## Llaves BRE-B
 
-`breb.createKey`, `activateKey` y `deleteKey` devuelven sus errores como `{ data: null, error }`. La única excepción es `BloqueApprovalRequiredError`: se **lanza**, para que puedas esperar la aprobación y repetir la llamada:
+`breb.createKey`, `activateKey` y `deleteKey` devuelven sus errores como `{ data: null, error }`, salvo los errores de aprobación con passkey (`BloqueApprovalRequiredError`, `BloqueApprovalInvalidError`, `BloqueApprovalExpiredError`, `BloqueApprovalUnavailableError`), que se **lanzan**, como en todos los demás métodos con aprobación. Así puedes esperar la aprobación y repetir la llamada:
 
 ```typescript
 const key = await withApproval(
@@ -78,10 +78,10 @@ const key = await withApproval(
   { onApprovalRequired: (error) => notifyOwner(error.approvalUrl) },
 );
 if (key.error) {
-  // Cualquier otro rechazo, como antes.
+  // Cualquier otro rechazo, devuelto como antes.
 }
 ```
 
 ## Errores
 
-Los tipos de error son los mismos que en las transferencias: `BloqueApprovalRequiredError` (428), `BloqueApprovalInvalidError` (403), `BloqueApprovalExpiredError` (403) y `BloqueApprovalUnavailableError` (503). Mira la tabla en [Primeros pasos](../start/getting-started#aprobaciones-con-passkey).
+Los tipos de error son los mismos que en las transferencias, y todos los métodos de esta página, incluidas las llaves BRE-B, los lanzan: `BloqueApprovalRequiredError` (428), `BloqueApprovalInvalidError` (403), `BloqueApprovalExpiredError` (403) y `BloqueApprovalUnavailableError` (503). Mira la tabla en [Primeros pasos](../start/getting-started#aprobaciones-con-passkey).

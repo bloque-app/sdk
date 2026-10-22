@@ -14,11 +14,14 @@ all of them):
   `tokenizeApple`, `tokenizeGoogle`, `delete`;
 - `create` (via `CreateAccountOptions`), `updateMetadata`, `activate` and
   `delete` on the other account clients, `us2.create`,
-  `externalUsBank.create` and `exchangePublicToken`;
-- `breb.createKey`, `activateKey`, `deleteKey`. These return other errors as
-  `{ error }`, but now throw `BloqueApprovalRequiredError` so the caller can
-  wait for the approval;
-- `apiKeys.create` and `rotate`.
+  `externalUsBank.create` and `exchangePublicToken`. `us2.create` and
+  `externalUsBank.create` ignored their options before; they now also send
+  `idempotencyKey` as the `Idempotency-Key` header;
+- `breb.createKey`, `activateKey`, `deleteKey`. These still return other
+  errors as `{ error }`, but now throw the passkey-approval errors
+  (`BloqueApprovalRequiredError`, `…InvalidError`, `…ExpiredError`,
+  `…UnavailableError`) so the caller can wait for the approval;
+- `identity.apiKeys.create` and `rotate`.
 
 Freezing, disabling, suspending and renaming take no approval. New docs page:
 Features → Passkey approvals (en, es).

@@ -1,6 +1,9 @@
 import { afterEach, describe, expect, it, mock } from 'bun:test';
 import {
+  BloqueApprovalExpiredError,
+  BloqueApprovalInvalidError,
   BloqueApprovalRequiredError,
+  BloqueApprovalUnavailableError,
   HttpClient,
   OPERATION_APPROVAL_HEADER,
 } from '@bloque/sdk-core';
@@ -132,7 +135,57 @@ const GATED: Array<[string, (a: AccountsClient) => Promise<unknown>]> = [
     (a) => a.virtual.activate(POCKET, { approval: APPROVAL }),
   ],
   ['virtual.delete', (a) => a.virtual.delete(POCKET, { approval: APPROVAL })],
+  ['polygon.create', (a) => a.polygon.create({}, { approval: APPROVAL })],
+  [
+    'polygon.updateMetadata',
+    (a) =>
+      a.polygon.updateMetadata(
+        { urn: POCKET, metadata: { name: 'x' } },
+        { approval: APPROVAL },
+      ),
+  ],
+  [
+    'polygon.activate',
+    (a) => a.polygon.activate(POCKET, { approval: APPROVAL }),
+  ],
   ['polygon.delete', (a) => a.polygon.delete(POCKET, { approval: APPROVAL })],
+  [
+    'bancolombia.create',
+    (a) => a.bancolombia.create({}, { approval: APPROVAL }),
+  ],
+  [
+    'bancolombia.updateMetadata',
+    (a) =>
+      a.bancolombia.updateMetadata(
+        { urn: POCKET, metadata: { name: 'x' } },
+        { approval: APPROVAL },
+      ),
+  ],
+  [
+    'us.create',
+    (a) =>
+      a.us.create({ type: 'individual', address: {} } as never, {
+        approval: APPROVAL,
+      }),
+  ],
+  [
+    'us.updateMetadata',
+    (a) =>
+      a.us.updateMetadata(
+        { urn: POCKET, metadata: { name: 'x' } },
+        { approval: APPROVAL },
+      ),
+  ],
+  [
+    'us2.create',
+    (a) =>
+      a.us2.create({ type: 'individual' } as never, { approval: APPROVAL }),
+  ],
+  [
+    'externalUsBank.create',
+    (a) =>
+      a.externalUsBank.create({ label: 'Checking' }, { approval: APPROVAL }),
+  ],
   [
     'bancolombia.activate',
     (a) => a.bancolombia.activate(POCKET, { approval: APPROVAL }),
@@ -180,6 +233,23 @@ describe('card, account and BRE-B key approvals', () => {
     expect(calls[0]?.headers.get(OPERATION_APPROVAL_HEADER)).toBe(APPROVAL);
   });
 
+  it('us2.create and externalUsBank.create now send their idempotencyKey', async () => {
+    const calls = mockApprovalRequired();
+    await settle(
+      client().us2.create({ type: 'individual' } as never, {
+        idempotencyKey: 'us2-1',
+      }),
+    );
+    await settle(
+      client().externalUsBank.create(
+        { label: 'Checking' },
+        { idempotencyKey: 'eub-1' },
+      ),
+    );
+    expect(calls[0]?.headers.get('Idempotency-Key')).toBe('us2-1');
+    expect(calls[1]?.headers.get('Idempotency-Key')).toBe('eub-1');
+  });
+
   it('freeze and disable stay unapproved: a lost card is frozen at once', async () => {
     const calls = mockApprovalRequired();
     await settle(client().card.freeze(CARD));
@@ -218,6 +288,54 @@ describe('BRE-B keys', () => {
       expect(calls[0]?.headers.get(OPERATION_APPROVAL_HEADER)).toBe(APPROVAL);
     });
   }
+
+  for (const [code, status, type] of [
+    ['E_APPROVAL_INVALID', 403, BloqueApprovalInvalidError],
+    ['E_APPROVAL_EXPIRED', 403, BloqueApprovalExpiredError],
+    ['E_APPROVAL_UNAVAILABLE', 503, BloqueApprovalUnavailableError],
+  ] as const) {
+    it(`${code} is thrown as a typed error too, from every key method`, async () => {
+      globalThis.fetch = mock(() =>
+        Promise.resolve(
+          new Response(
+            JSON.stringify({
+              error: true,
+              code,
+              message: code,
+              extra_details: { reason: 'x' },
+            }),
+            { status, headers: { 'Content-Type': 'application/json' } },
+          ),
+        ),
+      ) as unknown as typeof fetch;
+      for (const [, call] of KEYS) {
+        expect(await settle(call(client()))).toBeInstanceOf(type);
+      }
+    });
+  }
+
+  it('other errors are still returned as { error }, from every key method', async () => {
+    globalThis.fetch = mock(() =>
+      Promise.resolve(
+        new Response(
+          JSON.stringify({
+            error: true,
+            code: 'E_KEY_TAKEN',
+            message: 'taken',
+          }),
+          { status: 409, headers: { 'Content-Type': 'application/json' } },
+        ),
+      ),
+    ) as unknown as typeof fetch;
+    for (const [, call] of KEYS) {
+      const result = (await call(client())) as {
+        data: unknown;
+        error: { code: string | null } | null;
+      };
+      expect(result.data).toBeNull();
+      expect(result.error?.code).toBe('E_KEY_TAKEN');
+    }
+  });
 
   it('other errors are still returned as { error }', async () => {
     globalThis.fetch = mock(() =>

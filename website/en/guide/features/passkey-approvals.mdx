@@ -20,11 +20,11 @@ Each method below takes an `options` argument with `approval` (the value `waitFo
 | `accounts.virtual.delete(urn, options)` / `accounts.polygon.delete(urn, options)` | Deletes an account |
 | `accounts.us2.create(params, options)` / `accounts.externalUsBank.create(params, options)` / `externalUsBank.exchangePublicToken(params, options)` | Opens an account or links an external bank |
 | `accounts.breb.createKey(params, options)` / `activateKey(params, options)` / `deleteKey(params, options)` | A BRE-B key decides where deposits land, and can forward them to a wallet |
-| `apiKeys.create(params, options)` / `apiKeys.rotate(id, options)` | Mints a credential that acts as the person |
+| `identity.apiKeys.create(params, options)` / `identity.apiKeys.rotate(id, options)` | Mints a credential that acts as the person |
 
 Freezing and disabling (`card.freeze`, `card.disable`, `breb.suspendKey`) never ask for an approval: a lost card must be stoppable at once. Renaming (`updateName`) does not either.
 
-Whether a call asks for an approval is decided by the API, not by the SDK. Businesses, service tokens and deployments where approvals are off never get a `428`. Pass `approval` only when repeating a call that was refused with `BloqueApprovalRequiredError`.
+Whether a call asks for an approval is decided by the API's approval gate, not by the SDK, and depends on the mode the deployment runs it in: in `off` or `shadow` it refuses nothing, and in `enforce` it asks the person who owns the account (today, individuals; not businesses or service-to-service calls). Pass `approval` only when repeating a call that was refused with `BloqueApprovalRequiredError`.
 
 ## Example: issue a card
 
@@ -66,7 +66,7 @@ Repeat the call with exactly the same parameters. A different PIN, metadata valu
 
 ## BRE-B keys
 
-`breb.createKey`, `activateKey` and `deleteKey` return their errors as `{ data: null, error }`. The one exception is `BloqueApprovalRequiredError`: it is **thrown**, so you can wait for the approval and repeat the call:
+`breb.createKey`, `activateKey` and `deleteKey` return their errors as `{ data: null, error }`, except the passkey-approval errors (`BloqueApprovalRequiredError`, `BloqueApprovalInvalidError`, `BloqueApprovalExpiredError`, `BloqueApprovalUnavailableError`), which are **thrown**, as on every other gated method. That lets you wait for the approval and repeat the call:
 
 ```typescript
 const key = await withApproval(
@@ -78,10 +78,10 @@ const key = await withApproval(
   { onApprovalRequired: (error) => notifyOwner(error.approvalUrl) },
 );
 if (key.error) {
-  // Any other refusal, as before.
+  // Any other refusal, returned as before.
 }
 ```
 
 ## Errors
 
-The error types are the same as for transfers: `BloqueApprovalRequiredError` (428), `BloqueApprovalInvalidError` (403), `BloqueApprovalExpiredError` (403) and `BloqueApprovalUnavailableError` (503). See the table in [Getting started](../start/getting-started#passkey-approvals).
+The error types are the same as for transfers, and every method on this page, the BRE-B key methods included, throws them: `BloqueApprovalRequiredError` (428), `BloqueApprovalInvalidError` (403), `BloqueApprovalExpiredError` (403) and `BloqueApprovalUnavailableError` (503). See the table in [Getting started](../start/getting-started#passkey-approvals).

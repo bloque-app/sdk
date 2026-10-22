@@ -1,7 +1,10 @@
 import {
   BaseClient,
   BloqueAPIError,
+  BloqueApprovalExpiredError,
+  BloqueApprovalInvalidError,
   BloqueApprovalRequiredError,
+  BloqueApprovalUnavailableError,
   type OperationApprovalOptions,
   operationApprovalHeaders,
 } from '@bloque/sdk-core';
@@ -216,12 +219,21 @@ function mapDecodedQrFromWire(result: DecodeBrebQrWireResult): BrebDecodedQr {
 
 export class BrebClient extends BaseClient {
   /**
-   * A `BloqueApprovalRequiredError` is thrown, not returned as `{ error }`:
-   * the caller needs the error itself to wait for the owner's approval
-   * (`waitForApproval()`) and repeat the call with it.
+   * Passkey-approval errors are thrown, not returned as `{ error }`, so they
+   * read the same as on every other gated method: the caller needs
+   * `BloqueApprovalRequiredError` itself to wait for the owner's approval
+   * (`waitForApproval()`), and the invalid, expired and unavailable ones to
+   * know what to do next. Every other error is still returned as `{ error }`.
    */
-  private rethrowApprovalRequired(error: unknown): void {
-    if (error instanceof BloqueApprovalRequiredError) throw error;
+  private rethrowApprovalErrors(error: unknown): void {
+    if (
+      error instanceof BloqueApprovalRequiredError ||
+      error instanceof BloqueApprovalInvalidError ||
+      error instanceof BloqueApprovalExpiredError ||
+      error instanceof BloqueApprovalUnavailableError
+    ) {
+      throw error;
+    }
   }
 
   private mapError(error: unknown): BrebOperationError {
@@ -304,7 +316,7 @@ export class BrebClient extends BaseClient {
         error: null,
       };
     } catch (error) {
-      this.rethrowApprovalRequired(error);
+      this.rethrowApprovalErrors(error);
       return {
         data: null,
         error: this.mapError(error),
@@ -437,7 +449,7 @@ export class BrebClient extends BaseClient {
         error: null,
       };
     } catch (error) {
-      this.rethrowApprovalRequired(error);
+      this.rethrowApprovalErrors(error);
       return {
         data: null,
         error: this.mapError(error),
@@ -532,7 +544,7 @@ export class BrebClient extends BaseClient {
         error: null,
       };
     } catch (error) {
-      this.rethrowApprovalRequired(error);
+      this.rethrowApprovalErrors(error);
       return {
         data: null,
         error: this.mapError(error),
