@@ -1,4 +1,10 @@
-import { BaseClient, BloqueAPIError } from '@bloque/sdk-core';
+import {
+  BaseClient,
+  BloqueAPIError,
+  BloqueApprovalRequiredError,
+  type OperationApprovalOptions,
+  operationApprovalHeaders,
+} from '@bloque/sdk-core';
 import type {
   Account,
   AccountWithBalance,
@@ -209,6 +215,15 @@ function mapDecodedQrFromWire(result: DecodeBrebQrWireResult): BrebDecodedQr {
 }
 
 export class BrebClient extends BaseClient {
+  /**
+   * A `BloqueApprovalRequiredError` is thrown, not returned as `{ error }`:
+   * the caller needs the error itself to wait for the owner's approval
+   * (`waitForApproval()`) and repeat the call with it.
+   */
+  private rethrowApprovalRequired(error: unknown): void {
+    if (error instanceof BloqueApprovalRequiredError) throw error;
+  }
+
   private mapError(error: unknown): BrebOperationError {
     if (error instanceof BloqueAPIError) {
       const response = error.response as BloqueErrorResponse | undefined;
@@ -248,6 +263,7 @@ export class BrebClient extends BaseClient {
    */
   async createKey(
     params: CreateBrebKeyParams,
+    options?: OperationApprovalOptions,
   ): Promise<BrebOperationResult<BrebKeyAccount>> {
     try {
       const holderUrn = this.httpClient.urn;
@@ -266,6 +282,7 @@ export class BrebClient extends BaseClient {
       >({
         method: 'POST',
         path: '/api/mediums/breb',
+        headers: operationApprovalHeaders(options),
         body: {
           holder_urn: holderUrn,
           input: {
@@ -287,6 +304,7 @@ export class BrebClient extends BaseClient {
         error: null,
       };
     } catch (error) {
+      this.rethrowApprovalRequired(error);
       return {
         data: null,
         error: this.mapError(error),
@@ -390,6 +408,7 @@ export class BrebClient extends BaseClient {
    */
   async deleteKey(
     params: DeleteBrebKeyParams,
+    options?: OperationApprovalOptions,
   ): Promise<BrebOperationResult<DeleteBrebKeyResult>> {
     try {
       if (!params.accountUrn?.trim()) {
@@ -402,6 +421,7 @@ export class BrebClient extends BaseClient {
       >({
         method: 'PATCH',
         path: `/api/accounts/${encodeURIComponent(params.accountUrn)}`,
+        headers: operationApprovalHeaders(options),
         body: {
           status: 'deleted',
         },
@@ -417,6 +437,7 @@ export class BrebClient extends BaseClient {
         error: null,
       };
     } catch (error) {
+      this.rethrowApprovalRequired(error);
       return {
         data: null,
         error: this.mapError(error),
@@ -482,6 +503,7 @@ export class BrebClient extends BaseClient {
    */
   async activateKey(
     params: ActivateBrebKeyParams,
+    options?: OperationApprovalOptions,
   ): Promise<BrebOperationResult<ActivateBrebKeyResult>> {
     try {
       if (!params.accountUrn?.trim()) {
@@ -494,6 +516,7 @@ export class BrebClient extends BaseClient {
       >({
         method: 'PATCH',
         path: `/api/accounts/${encodeURIComponent(params.accountUrn)}`,
+        headers: operationApprovalHeaders(options),
         body: {
           status: 'active',
         },
@@ -509,6 +532,7 @@ export class BrebClient extends BaseClient {
         error: null,
       };
     } catch (error) {
+      this.rethrowApprovalRequired(error);
       return {
         data: null,
         error: this.mapError(error),

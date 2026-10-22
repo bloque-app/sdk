@@ -1,5 +1,9 @@
 import { afterEach, describe, expect, it, mock } from 'bun:test';
-import { HttpClient } from '@bloque/sdk-core';
+import {
+  BloqueApprovalRequiredError,
+  HttpClient,
+  OPERATION_APPROVAL_HEADER,
+} from '@bloque/sdk-core';
 import { ApiKeysClient } from '../src/api-keys/api-keys-client';
 
 const SK_KEY = 'sk_test_boundkey12abcdefghijklmnopqrstuvwxyz';
@@ -172,4 +176,68 @@ describe('ApiKeysClient origin-operator', () => {
     expect(call).toBeDefined();
     expect(authorization(call.init)).toBe(`Bearer ${OPERATOR_JWT}`);
   });
+});
+
+describe('api keys: passkey approval', () => {
+  const approvalRequired = () =>
+    new Response(
+      JSON.stringify({
+        error: true,
+        code: 'E_APPROVAL_REQUIRED',
+        message: 'E_APPROVAL_REQUIRED',
+        extra_details: {
+          approval_token: 'approval-token',
+          expires_at: Date.now() + 60_000,
+          approval_url: 'https://id.bloque.sh/approve#token=approval-token',
+          summary: { operation: 'api-keys.create', fields: {} },
+        },
+      }),
+      { status: 428, headers: { 'Content-Type': 'application/json' } },
+    );
+
+  for (const [name, call] of [
+    [
+      'create',
+      (c: ApiKeysClient) =>
+        c.create(
+          {
+            name: 'automation',
+            scopes: ['accounts.read'],
+            domains: [],
+            expiration: 'never',
+          },
+          { approval: 'signed-approval' },
+        ),
+    ],
+    [
+      'rotate',
+      (c: ApiKeysClient) =>
+        c.rotate('sk_test_abc123def456', { approval: 'signed-approval' }),
+    ],
+  ] as const) {
+    it(`${name}: sends the approval and throws BloqueApprovalRequiredError on 428`, async () => {
+      const calls: Headers[] = [];
+      globalThis.fetch = mock(
+        (_url: string | URL | Request, init?: RequestInit) => {
+          calls.push(new Headers(init?.headers));
+          return Promise.resolve(approvalRequired());
+        },
+      ) as unknown as typeof fetch;
+      const http = new HttpClient({
+        origin: 'colocapay',
+        auth: { type: 'originKey', originKey: 'sk_dev_origin' },
+        mode: 'sandbox',
+        retry: { enabled: false },
+      });
+      http.setAccessToken('test_access_token');
+      let error: unknown;
+      try {
+        await call(new ApiKeysClient(http));
+      } catch (e) {
+        error = e;
+      }
+      expect(error).toBeInstanceOf(BloqueApprovalRequiredError);
+      expect(calls[0]?.get(OPERATION_APPROVAL_HEADER)).toBe('signed-approval');
+    });
+  }
 });

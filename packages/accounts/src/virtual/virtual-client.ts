@@ -1,4 +1,8 @@
-import { BaseClient } from '@bloque/sdk-core';
+import {
+  BaseClient,
+  type OperationApprovalOptions,
+  operationApprovalHeaders,
+} from '@bloque/sdk-core';
 import type {
   AccountStatus,
   AccountWithBalance,
@@ -170,9 +174,7 @@ export class VirtualClient extends BaseClient {
       method: 'POST',
       path: '/api/mediums/virtual',
       body: request,
-      headers: options?.idempotencyKey
-        ? { 'Idempotency-Key': options.idempotencyKey }
-        : undefined,
+      headers: operationApprovalHeaders(options),
     });
 
     const account = this._mapAccountResponse(response.result.account);
@@ -239,6 +241,7 @@ export class VirtualClient extends BaseClient {
    */
   async updateMetadata(
     params: UpdateVirtualMetadataParams,
+    options?: OperationApprovalOptions,
   ): Promise<VirtualAccount> {
     const request: UpdateAccountRequest = {
       metadata: params.metadata,
@@ -250,6 +253,7 @@ export class VirtualClient extends BaseClient {
     >({
       method: 'PATCH',
       path: `/api/accounts/${params.urn}`,
+      headers: operationApprovalHeaders(options),
       body: request,
     });
 
@@ -269,8 +273,11 @@ export class VirtualClient extends BaseClient {
    * );
    * ```
    */
-  async activate(urn: string): Promise<VirtualAccount> {
-    return this._updateStatus(urn, 'active');
+  async activate(
+    urn: string,
+    options?: OperationApprovalOptions,
+  ): Promise<VirtualAccount> {
+    return this._updateStatus(urn, 'active', options);
   }
 
   /**
@@ -327,12 +334,16 @@ export class VirtualClient extends BaseClient {
    * );
    * ```
    */
-  async delete(urn: string): Promise<VirtualAccount> {
+  async delete(
+    urn: string,
+    options?: OperationApprovalOptions,
+  ): Promise<VirtualAccount> {
     const response = await this.httpClient.request<
       UpdateAccountResponse<VirtualDetails>
     >({
       method: 'DELETE',
       path: `/api/accounts/${urn}`,
+      headers: operationApprovalHeaders(options),
     });
 
     return this._mapAccountResponse(response.result.account);
@@ -344,6 +355,7 @@ export class VirtualClient extends BaseClient {
   private async _updateStatus(
     urn: string,
     status: AccountStatus,
+    options?: OperationApprovalOptions,
   ): Promise<VirtualAccount> {
     const request: UpdateAccountRequest = {
       status,
@@ -355,6 +367,7 @@ export class VirtualClient extends BaseClient {
     >({
       method: 'PATCH',
       path: `/api/accounts/${urn}`,
+      headers: operationApprovalHeaders(options),
       body: request,
     });
 

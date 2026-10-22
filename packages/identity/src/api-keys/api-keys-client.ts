@@ -1,4 +1,8 @@
-import { BaseClient } from '@bloque/sdk-core';
+import {
+  BaseClient,
+  type OperationApprovalOptions,
+  operationApprovalHeaders,
+} from '@bloque/sdk-core';
 import type {
   ApiKeyInfo,
   CreateApiKeyParams,
@@ -87,7 +91,10 @@ export class ApiKeysClient extends BaseClient {
    * key is origin-bound (`bound_origin` set, owner = controller org).
    * User JWTs cannot mint bound keys.
    */
-  async create(params: CreateApiKeyParams): Promise<CreateApiKeyResult> {
+  async create(
+    params: CreateApiKeyParams,
+    options?: OperationApprovalOptions,
+  ): Promise<CreateApiKeyResult> {
     const request: CreateApiKeyRequest = {
       name: params.name,
       scopes: params.scopes,
@@ -99,6 +106,7 @@ export class ApiKeysClient extends BaseClient {
     const response = await this.httpClient.request<CreateApiKeyResponse>({
       method: 'POST',
       path: '/api/api-keys',
+      headers: operationApprovalHeaders(options),
       body: request,
     });
 
@@ -200,10 +208,14 @@ export class ApiKeysClient extends BaseClient {
   }
 
   /** Rotate an API key secret. Returns the new secret key (shown only once). */
-  async rotate(id: string): Promise<RotateApiKeyResult> {
+  async rotate(
+    id: string,
+    options?: OperationApprovalOptions,
+  ): Promise<RotateApiKeyResult> {
     const response = await this.httpClient.request<RotateApiKeyResponse>({
       method: 'POST',
       path: `/api/api-keys/${id}/rotate`,
+      headers: operationApprovalHeaders(options),
     });
 
     return { secretKey: response.secret_key };

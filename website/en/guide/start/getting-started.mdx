@@ -222,7 +222,7 @@ All errors include rich metadata for debugging:
 
 ### Passkey Approvals
 
-When passkey approvals are enabled, a money-moving operation on a person's account needs that person to approve it with their passkey. One approval covers exactly one operation. It applies to `accounts.transfer`, `accounts.batchTransfer`, `accounts.externalUsBank.pull` and every swap order `create` / `createDeposit`.
+When passkey approvals are enabled, a money-moving operation on a person's account needs that person to approve it with their passkey. One approval covers exactly one operation. It applies to `accounts.transfer`, `accounts.batchTransfer`, `accounts.externalUsBank.pull`, every swap order `create` / `createDeposit`, and the card, account, BRE-B key and API-key methods listed in [Passkey approvals](../features/passkey-approvals).
 
 The first call throws `BloqueApprovalRequiredError` (HTTP 428). Share `approvalUrl` with the account owner, wait for their signature, then repeat **the same call** with the approval. `withApproval` does all of it and repeats the call exactly once:
 

@@ -2,6 +2,8 @@ import {
   BaseClient,
   isSupportedAsset,
   isSupportedCardAsset,
+  type OperationApprovalOptions,
+  operationApprovalHeaders,
   SUPPORTED_ASSETS,
   SUPPORTED_CARD_ASSETS,
 } from '@bloque/sdk-core';
@@ -284,9 +286,7 @@ export class CardClient extends BaseClient {
       method: 'POST',
       path: `/api/mediums/${program}`,
       body: request,
-      headers: options?.idempotencyKey
-        ? { 'Idempotency-Key': options.idempotencyKey }
-        : undefined,
+      headers: operationApprovalHeaders(options),
     });
 
     const account = this._mapAccountResponse(response.result.account);
@@ -535,7 +535,10 @@ export class CardClient extends BaseClient {
    * });
    * ```
    */
-  async update(params: UpdateCardParams): Promise<CardAccount> {
+  async update(
+    params: UpdateCardParams,
+    options?: OperationApprovalOptions,
+  ): Promise<CardAccount> {
     const input: UpdateCardAccountInput | undefined =
       params.statusReason || params.pin
         ? {
@@ -558,6 +561,7 @@ export class CardClient extends BaseClient {
     >({
       method: 'PATCH',
       path: `/api/accounts/${params.urn}`,
+      headers: operationApprovalHeaders(options),
       body: request,
     });
 
@@ -581,7 +585,10 @@ export class CardClient extends BaseClient {
    * });
    * ```
    */
-  async updateMetadata(params: UpdateCardMetadataParams): Promise<CardAccount> {
+  async updateMetadata(
+    params: UpdateCardMetadataParams,
+    options?: OperationApprovalOptions,
+  ): Promise<CardAccount> {
     if (params.defaultAsset && !isSupportedCardAsset(params.defaultAsset)) {
       throw new Error(
         `Invalid card settlement asset "${params.defaultAsset}". Supported card assets: ${SUPPORTED_CARD_ASSETS.join(', ')}`,
@@ -613,6 +620,7 @@ export class CardClient extends BaseClient {
     >({
       method: 'PATCH',
       path: `/api/accounts/${params.urn}`,
+      headers: operationApprovalHeaders(options),
       body: request,
     });
 
@@ -666,8 +674,11 @@ export class CardClient extends BaseClient {
    * );
    * ```
    */
-  async activate(urn: string): Promise<CardAccount> {
-    return this._updateStatus(urn, 'active');
+  async activate(
+    urn: string,
+    options?: OperationApprovalOptions,
+  ): Promise<CardAccount> {
+    return this._updateStatus(urn, 'active', undefined, options);
   }
 
   /**
@@ -691,8 +702,9 @@ export class CardClient extends BaseClient {
     urn: string,
     status: Exclude<AccountStatus, 'deleted'>,
     statusReason?: CardStatusReason,
+    options?: OperationApprovalOptions,
   ): Promise<CardAccount> {
-    return this._updateStatus(urn, status, statusReason);
+    return this._updateStatus(urn, status, statusReason, options);
   }
 
   /**
@@ -749,12 +761,16 @@ export class CardClient extends BaseClient {
    * );
    * ```
    */
-  async delete(urn: string): Promise<CardAccount> {
+  async delete(
+    urn: string,
+    options?: OperationApprovalOptions,
+  ): Promise<CardAccount> {
     const response = await this.httpClient.request<
       UpdateAccountResponse<CardDetails>
     >({
       method: 'DELETE',
       path: `/api/accounts/${urn}`,
+      headers: operationApprovalHeaders(options),
     });
 
     return this._mapAccountResponse(response.result.account);
@@ -783,6 +799,7 @@ export class CardClient extends BaseClient {
   async tokenizeApple(
     urn: string,
     params: TokenizeAppleParams,
+    options?: OperationApprovalOptions,
   ): Promise<TokenizeAppleResult> {
     const request: TokenizeAppleCardRequest = {
       certificates: params.certificates,
@@ -793,6 +810,7 @@ export class CardClient extends BaseClient {
     const response = await this.httpClient.request<TokenizeAppleCardResponse>({
       method: 'POST',
       path: `/api/accounts/${urn}/tokenize/apple`,
+      headers: operationApprovalHeaders(options),
       body: request,
     });
 
@@ -825,6 +843,7 @@ export class CardClient extends BaseClient {
   async tokenizeGoogle(
     urn: string,
     params: TokenizeGoogleParams,
+    options?: OperationApprovalOptions,
   ): Promise<TokenizeGoogleResult> {
     const request: TokenizeGoogleCardRequest = {
       device_id: params.deviceId,
@@ -834,6 +853,7 @@ export class CardClient extends BaseClient {
     const response = await this.httpClient.request<TokenizeGoogleCardResponse>({
       method: 'POST',
       path: `/api/accounts/${urn}/tokenize/google`,
+      headers: operationApprovalHeaders(options),
       body: request,
     });
 
@@ -849,6 +869,7 @@ export class CardClient extends BaseClient {
     urn: string,
     status: AccountStatus,
     statusReason?: CardStatusReason,
+    options?: OperationApprovalOptions,
   ): Promise<CardAccount> {
     const request: UpdateAccountRequest<UpdateCardAccountInput> = {
       status,
@@ -861,6 +882,7 @@ export class CardClient extends BaseClient {
     >({
       method: 'PATCH',
       path: `/api/accounts/${urn}`,
+      headers: operationApprovalHeaders(options),
       body: request,
     });
 

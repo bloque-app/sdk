@@ -1,4 +1,8 @@
-import { BaseClient } from '@bloque/sdk-core';
+import {
+  BaseClient,
+  type OperationApprovalOptions,
+  operationApprovalHeaders,
+} from '@bloque/sdk-core';
 import type {
   AccountStatus,
   AccountWithBalance,
@@ -167,9 +171,7 @@ export class PolygonClient extends BaseClient {
       method: 'POST',
       path: '/api/mediums/polygon',
       body: request,
-      headers: options?.idempotencyKey
-        ? { 'Idempotency-Key': options.idempotencyKey }
-        : undefined,
+      headers: operationApprovalHeaders(options),
     });
 
     const account = this._mapAccountResponse(response.result.account);
@@ -236,6 +238,7 @@ export class PolygonClient extends BaseClient {
    */
   async updateMetadata(
     params: UpdatePolygonMetadataParams,
+    options?: OperationApprovalOptions,
   ): Promise<PolygonAccount> {
     const request: UpdateAccountRequest = {
       metadata: params.metadata,
@@ -247,6 +250,7 @@ export class PolygonClient extends BaseClient {
     >({
       method: 'PATCH',
       path: `/api/accounts/${params.urn}`,
+      headers: operationApprovalHeaders(options),
       body: request,
     });
 
@@ -266,8 +270,11 @@ export class PolygonClient extends BaseClient {
    * );
    * ```
    */
-  async activate(urn: string): Promise<PolygonAccount> {
-    return this._updateStatus(urn, 'active');
+  async activate(
+    urn: string,
+    options?: OperationApprovalOptions,
+  ): Promise<PolygonAccount> {
+    return this._updateStatus(urn, 'active', options);
   }
 
   /**
@@ -325,12 +332,16 @@ export class PolygonClient extends BaseClient {
    * );
    * ```
    */
-  async delete(urn: string): Promise<PolygonAccount> {
+  async delete(
+    urn: string,
+    options?: OperationApprovalOptions,
+  ): Promise<PolygonAccount> {
     const response = await this.httpClient.request<
       UpdateAccountResponse<PolygonDetails>
     >({
       method: 'DELETE',
       path: `/api/accounts/${urn}`,
+      headers: operationApprovalHeaders(options),
     });
 
     return this._mapAccountResponse(response.result.account);
@@ -342,6 +353,7 @@ export class PolygonClient extends BaseClient {
   private async _updateStatus(
     urn: string,
     status: AccountStatus,
+    options?: OperationApprovalOptions,
   ): Promise<PolygonAccount> {
     const request: UpdateAccountRequest = {
       status,
@@ -353,6 +365,7 @@ export class PolygonClient extends BaseClient {
     >({
       method: 'PATCH',
       path: `/api/accounts/${urn}`,
+      headers: operationApprovalHeaders(options),
       body: request,
     });
 

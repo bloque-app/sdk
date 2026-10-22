@@ -1,4 +1,8 @@
-import { BaseClient } from '@bloque/sdk-core';
+import {
+  BaseClient,
+  type OperationApprovalOptions,
+  operationApprovalHeaders,
+} from '@bloque/sdk-core';
 import type {
   AccountWithBalance,
   CreateAccountRequest,
@@ -226,9 +230,7 @@ export class UsClient extends BaseClient {
       method: 'POST',
       path: '/api/mediums/us-account',
       body: request,
-      headers: options?.idempotencyKey
-        ? { 'Idempotency-Key': options.idempotencyKey }
-        : undefined,
+      headers: operationApprovalHeaders(options),
     });
 
     const account = this._mapAccountResponse(response.result.account);
@@ -337,7 +339,10 @@ export class UsClient extends BaseClient {
    * });
    * ```
    */
-  async updateMetadata(params: UpdateUsMetadataParams): Promise<UsAccount> {
+  async updateMetadata(
+    params: UpdateUsMetadataParams,
+    options?: OperationApprovalOptions,
+  ): Promise<UsAccount> {
     const request: UpdateAccountRequest = {
       metadata: params.metadata,
     };
@@ -348,6 +353,7 @@ export class UsClient extends BaseClient {
     >({
       method: 'PATCH',
       path: `/api/accounts/${params.urn}`,
+      headers: operationApprovalHeaders(options),
       body: request,
     });
 
@@ -367,8 +373,11 @@ export class UsClient extends BaseClient {
    * );
    * ```
    */
-  async activate(urn: string): Promise<UsAccount> {
-    return this._updateStatus(urn, 'active');
+  async activate(
+    urn: string,
+    options?: OperationApprovalOptions,
+  ): Promise<UsAccount> {
+    return this._updateStatus(urn, 'active', options);
   }
 
   /**
@@ -447,6 +456,7 @@ export class UsClient extends BaseClient {
   private async _updateStatus(
     urn: string,
     status: 'active' | 'frozen' | 'disabled',
+    options?: OperationApprovalOptions,
   ): Promise<UsAccount> {
     const request: UpdateAccountRequest = {
       status,
@@ -458,6 +468,7 @@ export class UsClient extends BaseClient {
     >({
       method: 'PATCH',
       path: `/api/accounts/${urn}`,
+      headers: operationApprovalHeaders(options),
       body: request,
     });
 

@@ -14,7 +14,12 @@ export type { SupportedAsset, SupportedCardAsset } from '@bloque/sdk-core';
 /**
  * Options for account creation
  */
-export interface CreateAccountOptions {
+/**
+ * Options for creating an account. `approval` is the account owner's passkey
+ * approval, for repeating a creation the API refused with
+ * `BloqueApprovalRequiredError` (see {@link OperationApprovalOptions}).
+ */
+export interface CreateAccountOptions extends OperationApprovalOptions {
   /**
    * If true, poll until the account reaches `active` before returning, instead
    * of returning as soon as it is created.
