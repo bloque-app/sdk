@@ -1,5 +1,11 @@
 # @bloque/sdk-orgs
 
+## 0.18.0
+
+### Patch Changes
+
+- @bloque/sdk-core@0.18.0
+
 ## 0.17.2
 
 ### Patch Changes
