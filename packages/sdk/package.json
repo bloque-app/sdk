@@ -38,6 +38,11 @@
       "import": "./dist/accounts.js",
       "require": "./dist/accounts.cjs"
     },
+    "./agents": {
+      "types": "./dist/agents.d.ts",
+      "import": "./dist/agents.js",
+      "require": "./dist/agents.cjs"
+    },
     "./compliance": {
       "types": "./dist/compliance.d.ts",
       "import": "./dist/compliance.js",
@@ -78,6 +83,7 @@
   },
   "dependencies": {
     "@bloque/sdk-accounts": "workspace:*",
+    "@bloque/sdk-agents": "workspace:*",
     "@bloque/sdk-compliance": "workspace:*",
     "@bloque/sdk-core": "workspace:*",
     "@bloque/sdk-identity": "workspace:*",
