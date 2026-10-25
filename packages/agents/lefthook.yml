@@ -1,0 +1,13 @@
+pre-commit:
+  parallel: true
+  commands:
+    typecheck-agents:
+      root: packages/agents
+      run: bun typecheck
+      fail_text: "TypeScript type checking failed for agents package"
+    biome-agents:
+      root: packages/agents
+      glob: "*.{js,ts,jsx,tsx}"
+      run: bun check {staged_files}
+      stage_fixed: true
+      fail_text: "Biome linting/formatting failed for agents package"
