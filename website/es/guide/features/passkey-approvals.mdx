@@ -82,6 +82,79 @@ if (key.error) {
 }
 ```
 
+## Redirigir para aprobar y volver
+
+`withApproval` y `waitForApproval()` guardan la petición en memoria mientras el dueño aprueba, así que necesitan que tu página siga abierta. Si en cambio envías al dueño a `approvalUrl` con una redirección de página completa, tu página ya no existe cuando vuelve: guarda primero la aprobación pendiente y, al volver, recógela y repite la llamada.
+
+1. Llama la operación con `approvalReturnUrl`, adonde la página de aprobación envía al dueño cuando aprueba. Todo método que acepta `approval` la acepta también.
+2. Ante `BloqueApprovalRequiredError`, guarda `error.toPendingApproval()` junto con los parámetros de la llamada y redirige a `error.approvalUrl`.
+3. En `approvalReturnUrl`, llama `approvals.collect(pending)` y repite la misma llamada con la aprobación que devuelve.
+
+```typescript
+import {
+  BloqueApprovalPendingError,
+  BloqueApprovalRequiredError,
+} from '@bloque/sdk';
+
+const RETURN_URL = 'https://myapp.com/transfers/approved';
+
+// 1–2. Antes de redirigir
+try {
+  await user.accounts.transfer(params, {
+    idempotencyKey: paymentId,
+    approvalReturnUrl: RETURN_URL,
+  });
+} catch (error) {
+  if (!(error instanceof BloqueApprovalRequiredError)) throw error;
+  sessionStorage.setItem(
+    'pending-transfer',
+    JSON.stringify({ params, paymentId, pending: error.toPendingApproval() }),
+  );
+  window.location.assign(error.approvalUrl!);
+}
+
+// 3. De vuelta en RETURN_URL
+const saved = JSON.parse(sessionStorage.getItem('pending-transfer')!);
+sessionStorage.removeItem('pending-transfer');
+try {
+  const approval = await user.approvals.collect(saved.pending);
+  await user.accounts.transfer(saved.params, {
+    idempotencyKey: saved.paymentId,
+    approval,
+  });
+} catch (error) {
+  if (error instanceof BloqueApprovalPendingError) {
+    // El dueño volvió sin aprobar: ofrécele de nuevo saved.pending.approvalUrl.
+  }
+  throw error;
+}
+```
+
+- `approvalReturnUrl` debe ser una URL https cuyo origen permita tu origin; si no, la llamada lanza `BloqueReturnUrlNotAllowedError` (400). Bloque configura los orígenes permitidos en tu origin (`tos_gate_return_url_allowlist`, la misma lista del TOS gate).
+- La operación se ejecuta una sola vez: `collect()` entrega una aprobación una sola vez y la API rechaza una aprobación ya usada. Un segundo `collect()` lanza `BloqueApprovalExpiredError` con `reason: 'approval_delivered_elsewhere'`.
+- Repite de inmediato. Una aprobación que no se usa unos dos minutos después de que el dueño abre la página de aprobación se descarta; `collect()` lanza entonces `BloqueApprovalPendingError` o, después de `expiresAt`, `BloqueApprovalExpiredError` (`reason: 'approval_not_received'`) sin llamar a la API. Repite la llamada sin `approval` para obtener un link nuevo.
+- La página de aprobación no agrega nada a `approvalReturnUrl`: `collect()` es la forma de saber si el dueño aprobó.
+- `pending.approvalToken` y `pending.approvalUrl` solo sirven para recoger esta aprobación (el dueño igual firma con su passkey), pero mantenlos fuera de URLs y logs. `sessionStorage` es un buen lugar para ellos.
+
+## Registrar de nuevo una passkey
+
+Cuando una aprobación falla con `BloqueApprovalInvalidError` y `reason: 'passkey_not_registered'`, o la persona perdió el dispositivo con su passkey, envíala a registrar una passkey de nuevo. `identity.passkeys.createLink` devuelve un link al portal de identidad de Bloque que la trae de vuelta a `returnUrl` cuando termina:
+
+```typescript
+const { url, expiresIn } = await user.identity.passkeys.createLink({
+  returnUrl: 'https://myapp.com/settings/security',
+});
+window.location.assign(url); // expiresIn: p. ej. '15m'
+```
+
+Necesita la sesión propia de la persona (JWT de navegador o React Native); una API key no puede crear el link. `returnUrl` sigue la misma regla que `approvalReturnUrl`.
+
+| Error | Código | Qué hacer |
+| --- | --- | --- |
+| `BloqueReturnUrlNotAllowedError` | 400 `E_RETURN_URL_NOT_ALLOWED` | Usa un `returnUrl` cuyo origen permita tu origin |
+| `BloquePasskeyRegistrationUnavailableError` | 501 `E_PASSKEY_REGISTRATION_NOT_SUPPORTED` / 503 `E_PASSKEY_REGISTRATION_UNAVAILABLE` | `retryable: false`: este despliegue no registra passkeys. `retryable: true`: se reintenta automáticamente; reintenta más tarde si persiste |
+| `BloqueRateLimitError` | 429 | Demasiados links para esta sesión (10 por hora por defecto) |
+
 ## Errores
 
 Los tipos de error son los mismos que en las transferencias, y todos los métodos de esta página, incluidas las llaves BRE-B, los lanzan: `BloqueApprovalRequiredError` (428), `BloqueApprovalInvalidError` (403), `BloqueApprovalExpiredError` (403) y `BloqueApprovalUnavailableError` (503). Mira la tabla en [Primeros pasos](../start/getting-started#aprobaciones-con-passkey).

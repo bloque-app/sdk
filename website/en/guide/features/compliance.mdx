@@ -330,6 +330,8 @@ try {
 
 Some Terms of Service documents also ask the user for a passkey on their device — this depends on the identity's usage country and is configured server-side, not something you opt into per call. When it applies, the hosted page runs WebAuthn automatically; you don't need to do anything extra to support it.
 
+The hosted page is Bloque's identity portal (`id.bloque.sh`), the same one that runs passkey approvals and passkey re-registration. `returnUrl` must be an https URL whose origin your origin allows (`tos_gate_return_url_allowlist`, set by Bloque); otherwise `start()` and `getVerificationLink()` throw `BloqueReturnUrlNotAllowedError`. Once the user accepts, the portal sends them to `returnUrl` with `tos=accepted` added to its query string.
+
 The passkey step has two schemes, and the backend picks one per deployment. The challenge says which in its `scheme` field; never infer it from the environment:
 
 | `scheme` | What the passkey does | What `accept()` sends back |

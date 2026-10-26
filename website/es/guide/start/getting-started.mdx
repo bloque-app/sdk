@@ -240,6 +240,8 @@ Repite la llamada con las mismas cuentas, montos, assets y, en swaps, el mismo `
 
 Si `waitForApproval()` termina con `reason: 'approval_delivered_elsewhere'`, el dueño sí aprobó, pero otra consulta recogió la aprobación (por ejemplo, un request reintentado cuya respuesta se perdió); repite la operación para obtener un link nuevo.
 
+`withApproval` y `waitForApproval()` necesitan que tu página siga abierta mientras el dueño aprueba. Para enviarlo con una redirección de página completa y continuar cuando vuelva, pasa `approvalReturnUrl` y mira [Aprobaciones con passkey → Redirigir para aprobar y volver](../features/passkey-approvals#redirigir-para-aprobar-y-volver).
+
 `summary.fields` es lo que el dueño aprueba y puede incluir datos personales (en swaps, `deposit_information` y `args`); trata `error.summary`, `error.response` y `toJSON()` como cualquier otro dato de clientes en tus logs.
 
 | Error | Código | Qué hacer |
@@ -251,6 +253,8 @@ Si `waitForApproval()` termina con `reason: 'approval_delivered_elsewhere'`, el 
 | `BloqueApprovalArgsRequiredError` | 422 `E_APPROVAL_ARGS_REQUIRED` | Solo swap: repite la orden con `args` (`error.args` los nombra) |
 | `BloqueApprovalMultipleOwnersError` | 422 `E_APPROVAL_MULTIPLE_OWNERS` | Solo batch: envía un batch por dueño de cuenta |
 | `BloqueApprovalAccountsNotReadyError` | 422 `E_APPROVAL_ACCOUNTS_NOT_READY` | Solo batch: envíalo de nuevo cuando sus cuentas estén listas |
+| `BloqueApprovalPendingError` | `E_APPROVAL_PENDING` (SDK) | Solo `approvals.collect()`: el dueño aún no aprueba; envíalo de nuevo a `approvalUrl` |
+| `BloqueReturnUrlNotAllowedError` | 400 `E_RETURN_URL_NOT_ALLOWED` | `approvalReturnUrl` no es una URL https cuyo origen permita tu origin |
 
 ## Soporte TypeScript
 

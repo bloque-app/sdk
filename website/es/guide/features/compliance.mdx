@@ -251,6 +251,31 @@ const verification = await bloque.compliance.kyc.startVerification({
 });
 ```
 
+## Términos y Condiciones (TOS Gate)
+
+El TOS gate es una página alojada donde el usuario acepta tus Términos y Condiciones. Casi nunca lo llamas directamente: atrapa un `BloqueVerificationRequiredError` con `reason === 'tos'` y abre el link que te da:
+
+```typescript
+import { BloqueVerificationRequiredError } from '@bloque/sdk';
+
+try {
+  await user.accounts.card.create({ /* ... */ });
+} catch (error) {
+  if (error instanceof BloqueVerificationRequiredError && error.reason === 'tos') {
+    const link = await error.getVerificationLink({
+      returnUrl: 'https://myapp.com/verification-complete',
+    });
+    // Abre link.url en un navegador o webview: el usuario acepta los términos allí.
+    return { redirectTo: link?.url };
+  }
+  throw error;
+}
+```
+
+La página alojada es el portal de identidad de Bloque (`id.bloque.sh`), el mismo que corre las aprobaciones con passkey y el registro de una passkey nueva. Algunos documentos piden además una passkey; el portal la crea automáticamente. `returnUrl` debe ser una URL https cuyo origen permita tu origin (`tos_gate_return_url_allowlist`, lo configura Bloque); si no, `start()` y `getVerificationLink()` lanzan `BloqueReturnUrlNotAllowedError`. Cuando el usuario acepta, el portal lo envía a `returnUrl` con `tos=accepted` en su query string.
+
+Para construir tu propia interfaz alrededor del gate (`tosGate.start()` → `init()` → `accept()`), mira la versión en inglés de esta página.
+
 ## Próximos Pasos
 
 - [Guía de Cuentas](/sdk/guide/accounts/overview) - Crea tarjetas virtuales para usuarios verificados

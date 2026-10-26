@@ -261,6 +261,8 @@ Repeat the call with the same accounts, amounts, assets and, for swaps, the same
 
 If `waitForApproval()` ends with `reason: 'approval_delivered_elsewhere'`, the owner did approve, but another poll collected the approval (for example a retried request whose response was lost); repeat the operation to get a new link.
 
+`withApproval` and `waitForApproval()` need your page to stay open while the owner approves. To send the owner away with a full-page redirect and continue when they come back, pass `approvalReturnUrl` and see [Passkey approvals → Redirect to approve and come back](../features/passkey-approvals#redirect-to-approve-and-come-back).
+
 `summary.fields` is what the owner approves and can include personal data (for swaps, `deposit_information` and `args`); treat `error.summary`, `error.response` and `toJSON()` like any other customer data in your logs.
 
 | Error | Code | What to do |
@@ -272,6 +274,8 @@ If `waitForApproval()` ends with `reason: 'approval_delivered_elsewhere'`, the o
 | `BloqueApprovalArgsRequiredError` | 422 `E_APPROVAL_ARGS_REQUIRED` | Swap only: repeat the order with `args` (`error.args` names them) |
 | `BloqueApprovalMultipleOwnersError` | 422 `E_APPROVAL_MULTIPLE_OWNERS` | Batch only: submit one batch per account owner |
 | `BloqueApprovalAccountsNotReadyError` | 422 `E_APPROVAL_ACCOUNTS_NOT_READY` | Batch only: submit again once its accounts are ready |
+| `BloqueApprovalPendingError` | `E_APPROVAL_PENDING` (SDK) | `approvals.collect()` only: the owner has not approved yet; send them to `approvalUrl` again |
+| `BloqueReturnUrlNotAllowedError` | 400 `E_RETURN_URL_NOT_ALLOWED` | `approvalReturnUrl` is not an https URL whose origin your origin allows |
 
 ## TypeScript Support
 
