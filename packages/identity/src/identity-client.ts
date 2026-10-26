@@ -2,6 +2,7 @@ import type { HttpClient } from '@bloque/sdk-core';
 import { AliasesClient } from './aliases/aliases-client';
 import { ApiKeysClient } from './api-keys/api-keys-client';
 import { OriginsClient } from './origins/origins-client';
+import { PasskeysClient } from './passkeys/passkeys-client';
 import type { IdentityAlias, IdentityMe, UpdateIdentityParams } from './types';
 
 interface UpdateIdentityResponse {
@@ -14,12 +15,14 @@ export class IdentityClient {
   readonly aliases: AliasesClient;
   readonly apiKeys: ApiKeysClient;
   readonly origins: OriginsClient;
+  readonly passkeys: PasskeysClient;
 
   constructor(httpClient: HttpClient) {
     this.httpClient = httpClient;
     this.aliases = new AliasesClient(this.httpClient);
     this.apiKeys = new ApiKeysClient(this.httpClient);
     this.origins = new OriginsClient(this.httpClient);
+    this.passkeys = new PasskeysClient(this.httpClient);
   }
 
   /**
