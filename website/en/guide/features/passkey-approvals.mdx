@@ -82,6 +82,79 @@ if (key.error) {
 }
 ```
 
+## Redirect to approve and come back
+
+`withApproval` and `waitForApproval()` keep the request in memory while the owner approves, so they need your page to stay open. When you send the owner to `approvalUrl` with a full-page redirect instead, your page is gone when they return: save the pending approval first, then collect it and repeat the call on the way back.
+
+1. Call the operation with `approvalReturnUrl`, where the approval page sends the owner once they approve. Every method that takes `approval` takes it too.
+2. On `BloqueApprovalRequiredError`, save `error.toPendingApproval()` together with the call's parameters, then redirect to `error.approvalUrl`.
+3. On `approvalReturnUrl`, call `approvals.collect(pending)` and repeat the same call with the approval it returns.
+
+```typescript
+import {
+  BloqueApprovalPendingError,
+  BloqueApprovalRequiredError,
+} from '@bloque/sdk';
+
+const RETURN_URL = 'https://myapp.com/transfers/approved';
+
+// 1–2. Before the redirect
+try {
+  await user.accounts.transfer(params, {
+    idempotencyKey: paymentId,
+    approvalReturnUrl: RETURN_URL,
+  });
+} catch (error) {
+  if (!(error instanceof BloqueApprovalRequiredError)) throw error;
+  sessionStorage.setItem(
+    'pending-transfer',
+    JSON.stringify({ params, paymentId, pending: error.toPendingApproval() }),
+  );
+  window.location.assign(error.approvalUrl!);
+}
+
+// 3. Back on RETURN_URL
+const saved = JSON.parse(sessionStorage.getItem('pending-transfer')!);
+sessionStorage.removeItem('pending-transfer');
+try {
+  const approval = await user.approvals.collect(saved.pending);
+  await user.accounts.transfer(saved.params, {
+    idempotencyKey: saved.paymentId,
+    approval,
+  });
+} catch (error) {
+  if (error instanceof BloqueApprovalPendingError) {
+    // The owner came back without approving: offer saved.pending.approvalUrl again.
+  }
+  throw error;
+}
+```
+
+- `approvalReturnUrl` must be an https URL whose origin your origin allows, or the call throws `BloqueReturnUrlNotAllowedError` (400). Bloque sets the allowed origins on your origin (`tos_gate_return_url_allowlist`, the same list as the TOS gate).
+- The operation runs once: `collect()` hands out an approval only once, and the API refuses an approval that was already used. A second `collect()` throws `BloqueApprovalExpiredError` with `reason: 'approval_delivered_elsewhere'`.
+- Repeat right away. An approval not used about two minutes after the owner opens the approval page is dropped; `collect()` then throws `BloqueApprovalPendingError` or, after `expiresAt`, `BloqueApprovalExpiredError` (`reason: 'approval_not_received'`) without calling the API. Repeat the call without `approval` to get a new link.
+- The approval page adds nothing to `approvalReturnUrl`: `collect()` is how you learn whether the owner approved.
+- `pending.approvalToken` and `pending.approvalUrl` can only collect this one approval (the owner still signs with their passkey), but keep them out of URLs and logs. `sessionStorage` is a good place for them.
+
+## Re-register a passkey
+
+When an approval fails with `BloqueApprovalInvalidError` and `reason: 'passkey_not_registered'`, or the person lost the device that holds their passkey, send them to register a passkey again. `identity.passkeys.createLink` returns a link to Bloque's identity portal that brings them back to `returnUrl` once they are done:
+
+```typescript
+const { url, expiresIn } = await user.identity.passkeys.createLink({
+  returnUrl: 'https://myapp.com/settings/security',
+});
+window.location.assign(url); // expiresIn: e.g. '15m'
+```
+
+It needs the person's own session (a browser or React Native JWT); an API key cannot create the link. `returnUrl` follows the same rule as `approvalReturnUrl`.
+
+| Error | Code | What to do |
+| --- | --- | --- |
+| `BloqueReturnUrlNotAllowedError` | 400 `E_RETURN_URL_NOT_ALLOWED` | Use a `returnUrl` whose origin your origin allows |
+| `BloquePasskeyRegistrationUnavailableError` | 501 `E_PASSKEY_REGISTRATION_NOT_SUPPORTED` / 503 `E_PASSKEY_REGISTRATION_UNAVAILABLE` | `retryable: false`: this deployment does not register passkeys. `retryable: true`: retried automatically; retry later if it persists |
+| `BloqueRateLimitError` | 429 | Too many links for this session (10 per hour by default) |
+
 ## Errors
 
 The error types are the same as for transfers, and every method on this page, the BRE-B key methods included, throws them: `BloqueApprovalRequiredError` (428), `BloqueApprovalInvalidError` (403), `BloqueApprovalExpiredError` (403) and `BloqueApprovalUnavailableError` (503). See the table in [Getting started](../start/getting-started#passkey-approvals).
