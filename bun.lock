@@ -17,7 +17,20 @@
     },
     "packages/accounts": {
       "name": "@bloque/sdk-accounts",
-      "version": "0.13.0",
+      "version": "0.13.1",
+      "dependencies": {
+        "@bloque/sdk-core": "workspace:*",
+      },
+      "devDependencies": {
+        "@rslib/core": "catalog:",
+        "@types/node": "catalog:",
+        "@typescript/native-preview": "catalog:",
+        "typescript": "catalog:",
+      },
+    },
+    "packages/agents": {
+      "name": "@bloque/sdk-agents",
+      "version": "0.13.1",
       "dependencies": {
         "@bloque/sdk-core": "workspace:*",
       },
@@ -30,7 +43,7 @@
     },
     "packages/cli": {
       "name": "@bloque/cli",
-      "version": "0.13.0",
+      "version": "0.13.1",
       "bin": {
         "bloque": "./bin/npm.cjs",
       },
@@ -49,7 +62,7 @@
     },
     "packages/compliance": {
       "name": "@bloque/sdk-compliance",
-      "version": "0.13.0",
+      "version": "0.13.1",
       "dependencies": {
         "@bloque/sdk-core": "workspace:*",
       },
@@ -62,7 +75,7 @@
     },
     "packages/core": {
       "name": "@bloque/sdk-core",
-      "version": "0.13.0",
+      "version": "0.13.1",
       "devDependencies": {
         "@rslib/core": "catalog:",
         "@types/node": "catalog:",
@@ -72,7 +85,7 @@
     },
     "packages/identity": {
       "name": "@bloque/sdk-identity",
-      "version": "0.13.0",
+      "version": "0.13.1",
       "dependencies": {
         "@bloque/sdk-core": "workspace:*",
       },
@@ -85,7 +98,7 @@
     },
     "packages/orgs": {
       "name": "@bloque/sdk-orgs",
-      "version": "0.13.0",
+      "version": "0.13.1",
       "dependencies": {
         "@bloque/sdk-core": "workspace:*",
       },
@@ -98,9 +111,10 @@
     },
     "packages/sdk": {
       "name": "@bloque/sdk",
-      "version": "0.13.0",
+      "version": "0.13.1",
       "dependencies": {
         "@bloque/sdk-accounts": "workspace:*",
+        "@bloque/sdk-agents": "workspace:*",
         "@bloque/sdk-compliance": "workspace:*",
         "@bloque/sdk-core": "workspace:*",
         "@bloque/sdk-identity": "workspace:*",
@@ -116,7 +130,7 @@
     },
     "packages/swap": {
       "name": "@bloque/sdk-swap",
-      "version": "0.13.0",
+      "version": "0.13.1",
       "dependencies": {
         "@bloque/sdk-core": "workspace:*",
       },
@@ -182,6 +196,8 @@
     "@bloque/sdk": ["@bloque/sdk@workspace:packages/sdk"],
 
     "@bloque/sdk-accounts": ["@bloque/sdk-accounts@workspace:packages/accounts"],
+
+    "@bloque/sdk-agents": ["@bloque/sdk-agents@workspace:packages/agents"],
 
     "@bloque/sdk-compliance": ["@bloque/sdk-compliance@workspace:packages/compliance"],
 

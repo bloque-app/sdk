@@ -6,6 +6,7 @@ export default defineConfig({
       index: './src/index.ts',
       init: './src/init.ts',
       accounts: './src/accounts.ts',
+      agents: './src/agents.ts',
       compliance: './src/compliance.ts',
       identity: './src/identity.ts',
       orgs: './src/orgs.ts',

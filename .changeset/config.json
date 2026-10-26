@@ -9,6 +9,7 @@
       "@bloque/sdk-compliance",
       "@bloque/sdk-identity",
       "@bloque/sdk-orgs",
+      "@bloque/sdk-agents",
       "@bloque/sdk",
       "@bloque/sdk-swap",
       "@bloque/cli"
