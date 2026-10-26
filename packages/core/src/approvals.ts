@@ -26,8 +26,10 @@ export interface OperationApprovalOptions {
   approval?: string;
   /**
    * Where the approval page sends the account owner back once they approve,
-   * when this call needs their approval. Must be an https URL whose origin
-   * your origin allows; otherwise the call throws
+   * when this call needs their approval. Must be an absolute https URL whose
+   * origin your origin allows. A value that is not an absolute URL, or has
+   * spaces or control characters, throws `BloqueConfigError` before the
+   * request is sent; one your origin does not allow makes the call throw
    * `BloqueReturnUrlNotAllowedError`. Ignored when `approval` is set.
    */
   approvalReturnUrl?: string;
@@ -70,15 +72,18 @@ export function operationApprovalHeaders(
 /**
  * The URL as given when it fits in a header, percent-encoded otherwise
  * (non-ASCII path or host), instead of failing the request as a network
- * error.
+ * error. Whitespace and control characters are refused rather than dropped,
+ * so the URL sent is never a different one.
  */
 function headerSafeUrl(url: string): string {
-  let parsed: URL;
+  let parsed: URL | undefined;
   try {
     parsed = new URL(url);
-  } catch {
+  } catch {}
+  // biome-ignore lint/suspicious/noControlCharactersInRegex: refusing them is the point
+  if (!parsed || /[\s\x00-\x1f\x7f]/.test(url)) {
     throw new BloqueConfigError(
-      `approvalReturnUrl must be an absolute URL, got: ${url}`,
+      'approvalReturnUrl must be an absolute URL without spaces or control characters',
     );
   }
   return /^[\x21-\x7e]+$/.test(url) ? url : parsed.href;
@@ -147,7 +152,17 @@ export class ApprovalsClient extends BaseClient {
    *
    * // Back on approvalReturnUrl
    * const { params, pending } = JSON.parse(sessionStorage.getItem('transfer'));
-   * const approval = await bloque.approvals.collect(pending);
+   * let approval: string;
+   * try {
+   *   approval = await bloque.approvals.collect(pending);
+   * } catch (error) {
+   *   // Expired or already collected: it can never succeed, drop it. Keep it
+   *   // on anything else (not approved yet, offline, 503) to try again.
+   *   if (error instanceof BloqueApprovalExpiredError) {
+   *     sessionStorage.removeItem('transfer');
+   *   }
+   *   throw error;
+   * }
    * sessionStorage.removeItem('transfer');
    * await bloque.accounts.transfer(params, { approval });
    * ```

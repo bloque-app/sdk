@@ -16,6 +16,7 @@
 
 import { existsSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import {
+  BloqueApprovalExpiredError,
   BloqueApprovalPendingError,
   BloqueApprovalRequiredError,
   SDK,
@@ -87,8 +88,11 @@ if (step === 'start') {
     if (error instanceof BloqueApprovalPendingError) {
       console.log('Not approved yet. Open again:', saved.pending.approvalUrl);
     } else {
-      // Expired or already used: run start again for a new approval.
-      rmSync(STATE_FILE, { force: true });
+      // Expired or already collected: run start again for a new approval.
+      // Anything else (offline, timeout, 503) keeps the state to retry.
+      if (error instanceof BloqueApprovalExpiredError) {
+        rmSync(STATE_FILE, { force: true });
+      }
       throw error;
     }
   }
