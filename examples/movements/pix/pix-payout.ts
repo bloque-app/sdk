@@ -1,4 +1,8 @@
-import { type PixKeyType, SDK } from '../../../packages/sdk/src/index';
+import {
+  type PixKeyType,
+  SDK,
+  withApproval,
+} from '../../../packages/sdk/src/index';
 
 /** PIX payout: BRLB/2 on Kusama → BRL/2 to a PIX key. */
 const origin = process.env.ORIGIN;
@@ -28,19 +32,29 @@ const { rates } = await user.swap.findRates({
 });
 
 if (!rates[0]) throw new Error('No PIX payout rate available.');
+const rate = rates[0];
 
-const result = await user.swap.pix.create(
+// If the account owner must approve this with their passkey, withApproval
+// shares the link, waits for the approval and repeats the call once.
+const result = await withApproval(
+  (approval) =>
+    user.swap.pix.create(
+      {
+        rateSig: rate.sig,
+        amountSrc,
+        depositInformation: {
+          pixKeyType,
+          pixKeyValue: process.env.PIX_KEY_VALUE ?? 'ana@example.com',
+          beneficiaryName: process.env.BENEFICIARY_NAME,
+        },
+        args: { sourceAccountUrn },
+      },
+      { idempotencyKey: `pix-payout-${rate.sig}-${amountSrc}`, approval },
+    ),
   {
-    rateSig: rates[0].sig,
-    amountSrc,
-    depositInformation: {
-      pixKeyType,
-      pixKeyValue: process.env.PIX_KEY_VALUE ?? 'ana@example.com',
-      beneficiaryName: process.env.BENEFICIARY_NAME,
-    },
-    args: { sourceAccountUrn },
+    onApprovalRequired: (error) =>
+      console.log('Approve with your passkey:', error.approvalUrl),
   },
-  { idempotencyKey: `pix-payout-${rates[0].sig}-${amountSrc}` },
 );
 
 console.log('PIX payout created:', {

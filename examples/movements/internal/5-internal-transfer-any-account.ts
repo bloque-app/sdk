@@ -3,7 +3,7 @@
 // accounts. This lists the accounts you own and moves funds between the
 // first two, whatever types they happen to be.
 
-import { SDK } from '../../../packages/sdk/src/index';
+import { SDK, withApproval } from '../../../packages/sdk/src/index';
 
 const bloque = new SDK({
   origin: process.env.ORIGIN!,
@@ -25,14 +25,23 @@ if (!source || !destination) {
 
 console.log(`Transferring from a ${source.urn} to a ${destination.urn}`);
 
-const result = await user.accounts.transfer(
+// If the account owner must approve this with their passkey, withApproval
+// shares the link, waits for the approval and repeats the call once.
+const result = await withApproval(
+  (approval) =>
+    user.accounts.transfer(
+      {
+        sourceUrn: source.urn,
+        destinationUrn: destination.urn,
+        amount: '1000000', // 1 DUSD
+        asset: 'DUSD/6',
+      },
+      { idempotencyKey: 'internal-transfer-any-account', approval },
+    ),
   {
-    sourceUrn: source.urn,
-    destinationUrn: destination.urn,
-    amount: '1000000', // 1 DUSD
-    asset: 'DUSD/6',
+    onApprovalRequired: (error) =>
+      console.log('Approve with your passkey:', error.approvalUrl),
   },
-  { idempotencyKey: 'internal-transfer-any-account' },
 );
 
 console.log('Transfer queued:', result.queueId, result.status);

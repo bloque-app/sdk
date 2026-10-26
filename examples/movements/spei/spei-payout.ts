@@ -1,4 +1,4 @@
-import { SDK } from '../../../packages/sdk/src/index';
+import { SDK, withApproval } from '../../../packages/sdk/src/index';
 
 /** SPEI payout: MXNB/2 on Kusama → MXN/2 to an 18-digit CLABE. */
 const origin = process.env.ORIGIN;
@@ -27,19 +27,29 @@ const { rates } = await user.swap.findRates({
 });
 
 if (!rates[0]) throw new Error('No SPEI payout rate available.');
+const rate = rates[0];
 
-const result = await user.swap.spei.create(
+// If the account owner must approve this with their passkey, withApproval
+// shares the link, waits for the approval and repeats the call once.
+const result = await withApproval(
+  (approval) =>
+    user.swap.spei.create(
+      {
+        rateSig: rate.sig,
+        amountSrc,
+        depositInformation: {
+          clabe: process.env.BENEFICIARY_CLABE ?? '646180157034181180',
+          beneficiaryName: process.env.BENEFICIARY_NAME ?? 'José Pérez',
+          rfc: process.env.BENEFICIARY_RFC,
+        },
+        args: { sourceAccountUrn },
+      },
+      { idempotencyKey: `spei-payout-${rate.sig}-${amountSrc}`, approval },
+    ),
   {
-    rateSig: rates[0].sig,
-    amountSrc,
-    depositInformation: {
-      clabe: process.env.BENEFICIARY_CLABE ?? '646180157034181180',
-      beneficiaryName: process.env.BENEFICIARY_NAME ?? 'José Pérez',
-      rfc: process.env.BENEFICIARY_RFC,
-    },
-    args: { sourceAccountUrn },
+    onApprovalRequired: (error) =>
+      console.log('Approve with your passkey:', error.approvalUrl),
   },
-  { idempotencyKey: `spei-payout-${rates[0].sig}-${amountSrc}` },
 );
 
 console.log('SPEI payout created:', {

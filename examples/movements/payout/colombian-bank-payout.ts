@@ -1,5 +1,5 @@
 import type { SupportedBank } from '../../../packages/sdk/src/index';
-import { SDK } from '../../../packages/sdk/src/index';
+import { SDK, withApproval } from '../../../packages/sdk/src/index';
 
 /**
  * Payout to any Colombian bank account: DUSD on Kusama → COP.
@@ -54,23 +54,32 @@ if (rates.rates.length === 0) {
 const sourceAccountUrn =
   process.env.SOURCE_ACCOUNT_URN ?? 'did:bloque:account:kusama-user-001';
 
-const result = await user.swap.bankTransfer.create(
+// If the account owner must approve this with their passkey, withApproval
+// shares the link, waits for the approval and repeats the call once.
+const result = await withApproval(
+  (approval) =>
+    user.swap.bankTransfer.create(
+      {
+        rateSig: rates.rates[0]!.sig,
+        toMedium,
+        amountSrc,
+        depositInformation: {
+          bankAccountType: 'savings',
+          bankAccountNumber: process.env.BANK_ACCOUNT_NUMBER ?? '5740088718',
+          bankAccountHolderName:
+            process.env.BANK_ACCOUNT_HOLDER_NAME ?? 'Juan Pérez',
+          bankAccountHolderIdentificationType: 'CC',
+          bankAccountHolderIdentificationValue:
+            process.env.BANK_ACCOUNT_HOLDER_ID ?? '1234567890',
+        },
+        args: { sourceAccountUrn },
+      },
+      { idempotencyKey: `${toMedium}-payout-${amountSrc}`, approval },
+    ),
   {
-    rateSig: rates.rates[0]!.sig,
-    toMedium,
-    amountSrc,
-    depositInformation: {
-      bankAccountType: 'savings',
-      bankAccountNumber: process.env.BANK_ACCOUNT_NUMBER ?? '5740088718',
-      bankAccountHolderName:
-        process.env.BANK_ACCOUNT_HOLDER_NAME ?? 'Juan Pérez',
-      bankAccountHolderIdentificationType: 'CC',
-      bankAccountHolderIdentificationValue:
-        process.env.BANK_ACCOUNT_HOLDER_ID ?? '1234567890',
-    },
-    args: { sourceAccountUrn },
+    onApprovalRequired: (error) =>
+      console.log('Approve with your passkey:', error.approvalUrl),
   },
-  { idempotencyKey: `${toMedium}-payout-${amountSrc}` },
 );
 
 console.log('Colombian bank payout order:', {

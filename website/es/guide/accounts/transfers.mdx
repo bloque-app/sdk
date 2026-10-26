@@ -10,6 +10,10 @@ import { QuestHeader } from '@theme';
 
 Transfiere fondos entre cualquier cuenta usando el SDK de Bloque.
 
+:::tip Aprobaciones con passkey
+`transfer` y `batchTransfer` pueden necesitar la aprobación del dueño de la cuenta con su passkey: la llamada lanza `BloqueApprovalRequiredError` con un `approvalUrl`. Envuélvela en `withApproval` para esperar y repetirla una vez, o redirige al dueño y continúa cuando vuelva. Mira [Aprobaciones con passkey](../features/passkey-approvals).
+:::
+
 ## Descripción General
 
 La API de transferencias te permite mover fondos entre diferentes tipos de cuentas:

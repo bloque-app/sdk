@@ -1,4 +1,4 @@
-import { SDK } from '../../../packages/sdk/src/index';
+import { SDK, withApproval } from '../../../packages/sdk/src/index';
 
 const bloque = new SDK({
   origin: process.env.ORIGIN!,
@@ -30,24 +30,33 @@ if (rates.rates.length === 0) {
   );
 }
 
-const result = await user.swap.breb.create(
-  {
-    rateSig: rates.rates[0].sig,
-    amountSrc,
-    depositInformation: {
-      // Any unique string -- required, not used by the active provider.
-      resolutionId: `payout-${crypto.randomUUID()}`,
-      // keyType is optional; only the key value is required.
-      destinationKey: {
-        keyValue: '@JAR1234',
+// If the account owner must approve this with their passkey, withApproval
+// shares the link, waits for the approval and repeats the call once.
+const result = await withApproval(
+  (approval) =>
+    user.swap.breb.create(
+      {
+        rateSig: rates.rates[0]!.sig,
+        amountSrc,
+        depositInformation: {
+          // Any unique string -- required, not used by the active provider.
+          resolutionId: `payout-${crypto.randomUUID()}`,
+          // keyType is optional; only the key value is required.
+          destinationKey: {
+            keyValue: '@JAR1234',
+          },
+        },
+        args: {
+          // Your own account -- funds the payout, not the recipient.
+          sourceAccountUrn,
+        },
       },
-    },
-    args: {
-      // Your own account -- funds the payout, not the recipient.
-      sourceAccountUrn,
-    },
+      { idempotencyKey: 'f7a3b89e-6d3f-4e9e-8b7f-a1c4d2e5f901', approval },
+    ),
+  {
+    onApprovalRequired: (error) =>
+      console.log('Approve with your passkey:', error.approvalUrl),
   },
-  { idempotencyKey: 'f7a3b89e-6d3f-4e9e-8b7f-a1c4d2e5f901' },
 );
 
 console.log('BREB payment created:', {

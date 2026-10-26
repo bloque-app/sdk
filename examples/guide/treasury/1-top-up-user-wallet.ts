@@ -1,4 +1,4 @@
-import { SDK } from '../../../packages/sdk/src/index';
+import { SDK, withApproval } from '../../../packages/sdk/src/index';
 
 /**
  * Step 1 of the treasury guide.
@@ -30,15 +30,27 @@ const destinationCardUrn =
 const masterAccountUrn =
   process.env.MASTER_ACCOUNT_URN ?? 'urn:bloque:polygon:0x1231231231';
 
-await sessionMaster.accounts.transfer({
-  amount: process.env.AMOUNT ?? '1000000000000',
-  asset: 'DUSD/6',
-  sourceUrn: masterAccountUrn,
-  destinationUrn: destinationCardUrn,
-  metadata: {
-    type: 'top-up',
-    purpose: 'user-wallet',
+// If the account owner must approve this with their passkey, withApproval
+// shares the link, waits for the approval and repeats the call once.
+await withApproval(
+  (approval) =>
+    sessionMaster.accounts.transfer(
+      {
+        amount: process.env.AMOUNT ?? '1000000000000',
+        asset: 'DUSD/6',
+        sourceUrn: masterAccountUrn,
+        destinationUrn: destinationCardUrn,
+        metadata: {
+          type: 'top-up',
+          purpose: 'user-wallet',
+        },
+      },
+      { approval },
+    ),
+  {
+    onApprovalRequired: (error) =>
+      console.log('Approve with your passkey:', error.approvalUrl),
   },
-});
+);
 
 console.log('Top-up transfer completed.');

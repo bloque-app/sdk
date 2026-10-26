@@ -1,4 +1,4 @@
-import { SDK } from '../../../packages/sdk/src/index';
+import { SDK, withApproval } from '../../../packages/sdk/src/index';
 
 /**
  * RTP cash-out: USDC on Base → USD to a US bank account via RTP.
@@ -41,22 +41,32 @@ console.log('Best rate:', rates.rates[0]);
 
 const txHash = process.env.TX_HASH?.trim();
 
-const result = await user.swap.rtp.create(
+// If the account owner must approve this with their passkey, withApproval
+// shares the link, waits for the approval and repeats the call once.
+const result = await withApproval(
+  (approval) =>
+    user.swap.rtp.create(
+      {
+        rateSig: rates.rates[0]!.sig,
+        amountSrc,
+        fromMedium: 'base',
+        depositInformation: {
+          owner: process.env.RTP_OWNER ?? 'Jane Doe',
+          accountNumber: process.env.RTP_ACCOUNT_NUMBER ?? '1234567890',
+          routingNumber: process.env.RTP_ROUTING_NUMBER ?? '063108680',
+          accountType:
+            (process.env.RTP_ACCOUNT_TYPE as 'checking' | 'savings') ??
+            'checking',
+          bankName: process.env.RTP_BANK_NAME ?? 'Example Bank',
+        },
+        ...(txHash ? { args: { txHash } } : {}),
+      },
+      { idempotencyKey: `rtp-payout-base-${amountSrc}`, approval },
+    ),
   {
-    rateSig: rates.rates[0]!.sig,
-    amountSrc,
-    fromMedium: 'base',
-    depositInformation: {
-      owner: process.env.RTP_OWNER ?? 'Jane Doe',
-      accountNumber: process.env.RTP_ACCOUNT_NUMBER ?? '1234567890',
-      routingNumber: process.env.RTP_ROUTING_NUMBER ?? '063108680',
-      accountType:
-        (process.env.RTP_ACCOUNT_TYPE as 'checking' | 'savings') ?? 'checking',
-      bankName: process.env.RTP_BANK_NAME ?? 'Example Bank',
-    },
-    ...(txHash ? { args: { txHash } } : {}),
+    onApprovalRequired: (error) =>
+      console.log('Approve with your passkey:', error.approvalUrl),
   },
-  { idempotencyKey: `rtp-payout-base-${amountSrc}` },
 );
 
 const how = result.execution?.result.how;

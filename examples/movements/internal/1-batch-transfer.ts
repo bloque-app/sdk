@@ -6,7 +6,7 @@
 // Large batches (80+ operations) are automatically chunked for you.
 // Each chunk gets its own queue ID for tracking.
 
-import { SDK } from '../../../packages/sdk/src/index';
+import { SDK, withApproval } from '../../../packages/sdk/src/index';
 
 const bloque = new SDK({
   origin: process.env.ORIGIN!,
@@ -41,39 +41,48 @@ const carol = await user.accounts.virtual.create(
 );
 
 // Pay everyone in one batch
-const result = await user.accounts.batchTransfer(
+// If the account owner must approve this with their passkey, withApproval
+// shares the link, waits for the approval and repeats the call once.
+const result = await withApproval(
+  (approval) =>
+    user.accounts.batchTransfer(
+      {
+        reference: 'payroll-2025-02',
+        operations: [
+          {
+            fromUrn: treasury.urn,
+            toUrn: alice.urn,
+            reference: 'salary-alice-feb',
+            amount: '3000000000', // 3,000 DUSD
+            asset: 'DUSD/6',
+            metadata: { employee: 'alice', type: 'salary' },
+          },
+          {
+            fromUrn: treasury.urn,
+            toUrn: bob.urn,
+            reference: 'salary-bob-feb',
+            amount: '2500000000', // 2,500 DUSD
+            asset: 'DUSD/6',
+            metadata: { employee: 'bob', type: 'salary' },
+          },
+          {
+            fromUrn: treasury.urn,
+            toUrn: carol.urn,
+            reference: 'salary-carol-feb',
+            amount: '2800000000', // 2,800 DUSD
+            asset: 'DUSD/6',
+            metadata: { employee: 'carol', type: 'salary' },
+          },
+        ],
+        metadata: { department: 'engineering', period: '2025-02' },
+        webhookUrl: 'https://api.example.com/webhooks/payroll',
+      },
+      { idempotencyKey: 'f7a3b89e-6d3f-4e9e-8b7f-a1c4d2e5f901', approval },
+    ),
   {
-    reference: 'payroll-2025-02',
-    operations: [
-      {
-        fromUrn: treasury.urn,
-        toUrn: alice.urn,
-        reference: 'salary-alice-feb',
-        amount: '3000000000', // 3,000 DUSD
-        asset: 'DUSD/6',
-        metadata: { employee: 'alice', type: 'salary' },
-      },
-      {
-        fromUrn: treasury.urn,
-        toUrn: bob.urn,
-        reference: 'salary-bob-feb',
-        amount: '2500000000', // 2,500 DUSD
-        asset: 'DUSD/6',
-        metadata: { employee: 'bob', type: 'salary' },
-      },
-      {
-        fromUrn: treasury.urn,
-        toUrn: carol.urn,
-        reference: 'salary-carol-feb',
-        amount: '2800000000', // 2,800 DUSD
-        asset: 'DUSD/6',
-        metadata: { employee: 'carol', type: 'salary' },
-      },
-    ],
-    metadata: { department: 'engineering', period: '2025-02' },
-    webhookUrl: 'https://api.example.com/webhooks/payroll',
+    onApprovalRequired: (error) =>
+      console.log('Approve with your passkey:', error.approvalUrl),
   },
-  { idempotencyKey: 'f7a3b89e-6d3f-4e9e-8b7f-a1c4d2e5f901' },
 );
 
 console.log(

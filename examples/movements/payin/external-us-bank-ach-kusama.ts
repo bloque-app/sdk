@@ -1,4 +1,4 @@
-import { SDK } from '../../../packages/sdk/src';
+import { SDK, withApproval } from '../../../packages/sdk/src';
 
 /**
  * External US bank (Brale / Plaid) → DUSD on Kusama — proactive ACH pull.
@@ -71,10 +71,22 @@ console.log('Indicative rate:', quote.rates[0]);
 
 // // Step 4: initiate the ACH pull. Amount is a USD decimal STRING (never a
 // // number) — e.g. "100.00" not 100. The server scales it to USD/2 cents.
-const order = await user.accounts.externalUsBank.pull({
-  urn: bank_urn,
-  amount: '10',
-});
+// If the account owner must approve this with their passkey, withApproval
+// shares the link, waits for the approval and repeats the call once.
+const order = await withApproval(
+  (approval) =>
+    user.accounts.externalUsBank.pull(
+      {
+        urn: bank_urn,
+        amount: '10',
+      },
+      { approval },
+    ),
+  {
+    onApprovalRequired: (error) =>
+      console.log('Approve with your passkey:', error.approvalUrl),
+  },
+);
 
 console.log(JSON.stringify(order, null, 2));
 

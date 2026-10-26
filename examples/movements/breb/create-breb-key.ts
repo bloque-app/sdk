@@ -1,4 +1,4 @@
-import { SDK } from '../../../packages/sdk/src/index';
+import { SDK, withApproval } from '../../../packages/sdk/src/index';
 
 const bloque = new SDK({
   origin: process.env.ORIGIN!,
@@ -11,14 +11,26 @@ const bloque = new SDK({
 
 const user = await bloque.connect(process.env.USER_HANDLE ?? 'demo-user');
 
-const { data, error } = await user.accounts.breb.createKey({
-  keyType: 'PHONE',
-  key: process.env.BREB_KEY ?? '3015550184',
-  displayName: process.env.BREB_DISPLAY_NAME ?? 'Camila Ortega',
-  metadata: {
-    source: 'demo',
+// If the account owner must approve this with their passkey, withApproval
+// shares the link, waits for the approval and repeats the call once.
+const { data, error } = await withApproval(
+  (approval) =>
+    user.accounts.breb.createKey(
+      {
+        keyType: 'PHONE',
+        key: process.env.BREB_KEY ?? '3015550184',
+        displayName: process.env.BREB_DISPLAY_NAME ?? 'Camila Ortega',
+        metadata: {
+          source: 'demo',
+        },
+      },
+      { approval },
+    ),
+  {
+    onApprovalRequired: (error) =>
+      console.log('Approve with your passkey:', error.approvalUrl),
   },
-});
+);
 
 console.log('BREB create key response:', { data, error });
 
