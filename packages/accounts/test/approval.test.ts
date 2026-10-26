@@ -1,8 +1,10 @@
 import { afterEach, describe, expect, it, mock } from 'bun:test';
 import {
+  ApprovalsClient,
   BloqueApprovalRequiredError,
   HttpClient,
   OPERATION_APPROVAL_HEADER,
+  OPERATION_APPROVAL_RETURN_URL_HEADER,
   withApproval,
 } from '@bloque/sdk-core';
 import { AccountsClient } from '../src/accounts-client';
@@ -128,6 +130,49 @@ describe('accounts.transfer approval', () => {
   });
 });
 
+describe('accounts.transfer approval after a full-page redirect', () => {
+  const RETURN_URL = 'https://app.example.com/transfers/back';
+
+  it('sends the return URL, then resumes once with the collected approval', async () => {
+    const calls = mockFetch([approvalRequired, approvalReady, transferOk]);
+    const http = authedClient();
+    const params = { ...transferParams, metadata: { reference: 'payment-1' } };
+
+    const error = await new AccountsClient(http)
+      .transfer(params, { approvalReturnUrl: RETURN_URL })
+      .catch((e) => e);
+    expect(error).toBeInstanceOf(BloqueApprovalRequiredError);
+    // Saved before the redirect; the page is gone when the owner comes back.
+    const saved = JSON.stringify({
+      params,
+      pending: error.toPendingApproval(),
+    });
+
+    const restored = JSON.parse(saved);
+    const approval = await new ApprovalsClient(http).collect(restored.pending);
+    const result = await new AccountsClient(http).transfer(restored.params, {
+      approval,
+      approvalReturnUrl: RETURN_URL,
+    });
+
+    expect(result.queueId).toBe('q_1');
+    expect(calls).toHaveLength(3);
+    expect(calls[0].headers.get(OPERATION_APPROVAL_RETURN_URL_HEADER)).toBe(
+      RETURN_URL,
+    );
+    expect(calls[0].headers.has(OPERATION_APPROVAL_HEADER)).toBe(false);
+    expect(calls[1].url).toEndWith('/api/origins/operation-approvals/result');
+    expect(calls[2].url).toBe(calls[0].url);
+    expect(calls[2].body).toEqual(calls[0].body);
+    expect(calls[2].headers.get(OPERATION_APPROVAL_HEADER)).toBe(
+      'signed-approval',
+    );
+    expect(calls[2].headers.has(OPERATION_APPROVAL_RETURN_URL_HEADER)).toBe(
+      false,
+    );
+  });
+});
+
 describe('accounts.batchTransfer approval', () => {
   it('sends the approval header with the same batch body', async () => {
     const calls = mockFetch([
@@ -155,7 +200,10 @@ describe('accounts.batchTransfer approval', () => {
       ],
     };
 
-    await accounts.batchTransfer(params, { idempotencyKey: 'batch-1' });
+    await accounts.batchTransfer(params, {
+      idempotencyKey: 'batch-1',
+      approvalReturnUrl: 'https://app.example.com',
+    });
     await accounts.batchTransfer(params, {
       idempotencyKey: 'batch-1',
       approval: 'signed-approval',
@@ -166,6 +214,9 @@ describe('accounts.batchTransfer approval', () => {
     expect(calls[0].headers.has(OPERATION_APPROVAL_HEADER)).toBe(false);
     expect(calls[1].headers.get(OPERATION_APPROVAL_HEADER)).toBe(
       'signed-approval',
+    );
+    expect(calls[0].headers.get(OPERATION_APPROVAL_RETURN_URL_HEADER)).toBe(
+      'https://app.example.com',
     );
     expect(calls[1].headers.get('Idempotency-Key')).toBe('batch-1');
   });
@@ -187,7 +238,7 @@ describe('externalUsBank.pull approval', () => {
       idempotencyKey: 'pull-1',
     };
 
-    await bank.pull(params);
+    await bank.pull(params, { approvalReturnUrl: 'https://app.example.com' });
     await bank.pull(params, { approval: 'signed-approval' });
 
     expect(calls[1].url).toContain('/api/mediums/external-us-bank/');
@@ -195,6 +246,9 @@ describe('externalUsBank.pull approval', () => {
     expect(calls[0].headers.has(OPERATION_APPROVAL_HEADER)).toBe(false);
     expect(calls[1].headers.get(OPERATION_APPROVAL_HEADER)).toBe(
       'signed-approval',
+    );
+    expect(calls[0].headers.get(OPERATION_APPROVAL_RETURN_URL_HEADER)).toBe(
+      'https://app.example.com',
     );
     expect(calls[1].headers.get('Idempotency-Key')).toBe('pull-1');
   });

@@ -382,8 +382,8 @@ export class AccountsClient extends BaseClient {
       path: `/api/accounts/${params.sourceUrn}/transfer`,
       body: request,
       headers: operationApprovalHeaders({
+        ...options,
         idempotencyKey: options?.idempotencyKey || reference,
-        approval: options?.approval,
       }),
     });
 

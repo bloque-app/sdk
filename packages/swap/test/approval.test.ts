@@ -3,6 +3,7 @@ import {
   BloqueApprovalArgsRequiredError,
   HttpClient,
   OPERATION_APPROVAL_HEADER,
+  OPERATION_APPROVAL_RETURN_URL_HEADER,
 } from '@bloque/sdk-core';
 import { BankTransferClient } from '../src/bank-transfer/bank-transfer-client';
 import { BrebClient } from '../src/breb/breb-client';
@@ -208,6 +209,7 @@ const orderCreates: Array<
             clabe: '646180157034181180',
             beneficiaryName: 'Owner Name',
           },
+          args: { sourceAccountUrn: 'did:bloque:account:virtual:acc-1' },
         },
         { idempotencyKey: 'k', approval },
       ),
@@ -239,6 +241,7 @@ const orderCreates: Array<
             pixKeyType: 'EMAIL',
             pixKeyValue: 'owner@example.com',
           },
+          args: { sourceAccountUrn: 'did:bloque:account:virtual:acc-1' },
         },
         { idempotencyKey: 'k', approval },
       ),
@@ -268,6 +271,29 @@ describe('swap order approval', () => {
       expect(calls[1].headers.get('Idempotency-Key')).toBe('k');
     },
   );
+
+  it('sends the approval return URL on the first take only', async () => {
+    const calls = mockFetch([orderOk]);
+    const brebs = new BrebClient(authedClient());
+    const returnUrl = 'https://app.example.com/orders/back';
+
+    await brebs.create(params, {
+      idempotencyKey: 'k',
+      approvalReturnUrl: returnUrl,
+    });
+    await brebs.create(params, {
+      idempotencyKey: 'k',
+      approval: 'signed-approval',
+      approvalReturnUrl: returnUrl,
+    });
+
+    expect(calls[0].headers.get(OPERATION_APPROVAL_RETURN_URL_HEADER)).toBe(
+      returnUrl,
+    );
+    expect(calls[1].headers.has(OPERATION_APPROVAL_RETURN_URL_HEADER)).toBe(
+      false,
+    );
+  });
 
   it('throws BloqueApprovalArgsRequiredError naming the missing args', async () => {
     mockFetch([

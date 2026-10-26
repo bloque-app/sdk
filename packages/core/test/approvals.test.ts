@@ -1,7 +1,9 @@
 import { afterEach, describe, expect, it, mock } from 'bun:test';
 import { inspect } from 'node:util';
 import {
+  ApprovalsClient,
   OPERATION_APPROVAL_HEADER,
+  OPERATION_APPROVAL_RETURN_URL_HEADER,
   operationApprovalHeaders,
   withApproval,
 } from '../src/approvals';
@@ -11,9 +13,12 @@ import {
   BloqueApprovalExpiredError,
   BloqueApprovalInvalidError,
   BloqueApprovalMultipleOwnersError,
+  BloqueApprovalPendingError,
   BloqueApprovalRequiredError,
   BloqueApprovalUnavailableError,
+  BloqueReturnUrlNotAllowedError,
   createBloqueError,
+  type PendingApproval,
 } from '../src/errors';
 import { HttpClient } from '../src/http-client';
 
@@ -444,6 +449,127 @@ describe('operationApprovalHeaders()', () => {
       'Idempotency-Key': 'k',
       [OPERATION_APPROVAL_HEADER]: 'signed',
     });
+  });
+
+  it('sends the approval return URL on the first request', () => {
+    expect(
+      operationApprovalHeaders({ approvalReturnUrl: 'https://app.test/back' }),
+    ).toEqual({
+      [OPERATION_APPROVAL_RETURN_URL_HEADER]: 'https://app.test/back',
+    });
+  });
+
+  it('drops the approval return URL when repeating with the approval', () => {
+    expect(
+      operationApprovalHeaders({
+        approval: 'signed',
+        approvalReturnUrl: 'https://app.test/back',
+      }),
+    ).toEqual({ [OPERATION_APPROVAL_HEADER]: 'signed' });
+  });
+
+  it('maps a 400 E_RETURN_URL_NOT_ALLOWED to BloqueReturnUrlNotAllowedError', async () => {
+    mockFetch([
+      () =>
+        json(400, {
+          error: true,
+          code: 'E_RETURN_URL_NOT_ALLOWED',
+          message: 'E_RETURN_URL_NOT_ALLOWED',
+        }),
+    ]);
+
+    const error = await client()
+      .request({ method: 'POST', path: '/api/accounts/x/transfer', body: {} })
+      .catch((e) => e);
+
+    expect(error).toBeInstanceOf(BloqueReturnUrlNotAllowedError);
+    expect(error.status).toBe(400);
+  });
+});
+
+describe('redirect resume', () => {
+  async function pendingFromRequired(
+    expiresAt = Date.now() + 60_000,
+  ): Promise<PendingApproval> {
+    mockFetch([() => json(428, requiredBody(expiresAt))]);
+    const error = await client()
+      .request({ method: 'POST', path: '/api/accounts/x/transfer', body: {} })
+      .catch((e) => e);
+    // What an integrator saves in sessionStorage before the redirect.
+    return JSON.parse(JSON.stringify(error.toPendingApproval()));
+  }
+
+  it('toPendingApproval() keeps what collect() needs as plain JSON', async () => {
+    const expiresAt = Date.now() + 60_000;
+    const pending = await pendingFromRequired(expiresAt);
+
+    expect(pending).toEqual({
+      approvalToken: TOKEN,
+      approvalUrl: `https://api.bloque.app/api/origins/operation-approvals/approve#token=${TOKEN}`,
+      expiresAt,
+      summary: {
+        operation: 'accounts.transfer',
+        fields: { amount: '100', asset: 'DUSD/6' },
+      },
+    });
+  });
+
+  it('collect() reads the result once and returns the approval', async () => {
+    const pending = await pendingFromRequired();
+    const calls = mockFetch([
+      () =>
+        json(200, {
+          status: 'ready',
+          header: OPERATION_APPROVAL_HEADER,
+          value: 'signed',
+        }),
+    ]);
+
+    const approval = await new ApprovalsClient(client()).collect(pending);
+
+    expect(approval).toBe('signed');
+    expect(calls).toHaveLength(1);
+    expect(calls[0].method).toBe('GET');
+    expect(calls[0].url).toEndWith(RESULT_PATH);
+    expect(calls[0].headers.get('Authorization')).toBe(`Bearer ${TOKEN}`);
+  });
+
+  it('collect() throws BloqueApprovalPendingError when not approved yet', async () => {
+    const pending = await pendingFromRequired();
+    const calls = mockFetch([() => json(200, { status: 'pending' })]);
+
+    const error = await new ApprovalsClient(client())
+      .collect(pending)
+      .catch((e) => e);
+
+    expect(error).toBeInstanceOf(BloqueApprovalPendingError);
+    expect(error.code).toBe('E_APPROVAL_PENDING');
+    expect(calls).toHaveLength(1);
+  });
+
+  it('collect() refuses an approval already collected', async () => {
+    const pending = await pendingFromRequired();
+    mockFetch([() => json(200, { status: 'delivered' })]);
+
+    const error = await new ApprovalsClient(client())
+      .collect(pending)
+      .catch((e) => e);
+
+    expect(error).toBeInstanceOf(BloqueApprovalExpiredError);
+    expect(error.reason).toBe('approval_delivered_elsewhere');
+  });
+
+  it('collect() does not call the API for an expired approval', async () => {
+    const pending = await pendingFromRequired(Date.now() - 1);
+    const calls = mockFetch([() => json(200, { status: 'pending' })]);
+
+    const error = await new ApprovalsClient(client())
+      .collect(pending)
+      .catch((e) => e);
+
+    expect(error).toBeInstanceOf(BloqueApprovalExpiredError);
+    expect(error.reason).toBe('approval_not_received');
+    expect(calls).toHaveLength(0);
   });
 });
 

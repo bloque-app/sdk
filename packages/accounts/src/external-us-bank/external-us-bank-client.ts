@@ -289,10 +289,7 @@ export class ExternalUsBankClient extends BaseClient {
       method: 'POST',
       path: `/api/mediums/external-us-bank/${encodeURIComponent(params.urn)}/pull`,
       body,
-      headers: operationApprovalHeaders({
-        idempotencyKey,
-        approval: options?.approval,
-      }),
+      headers: operationApprovalHeaders({ ...options, idempotencyKey }),
     });
 
     return {
