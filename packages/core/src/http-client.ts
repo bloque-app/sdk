@@ -279,9 +279,12 @@ export class HttpClient {
       return true;
     }
 
-    // Retry on 503 Service Unavailable
+    // Retry on 503 Service Unavailable, unless the API says retrying won't help
     if (error instanceof Error && 'status' in error && error.status === 503) {
-      return true;
+      const response = (error as { response?: unknown }).response as
+        | { extra_details?: { retryable?: unknown } }
+        | undefined;
+      return response?.extra_details?.retryable !== false;
     }
 
     return false;

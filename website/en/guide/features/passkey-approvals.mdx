@@ -110,31 +110,43 @@ try {
     'pending-transfer',
     JSON.stringify({ params, paymentId, pending: error.toPendingApproval() }),
   );
-  window.location.assign(error.approvalUrl!);
+  if (error.approvalUrl) window.location.assign(error.approvalUrl);
 }
 
 // 3. Back on RETURN_URL
 const saved = JSON.parse(sessionStorage.getItem('pending-transfer')!);
-sessionStorage.removeItem('pending-transfer');
+let approval: string;
 try {
-  const approval = await user.approvals.collect(saved.pending);
-  await user.accounts.transfer(saved.params, {
-    idempotencyKey: saved.paymentId,
-    approval,
-  });
+  approval = await user.approvals.collect(saved.pending);
 } catch (error) {
   if (error instanceof BloqueApprovalPendingError) {
-    // The owner came back without approving: offer saved.pending.approvalUrl again.
+    // Not approved yet: keep the saved state and offer
+    // saved.pending.approvalUrl again; this page runs again when they return.
+  } else {
+    sessionStorage.removeItem('pending-transfer'); // expired or already used
   }
   throw error;
 }
+// Remove it only now: until collect() succeeds the owner can still approve.
+sessionStorage.removeItem('pending-transfer');
+await user.accounts.transfer(saved.params, {
+  idempotencyKey: saved.paymentId,
+  approval,
+});
 ```
 
 - `approvalReturnUrl` must be an https URL whose origin your origin allows, or the call throws `BloqueReturnUrlNotAllowedError` (400). Bloque sets the allowed origins on your origin (`tos_gate_return_url_allowlist`, the same list as the TOS gate).
 - The operation runs once: `collect()` hands out an approval only once, and the API refuses an approval that was already used. A second `collect()` throws `BloqueApprovalExpiredError` with `reason: 'approval_delivered_elsewhere'`.
-- Repeat right away. An approval not used about two minutes after the owner opens the approval page is dropped; `collect()` then throws `BloqueApprovalPendingError` or, after `expiresAt`, `BloqueApprovalExpiredError` (`reason: 'approval_not_received'`) without calling the API. Repeat the call without `approval` to get a new link.
+- Repeat right away. The owner's approval lasts about two minutes from when they open the approval page:
+  - not collected in time: it is dropped, and `collect()` throws `BloqueApprovalPendingError` (or, after `expiresAt`, `BloqueApprovalExpiredError` with `reason: 'approval_not_received'`, without calling the API);
+  - collected, but the repeated call arrives too late: that call throws `BloqueApprovalExpiredError` (403).
+
+  Either way, nothing moved: repeat the call without `approval` to get a new link.
+- If the response to `collect()` is lost (a timeout, the tab closes) after the API handed out the approval, the next `collect()` throws `approval_delivered_elsewhere`. Nothing moved; request a new approval.
+- `approvalUrl` can be missing on deployments without an approval page; check it before redirecting.
 - The approval page adds nothing to `approvalReturnUrl`: `collect()` is how you learn whether the owner approved.
-- `pending.approvalToken` and `pending.approvalUrl` can only collect this one approval (the owner still signs with their passkey), but keep them out of URLs and logs. `sessionStorage` is a good place for them.
+- `pending.approvalToken` and `pending.approvalUrl` can only collect this one approval (the owner still signs with their passkey), but keep them out of URLs and logs. `pending.summary` is what the owner approves and can include personal data. `sessionStorage` is a good place for all of it.
+- The BRE-B key methods return most errors as `{ error }`, but throw `BloqueReturnUrlNotAllowedError` like the approval errors.
 
 ## Re-register a passkey
 
@@ -147,13 +159,14 @@ const { url, expiresIn } = await user.identity.passkeys.createLink({
 window.location.assign(url); // expiresIn: e.g. '15m'
 ```
 
-It needs the person's own session (a browser or React Native JWT); an API key cannot create the link. `returnUrl` follows the same rule as `approvalReturnUrl`.
+It needs the person's own session (a browser or React Native JWT); an API key or another kind of token gets `BloqueAuthenticationError` (403 `E_USER_SESSION_REQUIRED`). `returnUrl` follows the same rule as `approvalReturnUrl`.
 
 | Error | Code | What to do |
 | --- | --- | --- |
 | `BloqueReturnUrlNotAllowedError` | 400 `E_RETURN_URL_NOT_ALLOWED` | Use a `returnUrl` whose origin your origin allows |
-| `BloquePasskeyRegistrationUnavailableError` | 501 `E_PASSKEY_REGISTRATION_NOT_SUPPORTED` / 503 `E_PASSKEY_REGISTRATION_UNAVAILABLE` | `retryable: false`: this deployment does not register passkeys. `retryable: true`: retried automatically; retry later if it persists |
-| `BloqueRateLimitError` | 429 | Too many links for this session (10 per hour by default) |
+| `BloquePasskeyRegistrationUnavailableError` | 501 `E_PASSKEY_REGISTRATION_NOT_SUPPORTED` / 503 `E_PASSKEY_REGISTRATION_UNAVAILABLE` | `retryable: false`: this deployment does not register passkeys; not retried. `retryable: true`: retried automatically; retry later if it persists |
+| `BloqueAuthenticationError` | 403 `E_USER_SESSION_REQUIRED` | Call it with the person's own session |
+| `BloqueRateLimitError` | 429 | Too many links for this session (10 per hour by default). With `retry` on (the default), the SDK waits `Retry-After` (up to `maxDelay`) and retries before throwing |
 
 ## Errors
 

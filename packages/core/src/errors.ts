@@ -1,3 +1,4 @@
+import { readApprovalResult } from './approval-result';
 /**
  * Minimal shape of `HttpClient` that error classes need to make a follow-up
  * request (e.g. `BloqueVerificationRequiredError.getVerificationLink()`
@@ -441,11 +442,6 @@ interface ApprovalExtraDetails {
   args?: string[];
 }
 
-type ApprovalResult =
-  | { status: 'pending' }
-  | { status: 'ready'; header: string; value: string }
-  | { status: 'delivered' };
-
 /**
  * A pending approval saved before sending the account owner away with a
  * full-page redirect, from `BloqueApprovalRequiredError.toPendingApproval()`.
@@ -463,19 +459,6 @@ export interface PendingApproval {
   expiresAt: number;
   /** What the account owner is asked to approve. */
   summary?: OperationApprovalSummary;
-}
-
-/** One read of the approval's delivery state. @internal */
-export function readApprovalResult(
-  client: RequestCapableClient,
-  approvalToken: string,
-): Promise<ApprovalResult> {
-  return client.request<ApprovalResult>({
-    method: 'GET',
-    path: '/api/origins/operation-approvals/result',
-    authorizationOverride: `Bearer ${approvalToken}`,
-    _skipExchange: true,
-  });
 }
 
 function approvalTokenMissing(): BloqueApprovalExpiredError {

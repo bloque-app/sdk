@@ -274,6 +274,10 @@ try {
 
 La página alojada es el portal de identidad de Bloque (`id.bloque.sh`), el mismo que corre las aprobaciones con passkey y el registro de una passkey nueva. Algunos documentos piden además una passkey; el portal la crea automáticamente. `returnUrl` debe ser una URL https cuyo origen permita tu origin (`tos_gate_return_url_allowlist`, lo configura Bloque); si no, `start()` y `getVerificationLink()` lanzan `BloqueReturnUrlNotAllowedError`. Cuando el usuario acepta, el portal lo envía a `returnUrl` con `tos=accepted` en su query string.
 
+:::warning Si venías de la página de términos anterior de Bloque
+El portal de identidad funciona solo como página completa o pestaña nueva: no se puede embeber en un iframe. No envía el resultado con `postMessage` a una ventana padre y solo devuelve `tos=accepted` (sin `tos=<estado de error>` ni `code=`). Si el usuario sale sin aceptar, vuelve sin `tos`; revisa el estado de `compliance` (o atrapa de nuevo `BloqueVerificationRequiredError`) en lugar de depender de un parámetro de fallo.
+:::
+
 Para construir tu propia interfaz alrededor del gate (`tosGate.start()` → `init()` → `accept()`), mira la versión en inglés de esta página.
 
 ## Próximos Pasos

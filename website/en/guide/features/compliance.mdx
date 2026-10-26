@@ -332,6 +332,10 @@ Some Terms of Service documents also ask the user for a passkey on their device 
 
 The hosted page is Bloque's identity portal (`id.bloque.sh`), the same one that runs passkey approvals and passkey re-registration. `returnUrl` must be an https URL whose origin your origin allows (`tos_gate_return_url_allowlist`, set by Bloque); otherwise `start()` and `getVerificationLink()` throw `BloqueReturnUrlNotAllowedError`. Once the user accepts, the portal sends them to `returnUrl` with `tos=accepted` added to its query string.
 
+:::warning Coming from Bloque's previous TOS page
+The identity portal works only as a full page or a new tab: it cannot be embedded in an iframe. It does not `postMessage` the result to a parent window, and it only returns `tos=accepted` (no `tos=<error status>` or `code=`). If the user leaves without accepting, they come back without `tos`; check `compliance` status (or catch `BloqueVerificationRequiredError` again) instead of relying on a failure parameter.
+:::
+
 The passkey step has two schemes, and the backend picks one per deployment. The challenge says which in its `scheme` field; never infer it from the environment:
 
 | `scheme` | What the passkey does | What `accept()` sends back |

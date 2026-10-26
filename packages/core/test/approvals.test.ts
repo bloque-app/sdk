@@ -16,6 +16,8 @@ import {
   BloqueApprovalPendingError,
   BloqueApprovalRequiredError,
   BloqueApprovalUnavailableError,
+  BloqueConfigError,
+  BloquePasskeyRegistrationUnavailableError,
   BloqueReturnUrlNotAllowedError,
   createBloqueError,
   type PendingApproval,
@@ -459,6 +461,23 @@ describe('operationApprovalHeaders()', () => {
     });
   });
 
+  it('percent-encodes a non-ASCII approval return URL for the header', () => {
+    expect(
+      operationApprovalHeaders({
+        approvalReturnUrl: 'https://app.test/pagos/año?nota=sí',
+      }),
+    ).toEqual({
+      [OPERATION_APPROVAL_RETURN_URL_HEADER]:
+        'https://app.test/pagos/a%C3%B1o?nota=s%C3%AD',
+    });
+  });
+
+  it('refuses an approval return URL that is not an absolute URL', () => {
+    expect(() =>
+      operationApprovalHeaders({ approvalReturnUrl: '/relative/path' }),
+    ).toThrow(BloqueConfigError);
+  });
+
   it('drops the approval return URL when repeating with the approval', () => {
     expect(
       operationApprovalHeaders({
@@ -498,6 +517,18 @@ describe('redirect resume', () => {
     // What an integrator saves in sessionStorage before the redirect.
     return JSON.parse(JSON.stringify(error.toPendingApproval()));
   }
+
+  it('toPendingApproval() throws when the 428 carried no approval token', () => {
+    const error = createBloqueError('E_APPROVAL_REQUIRED', {
+      status: 428,
+      code: 'E_APPROVAL_REQUIRED',
+      response: approvalError('E_APPROVAL_REQUIRED', {
+        expires_at: Date.now() + 60_000,
+      }),
+    }) as BloqueApprovalRequiredError;
+
+    expect(() => error.toPendingApproval()).toThrow(BloqueApprovalExpiredError);
+  });
 
   it('toPendingApproval() keeps what collect() needs as plain JSON', async () => {
     const expiresAt = Date.now() + 60_000;
@@ -599,5 +630,63 @@ describe('HttpClient retries', () => {
     expect(calls).toHaveLength(2);
     expect(error).toBeInstanceOf(BloqueApprovalUnavailableError);
     expect(error.reason).toBe('passkey_verification_unavailable');
+  });
+
+  function retryingClient(): HttpClient {
+    const http = new HttpClient({
+      origin: 'test-origin',
+      auth: { type: 'originKey', originKey: 'sk_dev_origin' },
+      mode: 'sandbox',
+      retry: { enabled: true, maxRetries: 2, initialDelay: 0, maxDelay: 0 },
+    });
+    http.setAccessToken('test_access_token');
+    return http;
+  }
+
+  it('does not retry a 503 the API marks retryable: false', async () => {
+    const calls = mockFetch([
+      () =>
+        json(
+          503,
+          approvalError('E_PASSKEY_REGISTRATION_UNAVAILABLE', {
+            retryable: false,
+          }),
+        ),
+    ]);
+
+    const error = await retryingClient()
+      .request({
+        method: 'POST',
+        path: '/api/origins/passkeys/links',
+        body: {},
+      })
+      .catch((e) => e);
+
+    expect(calls).toHaveLength(1);
+    expect(error).toBeInstanceOf(BloquePasskeyRegistrationUnavailableError);
+    expect(error.retryable).toBe(false);
+  });
+
+  it('retries a 503 without extra_details', async () => {
+    const calls = mockFetch([
+      () =>
+        json(503, {
+          error: true,
+          code: 'E_PASSKEY_REGISTRATION_UNAVAILABLE',
+          message: 'E_PASSKEY_REGISTRATION_UNAVAILABLE',
+        }),
+    ]);
+
+    const error = await retryingClient()
+      .request({
+        method: 'POST',
+        path: '/api/origins/passkeys/links',
+        body: {},
+      })
+      .catch((e) => e);
+
+    expect(calls).toHaveLength(3);
+    expect(error).toBeInstanceOf(BloquePasskeyRegistrationUnavailableError);
+    expect(error.retryable).toBe(true);
   });
 });

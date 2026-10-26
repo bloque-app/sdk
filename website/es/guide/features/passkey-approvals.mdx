@@ -110,31 +110,43 @@ try {
     'pending-transfer',
     JSON.stringify({ params, paymentId, pending: error.toPendingApproval() }),
   );
-  window.location.assign(error.approvalUrl!);
+  if (error.approvalUrl) window.location.assign(error.approvalUrl);
 }
 
 // 3. De vuelta en RETURN_URL
 const saved = JSON.parse(sessionStorage.getItem('pending-transfer')!);
-sessionStorage.removeItem('pending-transfer');
+let approval: string;
 try {
-  const approval = await user.approvals.collect(saved.pending);
-  await user.accounts.transfer(saved.params, {
-    idempotencyKey: saved.paymentId,
-    approval,
-  });
+  approval = await user.approvals.collect(saved.pending);
 } catch (error) {
   if (error instanceof BloqueApprovalPendingError) {
-    // El dueño volvió sin aprobar: ofrécele de nuevo saved.pending.approvalUrl.
+    // Aún no aprueba: conserva lo guardado y ofrécele de nuevo
+    // saved.pending.approvalUrl; esta página corre otra vez cuando vuelva.
+  } else {
+    sessionStorage.removeItem('pending-transfer'); // vencida o ya usada
   }
   throw error;
 }
+// Bórralo solo ahora: hasta que collect() funcione, el dueño aún puede aprobar.
+sessionStorage.removeItem('pending-transfer');
+await user.accounts.transfer(saved.params, {
+  idempotencyKey: saved.paymentId,
+  approval,
+});
 ```
 
 - `approvalReturnUrl` debe ser una URL https cuyo origen permita tu origin; si no, la llamada lanza `BloqueReturnUrlNotAllowedError` (400). Bloque configura los orígenes permitidos en tu origin (`tos_gate_return_url_allowlist`, la misma lista del TOS gate).
 - La operación se ejecuta una sola vez: `collect()` entrega una aprobación una sola vez y la API rechaza una aprobación ya usada. Un segundo `collect()` lanza `BloqueApprovalExpiredError` con `reason: 'approval_delivered_elsewhere'`.
-- Repite de inmediato. Una aprobación que no se usa unos dos minutos después de que el dueño abre la página de aprobación se descarta; `collect()` lanza entonces `BloqueApprovalPendingError` o, después de `expiresAt`, `BloqueApprovalExpiredError` (`reason: 'approval_not_received'`) sin llamar a la API. Repite la llamada sin `approval` para obtener un link nuevo.
+- Repite de inmediato. La aprobación del dueño dura unos dos minutos desde que abre la página de aprobación:
+  - si no se recoge a tiempo, se descarta y `collect()` lanza `BloqueApprovalPendingError` (o, después de `expiresAt`, `BloqueApprovalExpiredError` con `reason: 'approval_not_received'`, sin llamar a la API);
+  - si se recoge pero la llamada repetida llega tarde, esa llamada lanza `BloqueApprovalExpiredError` (403).
+
+  En ambos casos no se movió nada: repite la llamada sin `approval` para obtener un link nuevo.
+- Si la respuesta de `collect()` se pierde (timeout, se cierra la pestaña) después de que la API entregó la aprobación, el siguiente `collect()` lanza `approval_delivered_elsewhere`. No se movió nada; pide una aprobación nueva.
+- `approvalUrl` puede faltar en despliegues sin página de aprobación; revísalo antes de redirigir.
 - La página de aprobación no agrega nada a `approvalReturnUrl`: `collect()` es la forma de saber si el dueño aprobó.
-- `pending.approvalToken` y `pending.approvalUrl` solo sirven para recoger esta aprobación (el dueño igual firma con su passkey), pero mantenlos fuera de URLs y logs. `sessionStorage` es un buen lugar para ellos.
+- `pending.approvalToken` y `pending.approvalUrl` solo sirven para recoger esta aprobación (el dueño igual firma con su passkey), pero mantenlos fuera de URLs y logs. `pending.summary` es lo que el dueño aprueba y puede incluir datos personales. `sessionStorage` es un buen lugar para todo esto.
+- Los métodos de llaves BRE-B devuelven la mayoría de errores como `{ error }`, pero lanzan `BloqueReturnUrlNotAllowedError` igual que los errores de aprobación.
 
 ## Registrar de nuevo una passkey
 
@@ -147,13 +159,14 @@ const { url, expiresIn } = await user.identity.passkeys.createLink({
 window.location.assign(url); // expiresIn: p. ej. '15m'
 ```
 
-Necesita la sesión propia de la persona (JWT de navegador o React Native); una API key no puede crear el link. `returnUrl` sigue la misma regla que `approvalReturnUrl`.
+Necesita la sesión propia de la persona (JWT de navegador o React Native); una API key u otro tipo de token recibe `BloqueAuthenticationError` (403 `E_USER_SESSION_REQUIRED`). `returnUrl` sigue la misma regla que `approvalReturnUrl`.
 
 | Error | Código | Qué hacer |
 | --- | --- | --- |
 | `BloqueReturnUrlNotAllowedError` | 400 `E_RETURN_URL_NOT_ALLOWED` | Usa un `returnUrl` cuyo origen permita tu origin |
-| `BloquePasskeyRegistrationUnavailableError` | 501 `E_PASSKEY_REGISTRATION_NOT_SUPPORTED` / 503 `E_PASSKEY_REGISTRATION_UNAVAILABLE` | `retryable: false`: este despliegue no registra passkeys. `retryable: true`: se reintenta automáticamente; reintenta más tarde si persiste |
-| `BloqueRateLimitError` | 429 | Demasiados links para esta sesión (10 por hora por defecto) |
+| `BloquePasskeyRegistrationUnavailableError` | 501 `E_PASSKEY_REGISTRATION_NOT_SUPPORTED` / 503 `E_PASSKEY_REGISTRATION_UNAVAILABLE` | `retryable: false`: este despliegue no registra passkeys; no se reintenta. `retryable: true`: se reintenta automáticamente; reintenta más tarde si persiste |
+| `BloqueAuthenticationError` | 403 `E_USER_SESSION_REQUIRED` | Llámalo con la sesión propia de la persona |
+| `BloqueRateLimitError` | 429 | Demasiados links para esta sesión (10 por hora por defecto). Con `retry` activo (por defecto), el SDK espera `Retry-After` (hasta `maxDelay`) y reintenta antes de lanzar el error |
 
 ## Errores
 

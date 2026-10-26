@@ -5,6 +5,7 @@ import {
   BloqueApprovalInvalidError,
   BloqueApprovalRequiredError,
   BloqueApprovalUnavailableError,
+  BloqueReturnUrlNotAllowedError,
   type OperationApprovalOptions,
   operationApprovalHeaders,
 } from '@bloque/sdk-core';
@@ -219,10 +220,10 @@ function mapDecodedQrFromWire(result: DecodeBrebQrWireResult): BrebDecodedQr {
 
 export class BrebClient extends BaseClient {
   /**
-   * Passkey-approval errors are thrown, not returned as `{ error }`, so they
-   * read the same as on every other gated method: the caller needs
-   * `BloqueApprovalRequiredError` itself to wait for the owner's approval
-   * (`waitForApproval()`), and the invalid, expired and unavailable ones to
+   * Passkey-approval errors, and a refused `approvalReturnUrl`, are thrown,
+   * not returned as `{ error }`, so they read the same as on every other
+   * gated method: the caller needs `BloqueApprovalRequiredError` itself to
+   * wait for the owner's approval (`waitForApproval()`), and the others to
    * know what to do next. Every other error is still returned as `{ error }`.
    */
   private rethrowApprovalErrors(error: unknown): void {
@@ -230,7 +231,8 @@ export class BrebClient extends BaseClient {
       error instanceof BloqueApprovalRequiredError ||
       error instanceof BloqueApprovalInvalidError ||
       error instanceof BloqueApprovalExpiredError ||
-      error instanceof BloqueApprovalUnavailableError
+      error instanceof BloqueApprovalUnavailableError ||
+      error instanceof BloqueReturnUrlNotAllowedError
     ) {
       throw error;
     }
