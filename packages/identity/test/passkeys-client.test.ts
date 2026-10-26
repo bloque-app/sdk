@@ -56,6 +56,9 @@ describe('PasskeysClient.createLink', () => {
       'https://api.dev-bloque.app/api/origins/passkeys/links',
     );
     expect(calls[0]?.init?.method).toBe('POST');
+    expect(new Headers(calls[0]?.init?.headers).get('Authorization')).toBe(
+      `Bearer ${SESSION_JWT}`,
+    );
     expect(JSON.parse(calls[0]?.init?.body as string)).toEqual({
       return_url: RETURN_URL,
     });

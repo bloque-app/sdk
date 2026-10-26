@@ -1,10 +1,11 @@
+import { readApprovalResult } from './approval-result';
 import { BaseClient } from './base-client';
 import {
   BloqueApprovalExpiredError,
   BloqueApprovalPendingError,
   BloqueApprovalRequiredError,
+  BloqueConfigError,
   type PendingApproval,
-  readApprovalResult,
   type WaitForApprovalOptions,
 } from './errors';
 
@@ -59,9 +60,28 @@ export function operationApprovalHeaders(
     }),
     ...(!options?.approval &&
       options?.approvalReturnUrl && {
-        [OPERATION_APPROVAL_RETURN_URL_HEADER]: options.approvalReturnUrl,
+        [OPERATION_APPROVAL_RETURN_URL_HEADER]: headerSafeUrl(
+          options.approvalReturnUrl,
+        ),
       }),
   };
+}
+
+/**
+ * The URL as given when it fits in a header, percent-encoded otherwise
+ * (non-ASCII path or host), instead of failing the request as a network
+ * error.
+ */
+function headerSafeUrl(url: string): string {
+  let parsed: URL;
+  try {
+    parsed = new URL(url);
+  } catch {
+    throw new BloqueConfigError(
+      `approvalReturnUrl must be an absolute URL, got: ${url}`,
+    );
+  }
+  return /^[\x21-\x7e]+$/.test(url) ? url : parsed.href;
 }
 
 /**
@@ -108,6 +128,8 @@ export class ApprovalsClient extends BaseClient {
    * `BloqueApprovalRequiredError.toPendingApproval()`, once. Repeat the same
    * call with it as the `approval` option right away: it must be used within
    * about two minutes of the owner opening the approval page, and only once.
+   * Keep `pending` saved until this resolves: on `BloqueApprovalPendingError`
+   * the owner can still approve and come back again.
    *
    * @throws {BloqueApprovalPendingError} The owner has not approved yet.
    * @throws {BloqueApprovalExpiredError} The approval expired
@@ -121,12 +143,12 @@ export class ApprovalsClient extends BaseClient {
    *   params,
    *   pending: error.toPendingApproval(),
    * }));
-   * window.location.assign(error.approvalUrl);
+   * if (error.approvalUrl) window.location.assign(error.approvalUrl);
    *
    * // Back on approvalReturnUrl
    * const { params, pending } = JSON.parse(sessionStorage.getItem('transfer'));
-   * sessionStorage.removeItem('transfer');
    * const approval = await bloque.approvals.collect(pending);
+   * sessionStorage.removeItem('transfer');
    * await bloque.accounts.transfer(params, { approval });
    * ```
    */

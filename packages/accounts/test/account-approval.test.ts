@@ -4,6 +4,7 @@ import {
   BloqueApprovalInvalidError,
   BloqueApprovalRequiredError,
   BloqueApprovalUnavailableError,
+  BloqueReturnUrlNotAllowedError,
   HttpClient,
   OPERATION_APPROVAL_HEADER,
 } from '@bloque/sdk-core';
@@ -334,6 +335,32 @@ describe('BRE-B keys', () => {
       };
       expect(result.data).toBeNull();
       expect(result.error?.code).toBe('E_KEY_TAKEN');
+    }
+  });
+
+  it('throws a refused approvalReturnUrl instead of returning it', async () => {
+    globalThis.fetch = mock(() =>
+      Promise.resolve(
+        new Response(
+          JSON.stringify({
+            error: true,
+            code: 'E_RETURN_URL_NOT_ALLOWED',
+            message: 'E_RETURN_URL_NOT_ALLOWED',
+          }),
+          { status: 400, headers: { 'Content-Type': 'application/json' } },
+        ),
+      ),
+    ) as unknown as typeof fetch;
+    const options = { approvalReturnUrl: 'https://evil.example.com' };
+    const breb = client().breb;
+
+    for (const call of [
+      () => breb.createKey({ keyType: 'BCODE', key: '0016027228' }, options),
+      () => breb.activateKey({ accountUrn: KEY }, options),
+      () => breb.deleteKey({ accountUrn: KEY }, options),
+    ]) {
+      const error = await call().catch((e) => e);
+      expect(error).toBeInstanceOf(BloqueReturnUrlNotAllowedError);
     }
   });
 
