@@ -40,5 +40,7 @@ jobs:
         run: bun run build:sdk-only
 
       - name: Publish Packages
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
           bun run release:sdk-only
