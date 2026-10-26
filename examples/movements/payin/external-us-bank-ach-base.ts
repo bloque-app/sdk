@@ -1,4 +1,4 @@
-import { SDK } from '../../../packages/sdk/src';
+import { SDK, withApproval } from '../../../packages/sdk/src';
 
 /**
  * External US bank (Brale / Plaid) → USDC on Base — proactive ACH pull.
@@ -39,11 +39,23 @@ const quote = await user.swap.findRates({
 });
 console.log('Indicative rate:', quote.rates[0]);
 
-const order = await user.accounts.externalUsBank.pull({
-  urn: bankUrn,
-  amount: '10',
-  chain: 'base',
-  walletAddress,
-});
+// If the account owner must approve this with their passkey, withApproval
+// shares the link, waits for the approval and repeats the call once.
+const order = await withApproval(
+  (approval) =>
+    user.accounts.externalUsBank.pull(
+      {
+        urn: bankUrn,
+        amount: '10',
+        chain: 'base',
+        walletAddress,
+      },
+      { approval },
+    ),
+  {
+    onApprovalRequired: (error) =>
+      console.log('Approve with your passkey:', error.approvalUrl),
+  },
+);
 
 console.log(JSON.stringify(order, null, 2));

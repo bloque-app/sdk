@@ -4,7 +4,7 @@
 // `sourceUrn`/`destinationUrn` swap. Amounts are strings; see
 // 0-transfer-between-accounts.ts for the asset/decimals explanation.
 
-import { SDK } from '../../../packages/sdk/src/index';
+import { SDK, withApproval } from '../../../packages/sdk/src/index';
 
 const bloque = new SDK({
   origin: process.env.ORIGIN!,
@@ -28,27 +28,43 @@ const card = await user.accounts.card.create(
 );
 
 // virtual -> card: top up the card with 20 DUSD
-const topUp = await user.accounts.transfer(
+// If the account owner must approve this with their passkey, withApproval
+// shares the link, waits for the approval and repeats the call once.
+const topUp = await withApproval(
+  (approval) =>
+    user.accounts.transfer(
+      {
+        sourceUrn: spending.urn,
+        destinationUrn: card.urn,
+        amount: '20000000',
+        asset: 'DUSD/6',
+        metadata: { note: 'Card top-up' },
+      },
+      { idempotencyKey: 'card-virtual-funding-topup', approval },
+    ),
   {
-    sourceUrn: spending.urn,
-    destinationUrn: card.urn,
-    amount: '20000000',
-    asset: 'DUSD/6',
-    metadata: { note: 'Card top-up' },
+    onApprovalRequired: (error) =>
+      console.log('Approve with your passkey:', error.approvalUrl),
   },
-  { idempotencyKey: 'card-virtual-funding-topup' },
 );
 console.log('Top-up queued:', topUp.queueId, topUp.status);
 
 // card -> virtual: pull unspent funds back
-const pullback = await user.accounts.transfer(
+const pullback = await withApproval(
+  (approval) =>
+    user.accounts.transfer(
+      {
+        sourceUrn: card.urn,
+        destinationUrn: spending.urn,
+        amount: '5000000',
+        asset: 'DUSD/6',
+        metadata: { note: 'Card pull-back' },
+      },
+      { idempotencyKey: 'card-virtual-funding-pullback', approval },
+    ),
   {
-    sourceUrn: card.urn,
-    destinationUrn: spending.urn,
-    amount: '5000000',
-    asset: 'DUSD/6',
-    metadata: { note: 'Card pull-back' },
+    onApprovalRequired: (error) =>
+      console.log('Approve with your passkey:', error.approvalUrl),
   },
-  { idempotencyKey: 'card-virtual-funding-pullback' },
 );
 console.log('Pull-back queued:', pullback.queueId, pullback.status);

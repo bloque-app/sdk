@@ -10,6 +10,10 @@ import { QuestHeader } from '@theme';
 
 Create and resolve BRE-B payment keys through the SDK.
 
+:::tip Passkey approvals
+Creating, activating and deleting a key can need the account owner's passkey approval: the call throws `BloqueApprovalRequiredError` with an `approvalUrl`. Wrap it in `withApproval` to wait and repeat it once, or redirect the owner and continue when they come back. See [Passkey approvals](../features/passkey-approvals).
+:::
+
 ## Overview
 
 The BRE-B client lets you:

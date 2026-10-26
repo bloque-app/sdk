@@ -1,4 +1,4 @@
-import { SDK } from '../../packages/sdk/src/index';
+import { SDK, withApproval } from '../../packages/sdk/src/index';
 
 /**
  * Confirming operation results: webhooks + polling.
@@ -45,20 +45,29 @@ if (rates.rates.length === 0) {
 }
 
 // Option A: webhook-driven — pass webhookUrl, your endpoint gets notified.
-const order = await user.swap.rtp.create(
+// If the account owner must approve this with their passkey, withApproval
+// shares the link, waits for the approval and repeats the call once.
+const order = await withApproval(
+  (approval) =>
+    user.swap.rtp.create(
+      {
+        rateSig: rates.rates[0]!.sig,
+        amountSrc,
+        webhookUrl: 'https://your-app.com/webhooks/bloque',
+        depositInformation: {
+          owner: 'Jane Doe',
+          accountNumber: '1234567890',
+          routingNumber: '063108680',
+          accountType: 'checking',
+        },
+        args: { sourceAccountUrn },
+      },
+      { idempotencyKey: `webhook-demo-${amountSrc}`, approval },
+    ),
   {
-    rateSig: rates.rates[0]!.sig,
-    amountSrc,
-    webhookUrl: 'https://your-app.com/webhooks/bloque',
-    depositInformation: {
-      owner: 'Jane Doe',
-      accountNumber: '1234567890',
-      routingNumber: '063108680',
-      accountType: 'checking',
-    },
-    args: { sourceAccountUrn },
+    onApprovalRequired: (error) =>
+      console.log('Approve with your passkey:', error.approvalUrl),
   },
-  { idempotencyKey: `webhook-demo-${amountSrc}` },
 );
 
 console.log(

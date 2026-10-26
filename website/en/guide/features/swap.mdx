@@ -3,6 +3,10 @@
 
 Learn how to perform asset swaps using the Bloque SDK.
 
+:::tip Passkey approvals
+Order creates that move money out (payouts, conversions, the ACH pull) can need the account owner's passkey approval: the call throws `BloqueApprovalRequiredError` with an `approvalUrl`. Wrap it in `withApproval` to wait and repeat it once, or redirect the owner and continue when they come back. See [Passkey approvals](./passkey-approvals).
+:::
+
 ## Overview
 
 The swap module lets you query exchange rates and perform asset swaps between supported mediums and currencies.

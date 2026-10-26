@@ -7,7 +7,7 @@
 // The asset format is "SYMBOL/DECIMALS", e.g. "DUSD/6" means
 // 6 decimal places — so "10000000" = 10.000000 DUSD (10 dollars).
 
-import { SDK } from '../../../packages/sdk/src/index';
+import { SDK, withApproval } from '../../../packages/sdk/src/index';
 
 const bloque = new SDK({
   origin: process.env.ORIGIN!,
@@ -33,17 +33,26 @@ const spending = await user.accounts.virtual.create(
 
 // Transfer 50 DUSD from savings to spending
 // 50 DUSD = 50 * 10^6 = "50000000"
-const result = await user.accounts.transfer(
+// If the account owner must approve this with their passkey, withApproval
+// shares the link, waits for the approval and repeats the call once.
+const result = await withApproval(
+  (approval) =>
+    user.accounts.transfer(
+      {
+        sourceUrn: savings.urn,
+        destinationUrn: spending.urn,
+        amount: '50000000',
+        asset: 'DUSD/6',
+        metadata: {
+          note: 'Weekly allowance',
+        },
+      },
+      { idempotencyKey: 'f7a3b89e-6d3f-4e9e-8b7f-a1c4d2e5f901', approval },
+    ),
   {
-    sourceUrn: savings.urn,
-    destinationUrn: spending.urn,
-    amount: '50000000',
-    asset: 'DUSD/6',
-    metadata: {
-      note: 'Weekly allowance',
-    },
+    onApprovalRequired: (error) =>
+      console.log('Approve with your passkey:', error.approvalUrl),
   },
-  { idempotencyKey: 'f7a3b89e-6d3f-4e9e-8b7f-a1c4d2e5f901' },
 );
 
 console.log('Transfer queued:', result.queueId);
@@ -59,17 +68,24 @@ const card = await user.accounts.card.create(
   { waitLedger: true, idempotencyKey: 'f7a3b89e-6d3f-4e9e-8b7f-a1c4d2e5f901' },
 );
 
-const topUp = await user.accounts.transfer(
+const topUp = await withApproval(
+  (approval) =>
+    user.accounts.transfer(
+      {
+        sourceUrn: savings.urn,
+        destinationUrn: card.urn,
+        amount: '25000000', // 25 DUSD
+        asset: 'DUSD/6',
+        metadata: {
+          note: 'Card top-up',
+        },
+      },
+      { idempotencyKey: 'f7a3b89e-6d3f-4e9e-8b7f-a1c4d2e5f901', approval },
+    ),
   {
-    sourceUrn: savings.urn,
-    destinationUrn: card.urn,
-    amount: '25000000', // 25 DUSD
-    asset: 'DUSD/6',
-    metadata: {
-      note: 'Card top-up',
-    },
+    onApprovalRequired: (error) =>
+      console.log('Approve with your passkey:', error.approvalUrl),
   },
-  { idempotencyKey: 'f7a3b89e-6d3f-4e9e-8b7f-a1c4d2e5f901' },
 );
 
 console.log('Card top-up queued:', topUp.queueId);

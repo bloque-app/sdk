@@ -1,4 +1,4 @@
-import { SDK } from '../../../packages/sdk/src/index';
+import { SDK, withApproval } from '../../../packages/sdk/src/index';
 
 /**
  * External US bank on-ramp: ACH pull USD → USDC on Base.
@@ -49,15 +49,24 @@ if (rates.rates.length === 0) {
 
 console.log('Best rate:', rates.rates[0]);
 
-const result = await user.swap.externalUsBank.create(
+// If the account owner must approve this with their passkey, withApproval
+// shares the link, waits for the approval and repeats the call once.
+const result = await withApproval(
+  (approval) =>
+    user.swap.externalUsBank.create(
+      {
+        rateSig: rates.rates[0]!.sig,
+        amountSrc,
+        toMedium: 'base',
+        depositInformation: { walletAddress },
+        args: { sourceAccountUrn },
+      },
+      { idempotencyKey: `external-us-bank-onramp-base-${amountSrc}`, approval },
+    ),
   {
-    rateSig: rates.rates[0]!.sig,
-    amountSrc,
-    toMedium: 'base',
-    depositInformation: { walletAddress },
-    args: { sourceAccountUrn },
+    onApprovalRequired: (error) =>
+      console.log('Approve with your passkey:', error.approvalUrl),
   },
-  { idempotencyKey: `external-us-bank-onramp-base-${amountSrc}` },
 );
 
 console.log('External US bank → Base on-ramp order:', {

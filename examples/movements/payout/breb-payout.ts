@@ -1,4 +1,4 @@
-import { SDK } from '../../../packages/sdk/src/index';
+import { SDK, withApproval } from '../../../packages/sdk/src/index';
 
 /**
  * BRE-B payout: DUSD on Kusama → COP, sent to any BRE-B key.
@@ -41,20 +41,29 @@ if (rates.rates.length === 0) {
 const sourceAccountUrn =
   process.env.SOURCE_ACCOUNT_URN ?? 'did:bloque:account:kusama-user-001';
 
-const result = await user.swap.breb.create(
-  {
-    rateSig: rates.rates[0]!.sig,
-    amountSrc,
-    depositInformation: {
-      resolutionId: `breb-payout-${amountSrc}`,
-      destinationKey: {
-        keyValue: process.env.BREB_KEY_VALUE ?? '@JAR1234',
-        displayName: 'Jane Doe',
+// If the account owner must approve this with their passkey, withApproval
+// shares the link, waits for the approval and repeats the call once.
+const result = await withApproval(
+  (approval) =>
+    user.swap.breb.create(
+      {
+        rateSig: rates.rates[0]!.sig,
+        amountSrc,
+        depositInformation: {
+          resolutionId: `breb-payout-${amountSrc}`,
+          destinationKey: {
+            keyValue: process.env.BREB_KEY_VALUE ?? '@JAR1234',
+            displayName: 'Jane Doe',
+          },
+        },
+        args: { sourceAccountUrn },
       },
-    },
-    args: { sourceAccountUrn },
+      { idempotencyKey: `breb-payout-${amountSrc}`, approval },
+    ),
+  {
+    onApprovalRequired: (error) =>
+      console.log('Approve with your passkey:', error.approvalUrl),
   },
-  { idempotencyKey: `breb-payout-${amountSrc}` },
 );
 
 console.log('BRE-B payout order:', {

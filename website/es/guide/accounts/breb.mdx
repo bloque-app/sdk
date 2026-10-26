@@ -10,6 +10,10 @@ import { QuestHeader } from '@theme';
 
 Crea y resuelve llaves BRE-B desde el SDK.
 
+:::tip Aprobaciones con passkey
+Crear, activar y eliminar una llave pueden necesitar la aprobación del dueño de la cuenta con su passkey: la llamada lanza `BloqueApprovalRequiredError` con un `approvalUrl`. Envuélvela en `withApproval` para esperar y repetirla una vez, o redirige al dueño y continúa cuando vuelva. Mira [Aprobaciones con passkey](../features/passkey-approvals).
+:::
+
 ## Descripción general
 
 El cliente de BRE-B te permite:

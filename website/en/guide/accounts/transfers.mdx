@@ -10,6 +10,10 @@ import { QuestHeader } from '@theme';
 
 Transfer funds between any accounts using the Bloque SDK.
 
+:::tip Passkey approvals
+`transfer` and `batchTransfer` can need the account owner's passkey approval: the call throws `BloqueApprovalRequiredError` with an `approvalUrl`. Wrap it in `withApproval` to wait and repeat it once, or redirect the owner and continue when they come back. See [Passkey approvals](../features/passkey-approvals).
+:::
+
 ## Overview
 
 The transfer API allows you to move funds between different account types:

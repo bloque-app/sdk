@@ -3,7 +3,7 @@
 // Same `accounts.transfer()` call as any other internal transfer — the
 // medium of source/destination doesn't matter to this endpoint.
 
-import { SDK } from '../../../packages/sdk/src/index';
+import { SDK, withApproval } from '../../../packages/sdk/src/index';
 
 const bloque = new SDK({
   origin: process.env.ORIGIN!,
@@ -26,15 +26,24 @@ const cardB = await user.accounts.card.create(
   { waitLedger: true, idempotencyKey: 'card-to-card-b' },
 );
 
-const result = await user.accounts.transfer(
+// If the account owner must approve this with their passkey, withApproval
+// shares the link, waits for the approval and repeats the call once.
+const result = await withApproval(
+  (approval) =>
+    user.accounts.transfer(
+      {
+        sourceUrn: cardA.urn,
+        destinationUrn: cardB.urn,
+        amount: '10000000', // 10 DUSD
+        asset: 'DUSD/6',
+        metadata: { note: 'Split between cards' },
+      },
+      { idempotencyKey: 'card-to-card-transfer', approval },
+    ),
   {
-    sourceUrn: cardA.urn,
-    destinationUrn: cardB.urn,
-    amount: '10000000', // 10 DUSD
-    asset: 'DUSD/6',
-    metadata: { note: 'Split between cards' },
+    onApprovalRequired: (error) =>
+      console.log('Approve with your passkey:', error.approvalUrl),
   },
-  { idempotencyKey: 'card-to-card-transfer' },
 );
 
 console.log('Transfer queued:', result.queueId, result.status);

@@ -3,6 +3,10 @@
 
 Aprende cómo realizar intercambios de activos usando el SDK de Bloque.
 
+:::tip Aprobaciones con passkey
+Las órdenes que sacan dinero (payouts, conversiones, el pull ACH) pueden necesitar la aprobación del dueño de la cuenta con su passkey: la llamada lanza `BloqueApprovalRequiredError` con un `approvalUrl`. Envuélvela en `withApproval` para esperar y repetirla una vez, o redirige al dueño y continúa cuando vuelva. Mira [Aprobaciones con passkey](./passkey-approvals).
+:::
+
 ## Descripción General
 
 El módulo swap permite consultar tasas de cambio y realizar intercambios de activos entre diferentes medios y monedas soportadas.
