@@ -1,4 +1,5 @@
 import { readApprovalResult } from './approval-result';
+
 /**
  * Minimal shape of `HttpClient` that error classes need to make a follow-up
  * request (e.g. `BloqueVerificationRequiredError.getVerificationLink()`

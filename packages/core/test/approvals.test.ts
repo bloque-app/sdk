@@ -472,10 +472,22 @@ describe('operationApprovalHeaders()', () => {
     });
   });
 
-  it('refuses an approval return URL that is not an absolute URL', () => {
-    expect(() =>
-      operationApprovalHeaders({ approvalReturnUrl: '/relative/path' }),
-    ).toThrow(BloqueConfigError);
+  it.each([
+    '/relative/path',
+    'https://app.test/a\tb',
+    'https://app.test/a\nb',
+    ' https://app.test/back',
+    'https://app.test/a b',
+  ])('refuses %p as an approval return URL instead of changing it', (url) => {
+    expect(() => operationApprovalHeaders({ approvalReturnUrl: url })).toThrow(
+      BloqueConfigError,
+    );
+  });
+
+  it('sends a header-safe approval return URL unchanged', () => {
+    expect(
+      operationApprovalHeaders({ approvalReturnUrl: 'https://app.test' }),
+    ).toEqual({ [OPERATION_APPROVAL_RETURN_URL_HEADER]: 'https://app.test' });
   });
 
   it('drops the approval return URL when repeating with the approval', () => {

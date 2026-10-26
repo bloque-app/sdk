@@ -4,6 +4,7 @@ import {
   BloqueApprovalInvalidError,
   BloqueApprovalRequiredError,
   BloqueApprovalUnavailableError,
+  BloqueConfigError,
   BloqueReturnUrlNotAllowedError,
   HttpClient,
   OPERATION_APPROVAL_HEADER,
@@ -362,6 +363,26 @@ describe('BRE-B keys', () => {
       const error = await call().catch((e) => e);
       expect(error).toBeInstanceOf(BloqueReturnUrlNotAllowedError);
     }
+  });
+
+  it('throws a malformed approvalReturnUrl instead of returning it', async () => {
+    const calls: unknown[] = [];
+    globalThis.fetch = mock((...args: unknown[]) => {
+      calls.push(args);
+      return Promise.resolve(new Response('{}', { status: 200 }));
+    }) as unknown as typeof fetch;
+    const options = { approvalReturnUrl: '/back' };
+    const breb = client().breb;
+
+    for (const call of [
+      () => breb.createKey({ keyType: 'BCODE', key: '0016027228' }, options),
+      () => breb.activateKey({ accountUrn: KEY }, options),
+      () => breb.deleteKey({ accountUrn: KEY }, options),
+    ]) {
+      const error = await call().catch((e) => e);
+      expect(error).toBeInstanceOf(BloqueConfigError);
+    }
+    expect(calls).toHaveLength(0);
   });
 
   it('other errors are still returned as { error }', async () => {

@@ -1,8 +1,9 @@
 export interface StartTosGateParams {
   /**
    * Where the hosted TOS gate page redirects back to after acceptance.
-   * Must be an https URL whose origin your origin allows
-   * (`tos_gate_return_url_allowlist`, set by Bloque).
+   * Must be an https URL. When your origin has an allowlist
+   * (`tos_gate_return_url_allowlist`, set by Bloque), its origin must be in
+   * it; links to Bloque's identity portal always require one.
    */
   returnUrl: string;
 }

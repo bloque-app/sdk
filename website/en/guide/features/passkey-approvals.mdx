@@ -92,7 +92,7 @@ if (key.error) {
 
 ```typescript
 import {
-  BloqueApprovalPendingError,
+  BloqueApprovalExpiredError,
   BloqueApprovalRequiredError,
 } from '@bloque/sdk';
 
@@ -119,12 +119,13 @@ let approval: string;
 try {
   approval = await user.approvals.collect(saved.pending);
 } catch (error) {
-  if (error instanceof BloqueApprovalPendingError) {
-    // Not approved yet: keep the saved state and offer
-    // saved.pending.approvalUrl again; this page runs again when they return.
-  } else {
-    sessionStorage.removeItem('pending-transfer'); // expired or already used
+  if (error instanceof BloqueApprovalExpiredError) {
+    // Expired or already collected: it can never succeed, so drop it.
+    sessionStorage.removeItem('pending-transfer');
   }
+  // Anything else keeps the saved state: BloqueApprovalPendingError (offer
+  // saved.pending.approvalUrl again; this page runs again when they return),
+  // or a network error, timeout, 503 or 429 (call collect() again).
   throw error;
 }
 // Remove it only now: until collect() succeeds the owner can still approve.
@@ -135,7 +136,7 @@ await user.accounts.transfer(saved.params, {
 });
 ```
 
-- `approvalReturnUrl` must be an https URL whose origin your origin allows, or the call throws `BloqueReturnUrlNotAllowedError` (400). Bloque sets the allowed origins on your origin (`tos_gate_return_url_allowlist`, the same list as the TOS gate).
+- `approvalReturnUrl` must be an absolute https URL whose origin your origin allows, or the call throws `BloqueReturnUrlNotAllowedError` (400). A value that is not an absolute URL, or has spaces or control characters, throws `BloqueConfigError` before anything is sent; non-ASCII characters are percent-encoded. Bloque sets the allowed origins on your origin (`tos_gate_return_url_allowlist`, the same list as the TOS gate).
 - The operation runs once: `collect()` hands out an approval only once, and the API refuses an approval that was already used. A second `collect()` throws `BloqueApprovalExpiredError` with `reason: 'approval_delivered_elsewhere'`.
 - Repeat right away. The owner's approval lasts about two minutes from when they open the approval page:
   - not collected in time: it is dropped, and `collect()` throws `BloqueApprovalPendingError` (or, after `expiresAt`, `BloqueApprovalExpiredError` with `reason: 'approval_not_received'`, without calling the API);
@@ -146,7 +147,7 @@ await user.accounts.transfer(saved.params, {
 - `approvalUrl` can be missing on deployments without an approval page; check it before redirecting.
 - The approval page adds nothing to `approvalReturnUrl`: `collect()` is how you learn whether the owner approved.
 - `pending.approvalToken` and `pending.approvalUrl` can only collect this one approval (the owner still signs with their passkey), but keep them out of URLs and logs. `pending.summary` is what the owner approves and can include personal data. `sessionStorage` is a good place for all of it.
-- The BRE-B key methods return most errors as `{ error }`, but throw `BloqueReturnUrlNotAllowedError` like the approval errors.
+- The BRE-B key methods return most errors as `{ error }`, but throw `BloqueReturnUrlNotAllowedError` and `BloqueConfigError` like the approval errors.
 
 ## Re-register a passkey
 
