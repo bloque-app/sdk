@@ -446,6 +446,45 @@ type ApprovalResult =
   | { status: 'ready'; header: string; value: string }
   | { status: 'delivered' };
 
+/**
+ * A pending approval saved before sending the account owner away with a
+ * full-page redirect, from `BloqueApprovalRequiredError.toPendingApproval()`.
+ * Plain JSON, so it can go in `sessionStorage`. `approvalToken` and
+ * `approvalUrl` only let you collect this one approval (the owner still signs
+ * with their passkey), but treat them as secrets: never put them in a URL or
+ * a log.
+ */
+export interface PendingApproval {
+  /** Collects the approval through `/api/origins/operation-approvals/result`. */
+  approvalToken: string;
+  /** The approval page, to send the owner there again. */
+  approvalUrl?: string;
+  /** When the approval expires, in epoch milliseconds. */
+  expiresAt: number;
+  /** What the account owner is asked to approve. */
+  summary?: OperationApprovalSummary;
+}
+
+/** One read of the approval's delivery state. @internal */
+export function readApprovalResult(
+  client: RequestCapableClient,
+  approvalToken: string,
+): Promise<ApprovalResult> {
+  return client.request<ApprovalResult>({
+    method: 'GET',
+    path: '/api/origins/operation-approvals/result',
+    authorizationOverride: `Bearer ${approvalToken}`,
+    _skipExchange: true,
+  });
+}
+
+function approvalTokenMissing(): BloqueApprovalExpiredError {
+  return new BloqueApprovalExpiredError('', {
+    code: 'E_APPROVAL_EXPIRED',
+    response: { extra_details: { reason: 'approval_token_missing' } },
+  });
+}
+
 /** Options for {@link BloqueApprovalRequiredError.waitForApproval}. */
 export interface WaitForApprovalOptions {
   /** Delay between polls, in milliseconds. Never below 2000. @default 2000 */
@@ -564,10 +603,7 @@ export class BloqueApprovalRequiredError extends BloqueAPIError {
    */
   async waitForApproval(options?: WaitForApprovalOptions): Promise<string> {
     if (!this.approvalToken || !this.requestClient) {
-      throw new BloqueApprovalExpiredError('', {
-        code: 'E_APPROVAL_EXPIRED',
-        response: { extra_details: { reason: 'approval_token_missing' } },
-      });
+      throw approvalTokenMissing();
     }
 
     const requested = options?.intervalMs;
@@ -582,12 +618,7 @@ export class BloqueApprovalRequiredError extends BloqueAPIError {
     while (Date.now() < deadline) {
       signal?.throwIfAborted();
       const result = await within(
-        this.requestClient.request<ApprovalResult>({
-          method: 'GET',
-          path: '/api/origins/operation-approvals/result',
-          authorizationOverride: `Bearer ${this.approvalToken}`,
-          _skipExchange: true,
-        }),
+        readApprovalResult(this.requestClient, this.approvalToken),
         deadline - Date.now(),
         signal,
       );
@@ -612,6 +643,21 @@ export class BloqueApprovalRequiredError extends BloqueAPIError {
         },
       },
     });
+  }
+
+  /**
+   * The approval to save before sending the account owner to `approvalUrl`
+   * with a full-page redirect. When they come back, pass it to
+   * `approvals.collect()` and repeat the same call with the approval.
+   */
+  toPendingApproval(): PendingApproval {
+    if (!this.approvalToken) throw approvalTokenMissing();
+    return {
+      approvalToken: this.approvalToken,
+      ...(this.approvalUrl && { approvalUrl: this.approvalUrl }),
+      expiresAt: this.expiresAt.getTime(),
+      ...(this.summary && { summary: this.summary }),
+    };
   }
 
   toJSON() {
@@ -658,6 +704,23 @@ function approvalInvalidMessage(extra?: ApprovalExtraDetails): string {
       return 'The passkey used to approve belongs to someone else. The account owner must approve with their own passkey.';
     default:
       return `The operation approval is not valid${extra?.reason ? ` (${extra.reason})` : ''}.`;
+  }
+}
+
+/**
+ * Error thrown by `approvals.collect()` when the account owner has not
+ * approved yet (`E_APPROVAL_PENDING`), e.g. they came back without
+ * approving. Send them to `approvalUrl` again before `expiresAt`, or call
+ * `collect()` again later.
+ */
+export class BloqueApprovalPendingError extends BloqueAPIError {
+  constructor(_message?: string, options?: BloqueAPIErrorOptions) {
+    super('The account owner has not approved this operation yet.', {
+      ...options,
+      code: options?.code ?? 'E_APPROVAL_PENDING',
+    });
+    this.name = 'BloqueApprovalPendingError';
+    Object.setPrototypeOf(this, BloqueApprovalPendingError.prototype);
   }
 }
 
@@ -850,6 +913,58 @@ export class BloqueValidationError extends BloqueAPIError {
 }
 
 /**
+ * Error thrown when a `returnUrl` is refused (`E_RETURN_URL_NOT_ALLOWED`,
+ * HTTP 400): it is not an https URL whose origin your origin allows, or your
+ * origin allows none. Bloque sets the allowed origins on your origin.
+ */
+export class BloqueReturnUrlNotAllowedError extends BloqueValidationError {
+  constructor(_message: string, options?: BloqueAPIErrorOptions) {
+    super(
+      'returnUrl is not allowed: use an https URL whose origin your origin allows.',
+      { ...options, code: options?.code ?? 'E_RETURN_URL_NOT_ALLOWED' },
+    );
+    this.name = 'BloqueReturnUrlNotAllowedError';
+    Object.setPrototypeOf(this, BloqueReturnUrlNotAllowedError.prototype);
+  }
+}
+
+/**
+ * Error thrown when a passkey registration link cannot be created:
+ * `E_PASSKEY_REGISTRATION_NOT_SUPPORTED` (HTTP 501, the deployment does not
+ * register passkeys; retrying does not help) or
+ * `E_PASSKEY_REGISTRATION_UNAVAILABLE` (HTTP 503, retry shortly).
+ */
+export class BloquePasskeyRegistrationUnavailableError extends BloqueAPIError {
+  /** Whether retrying later can succeed (`extra_details.retryable`). */
+  public readonly retryable: boolean;
+
+  constructor(_message: string, options?: BloqueAPIErrorOptions) {
+    const extra = extractExtraDetails<{ retryable?: boolean }>(
+      options?.response,
+    );
+    const retryable =
+      extra?.retryable ??
+      options?.code !== 'E_PASSKEY_REGISTRATION_NOT_SUPPORTED';
+    super(
+      retryable
+        ? 'Passkey registration is unavailable right now. Retry shortly.'
+        : 'Passkey registration is not supported on this deployment.',
+      options,
+    );
+    this.name = 'BloquePasskeyRegistrationUnavailableError';
+    this.retryable = retryable;
+    Object.setPrototypeOf(
+      this,
+      BloquePasskeyRegistrationUnavailableError.prototype,
+    );
+  }
+
+  toJSON() {
+    return { ...super.toJSON(), retryable: this.retryable };
+  }
+}
+
+/**
  * Error thrown when a resource is not found (HTTP 404).
  *
  * Possible causes:
@@ -995,6 +1110,10 @@ const ERROR_CODE_MAP: Record<
 > = {
   INSUFFICIENT_FUNDS: BloqueInsufficientFundsError,
   INSUFFICIENT_BALANCE: BloqueInsufficientFundsError,
+  E_RETURN_URL_NOT_ALLOWED: BloqueReturnUrlNotAllowedError,
+  E_PASSKEY_REGISTRATION_NOT_SUPPORTED:
+    BloquePasskeyRegistrationUnavailableError,
+  E_PASSKEY_REGISTRATION_UNAVAILABLE: BloquePasskeyRegistrationUnavailableError,
   // Add more mappings as we discover them from the API
 };
 
