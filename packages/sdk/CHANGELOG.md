@@ -1,5 +1,22 @@
 # @bloque/sdk
 
+## 0.20.0
+
+### Minor Changes
+
+- a6e06e5: Add an `agents` client for the hosted personal agent API: create, list, get, and WhatsApp link.
+
+### Patch Changes
+
+- Updated dependencies [a6e06e5]
+  - @bloque/sdk-agents@0.20.0
+  - @bloque/sdk-core@0.20.0
+  - @bloque/sdk-accounts@0.20.0
+  - @bloque/sdk-compliance@0.20.0
+  - @bloque/sdk-identity@0.20.0
+  - @bloque/sdk-orgs@0.20.0
+  - @bloque/sdk-swap@0.20.0
+
 ## 0.19.0
 
 ### Minor Changes
