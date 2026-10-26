@@ -1,6 +1,10 @@
 import { AccountsClient } from '@bloque/sdk-accounts';
 import { ComplianceClient } from '@bloque/sdk-compliance';
-import { type BloqueSDKConfig, HttpClient } from '@bloque/sdk-core';
+import {
+  ApprovalsClient,
+  type BloqueSDKConfig,
+  HttpClient,
+} from '@bloque/sdk-core';
 import {
   type CreateIdentityParams,
   IdentityClient,
@@ -77,6 +81,7 @@ interface UpdateOriginMetadataResponse {
 
 export interface BloqueClients {
   accounts: AccountsClient;
+  approvals: ApprovalsClient;
   compliance: ComplianceClient;
   identity: IdentityClient;
   orgs: OrgsClient;
@@ -100,6 +105,7 @@ export class SDK {
   ): BloqueClients {
     return {
       accounts: new AccountsClient(httpClient),
+      approvals: new ApprovalsClient(httpClient),
       compliance: new ComplianceClient(httpClient),
       identity: new IdentityClient(httpClient),
       orgs: new OrgsClient(httpClient),
