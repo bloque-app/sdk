@@ -54,7 +54,7 @@ This monorepo contains the following packages:
 | **[@bloque/sdk](./packages/sdk)** | Main SDK — aggregates all packages |
 | **[@bloque/sdk-core](./packages/core)** | Core utilities, HTTP client, and shared types |
 | **[@bloque/sdk-accounts](./packages/accounts)** | Accounts, cards, Polygon, and transfers |
-| **[@bloque/sdk-agents](./packages/agents)** | Hosted personal agent and WhatsApp link |
+| **[@bloque/sdk-agents](./packages/agents)** | Hosted personal agent, WhatsApp link, and app connections |
 | **[@bloque/sdk-orgs](./packages/orgs)** | Organizations API |
 | **[@bloque/sdk-compliance](./packages/compliance)** | KYC verification and compliance |
 | **[@bloque/sdk-identity](./packages/identity)** | Identity and aliases |

@@ -62,3 +62,53 @@ export interface LinkWhatsAppResponse {
   result: WhatsAppChannelWire;
   req_id: string;
 }
+
+export type AgentAppStatusWire =
+  | 'INITIALIZING'
+  | 'INITIATED'
+  | 'ACTIVE'
+  | 'FAILED'
+  | 'EXPIRED'
+  | 'INACTIVE'
+  | 'REVOKED';
+
+export interface AgentAppCatalogItemWire {
+  slug: string;
+  name: string;
+  description: string | null;
+  logo: string | null;
+  no_auth: boolean;
+}
+
+export interface ListAppCatalogResponse {
+  data: AgentAppCatalogItemWire[];
+  page_size: number;
+  has_more: boolean;
+  next_cursor: string | null;
+}
+
+export interface AgentAppWire {
+  slug: string;
+  status: AgentAppStatusWire;
+  connected: boolean;
+}
+
+export interface ListAgentAppsResponse {
+  data: AgentAppWire[];
+}
+
+export type AgentAppConnectStatusWire =
+  | 'link_issued'
+  | 'already_connected'
+  | 'no_auth';
+
+export interface AgentAppConnectWire {
+  app: string;
+  status: AgentAppConnectStatusWire;
+  connect_url?: string;
+}
+
+export interface ConnectAgentAppResponse {
+  result: AgentAppConnectWire;
+  req_id: string;
+}

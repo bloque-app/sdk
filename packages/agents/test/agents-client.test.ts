@@ -325,4 +325,171 @@ describe('AgentsClient', () => {
     expect((error as BloqueAPIError).status).toBe(409);
     expect((error as BloqueAPIError).code).toBe('E_AGENT_NOT_READY');
   });
+
+  it('apps.catalog GETs /api/agents/apps and maps camelCase', async () => {
+    const calls = captureFetch(() =>
+      jsonResponse({
+        data: [
+          {
+            slug: 'gmail',
+            name: 'Gmail',
+            description: 'Read and send email.',
+            logo: 'https://logo.example/gmail.png',
+            no_auth: false,
+          },
+        ],
+        page_size: 50,
+        has_more: true,
+        next_cursor: '50',
+      }),
+    );
+
+    const result = await new AgentsClient(authedClient()).apps.catalog();
+
+    expect(calls[0]?.url).toBe('https://api.dev-bloque.app/api/agents/apps');
+    expect(calls[0]?.init?.method).toBe('GET');
+    expect(result).toEqual({
+      data: [
+        {
+          slug: 'gmail',
+          name: 'Gmail',
+          description: 'Read and send email.',
+          logo: 'https://logo.example/gmail.png',
+          noAuth: false,
+        },
+      ],
+      pageSize: 50,
+      hasMore: true,
+      nextCursor: '50',
+    });
+  });
+
+  it('apps.catalog sends limit and cursor as query params', async () => {
+    const calls = captureFetch(() =>
+      jsonResponse({
+        data: [],
+        page_size: 10,
+        has_more: false,
+        next_cursor: null,
+      }),
+    );
+
+    const result = await new AgentsClient(authedClient()).apps.catalog({
+      limit: 10,
+      cursor: '50',
+    });
+
+    expect(calls[0]?.url).toBe(
+      'https://api.dev-bloque.app/api/agents/apps?limit=10&cursor=50',
+    );
+    expect(result.nextCursor).toBeNull();
+    expect(result.hasMore).toBe(false);
+  });
+
+  it('apps.list GETs /api/agents/:urn/apps and maps connected status', async () => {
+    const calls = captureFetch(() =>
+      jsonResponse({
+        data: [
+          { slug: 'gmail', status: 'ACTIVE', connected: true },
+          { slug: 'github', status: 'INITIATED', connected: false },
+        ],
+      }),
+    );
+
+    const result = await new AgentsClient(authedClient()).apps.list(AGENT_URN);
+
+    expect(calls[0]?.url).toBe(
+      `https://api.dev-bloque.app/api/agents/${AGENT_URN}/apps`,
+    );
+    expect(calls[0]?.init?.method).toBe('GET');
+    expect(result.data).toEqual([
+      { slug: 'gmail', status: 'ACTIVE', connected: true },
+      { slug: 'github', status: 'INITIATED', connected: false },
+    ]);
+  });
+
+  it('apps.connect POSTs /api/agents/:urn/apps/:app/connect with no body', async () => {
+    const calls = captureFetch(() =>
+      jsonResponse({
+        result: {
+          app: 'gmail',
+          status: 'link_issued',
+          connect_url: 'https://example.invalid/connect',
+        },
+        req_id: 'req_3',
+      }),
+    );
+
+    const result = await new AgentsClient(authedClient()).apps.connect(
+      AGENT_URN,
+      { app: 'gmail' },
+    );
+
+    expect(calls[0]?.url).toBe(
+      `https://api.dev-bloque.app/api/agents/${AGENT_URN}/apps/gmail/connect`,
+    );
+    expect(calls[0]?.init?.method).toBe('POST');
+    expect(calls[0]?.init?.body).toBeUndefined();
+    expect(result).toEqual({
+      app: 'gmail',
+      status: 'link_issued',
+      connectUrl: 'https://example.invalid/connect',
+    });
+  });
+
+  it('apps.connect omits connectUrl when already connected or no_auth', async () => {
+    captureFetch(() =>
+      jsonResponse({
+        result: { app: 'gmail', status: 'already_connected' },
+        req_id: 'req_4',
+      }),
+    );
+
+    const connected = await new AgentsClient(authedClient()).apps.connect(
+      AGENT_URN,
+      { app: 'gmail' },
+    );
+
+    expect(connected).toEqual({
+      app: 'gmail',
+      status: 'already_connected',
+    });
+    expect(connected).not.toHaveProperty('connectUrl');
+  });
+
+  it('maps E_AGENT_APP_INVALID (400) to BloqueValidationError', async () => {
+    captureFetch(() =>
+      errorResponse(400, 'E_AGENT_APP_INVALID', {
+        message: 'app must be a lowercase slug',
+      }),
+    );
+
+    let error: unknown;
+    try {
+      await new AgentsClient(authedClient()).apps.connect(AGENT_URN, {
+        app: 'Gmail!',
+      });
+    } catch (e) {
+      error = e;
+    }
+
+    expect(error).toBeInstanceOf(BloqueValidationError);
+    expect((error as BloqueValidationError).code).toBe('E_AGENT_APP_INVALID');
+  });
+
+  it('maps E_AGENT_APP_NOT_FOUND (404) to BloqueNotFoundError', async () => {
+    captureFetch(() => errorResponse(404, 'E_AGENT_APP_NOT_FOUND'));
+
+    let error: unknown;
+    try {
+      await new AgentsClient(authedClient()).apps.connect(AGENT_URN, {
+        app: 'gmail',
+      });
+    } catch (e) {
+      error = e;
+    }
+
+    expect(error).toBeInstanceOf(BloqueNotFoundError);
+    expect((error as BloqueNotFoundError).code).toBe('E_AGENT_APP_NOT_FOUND');
+  });
 });

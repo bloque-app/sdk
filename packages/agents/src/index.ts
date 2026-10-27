@@ -1,13 +1,26 @@
-export { AgentsClient, WhatsAppChannelClient } from './agents-client';
+export {
+  AgentsClient,
+  AppsClient,
+  WhatsAppChannelClient,
+} from './agents-client';
 export type {
   Agent,
+  AgentApp,
+  AgentAppCatalogItem,
+  AgentAppConnect,
+  AgentAppConnectStatus,
+  AgentAppStatus,
   AgentStatus,
   AgentWhatsAppChannel,
+  ConnectAgentAppParams,
   CreateAgentOptions,
   CreateAgentParams,
   LinkWhatsAppOptions,
   LinkWhatsAppParams,
+  ListAgentAppsResult,
   ListAgentsResult,
+  ListAppCatalogParams,
+  ListAppCatalogResult,
   WhatsAppChannel,
   WhatsAppChannelStatus,
 } from './types';

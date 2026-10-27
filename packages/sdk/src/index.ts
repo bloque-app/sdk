@@ -1,7 +1,11 @@
 export type * from '@bloque/sdk-accounts';
 export type { BrebClient } from '@bloque/sdk-accounts';
 export type * from '@bloque/sdk-agents';
-export type { AgentsClient, WhatsAppChannelClient } from '@bloque/sdk-agents';
+export type {
+  AgentsClient,
+  AppsClient,
+  WhatsAppChannelClient,
+} from '@bloque/sdk-agents';
 export type * from '@bloque/sdk-compliance';
 export {
   buildTosGatePasskeyCreationOptions,
