@@ -89,3 +89,80 @@ export interface LinkWhatsAppOptions {
    */
   idempotencyKey?: string;
 }
+
+/**
+ * Connection status of an app on an agent. `connected` is true only for
+ * `ACTIVE`.
+ */
+export type AgentAppStatus =
+  | 'INITIALIZING'
+  | 'INITIATED'
+  | 'ACTIVE'
+  | 'FAILED'
+  | 'EXPIRED'
+  | 'INACTIVE'
+  | 'REVOKED';
+
+/**
+ * One app offered in the catalog. `slug` is what `apps.connect()` takes.
+ */
+export interface AgentAppCatalogItem {
+  slug: string;
+  name: string;
+  description: string | null;
+  /** Https logo URL when one is available. */
+  logo: string | null;
+  /** True when the app needs no sign-in. */
+  noAuth: boolean;
+}
+
+export interface ListAppCatalogParams {
+  /** Page size, 1–100. The API defaults to 50. */
+  limit?: number;
+  /** Opaque offset from the previous page's `nextCursor`. */
+  cursor?: string;
+}
+
+export interface ListAppCatalogResult {
+  data: AgentAppCatalogItem[];
+  pageSize: number;
+  hasMore: boolean;
+  nextCursor: string | null;
+}
+
+/**
+ * One app's connection on an agent. `connected` is true only when status
+ * is `ACTIVE`.
+ */
+export interface AgentApp {
+  slug: string;
+  status: AgentAppStatus;
+  connected: boolean;
+}
+
+export interface ListAgentAppsResult {
+  data: AgentApp[];
+}
+
+export type AgentAppConnectStatus =
+  | 'link_issued'
+  | 'already_connected'
+  | 'no_auth';
+
+/**
+ * Outcome of `apps.connect()`. `connectUrl` is present only when status
+ * is `link_issued`. Do not log it.
+ */
+export interface AgentAppConnect {
+  app: string;
+  status: AgentAppConnectStatus;
+  connectUrl?: string;
+}
+
+/**
+ * Body for `agents.apps.connect()`. `app` is a lowercase slug such as
+ * `gmail`.
+ */
+export interface ConnectAgentAppParams {
+  app: string;
+}
