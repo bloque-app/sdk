@@ -1,5 +1,22 @@
 # @bloque/sdk
 
+## 0.21.0
+
+### Minor Changes
+
+- aa3277c: Add `agents.apps` to list the catalog of connectable apps, list an agent's connections, and start an app connect.
+
+### Patch Changes
+
+- Updated dependencies [aa3277c]
+  - @bloque/sdk-agents@0.21.0
+  - @bloque/sdk-core@0.21.0
+  - @bloque/sdk-accounts@0.21.0
+  - @bloque/sdk-compliance@0.21.0
+  - @bloque/sdk-identity@0.21.0
+  - @bloque/sdk-orgs@0.21.0
+  - @bloque/sdk-swap@0.21.0
+
 ## 0.20.0
 
 ### Minor Changes
