@@ -56,8 +56,9 @@ export interface BrebDepositOnRampInformation {
 
 export interface BrebSwapArgs {
   /**
-   * Your own Kusama-linked BRE-B account URN — funds the payout (this
-   * account's on-chain balance is debited). Not the recipient; see
+   * URN of your own Kusama-linked account (e.g. your virtual account) —
+   * funds the payout (this account's on-chain balance is debited). It does
+   * not need to be a BRE-B account. Not the recipient; see
    * `depositInformation.destinationKey` for that.
    */
   sourceAccountUrn: string;

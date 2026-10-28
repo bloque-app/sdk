@@ -12,7 +12,7 @@ const bloque = new SDK({
 const user = await bloque.connect(process.env.USER_HANDLE ?? 'demo-user');
 
 const sourceAccountUrn =
-  process.env.SOURCE_ACCOUNT_URN ?? 'did:bloque:account:breb:demo-account-id';
+  process.env.SOURCE_ACCOUNT_URN ?? 'did:bloque:account:virtual:demo-account-id';
 const amountSrc = process.env.AMOUNT_SRC ?? '10000000';
 
 const rates = await user.swap.findRates({

@@ -206,7 +206,7 @@ interface BrebResolvedKey {
 
 ## Pay to a BRE-B Key
 
-Convert your own Kusama-linked balance and send it to any BRE-B key — the recipient does not need to be a Bloque-managed account. Identify them directly with `destinationKey` — only `keyValue` is required. `keyType` is optional: the active provider pays out by the key value alone, and when you do send it, it must be one of the types in the table above. Resolving the key first with `session.accounts.breb.resolveKey()` is optional too, useful to show the recipient's name before paying.
+Convert your own Kusama-linked balance and send it to any BRE-B key — the recipient does not need to be a Bloque-managed account, and you do not need a BRE-B key of your own: pay from any funded account you own, such as your virtual account. Identify them directly with `destinationKey` — only `keyValue` is required. `keyType` is optional: the active provider pays out by the key value alone, and when you do send it, it must be one of the types in the table above. Resolving the key first with `session.accounts.breb.resolveKey()` is optional too, useful to show the recipient's name before paying.
 
 ```typescript title="pay-to-breb-key.ts"
 const rates = await session.swap.findRates({
@@ -233,8 +233,8 @@ const result = await session.swap.breb.create({
     },
   },
   args: {
-    // Your own account — funds the payout, not the recipient.
-    sourceAccountUrn: 'did:bloque:account:breb:demo-account-id',
+    // Your own funded account (e.g. virtual) — funds the payout, not the recipient.
+    sourceAccountUrn: 'did:bloque:account:virtual:demo-account-id',
   },
 });
 
