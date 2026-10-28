@@ -206,7 +206,7 @@ interface BrebResolvedKey {
 
 ## Pagar a una llave BRE-B
 
-Convierte tu propio saldo vinculado a Kusama y envíalo a cualquier llave BRE-B — el destinatario no necesita ser una cuenta administrada por Bloque. Identifícalo directamente con `destinationKey` — solo `keyValue` es obligatorio. `keyType` es opcional: el proveedor activo paga usando solo el valor de la llave, y si lo envías debe ser uno de los tipos de la tabla anterior. Resolver la llave antes con `session.accounts.breb.resolveKey()` también es opcional, útil para mostrar el nombre del destinatario antes de pagar.
+Convierte tu propio saldo vinculado a Kusama y envíalo a cualquier llave BRE-B — el destinatario no necesita ser una cuenta administrada por Bloque, y tú no necesitas una llave BRE-B propia: paga desde cualquier cuenta tuya con saldo, como tu cuenta virtual. Identifícalo directamente con `destinationKey` — solo `keyValue` es obligatorio. `keyType` es opcional: el proveedor activo paga usando solo el valor de la llave, y si lo envías debe ser uno de los tipos de la tabla anterior. Resolver la llave antes con `session.accounts.breb.resolveKey()` también es opcional, útil para mostrar el nombre del destinatario antes de pagar.
 
 ```typescript title="pagar-a-llave-breb.ts"
 const rates = await session.swap.findRates({
@@ -233,8 +233,8 @@ const result = await session.swap.breb.create({
     },
   },
   args: {
-    // Tu propia cuenta — financia el pago, no es el destinatario.
-    sourceAccountUrn: 'did:bloque:account:breb:demo-account-id',
+    // Tu propia cuenta con saldo (p. ej. virtual) — financia el pago, no es el destinatario.
+    sourceAccountUrn: 'did:bloque:account:virtual:demo-account-id',
   },
 });
 
