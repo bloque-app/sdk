@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, mock } from 'bun:test';
-import { HttpClient } from '@bloque/sdk-core';
+import { HttpClient, OPERATION_APPROVAL_HEADER } from '@bloque/sdk-core';
+import { BrebClient } from '../src/breb/breb-client';
 import { CardClient } from '../src/card/card-client';
 import { PolygonClient } from '../src/polygon/polygon-client';
 import { VirtualClient } from '../src/virtual/virtual-client';
@@ -139,5 +140,56 @@ describe('CardClient.delete / VirtualClient.delete / PolygonClient.delete', () =
     expect(error).toBeDefined();
     expect((error as { status?: number }).status).toBe(409);
     expect((error as { code?: string }).code).toBe('E_ACCOUNT_HAS_BALANCE');
+  });
+});
+
+describe('BrebClient.deleteKey', () => {
+  const originalFetch = globalThis.fetch;
+
+  afterEach(() => {
+    globalThis.fetch = originalFetch;
+  });
+
+  it('sends DELETE with the passkey approval and maps the deleted key', async () => {
+    const urn = 'did:bloque:account:breb:key-123';
+    const account = {
+      ...fakeAccount('breb', urn),
+      details: {
+        id: 'key-123',
+        remote_key_id: 'remote-key-123',
+        account_id: 'account-123',
+        key: { key_type: 'ALPHA', key_value: '@example' },
+        display_name: 'Example key',
+        status: 'DELETED',
+        created_at: '2026-01-01T00:00:00.000Z',
+        updated_at: '2026-01-02T00:00:00.000Z',
+        raw_response: {},
+      },
+    };
+    const calls = mockDeleteSuccess(account);
+
+    const result = await new BrebClient(authedClient()).deleteKey(
+      { accountUrn: urn },
+      { approval: 'approved-operation-token' },
+    );
+
+    expect(calls).toHaveLength(1);
+    expect(calls[0]?.url).toBe(
+      `https://api.dev-bloque.app/api/accounts/${encodeURIComponent(urn)}`,
+    );
+    expect(calls[0]?.init?.method).toBe('DELETE');
+    expect(calls[0]?.init?.body).toBeUndefined();
+    expect(
+      new Headers(calls[0]?.init?.headers).get(OPERATION_APPROVAL_HEADER),
+    ).toBe('approved-operation-token');
+    expect(result).toEqual({
+      data: {
+        deleted: true,
+        accountUrn: urn,
+        keyId: 'key-123',
+        status: 'deleted',
+      },
+      error: null,
+    });
   });
 });

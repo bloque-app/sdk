@@ -346,6 +346,10 @@ if (error) {
 
 ## Delete a BRE-B Key
 
+Deletion calls `DELETE /api/accounts/:accountUrn`. When passkey approval is
+required, pass the approved operation token as the second argument. The SDK
+returns the deleted local account and key identifiers in `data`.
+
 ```typescript title="delete-breb-key.ts"
 const { data, error } = await session.accounts.breb.deleteKey({
   accountUrn: 'did:bloque:account:breb:demo-account-id',
@@ -422,7 +426,7 @@ if (error) {
 - if `ledgerId` is omitted, a ledger is created automatically
 - key suspension updates the account with `PATCH /api/accounts/:accountUrn` and `status: 'frozen'`
 - key activation updates the account with `PATCH /api/accounts/:accountUrn` and `status: 'active'`
-- key deletion updates the account with `PATCH /api/accounts/:accountUrn` and `status: 'deleted'`
+- key deletion uses `DELETE /api/accounts/:accountUrn` and preserves passkey approval headers
 - BRE-B payouts are created through `session.swap.breb.create()`
 - BRE-B on-ramp deposits are created through `session.swap.breb.createDeposit()`
 

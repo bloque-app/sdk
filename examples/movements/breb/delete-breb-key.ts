@@ -14,8 +14,9 @@ const user = await bloque.connect(process.env.USER_HANDLE ?? 'demo-user');
 const accountUrn =
   process.env.BREB_ACCOUNT_URN ?? 'did:bloque:account:breb:demo-account-id';
 
-// If the account owner must approve this with their passkey, withApproval
-// shares the link, waits for the approval and repeats the call once.
+// Deletion uses DELETE /api/accounts/:accountUrn. If the account owner must
+// approve it with their passkey, withApproval shares the link, waits for the
+// approval and repeats the call once with the approved operation token.
 const { data, error } = await withApproval(
   (approval) =>
     user.accounts.breb.deleteKey(
