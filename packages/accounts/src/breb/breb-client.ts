@@ -433,15 +433,11 @@ export class BrebClient extends BaseClient {
       }
 
       const response = await this.httpClient.request<
-        UpdateAccountResponse<BrebDetails>,
-        UpdateAccountRequest
+        UpdateAccountResponse<BrebDetails>
       >({
-        method: 'PATCH',
+        method: 'DELETE',
         path: `/api/accounts/${encodeURIComponent(params.accountUrn)}`,
         headers: operationApprovalHeaders(options),
-        body: {
-          status: 'deleted',
-        },
       });
 
       return {

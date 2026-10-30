@@ -312,6 +312,11 @@ if (error) {
 
 ## Eliminar una llave BRE-B
 
+La eliminación llama a `DELETE /api/accounts/:accountUrn`. Cuando se requiere
+aprobación con passkey, pasa el token de la operación aprobada como segundo
+argumento. El SDK devuelve en `data` los identificadores de la cuenta local y
+de la llave eliminada.
+
 ```typescript title="eliminar-llave-breb.ts"
 const { data, error } = await session.accounts.breb.deleteKey({
   accountUrn: 'did:bloque:account:breb:demo-account-id',
@@ -388,7 +393,7 @@ if (error) {
 - si no envías `ledgerId`, se crea un ledger automáticamente
 - la suspensión actualiza la cuenta con `PATCH /api/accounts/:accountUrn` y `status: 'frozen'`
 - la activación actualiza la cuenta con `PATCH /api/accounts/:accountUrn` y `status: 'active'`
-- la eliminación actualiza la cuenta con `PATCH /api/accounts/:accountUrn` y `status: 'deleted'`
+- la eliminación usa `DELETE /api/accounts/:accountUrn` y conserva los encabezados de aprobación con passkey
 - los pagos BRE-B se crean con `session.swap.breb.create()`
 - los depósitos on-ramp BRE-B se crean con `session.swap.breb.createDeposit()`
 
