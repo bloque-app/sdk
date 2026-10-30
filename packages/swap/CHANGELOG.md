@@ -1,5 +1,12 @@
 # @bloque/sdk-orgs
 
+## 0.21.1
+
+### Patch Changes
+
+- c411500: Document that a BRE-B payout's `sourceAccountUrn` can be any funded account the user owns (e.g. virtual); a BRE-B account is no longer required.
+  - @bloque/sdk-core@0.21.1
+
 ## 0.21.0
 
 ### Patch Changes

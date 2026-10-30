@@ -1,5 +1,11 @@
 # @bloque/sdk-compliance
 
+## 0.21.1
+
+### Patch Changes
+
+- @bloque/sdk-core@0.21.1
+
 ## 0.21.0
 
 ### Patch Changes

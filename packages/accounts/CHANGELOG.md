@@ -1,5 +1,12 @@
 # @bloque/sdk-accounts
 
+## 0.21.1
+
+### Patch Changes
+
+- 7c6c113: Fix BRE-B key deletion to call the supported account DELETE endpoint while preserving passkey approval headers.
+  - @bloque/sdk-core@0.21.1
+
 ## 0.21.0
 
 ### Patch Changes

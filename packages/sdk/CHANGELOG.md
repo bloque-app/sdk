@@ -1,5 +1,21 @@
 # @bloque/sdk
 
+## 0.21.1
+
+### Patch Changes
+
+- c411500: Document that a BRE-B payout's `sourceAccountUrn` can be any funded account the user owns (e.g. virtual); a BRE-B account is no longer required.
+- 7c6c113: Fix BRE-B key deletion to call the supported account DELETE endpoint while preserving passkey approval headers.
+- Updated dependencies [c411500]
+- Updated dependencies [7c6c113]
+  - @bloque/sdk-swap@0.21.1
+  - @bloque/sdk-accounts@0.21.1
+  - @bloque/sdk-core@0.21.1
+  - @bloque/sdk-compliance@0.21.1
+  - @bloque/sdk-identity@0.21.1
+  - @bloque/sdk-orgs@0.21.1
+  - @bloque/sdk-agents@0.21.1
+
 ## 0.21.0
 
 ### Minor Changes
