@@ -1,5 +1,22 @@
 # @bloque/sdk
 
+## 0.22.0
+
+### Minor Changes
+
+- 32509cd: Accept optional `environment` extras on `agents.create()`. Provision-owned `BLOQUE_*` keys are rejected with `E_AGENT_ENV_RESERVED`.
+
+### Patch Changes
+
+- Updated dependencies [32509cd]
+  - @bloque/sdk-agents@0.22.0
+  - @bloque/sdk-core@0.22.0
+  - @bloque/sdk-accounts@0.22.0
+  - @bloque/sdk-compliance@0.22.0
+  - @bloque/sdk-identity@0.22.0
+  - @bloque/sdk-orgs@0.22.0
+  - @bloque/sdk-swap@0.22.0
+
 ## 0.21.1
 
 ### Patch Changes
