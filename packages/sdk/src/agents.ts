@@ -8,6 +8,7 @@ export type {
   AgentStatus,
   AgentWhatsAppChannel,
   ConnectAgentAppParams,
+  CreateAgentEnvironmentEntry,
   CreateAgentOptions,
   CreateAgentParams,
   LinkWhatsAppOptions,

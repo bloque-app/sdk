@@ -148,6 +148,63 @@ describe('AgentsClient', () => {
     expect(body).not.toHaveProperty('owner_urn');
   });
 
+  it('create forwards environment extras with name', async () => {
+    const calls = captureFetch(() =>
+      jsonResponse({ result: agentWire(), req_id: 'req_1' }, 202),
+    );
+
+    await new AgentsClient(authedClient()).create({
+      name: 'Ada',
+      environment: [{ key: 'FOO', value: 'bar', secret: true }],
+    });
+
+    expect(JSON.parse(String(calls[0]?.init?.body))).toEqual({
+      name: 'Ada',
+      environment: [{ key: 'FOO', value: 'bar', secret: true }],
+    });
+  });
+
+  it('create sends environment without a name', async () => {
+    const calls = captureFetch(() =>
+      jsonResponse({ result: agentWire(), req_id: 'req_1' }, 202),
+    );
+
+    await new AgentsClient(authedClient()).create({
+      environment: [
+        { key: 'WEBHOOK_URL', value: 'https://hooks.example', secret: false },
+      ],
+    });
+
+    expect(JSON.parse(String(calls[0]?.init?.body))).toEqual({
+      environment: [
+        { key: 'WEBHOOK_URL', value: 'https://hooks.example', secret: false },
+      ],
+    });
+  });
+
+  it('maps E_AGENT_ENV_RESERVED (400) to BloqueValidationError', async () => {
+    captureFetch(() =>
+      errorResponse(400, 'E_AGENT_ENV_RESERVED', {
+        message: 'BLOQUE_API_KEY is reserved for provision',
+      }),
+    );
+
+    let error: unknown;
+    try {
+      await new AgentsClient(authedClient()).create({
+        environment: [
+          { key: 'BLOQUE_API_KEY', value: 'sk_attacker', secret: true },
+        ],
+      });
+    } catch (e) {
+      error = e;
+    }
+
+    expect(error).toBeInstanceOf(BloqueValidationError);
+    expect((error as BloqueValidationError).code).toBe('E_AGENT_ENV_RESERVED');
+    expect((error as BloqueValidationError).status).toBe(400);
+  });
+
   it('list GETs /api/agents and maps the list envelope', async () => {
     captureFetch(() =>
       jsonResponse({

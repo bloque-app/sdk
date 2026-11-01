@@ -52,12 +52,31 @@ export interface WhatsAppChannel {
 }
 
 /**
- * Optional display name for `agents.create()`. Identity comes from the
+ * Extra environment variable forwarded into the hosted agent on create.
+ *
+ * `key` is a POSIX-style name (`[A-Z_][A-Z0-9_]*`, 1–128). `value` is a
+ * non-empty string (max 4096). `secret` is required. Provision-owned keys
+ * (`BLOQUE_API_KEY`, `BLOQUE_API_BASE_URL`, `BLOQUE_RETURN_URL`,
+ * `BLOQUE_PUBLISHABLE_KEY`) are rejected by the API.
+ */
+export interface CreateAgentEnvironmentEntry {
+  key: string;
+  value: string;
+  secret: boolean;
+}
+
+/**
+ * Optional create body for `agents.create()`. Identity comes from the
  * caller JWT — do not send phone, userId, DID, or owner fields.
  */
 export interface CreateAgentParams {
   /** Trimmed 1–200 characters when sent. Omit to let the API pick a name. */
   name?: string;
+  /**
+   * Extra environment variables. Empty array adds nothing. Duplicate keys
+   * are rejected. Provision-owned `BLOQUE_*` keys return `E_AGENT_ENV_RESERVED`.
+   */
+  environment?: CreateAgentEnvironmentEntry[];
 }
 
 export interface CreateAgentOptions {

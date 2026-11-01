@@ -39,8 +39,15 @@ export interface WhatsAppChannelWire {
   updated_at?: string;
 }
 
+export interface CreateAgentEnvironmentEntryWire {
+  key: string;
+  value: string;
+  secret: boolean;
+}
+
 export interface CreateAgentRequest {
   name?: string;
+  environment?: CreateAgentEnvironmentEntryWire[];
 }
 
 export interface CreateAgentResponse {
