@@ -295,18 +295,22 @@ export class AgentsClient extends BaseClient {
   /**
    * Create the caller's hosted personal agent, or return the existing one.
    *
-   * Optional `name` only. Identity is the caller JWT — do not send phone,
-   * userId, DID, or owner fields. Returns `status: "provisioning"`; poll
-   * `get()` until `ready` before linking WhatsApp.
+   * Optional `name` and `environment` extras. Identity is the caller JWT —
+   * do not send phone, userId, DID, or owner fields. Returns
+   * `status: "provisioning"`; poll `get()` until `ready` before linking
+   * WhatsApp. Apps can be listed and connected while still provisioning.
    *
-   * Errors: `400 E_INVALID_BODY`, `401`, `403 E_AGENT_FORBIDDEN`,
-   * `409 E_AGENT_IDENTITY_CONFLICT`, `429 E_AGENT_CAPACITY`,
-   * `502 E_AGENT_API_KEY_UNAVAILABLE` / `E_AGENT_BACKEND_UNAVAILABLE`,
-   * `503 E_AGENT_UNAVAILABLE`.
+   * Errors: `400 E_INVALID_BODY` / `E_AGENT_ENV_RESERVED`, `401`,
+   * `403 E_AGENT_FORBIDDEN`, `409 E_AGENT_IDENTITY_CONFLICT`,
+   * `429 E_AGENT_CAPACITY`, `502 E_AGENT_API_KEY_UNAVAILABLE` /
+   * `E_AGENT_BACKEND_UNAVAILABLE`, `503 E_AGENT_UNAVAILABLE`.
    *
    * @example
    * ```typescript
-   * const agent = await clients.agents.create({ name: 'Ada' });
+   * const agent = await clients.agents.create({
+   *   name: 'Ada',
+   *   environment: [{ key: 'FOO', value: 'bar', secret: true }],
+   * });
    * ```
    */
   async create(
@@ -314,8 +318,14 @@ export class AgentsClient extends BaseClient {
     options?: CreateAgentOptions,
   ): Promise<Agent> {
     const name = params?.name?.trim();
-    const body: CreateAgentRequest | undefined =
-      name && name.length > 0 ? { name } : undefined;
+    const body: CreateAgentRequest = {};
+    if (name && name.length > 0) {
+      body.name = name;
+    }
+    if (params?.environment) {
+      body.environment = params.environment;
+    }
+    const requestBody = Object.keys(body).length > 0 ? body : undefined;
 
     const response = await this.httpClient.request<
       CreateAgentResponse,
@@ -323,7 +333,7 @@ export class AgentsClient extends BaseClient {
     >({
       method: 'POST',
       path: '/api/agents',
-      body,
+      body: requestBody,
       headers: createHeaders(options?.idempotencyKey),
     });
 
