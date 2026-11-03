@@ -1,5 +1,11 @@
 # @bloque/sdk-agents
 
+## 0.23.0
+
+### Patch Changes
+
+- @bloque/sdk-core@0.23.0
+
 ## 0.22.0
 
 ### Minor Changes

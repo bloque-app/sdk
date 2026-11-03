@@ -1,5 +1,24 @@
 # @bloque/sdk
 
+## 0.23.0
+
+### Minor Changes
+
+- fd8dd66: `identity.passkeys.createLink()` returns `verification` (`'otp' | null`): `'otp'` when the link was created with a session obtained with the origin's API key, so the identity portal asks the person for a code sent to their email or phone before registering the passkey.
+- c889852: `accounts.transactions()` returns `partial` (and `partialAccounts` when it is `true`): some accounts' history from before the ledger re-founding could not be read for a moment, so the page lists only what was read for them. Retry from the first page for the full list.
+
+### Patch Changes
+
+- Updated dependencies [fd8dd66]
+- Updated dependencies [c889852]
+  - @bloque/sdk-identity@0.23.0
+  - @bloque/sdk-accounts@0.23.0
+  - @bloque/sdk-core@0.23.0
+  - @bloque/sdk-compliance@0.23.0
+  - @bloque/sdk-orgs@0.23.0
+  - @bloque/sdk-agents@0.23.0
+  - @bloque/sdk-swap@0.23.0
+
 ## 0.22.0
 
 ### Minor Changes

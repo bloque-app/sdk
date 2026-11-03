@@ -1,5 +1,15 @@
 # @bloque/sdk-identity
 
+## 0.23.0
+
+### Minor Changes
+
+- fd8dd66: `identity.passkeys.createLink()` returns `verification` (`'otp' | null`): `'otp'` when the link was created with a session obtained with the origin's API key, so the identity portal asks the person for a code sent to their email or phone before registering the passkey.
+
+### Patch Changes
+
+- @bloque/sdk-core@0.23.0
+
 ## 0.22.0
 
 ### Patch Changes

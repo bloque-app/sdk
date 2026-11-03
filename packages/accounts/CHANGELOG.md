@@ -1,5 +1,15 @@
 # @bloque/sdk-accounts
 
+## 0.23.0
+
+### Minor Changes
+
+- c889852: `accounts.transactions()` returns `partial` (and `partialAccounts` when it is `true`): some accounts' history from before the ledger re-founding could not be read for a moment, so the page lists only what was read for them. Retry from the first page for the full list.
+
+### Patch Changes
+
+- @bloque/sdk-core@0.23.0
+
 ## 0.22.0
 
 ### Patch Changes
