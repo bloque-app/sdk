@@ -701,6 +701,10 @@ export class AccountsClient extends BaseClient {
       pageSize: response.page_size,
       hasMore: response.has_more,
       next: response.next,
+      partial: response.partial ?? false,
+      ...(response.partial_accounts && {
+        partialAccounts: response.partial_accounts,
+      }),
     };
   }
 

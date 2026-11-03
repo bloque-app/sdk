@@ -160,6 +160,14 @@ console.log(`Found ${transactions.data.length} transactions`);
 console.log('Has more:', transactions.hasMore);
 ```
 
+If some accounts' history from before Bloque's ledger was re-founded cannot be read for a moment, the call still succeeds with `partial: true` and those accounts in `partialAccounts`. The page lists only what was read for them, and `hasMore`/`next` cover only that: retry later from the first page before building a full statement.
+
+```typescript title="partial.ts"
+if (transactions.partial) {
+  console.warn('History incomplete for:', transactions.partialAccounts);
+}
+```
+
 ## Transfers
 
 Transfer funds between any accounts:
