@@ -154,19 +154,30 @@ await user.accounts.transfer(saved.params, {
 When an approval fails with `BloqueApprovalInvalidError` and `reason: 'passkey_not_registered'`, or the person lost the device that holds their passkey, send them to register a passkey again. `identity.passkeys.createLink` returns a link to Bloque's identity portal that brings them back to `returnUrl` once they are done:
 
 ```typescript
-const { url, expiresIn } = await user.identity.passkeys.createLink({
-  returnUrl: 'https://myapp.com/settings/security',
-});
+const { url, expiresIn, verification } =
+  await user.identity.passkeys.createLink({
+    returnUrl: 'https://myapp.com/settings/security',
+  });
 window.location.assign(url); // expiresIn: e.g. '15m'
 ```
 
-It needs the person's own session (a browser or React Native JWT); an API key or another kind of token gets `BloqueAuthenticationError` (403 `E_USER_SESSION_REQUIRED`). `returnUrl` follows the same rule as `approvalReturnUrl`.
+It needs a user session for the person: their own (a browser or React Native JWT), or one your backend obtained with your origin's API key. An API key token itself, or another kind of token, gets `BloqueAuthenticationError` (403 `E_USER_SESSION_REQUIRED`). `returnUrl` follows the same rule as `approvalReturnUrl`.
+
+`verification` says whether the person must prove it's them first:
+
+- `null`: the link needs no code. The person's own session must come from a login they made in the last 5 minutes.
+- `'otp'`: the link was created with a session obtained with your origin's API key. Before registering, the identity portal sends a 6-digit code to the person's email (or phone, when the account has no email) and asks for it. You don't handle the code: just send the person to `url`. A passkey registered this way can approve operations 24 hours after it is registered.
+
+The account needs an email or phone, and a recent change to either blocks new passkeys for 24 hours.
 
 | Error | Code | What to do |
 | --- | --- | --- |
 | `BloqueReturnUrlNotAllowedError` | 400 `E_RETURN_URL_NOT_ALLOWED` | Use a `returnUrl` whose origin your origin allows |
 | `BloquePasskeyRegistrationUnavailableError` | 501 `E_PASSKEY_REGISTRATION_NOT_SUPPORTED` / 503 `E_PASSKEY_REGISTRATION_UNAVAILABLE` | `retryable: false`: this deployment does not register passkeys; not retried. `retryable: true`: retried automatically; retry later if it persists |
-| `BloqueAuthenticationError` | 403 `E_USER_SESSION_REQUIRED` | Call it with the person's own session |
+| `BloqueAuthenticationError` | 403 `E_USER_SESSION_REQUIRED` | Call it with a user session for the person |
+| `BloqueAuthenticationError` | 403 `E_FRESH_LOGIN_REQUIRED` | The person's login is older than 5 minutes (`error.response.extra_details.reason`); ask them to sign in again |
+| `BloqueAuthenticationError` | 403 `E_CONTACT_RECENTLY_CHANGED` | The account's email or phone changed in the last 24 hours; `error.response.extra_details.retry_after_ms` says when to try again |
+| `BloqueAPIError` | 409 `E_CONTACT_REQUIRED` | The account has no email or phone; add one first |
 | `BloqueRateLimitError` | 429 | Too many links for this session (10 per hour by default). With `retry` on (the default), the SDK waits `Retry-After` (up to `maxDelay`) and retries before throwing |
 
 ## Errors

@@ -5,6 +5,7 @@ interface CreatePasskeyLinkResponse {
   token: string;
   url: string;
   expires_in: string;
+  verification?: 'otp' | null;
 }
 
 export class PasskeysClient extends BaseClient {
@@ -12,8 +13,11 @@ export class PasskeysClient extends BaseClient {
    * Create a link where the signed-in person registers a passkey again (for
    * example after losing their device), then comes back to `returnUrl`.
    *
-   * Needs the person's own session (browser or React Native JWT); an API key
-   * cannot create it.
+   * Needs a user session for the person: their own (browser or React Native
+   * JWT), or one your backend obtained with your origin's API key. With the
+   * latter, the link comes back with `verification: 'otp'`: the identity app
+   * first sends the person a code to their email (or phone) and they enter
+   * it before registering. An API key token itself cannot create the link.
    *
    * @throws {BloqueReturnUrlNotAllowedError} `returnUrl` is not allowed for your origin.
    * @throws {BloquePasskeyRegistrationUnavailableError} The deployment does not
@@ -35,6 +39,10 @@ export class PasskeysClient extends BaseClient {
       body: { return_url: params.returnUrl },
     });
 
-    return { url: response.url, expiresIn: response.expires_in };
+    return {
+      url: response.url,
+      expiresIn: response.expires_in,
+      verification: response.verification ?? null,
+    };
   }
 }
