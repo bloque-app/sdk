@@ -20,8 +20,9 @@ export interface PasskeyLink {
    * `'otp'` when the person must first enter a code Bloque sends to their
    * account's email (or phone, when it has no email) before registering the
    * passkey: the link was created with a session your origin obtained with
-   * its API key. `null` when the link needs no code. The identity app asks
-   * for the code itself; nothing else to do on your side.
+   * its API key, while Bloque requires the code for those. `null` when the
+   * link needs no code. The identity app asks for the code itself; nothing
+   * else to do on your side.
    */
   verification: 'otp' | null;
 }

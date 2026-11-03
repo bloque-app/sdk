@@ -165,10 +165,10 @@ Necesita una sesión de usuario de la persona: la suya propia (JWT de navegador 
 
 `verification` dice si la persona debe confirmar primero que es ella:
 
-- `null`: el link no pide código. La sesión propia de la persona debe venir de un login que hizo en los últimos 5 minutos.
-- `'otp'`: el link se creó con una sesión obtenida con la API key de tu origin. Antes de registrar, el portal de identidad envía un código de 6 dígitos al correo de la persona (o a su teléfono, si la cuenta no tiene correo) y se lo pide. Tú no manejas el código: solo envía a la persona a `url`. Una passkey registrada así puede aprobar operaciones 24 horas después de registrarse.
+- `null`: el link no pide código. Cuando Bloque lo exige, la sesión propia de la persona debe venir de un login que hizo en los últimos 5 minutos (si no, `E_FRESH_LOGIN_REQUIRED`).
+- `'otp'`: el link se creó con una sesión obtenida con la API key de tu origin, mientras Bloque exija un código para esas sesiones (hasta entonces también reciben `null`). Antes de registrar, el portal de identidad envía un código de 6 dígitos al correo de la persona (o a su teléfono, si la cuenta no tiene correo) y se lo pide. Tú no manejas el código: solo envía a la persona a `url`. Una passkey registrada así puede aprobar operaciones 24 horas después de registrarse.
 
-La cuenta necesita un correo o teléfono, y un cambio reciente en cualquiera de los dos bloquea nuevas passkeys durante 24 horas.
+La cuenta necesita un correo o teléfono. Un cambio en cualquiera de los dos hecho sin que la persona inicie sesión bloquea nuevas passkeys durante 24 horas.
 
 | Error | Código | Qué hacer |
 | --- | --- | --- |

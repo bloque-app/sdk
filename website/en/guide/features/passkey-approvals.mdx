@@ -165,10 +165,10 @@ It needs a user session for the person: their own (a browser or React Native JWT
 
 `verification` says whether the person must prove it's them first:
 
-- `null`: the link needs no code. The person's own session must come from a login they made in the last 5 minutes.
-- `'otp'`: the link was created with a session obtained with your origin's API key. Before registering, the identity portal sends a 6-digit code to the person's email (or phone, when the account has no email) and asks for it. You don't handle the code: just send the person to `url`. A passkey registered this way can approve operations 24 hours after it is registered.
+- `null`: the link needs no code. When Bloque requires it, the person's own session must come from a login they made in the last 5 minutes (otherwise `E_FRESH_LOGIN_REQUIRED`).
+- `'otp'`: the link was created with a session obtained with your origin's API key, while Bloque requires a code for those (until then they get `null` too). Before registering, the identity portal sends a 6-digit code to the person's email (or phone, when the account has no email) and asks for it. You don't handle the code: just send the person to `url`. A passkey registered this way can approve operations 24 hours after it is registered.
 
-The account needs an email or phone, and a recent change to either blocks new passkeys for 24 hours.
+The account needs an email or phone. A change to either made without the person signing in blocks new passkeys for 24 hours.
 
 | Error | Code | What to do |
 | --- | --- | --- |
