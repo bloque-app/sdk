@@ -1,5 +1,7 @@
 import { afterEach, describe, expect, it, mock } from 'bun:test';
 import {
+  BloqueAPIError,
+  BloqueAuthenticationError,
   BloquePasskeyRegistrationUnavailableError,
   BloqueReturnUrlNotAllowedError,
   HttpClient,
@@ -62,7 +64,57 @@ describe('PasskeysClient.createLink', () => {
     expect(JSON.parse(calls[0]?.init?.body as string)).toEqual({
       return_url: RETURN_URL,
     });
-    expect(link).toEqual({ url: LINK_URL, expiresIn: '15m' });
+    expect(link).toEqual({
+      url: LINK_URL,
+      expiresIn: '15m',
+      verification: null,
+    });
+  });
+
+  it('says when the link asks the person for a code first', async () => {
+    respond(200, {
+      token: 'link_token',
+      url: LINK_URL,
+      expires_in: '15m',
+      verification: 'otp',
+    });
+
+    const link = await client().createLink({ returnUrl: RETURN_URL });
+
+    expect(link.verification).toBe('otp');
+  });
+
+  it('refuses a stale login with BloqueAuthenticationError (E_FRESH_LOGIN_REQUIRED)', async () => {
+    respond(403, {
+      error: true,
+      code: 'E_FRESH_LOGIN_REQUIRED',
+      message: 'E_FRESH_LOGIN_REQUIRED',
+      extra_details: { reason: 'login_too_old' },
+    });
+
+    const error = await client()
+      .createLink({ returnUrl: RETURN_URL })
+      .catch((e) => e);
+
+    expect(error).toBeInstanceOf(BloqueAuthenticationError);
+    expect(error.status).toBe(403);
+    expect(error.code).toBe('E_FRESH_LOGIN_REQUIRED');
+  });
+
+  it('surfaces E_CONTACT_REQUIRED as a BloqueAPIError with its code', async () => {
+    respond(409, {
+      error: true,
+      code: 'E_CONTACT_REQUIRED',
+      message: 'E_CONTACT_REQUIRED',
+    });
+
+    const error = await client()
+      .createLink({ returnUrl: RETURN_URL })
+      .catch((e) => e);
+
+    expect(error).toBeInstanceOf(BloqueAPIError);
+    expect(error.status).toBe(409);
+    expect(error.code).toBe('E_CONTACT_REQUIRED');
   });
 
   it('throws BloqueReturnUrlNotAllowedError on E_RETURN_URL_NOT_ALLOWED', async () => {

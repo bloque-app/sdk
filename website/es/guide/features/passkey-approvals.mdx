@@ -154,19 +154,30 @@ await user.accounts.transfer(saved.params, {
 Cuando una aprobación falla con `BloqueApprovalInvalidError` y `reason: 'passkey_not_registered'`, o la persona perdió el dispositivo con su passkey, envíala a registrar una passkey de nuevo. `identity.passkeys.createLink` devuelve un link al portal de identidad de Bloque que la trae de vuelta a `returnUrl` cuando termina:
 
 ```typescript
-const { url, expiresIn } = await user.identity.passkeys.createLink({
-  returnUrl: 'https://myapp.com/settings/security',
-});
+const { url, expiresIn, verification } =
+  await user.identity.passkeys.createLink({
+    returnUrl: 'https://myapp.com/settings/security',
+  });
 window.location.assign(url); // expiresIn: p. ej. '15m'
 ```
 
-Necesita la sesión propia de la persona (JWT de navegador o React Native); una API key u otro tipo de token recibe `BloqueAuthenticationError` (403 `E_USER_SESSION_REQUIRED`). `returnUrl` sigue la misma regla que `approvalReturnUrl`.
+Necesita una sesión de usuario de la persona: la suya propia (JWT de navegador o React Native), o una que tu backend obtuvo con la API key de tu origin. El token de una API key, u otro tipo de token, recibe `BloqueAuthenticationError` (403 `E_USER_SESSION_REQUIRED`). `returnUrl` sigue la misma regla que `approvalReturnUrl`.
+
+`verification` dice si la persona debe confirmar primero que es ella:
+
+- `null`: el link no pide código. La sesión propia de la persona debe venir de un login que hizo en los últimos 5 minutos.
+- `'otp'`: el link se creó con una sesión obtenida con la API key de tu origin. Antes de registrar, el portal de identidad envía un código de 6 dígitos al correo de la persona (o a su teléfono, si la cuenta no tiene correo) y se lo pide. Tú no manejas el código: solo envía a la persona a `url`. Una passkey registrada así puede aprobar operaciones 24 horas después de registrarse.
+
+La cuenta necesita un correo o teléfono, y un cambio reciente en cualquiera de los dos bloquea nuevas passkeys durante 24 horas.
 
 | Error | Código | Qué hacer |
 | --- | --- | --- |
 | `BloqueReturnUrlNotAllowedError` | 400 `E_RETURN_URL_NOT_ALLOWED` | Usa un `returnUrl` cuyo origen permita tu origin |
 | `BloquePasskeyRegistrationUnavailableError` | 501 `E_PASSKEY_REGISTRATION_NOT_SUPPORTED` / 503 `E_PASSKEY_REGISTRATION_UNAVAILABLE` | `retryable: false`: este despliegue no registra passkeys; no se reintenta. `retryable: true`: se reintenta automáticamente; reintenta más tarde si persiste |
-| `BloqueAuthenticationError` | 403 `E_USER_SESSION_REQUIRED` | Llámalo con la sesión propia de la persona |
+| `BloqueAuthenticationError` | 403 `E_USER_SESSION_REQUIRED` | Llámalo con una sesión de usuario de la persona |
+| `BloqueAuthenticationError` | 403 `E_FRESH_LOGIN_REQUIRED` | El login de la persona tiene más de 5 minutos (`error.response.extra_details.reason`); pídele que inicie sesión de nuevo |
+| `BloqueAuthenticationError` | 403 `E_CONTACT_RECENTLY_CHANGED` | El correo o teléfono de la cuenta cambió en las últimas 24 horas; `error.response.extra_details.retry_after_ms` dice cuándo intentar de nuevo |
+| `BloqueAPIError` | 409 `E_CONTACT_REQUIRED` | La cuenta no tiene correo ni teléfono; agrega uno primero |
 | `BloqueRateLimitError` | 429 | Demasiados links para esta sesión (10 por hora por defecto). Con `retry` activo (por defecto), el SDK espera `Retry-After` (hasta `maxDelay`) y reintenta antes de lanzar el error |
 
 ## Errores
