@@ -154,6 +154,14 @@ console.log(`Se encontraron ${transactions.data.length} transacciones`);
 console.log('Hay más:', transactions.hasMore);
 ```
 
+Si por un momento no se puede leer la historia de algunas cuentas anterior a la re-fundación del ledger de Bloque, la llamada responde igual, con `partial: true` y esas cuentas en `partialAccounts`. La página trae solo lo que se leyó de ellas, y `hasMore`/`next` cubren solo eso: reintenta más tarde desde la primera página antes de armar un extracto completo.
+
+```typescript title="partial.ts"
+if (transactions.partial) {
+  console.warn('Historia incompleta para:', transactions.partialAccounts);
+}
+```
+
 ## Transferencias
 
 Transfiere fondos entre cualquier cuenta:

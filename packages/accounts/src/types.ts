@@ -604,4 +604,13 @@ export interface ListTransactionsResult {
   hasMore: boolean;
   /** Pagination token for the next page (if hasMore is true) */
   next?: string;
+  /**
+   * True when some accounts' history from before the ledger re-founding
+   * could not be read for a moment. The page then lists only what was read
+   * for them, and `hasMore`/`next` cover only that: retry later from the
+   * first page for the full list.
+   */
+  partial: boolean;
+  /** Accounts whose earlier history is missing (only when `partial` is true) */
+  partialAccounts?: string[];
 }

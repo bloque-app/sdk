@@ -600,6 +600,8 @@ export interface ListTransactionsResponse {
   page_size: number;
   has_more: boolean;
   next?: string;
+  partial?: boolean;
+  partial_accounts?: string[];
 }
 
 /**
