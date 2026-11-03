@@ -10,9 +10,9 @@ import { SDK } from '../../packages/sdk/src/index';
  *
  * This needs a user session for the person: their own (run it from your
  * frontend with a browser or React Native JWT, as below), or one your
- * backend obtained with your origin's API key. With the latter, while Bloque
- * requires it, the link comes back with `verification: 'otp'` and the portal
- * first asks the person for a code sent to their email or phone.
+ * backend obtained with your origin's API key. With the latter the link
+ * comes back with `verification: 'otp'` and the portal first asks the person
+ * for a code sent to their email or phone.
  */
 
 const bloque = new SDK({

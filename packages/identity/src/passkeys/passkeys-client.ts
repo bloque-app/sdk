@@ -15,8 +15,7 @@ export class PasskeysClient extends BaseClient {
    *
    * Needs a user session for the person: their own (browser or React Native
    * JWT), or one your backend obtained with your origin's API key. With the
-   * latter, while Bloque requires it, the link comes back with
-   * `verification: 'otp'`: the identity app first sends the person a code to
+   * latter, the link comes back with `verification: 'otp'`: the identity app first sends the person a code to
    * their email (or phone) and they enter it before registering. An API key
    * token itself cannot create the link.
    *
