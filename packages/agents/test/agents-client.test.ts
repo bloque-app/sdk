@@ -182,6 +182,30 @@ describe('AgentsClient', () => {
     });
   });
 
+  it('create forwards skill URLs with environment extras', async () => {
+    const calls = captureFetch(() =>
+      jsonResponse({ result: agentWire(), req_id: 'req_1' }, 202),
+    );
+
+    await new AgentsClient(authedClient()).create({
+      name: 'Ada',
+      environment: [{ key: 'FOO', value: 'bar', secret: true }],
+      skills: [
+        { url: 'https://example.com/skills/plants/SKILL.md' },
+        { url: 'https://example.com/skills/travel.zip' },
+      ],
+    });
+
+    expect(JSON.parse(String(calls[0]?.init?.body))).toEqual({
+      name: 'Ada',
+      environment: [{ key: 'FOO', value: 'bar', secret: true }],
+      skills: [
+        { url: 'https://example.com/skills/plants/SKILL.md' },
+        { url: 'https://example.com/skills/travel.zip' },
+      ],
+    });
+  });
+
   it('maps E_AGENT_ENV_RESERVED (400) to BloqueValidationError', async () => {
     captureFetch(() =>
       errorResponse(400, 'E_AGENT_ENV_RESERVED', {
@@ -548,5 +572,56 @@ describe('AgentsClient', () => {
 
     expect(error).toBeInstanceOf(BloqueNotFoundError);
     expect((error as BloqueNotFoundError).code).toBe('E_AGENT_APP_NOT_FOUND');
+  });
+
+  it('apps.recommend POSTs /api/agents/apps/recommend and maps data', async () => {
+    const calls = captureFetch(() =>
+      jsonResponse({
+        about: 'imports coffee and invoices in Gmail',
+        story: 'Start with email so invoices land in one place.',
+        name: 'Ada',
+        data: [
+          {
+            name: 'Email',
+            slugs: ['gmail', 'outlook'],
+            story: 'One inbox for this work.',
+            conversation: [
+              { role: 'mr.bloque', message: 'I can open Gmail for invoices.' },
+            ],
+            score: 0.9,
+          },
+        ],
+      }),
+    );
+
+    const result = await new AgentsClient(authedClient()).apps.recommend({
+      about: 'imports coffee and invoices in Gmail',
+      name: 'Ada',
+    });
+
+    expect(calls[0]?.url).toBe(
+      'https://api.dev-bloque.app/api/agents/apps/recommend',
+    );
+    expect(calls[0]?.init?.method).toBe('POST');
+    expect(JSON.parse(String(calls[0]?.init?.body))).toEqual({
+      about: 'imports coffee and invoices in Gmail',
+      name: 'Ada',
+    });
+    expect(result).toEqual({
+      about: 'imports coffee and invoices in Gmail',
+      story: 'Start with email so invoices land in one place.',
+      name: 'Ada',
+      data: [
+        {
+          name: 'Email',
+          slugs: ['gmail', 'outlook'],
+          story: 'One inbox for this work.',
+          conversation: [
+            { role: 'mr.bloque', message: 'I can open Gmail for invoices.' },
+          ],
+          score: 0.9,
+        },
+      ],
+    });
   });
 });

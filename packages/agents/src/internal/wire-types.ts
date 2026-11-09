@@ -45,9 +45,14 @@ export interface CreateAgentEnvironmentEntryWire {
   secret: boolean;
 }
 
+export interface CreateAgentSkillEntryWire {
+  url: string;
+}
+
 export interface CreateAgentRequest {
   name?: string;
   environment?: CreateAgentEnvironmentEntryWire[];
+  skills?: CreateAgentSkillEntryWire[];
 }
 
 export interface CreateAgentResponse {
@@ -118,4 +123,29 @@ export interface AgentAppConnectWire {
 export interface ConnectAgentAppResponse {
   result: AgentAppConnectWire;
   req_id: string;
+}
+
+export interface RecommendAppsRequest {
+  about: string;
+  name?: string;
+}
+
+export interface RecommendAppsTurnWire {
+  role: 'owner' | 'mr.bloque';
+  message: string;
+}
+
+export interface RecommendedAppWire {
+  name: string;
+  slugs: string[];
+  story: string;
+  conversation: RecommendAppsTurnWire[];
+  score: number;
+}
+
+export interface RecommendAppsResponse {
+  about: string;
+  story: string;
+  name?: string;
+  data: RecommendedAppWire[];
 }
