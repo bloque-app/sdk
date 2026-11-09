@@ -57,12 +57,20 @@ export interface WhatsAppChannel {
  * `key` is a POSIX-style name (`[A-Z_][A-Z0-9_]*`, 1–128). `value` is a
  * non-empty string (max 4096). `secret` is required. Provision-owned keys
  * (`BLOQUE_API_KEY`, `BLOQUE_API_BASE_URL`, `BLOQUE_RETURN_URL`,
- * `BLOQUE_PUBLISHABLE_KEY`) are rejected by the API.
+ * `BLOQUE_PUBLISHABLE_KEY`, `INSTINCT_SKILL_URLS`) are rejected by the API.
  */
 export interface CreateAgentEnvironmentEntry {
   key: string;
   value: string;
   secret: boolean;
+}
+
+/**
+ * Public https URL of a skill playbook (`.md` / `SKILL.md`) or a zip of one
+ * skill folder. Format is inferred at fetch.
+ */
+export interface CreateAgentSkillEntry {
+  url: string;
 }
 
 /**
@@ -74,9 +82,16 @@ export interface CreateAgentParams {
   name?: string;
   /**
    * Extra environment variables. Empty array adds nothing. Duplicate keys
-   * are rejected. Provision-owned `BLOQUE_*` keys return `E_AGENT_ENV_RESERVED`.
+   * are rejected. Provision-owned `BLOQUE_*` keys and `INSTINCT_SKILL_URLS`
+   * return `E_AGENT_ENV_RESERVED`.
    */
   environment?: CreateAgentEnvironmentEntry[];
+  /**
+   * Public skill URLs fetched by the hosted agent at boot. Empty array adds
+   * nothing. Unique absolute https URLs, max 8. A second create does not
+   * re-apply skills.
+   */
+  skills?: CreateAgentSkillEntry[];
 }
 
 export interface CreateAgentOptions {
@@ -184,4 +199,36 @@ export interface AgentAppConnect {
  */
 export interface ConnectAgentAppParams {
   app: string;
+}
+
+/**
+ * Body for `agents.apps.recommend()`. Does not require an agent URN.
+ */
+export interface RecommendAppsParams {
+  /** What the hosted agent is for. 1–4000 characters. */
+  about: string;
+  /** Optional display name used in the recommendation copy. Max 80. */
+  name?: string;
+}
+
+export type RecommendAppsTurnRole = 'owner' | 'mr.bloque';
+
+export interface RecommendAppsTurn {
+  role: RecommendAppsTurnRole;
+  message: string;
+}
+
+export interface RecommendedApp {
+  name: string;
+  slugs: string[];
+  story: string;
+  conversation: RecommendAppsTurn[];
+  score: number;
+}
+
+export interface RecommendAppsResult {
+  about: string;
+  story: string;
+  name?: string;
+  data: RecommendedApp[];
 }

@@ -13,6 +13,9 @@ import type {
   ListAgentAppsResponse,
   ListAgentsResponse,
   ListAppCatalogResponse,
+  RecommendAppsRequest,
+  RecommendAppsResponse,
+  RecommendedAppWire,
   WhatsAppChannelWire,
 } from './internal/wire-types';
 import type {
@@ -29,6 +32,9 @@ import type {
   ListAgentsResult,
   ListAppCatalogParams,
   ListAppCatalogResult,
+  RecommendAppsParams,
+  RecommendAppsResult,
+  RecommendedApp,
   WhatsAppChannel,
 } from './types';
 
@@ -109,6 +115,19 @@ function mapAgentAppConnect(wire: AgentAppConnectWire): AgentAppConnect {
     mapped.connectUrl = wire.connect_url;
   }
   return mapped;
+}
+
+function mapRecommendedApp(wire: RecommendedAppWire): RecommendedApp {
+  return {
+    name: wire.name,
+    slugs: wire.slugs,
+    story: wire.story,
+    conversation: wire.conversation.map((turn) => ({
+      role: turn.role,
+      message: turn.message,
+    })),
+    score: wire.score,
+  };
 }
 
 function createHeaders(
@@ -225,7 +244,7 @@ export class AppsClient extends BaseClient {
    * List the apps connected to an agent. One row per app with its best
    * connection status. `connected` is true only for `ACTIVE`.
    *
-   * The agent must already be `ready`.
+   * Allowed while the agent is still `provisioning`.
    *
    * Errors: `400 E_INVALID_AGENT_URN`, `401`, `404 E_AGENT_NOT_FOUND`,
    * `409 E_AGENT_NOT_READY` / `E_AGENT_APPS_UNSUPPORTED`,
@@ -249,8 +268,8 @@ export class AppsClient extends BaseClient {
    * Start connecting an app to an agent.
    *
    * Returns a one-time `connectUrl` when status is `link_issued`. Open it
-   * so the agent owner can sign in. Do not log `connectUrl`. The agent
-   * must already be `ready`. Each call issues a new link.
+   * so the agent owner can sign in. Do not log `connectUrl`. Allowed
+   * while the agent is still `provisioning`. Each call issues a new link.
    *
    * Status is `link_issued` (with `connectUrl`), `already_connected`, or
    * `no_auth` (the app needs no sign-in).
@@ -280,6 +299,48 @@ export class AppsClient extends BaseClient {
 
     return mapAgentAppConnect(response.result);
   }
+
+  /**
+   * Recommend catalog apps from a short description of the work.
+   *
+   * Does not require an agent URN or `ready`. Works before and during
+   * create. `about` is required (1–4000 characters). `name` is optional.
+   *
+   * Errors: `400 E_INVALID_BODY`, `401`, `403 E_AGENT_FORBIDDEN`,
+   * `502` / `503 E_AGENT_APPS_UNAVAILABLE`.
+   *
+   * @example
+   * ```typescript
+   * const recommended = await clients.agents.apps.recommend({
+   *   about: 'imports coffee and invoices in Gmail',
+   *   name: 'Ada',
+   * });
+   * const firstSlug = recommended.data[0]?.slugs[0];
+   * ```
+   */
+  async recommend(params: RecommendAppsParams): Promise<RecommendAppsResult> {
+    const body: RecommendAppsRequest = { about: params.about };
+    if (params.name !== undefined) {
+      body.name = params.name;
+    }
+    const response = await this.httpClient.request<
+      RecommendAppsResponse,
+      RecommendAppsRequest
+    >({
+      method: 'POST',
+      path: '/api/agents/apps/recommend',
+      body,
+    });
+    const mapped: RecommendAppsResult = {
+      about: response.about,
+      story: response.story,
+      data: response.data.map(mapRecommendedApp),
+    };
+    if (response.name !== undefined) {
+      mapped.name = response.name;
+    }
+    return mapped;
+  }
 }
 
 export class AgentsClient extends BaseClient {
@@ -295,10 +356,12 @@ export class AgentsClient extends BaseClient {
   /**
    * Create the caller's hosted personal agent, or return the existing one.
    *
-   * Optional `name` and `environment` extras. Identity is the caller JWT —
-   * do not send phone, userId, DID, or owner fields. Returns
-   * `status: "provisioning"`; poll `get()` until `ready` before linking
-   * WhatsApp. Apps can be listed and connected while still provisioning.
+   * Optional `name`, `environment` extras, and public `skills` URLs.
+   * Identity is the caller JWT — do not send phone, userId, DID, or owner
+   * fields. Returns `status: "provisioning"`; poll `get()` until `ready`
+   * before linking WhatsApp. Apps can be listed, recommended, and connected
+   * while still provisioning. Skill URLs are fetched on VM boot (`.md` or
+   * `.zip`).
    *
    * Errors: `400 E_INVALID_BODY` / `E_AGENT_ENV_RESERVED`, `401`,
    * `403 E_AGENT_FORBIDDEN`, `409 E_AGENT_IDENTITY_CONFLICT`,
@@ -310,6 +373,10 @@ export class AgentsClient extends BaseClient {
    * const agent = await clients.agents.create({
    *   name: 'Ada',
    *   environment: [{ key: 'FOO', value: 'bar', secret: true }],
+   *   skills: [
+   *     { url: 'https://example.com/skills/plants/SKILL.md' },
+   *     { url: 'https://example.com/skills/travel.zip' },
+   *   ],
    * });
    * ```
    */
@@ -324,6 +391,9 @@ export class AgentsClient extends BaseClient {
     }
     if (params?.environment) {
       body.environment = params.environment;
+    }
+    if (params?.skills) {
+      body.skills = params.skills;
     }
     const requestBody = Object.keys(body).length > 0 ? body : undefined;
 
