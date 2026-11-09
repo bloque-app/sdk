@@ -1,5 +1,15 @@
 # @bloque/sdk-agents
 
+## 0.24.0
+
+### Minor Changes
+
+- 6611b58: Accept optional `skills` URLs on `agents.create()` and add `agents.apps.recommend()`. Catalog and connect work while the agent is still provisioning.
+
+### Patch Changes
+
+- @bloque/sdk-core@0.24.0
+
 ## 0.23.0
 
 ### Patch Changes

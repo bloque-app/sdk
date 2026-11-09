@@ -1,5 +1,11 @@
 # @bloque/sdk-accounts
 
+## 0.24.0
+
+### Patch Changes
+
+- @bloque/sdk-core@0.24.0
+
 ## 0.23.0
 
 ### Minor Changes
