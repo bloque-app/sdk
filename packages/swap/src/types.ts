@@ -8,6 +8,12 @@
 export type FeeComponentType = 'percentage' | 'rate' | 'fixed';
 
 /**
+ * Who a fee component pays: Bloque, the payment provider, or a shared pool.
+ * Components without a role are charged by the provider on its side.
+ */
+export type FeeRole = 'bloque_fee' | 'provider_cost' | 'service_pool';
+
+/**
  * Fee component details
  */
 export interface FeeComponent {
@@ -17,14 +23,21 @@ export interface FeeComponent {
   name: string;
   /** Type of fee component */
   type: FeeComponentType;
-  /** Component value */
+  /**
+   * Value the formula uses for this component, as a decimal or fraction
+   * string (e.g. `"1/400"` for 0.25%, `"5"` for 5 units of the source asset).
+   */
   value: number | string;
-  /** Percentage value (only for percentage type) */
-  percentage?: number;
+  /** Percentage value (only for percentage type), e.g. `"0.25"` */
+  percentage?: number | string;
   /** Currency pair (only for rate type) */
   pair?: string;
-  /** Fixed amount (only for fixed type) */
-  amount?: number;
+  /** Fixed amount in source-asset units (only for fixed type), e.g. `"5"` */
+  amount?: number | string;
+  /** Who receives this component, when assigned */
+  role?: FeeRole;
+  /** Expression used to compute this component's share, when set */
+  roleExpression?: string;
 }
 
 /**
@@ -33,8 +46,11 @@ export interface FeeComponent {
 export interface Fee {
   /** Timestamp when the fee was calculated */
   at: number;
-  /** Fee value */
-  value: number;
+  /**
+   * Formula output for the reference amount in `SwapRate.rate[0]`. Use
+   * `calculateRateQuote()` for a specific amount.
+   */
+  value: number | string;
   /** Formula used to calculate the fee */
   formula: string;
   /** Components that make up the fee */
@@ -75,9 +91,12 @@ export interface SwapRate {
   fromMediums: string[];
   /** Available destination mediums */
   toMediums: string[];
-  /** Rate tuple [sourceAmount, destinationAmount] */
+  /** Rate tuple [sourceAmount, destinationAmount] for a reference amount */
   rate: RateTuple;
-  /** Exchange ratio */
+  /**
+   * Exchange ratio at the reference amount in `rate[0]`. Not valid for other
+   * amounts when the fee has a fixed component: use `calculateRateQuote()`.
+   */
   ratio: number;
   /** Source amount limits [min, max] */
   fromLimits: RateLimits;
@@ -203,4 +222,47 @@ export interface CancelSubscriptionResult {
   cursor: number | null;
   orderId: string;
   graphId: string;
+}
+
+/**
+ * One fee line of a quote, in destination-asset atoms.
+ */
+export interface RateQuoteFee {
+  /** Component name, e.g. `bloque_pct` */
+  name: string;
+  /** `percentage` or `fixed` */
+  type: 'percentage' | 'fixed';
+  /** Who receives it, when assigned */
+  role?: FeeRole;
+  /** Percentage, for `percentage` components (e.g. `"1.75"`) */
+  percentage?: string;
+  /** Fixed amount in source-asset units, for `fixed` components (e.g. `"5"`) */
+  fixedAmount?: string;
+  /** What this component costs for the quoted amount, in destination atoms */
+  amount: string;
+}
+
+/**
+ * What a rate delivers for a specific source amount.
+ */
+export interface RateQuote {
+  /** Source asset with precision, e.g. `MXN/2` */
+  fromAsset: string;
+  /** Destination asset with precision, e.g. `MXNB/2` */
+  toAsset: string;
+  /** Destination currency code the amounts are in, e.g. `MXNB` */
+  currency: string;
+  /** Source amount in source atoms */
+  amountSrc: string;
+  /** Amount received, in destination atoms (rounded down, like the server) */
+  amountDst: string;
+  /** Amount before fees, in destination atoms */
+  amountBeforeFees: string;
+  /** Total fee: `amountBeforeFees - amountDst`, in destination atoms */
+  fee: string;
+  /**
+   * Each percentage and fixed component, in destination atoms. Each line is
+   * rounded down on its own, so their sum can be an atom below `fee`.
+   */
+  fees: RateQuoteFee[];
 }

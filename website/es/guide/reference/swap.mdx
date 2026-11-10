@@ -107,7 +107,7 @@ interface SwapRate {
 ```typescript
 interface Fee {
   at: number;
-  value: number;
+  value: number | string;
   formula: string;
   components: FeeComponent[];
 }
@@ -121,11 +121,40 @@ interface FeeComponent {
   name: string;
   type: 'percentage' | 'rate' | 'fixed';
   value: number | string;
-  percentage?: number;
+  percentage?: number | string;
   pair?: string;
-  amount?: number;
+  amount?: number | string;
+  role?: 'bloque_fee' | 'provider_cost' | 'service_pool';
+  roleExpression?: string;
 }
 ```
+
+## Cotizar un monto
+
+`ratio` y `rate` describen un monto de referencia. Cuando la comisión tiene una parte fija, como los 5 MXN de SPEI, `monto × ratio` da mal para cualquier otro monto. Usa `calculateRateQuote()` para saber qué entrega una tasa por el monto que escribió el usuario. Usa la misma aritmética exacta y el mismo redondeo que el servidor.
+
+```typescript
+import { calculateRateQuote } from '@bloque/sdk-swap';
+
+const { rates } = await bloque.swap.findRates({
+  fromAsset: 'MXN/2',
+  toAsset: 'MXNB/2',
+  fromMediums: ['spei'],
+  toMediums: ['kusama'],
+  amountSrc: '100000', // 1.000,00 MXN
+});
+
+const cotizacion = calculateRateQuote(rates[0], '100000');
+// cotizacion.amountDst  → '97500' (975,00 MXNB)
+// cotizacion.fee        → '2500'  (25,00)
+// cotizacion.currency   → 'MXNB'
+// cotizacion.fees       → una línea por componente porcentual o fijo:
+//   { name: 'provider_pct',   type: 'percentage', percentage: '0.25', amount: '250' }
+//   { name: 'provider_fixed', type: 'fixed',      fixedAmount: '5',   amount: '500' }
+//   { name: 'bloque_pct',     type: 'percentage', percentage: '1.75', amount: '1750', role: 'bloque_fee' }
+```
+
+Todos los montos de la cotización están en átomos del activo de destino. Cada línea de comisión se redondea hacia abajo por separado, así que su suma puede quedar un átomo por debajo de `fee`. `calculateRateQuote()` lanza un error cuando las comisiones superan el monto.
 
 ## Ejemplo Completo de Flujo
 
