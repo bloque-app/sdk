@@ -1,5 +1,22 @@
 # @bloque/sdk
 
+## 0.25.0
+
+### Minor Changes
+
+- 431159c: `agents.apps.recommend()` returns integer fit `score` (0–4), `source` (`scored` | `heuristic`), and `stories` (`model` | `template`).
+
+### Patch Changes
+
+- Updated dependencies [431159c]
+  - @bloque/sdk-agents@0.25.0
+  - @bloque/sdk-core@0.25.0
+  - @bloque/sdk-accounts@0.25.0
+  - @bloque/sdk-compliance@0.25.0
+  - @bloque/sdk-identity@0.25.0
+  - @bloque/sdk-orgs@0.25.0
+  - @bloque/sdk-swap@0.25.0
+
 ## 0.24.0
 
 ### Minor Changes
