@@ -170,19 +170,34 @@ if (transactions.partial) {
 
 ### Fees
 
-A movement that belongs to a swap order (a payout, a deposit) carries `orderSig`, the order that produced it, also on its refund. The movement that charged the order also carries `fee`: the total the customer paid, in one amount. `fee.amount` uses the same minor-units format as `amount`; `fee.asset` is the asset the order delivers, which can differ from the movement's own `asset` (a COPM payout to a COP bank account reports its fee in COP).
+A movement that belongs to a swap order (a payout, a deposit) carries `orderSig`, the order that produced it, also on its refund. The movements of the operation that charged the order also carry `fee`: the total the customer paid, in one amount. `fee.amount` uses the same minor-units format as `amount`; `fee.asset` is the asset the order delivers, which can differ from the movement's own `asset` (a COPM payout to a COP bank account reports its fee in COP).
 
 - Count it once per `orderSig`: one order can be listed more than once (e.g. pending, then settled).
-- If the order fails the customer is not charged: ignore `fee` on a movement with direction `failed`, or when a refund with the same `orderSig` exists.
+- If the order fails the customer is not charged. Ignore `fee` on a movement with direction `failed` (returned with `collapsed_view`) or with status `cancelled`, `failed` or `ignored`, and when the order has a refund: a separate movement with the same `orderSig` and no `fee`.
 - Only orders created since fees started being recorded have it: an absent `fee` means "not recorded", not "no fee".
+- A payout split across several destinations, or paid in recurring installments, records it on none of them.
 
 ```typescript title="fees.ts"
-const charged = new Map<string, MovementFee>();
-for (const tx of transactions.data) {
-  if (tx.fee && tx.orderSig && tx.direction !== 'failed') {
-    charged.set(tx.orderSig, tx.fee);
+import type { GlobalTransaction, MovementFee } from '@bloque/sdk';
+
+const NOT_CHARGED = new Set(['cancelled', 'failed', 'ignored']);
+
+function feesByOrder(txs: GlobalTransaction[]): Map<string, MovementFee> {
+  const charged = new Map<string, MovementFee>();
+  const refunded = new Set<string>();
+  for (const tx of txs) {
+    if (!tx.orderSig) continue;
+    if (!tx.fee) {
+      refunded.add(tx.orderSig);
+    } else if (tx.direction !== 'failed' && !NOT_CHARGED.has(tx.status)) {
+      charged.set(tx.orderSig, tx.fee);
+    }
   }
+  for (const order of refunded) charged.delete(order);
+  return charged;
 }
+
+const fees = feesByOrder(transactions.data);
 ```
 
 `card.movements()` returns the API fields as they come: `fee` and `details.order_sig`.

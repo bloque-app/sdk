@@ -505,13 +505,16 @@ export interface Movement {
   /**
    * Total fee the customer paid on the order this movement belongs to.
    *
-   * Set on the movements of the order that charged it (the debit of a
-   * payout, the credit of a deposit), only for orders created since fees
-   * started being recorded: absent means "not recorded", not "no fee".
+   * Set on every movement of the operation that charged the order (the
+   * debit of a payout, the credit of a deposit), only for orders created
+   * since fees started being recorded: absent means "not recorded", not
+   * "no fee". A payout split across several destinations, or paid in
+   * recurring installments, records it on none of them.
    * One order can be listed more than once (e.g. pending, then settled), so
    * count it once per `orderSig`. If the order fails the customer is not
-   * charged: ignore it on a movement with direction `failed`, or when a
-   * refund with the same `orderSig` exists.
+   * charged: ignore it on a movement with direction `failed` or status
+   * `cancelled`, `failed` or `ignored`, or when the order has a refund (a
+   * separate movement with the same `orderSig` and no `fee`).
    */
   fee?: MovementFee;
   /** Swap order that produced the movement, when recorded (also on its refund) */
@@ -624,13 +627,16 @@ export interface GlobalTransaction {
   /**
    * Total fee the customer paid on the order this movement belongs to.
    *
-   * Set on the movements of the order that charged it (the debit of a
-   * payout, the credit of a deposit), only for orders created since fees
-   * started being recorded: absent means "not recorded", not "no fee".
+   * Set on every movement of the operation that charged the order (the
+   * debit of a payout, the credit of a deposit), only for orders created
+   * since fees started being recorded: absent means "not recorded", not
+   * "no fee". A payout split across several destinations, or paid in
+   * recurring installments, records it on none of them.
    * One order can be listed more than once (e.g. pending, then settled), so
    * count it once per `orderSig`. If the order fails the customer is not
-   * charged: ignore it on a movement with direction `failed`, or when a
-   * refund with the same `orderSig` exists.
+   * charged: ignore it on a movement with direction `failed` or status
+   * `cancelled`, `failed` or `ignored`, or when the order has a refund (a
+   * separate movement with the same `orderSig` and no `fee`).
    */
   fee?: MovementFee;
   /** Swap order that produced the movement, when recorded (also on its refund) */
