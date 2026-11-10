@@ -92,7 +92,7 @@ interface SwapRate {
 ```typescript
 interface Fee {
   at: number;
-  value: number;
+  value: number | string;
   formula: string;
   components: FeeComponent[];
 }
@@ -106,9 +106,11 @@ interface FeeComponent {
   name: string;
   type: 'percentage' | 'rate' | 'fixed';
   value: number | string;
-  percentage?: number;
+  percentage?: number | string;
   pair?: string;
-  amount?: number;
+  amount?: number | string;
+  role?: 'bloque_fee' | 'provider_cost' | 'service_pool';
+  roleExpression?: string;
 }
 ```
 

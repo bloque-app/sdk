@@ -71,6 +71,7 @@ export type {
   PseCustomerData,
   PsePaymentArgs,
 } from './pse/types';
+export { calculateRateQuote } from './quote';
 export { RtpClient } from './rtp/rtp-client';
 export type {
   CreateRtpBaseOrderParams,
@@ -92,19 +93,21 @@ export type {
   SpeiDepositInformation,
   SpeiPayoutInformation,
 } from './spei/types';
-
 // Swap client + top-level types
 export { SwapClient } from './swap-client';
 export type {
   Fee,
   FeeComponent,
   FeeComponentType,
+  FeeRole,
   FindRatesParams,
   FindRatesResult,
   ListOrdersParams,
   ListOrdersResult,
   OrderStatus,
   RateLimits,
+  RateQuote,
+  RateQuoteFee,
   RateTuple,
   SwapRate,
 } from './types';

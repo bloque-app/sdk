@@ -107,7 +107,7 @@ interface SwapRate {
 ```typescript
 interface Fee {
   at: number;
-  value: number;
+  value: number | string;
   formula: string;
   components: FeeComponent[];
 }
@@ -121,11 +121,40 @@ interface FeeComponent {
   name: string;
   type: 'percentage' | 'rate' | 'fixed';
   value: number | string;
-  percentage?: number;
+  percentage?: number | string;
   pair?: string;
-  amount?: number;
+  amount?: number | string;
+  role?: 'bloque_fee' | 'provider_cost' | 'service_pool';
+  roleExpression?: string;
 }
 ```
+
+## Quote an Amount
+
+`ratio` and `rate` describe a reference amount. When the fee has a fixed part, such as SPEI's 5 MXN, `amount × ratio` is wrong for any other amount. Use `calculateRateQuote()` to get what a rate delivers for the amount the user typed. It uses the same exact arithmetic and rounding as the server.
+
+```typescript
+import { calculateRateQuote } from '@bloque/sdk-swap';
+
+const { rates } = await bloque.swap.findRates({
+  fromAsset: 'MXN/2',
+  toAsset: 'MXNB/2',
+  fromMediums: ['spei'],
+  toMediums: ['kusama'],
+  amountSrc: '100000', // 1,000.00 MXN
+});
+
+const quote = calculateRateQuote(rates[0], '100000');
+// quote.amountDst  → '97500' (975.00 MXNB)
+// quote.fee        → '2500'  (25.00)
+// quote.currency   → 'MXNB'
+// quote.fees       → one line per percentage/fixed component:
+//   { name: 'provider_pct',   type: 'percentage', percentage: '0.25', amount: '250' }
+//   { name: 'provider_fixed', type: 'fixed',      fixedAmount: '5',   amount: '500' }
+//   { name: 'bloque_pct',     type: 'percentage', percentage: '1.75', amount: '1750', role: 'bloque_fee' }
+```
+
+Every amount in the quote is in destination-asset atoms. Each fee line is rounded down on its own, so their sum can be one atom below `fee`. `calculateRateQuote()` throws when the fees exceed the amount.
 
 ## Complete Example Flow
 

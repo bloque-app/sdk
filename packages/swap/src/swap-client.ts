@@ -247,6 +247,10 @@ export class SwapClient extends BaseClient {
           percentage: component.percentage,
           pair: component.pair,
           amount: component.amount,
+          ...(component.role ? { role: component.role } : {}),
+          ...(component.role_expression
+            ? { roleExpression: component.role_expression }
+            : {}),
         })),
       },
       at: rate.at,

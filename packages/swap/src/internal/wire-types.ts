@@ -20,9 +20,11 @@ export interface FeeComponent {
   name: string;
   type: FeeComponentType;
   value: number | string;
-  percentage?: number;
+  percentage?: number | string;
   pair?: string;
-  amount?: number;
+  amount?: number | string;
+  role?: 'bloque_fee' | 'provider_cost' | 'service_pool';
+  role_expression?: string;
 }
 
 /**
@@ -31,7 +33,7 @@ export interface FeeComponent {
  */
 export interface Fee {
   at: number;
-  value: number;
+  value: number | string;
   formula: string;
   components: FeeComponent[];
 }
