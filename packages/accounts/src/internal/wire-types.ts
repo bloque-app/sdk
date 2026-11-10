@@ -527,6 +527,7 @@ export interface TransactionMetadata {
 export interface TransactionDetails {
   metadata: TransactionMetadata;
   type: string;
+  order_sig?: string;
 }
 
 export enum TransactionStatus {
@@ -546,6 +547,15 @@ export type TransactionType = 'deposit' | 'withdraw' | 'transfer';
 
 /**
  * @internal
+ * Total fee the customer paid on the order a movement belongs to
+ */
+export interface MovementFeeWire {
+  amount: string;
+  asset: string;
+}
+
+/**
+ * @internal
  * Transaction from API
  */
 export interface Transaction {
@@ -553,13 +563,14 @@ export interface Transaction {
   asset: string;
   from_account_id: string;
   to_account_id: string;
-  direction: 'in' | 'out';
+  direction: 'in' | 'out' | 'failed';
   type: TransactionType;
   reference: string;
   rail_name: string;
   status: TransactionStatus;
   details: TransactionDetails;
   created_at: string;
+  fee?: MovementFeeWire;
 }
 
 /**
@@ -582,13 +593,14 @@ export interface GlobalTransaction {
   asset: string;
   from_account_id: string;
   to_account_id: string;
-  direction: 'in' | 'out';
+  direction: 'in' | 'out' | 'failed';
   reference: string;
   rail_name: string;
   status: TransactionStatus;
   type?: TransactionType;
   details?: Record<string, unknown>;
   created_at: string;
+  fee?: MovementFeeWire;
 }
 
 /**

@@ -168,6 +168,25 @@ if (transactions.partial) {
 }
 ```
 
+### Fees
+
+A movement that belongs to a swap order (a payout, a deposit) carries `orderSig`, the order that produced it, also on its refund. The movement that charged the order also carries `fee`: the total the customer paid, in one amount. `fee.amount` uses the same minor-units format as `amount`; `fee.asset` is the asset the order delivers, which can differ from the movement's own `asset` (a COPM payout to a COP bank account reports its fee in COP).
+
+- Count it once per `orderSig`: one order can be listed more than once (e.g. pending, then settled).
+- If the order fails the customer is not charged: ignore `fee` on a movement with direction `failed`, or when a refund with the same `orderSig` exists.
+- Only orders created since fees started being recorded have it: an absent `fee` means "not recorded", not "no fee".
+
+```typescript title="fees.ts"
+const charged = new Map<string, MovementFee>();
+for (const tx of transactions.data) {
+  if (tx.fee && tx.orderSig && tx.direction !== 'failed') {
+    charged.set(tx.orderSig, tx.fee);
+  }
+}
+```
+
+`card.movements()` returns the API fields as they come: `fee` and `details.order_sig`.
+
 ## Transfers
 
 Transfer funds between any accounts:
