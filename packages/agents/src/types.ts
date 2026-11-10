@@ -218,17 +218,31 @@ export interface RecommendAppsTurn {
   message: string;
 }
 
+/** Integer fit of one card to the note. 0 is unrelated; 4 is an explicit request. */
+export type RecommendAppsFit = 0 | 1 | 2 | 3 | 4;
+
+/**
+ * How the cards were ranked. `scored` is the hosted ranker; `heuristic` is
+ * the fallback when that ranker is not used.
+ */
+export type RecommendAppsSource = 'scored' | 'heuristic';
+
+/** How the story copy was produced. `model` is written copy; `template` is stock copy. */
+export type RecommendAppsStories = 'model' | 'template';
+
 export interface RecommendedApp {
   name: string;
   slugs: string[];
   story: string;
   conversation: RecommendAppsTurn[];
-  score: number;
+  score: RecommendAppsFit;
 }
 
 export interface RecommendAppsResult {
   about: string;
   story: string;
   name?: string;
+  source: RecommendAppsSource;
+  stories: RecommendAppsStories;
   data: RecommendedApp[];
 }

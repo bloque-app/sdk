@@ -139,13 +139,15 @@ export interface RecommendedAppWire {
   name: string;
   slugs: string[];
   story: string;
-  conversation: RecommendAppsTurnWire[];
-  score: number;
+  conversation?: RecommendAppsTurnWire[];
+  score: 0 | 1 | 2 | 3 | 4;
 }
 
 export interface RecommendAppsResponse {
   about: string;
   story: string;
   name?: string;
+  source: 'scored' | 'heuristic';
+  stories: 'model' | 'template';
   data: RecommendedAppWire[];
 }

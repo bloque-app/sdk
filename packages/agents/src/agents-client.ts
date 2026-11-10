@@ -122,7 +122,7 @@ function mapRecommendedApp(wire: RecommendedAppWire): RecommendedApp {
     name: wire.name,
     slugs: wire.slugs,
     story: wire.story,
-    conversation: wire.conversation.map((turn) => ({
+    conversation: (wire.conversation ?? []).map((turn) => ({
       role: turn.role,
       message: turn.message,
     })),
@@ -305,6 +305,8 @@ export class AppsClient extends BaseClient {
    *
    * Does not require an agent URN or `ready`. Works before and during
    * create. `about` is required (1–4000 characters). `name` is optional.
+   * Each card's `score` is an integer fit 0–4. `source` is `scored` or
+   * `heuristic`. `stories` is `model` or `template`.
    *
    * Errors: `400 E_INVALID_BODY`, `401`, `403 E_AGENT_FORBIDDEN`,
    * `502` / `503 E_AGENT_APPS_UNAVAILABLE`.
@@ -334,6 +336,8 @@ export class AppsClient extends BaseClient {
     const mapped: RecommendAppsResult = {
       about: response.about,
       story: response.story,
+      source: response.source,
+      stories: response.stories,
       data: response.data.map(mapRecommendedApp),
     };
     if (response.name !== undefined) {
