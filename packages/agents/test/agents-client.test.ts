@@ -580,6 +580,8 @@ describe('AgentsClient', () => {
         about: 'imports coffee and invoices in Gmail',
         story: 'Start with email so invoices land in one place.',
         name: 'Ada',
+        source: 'scored',
+        stories: 'model',
         data: [
           {
             name: 'Email',
@@ -588,7 +590,7 @@ describe('AgentsClient', () => {
             conversation: [
               { role: 'mr.bloque', message: 'I can open Gmail for invoices.' },
             ],
-            score: 0.9,
+            score: 4,
           },
         ],
       }),
@@ -611,6 +613,8 @@ describe('AgentsClient', () => {
       about: 'imports coffee and invoices in Gmail',
       story: 'Start with email so invoices land in one place.',
       name: 'Ada',
+      source: 'scored',
+      stories: 'model',
       data: [
         {
           name: 'Email',
@@ -619,7 +623,7 @@ describe('AgentsClient', () => {
           conversation: [
             { role: 'mr.bloque', message: 'I can open Gmail for invoices.' },
           ],
-          score: 0.9,
+          score: 4,
         },
       ],
     });
