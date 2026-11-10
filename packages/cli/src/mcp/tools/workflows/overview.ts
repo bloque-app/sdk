@@ -1,7 +1,7 @@
 import { z } from 'zod/v4';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { BloqueClients } from '../../types.ts';
-import { toHuman, humanizeBalance } from '../../currency.ts';
+import { humanizeBalance, humanizeMovement } from '../../currency.ts';
 
 export function registerOverviewWorkflows(server: McpServer, clients: BloqueClients) {
   server.registerTool(
@@ -57,10 +57,7 @@ export function registerOverviewWorkflows(server: McpServer, clients: BloqueClie
         }
       }
 
-      const humanizedTxs = txs.data.map((tx: any) => {
-        const { amount, currency } = toHuman(tx.amount, tx.asset);
-        return { ...tx, amount, currency };
-      });
+      const humanizedTxs = txs.data.map((tx: any) => humanizeMovement(tx));
 
       const result = {
         accounts: grouped,
@@ -115,10 +112,7 @@ export function registerOverviewWorkflows(server: McpServer, clients: BloqueClie
       const details = card.details ?? card;
       const metadata = card.metadata ?? {};
 
-      const humanizedMovements = movements.map((mv: any) => {
-        const { amount, currency } = toHuman(mv.amount, mv.asset);
-        return { ...mv, amount, currency };
-      });
+      const humanizedMovements = movements.map((mv: any) => humanizeMovement(mv));
 
       const result = {
         card: {

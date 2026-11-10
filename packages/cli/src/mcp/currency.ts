@@ -53,6 +53,24 @@ export function toHuman(
   return { amount: humanAmount, currency: mapping.currency };
 }
 
+/**
+ * A movement or transaction with `amount` and, when present, `fee.amount`
+ * in human units, each with its own currency (the fee is in the asset the
+ * order delivers, which can differ from the movement's).
+ */
+export function humanizeMovement<
+  T extends { amount: string; asset: string; fee?: { amount: string; asset: string } },
+>(mv: T) {
+  const { amount, currency } = toHuman(mv.amount, mv.asset);
+  const { fee, ...rest } = mv;
+  return {
+    ...rest,
+    amount,
+    currency,
+    ...(fee ? { fee: toHuman(fee.amount, fee.asset) } : {}),
+  };
+}
+
 export function humanizeBalance(
   balance: Record<string, { current: string; pending: string; in?: string; out?: string }>,
 ) {

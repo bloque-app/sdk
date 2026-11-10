@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { resolveAsset, toHuman, toRaw } from './currency.ts';
+import { humanizeMovement, resolveAsset, toHuman, toRaw } from './currency.ts';
 
 describe('toRaw', () => {
   test('converts COPM to the precision-qualified asset ticker', () => {
@@ -35,5 +35,28 @@ describe('toHuman', () => {
       amount: '5050',
       currency: 'COPM',
     });
+  });
+});
+
+describe('humanizeMovement', () => {
+  test('humanizes the fee in its own asset', () => {
+    expect(
+      humanizeMovement({
+        amount: '100000',
+        asset: 'COPM/2',
+        orderSig: 'order-1',
+        fee: { amount: '50100', asset: 'COP/2' },
+      }),
+    ).toEqual({
+      amount: '1000',
+      currency: 'COPM',
+      asset: 'COPM/2',
+      orderSig: 'order-1',
+      fee: { amount: '501', currency: 'COP' },
+    });
+  });
+
+  test('adds no fee when the movement has none', () => {
+    expect(humanizeMovement({ amount: '100', asset: 'COPM/2' })).not.toHaveProperty('fee');
   });
 });

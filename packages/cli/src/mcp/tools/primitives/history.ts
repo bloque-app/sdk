@@ -1,7 +1,7 @@
 import { z } from 'zod/v4';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { BloqueClients } from '../../types.ts';
-import { toHuman, resolveAsset } from '../../currency.ts';
+import { humanizeMovement, resolveAsset } from '../../currency.ts';
 
 export function registerHistoryTools(server: McpServer, clients: BloqueClients) {
   server.registerTool(
@@ -27,10 +27,7 @@ export function registerHistoryTools(server: McpServer, clients: BloqueClients) 
         direction,
         next,
       } as any);
-      const humanizedTxs = result.data.map((tx: any) => {
-        const { amount, currency: cur } = toHuman(tx.amount, tx.asset);
-        return { ...tx, amount, currency: cur };
-      });
+      const humanizedTxs = result.data.map((tx: any) => humanizeMovement(tx));
       return {
         content: [
           {
@@ -77,10 +74,7 @@ export function registerHistoryTools(server: McpServer, clients: BloqueClients) 
         pocket,
         next,
       } as any);
-      const humanizedMovements = result.data.map((mv: any) => {
-        const { amount, currency: cur } = toHuman(mv.amount, mv.asset);
-        return { ...mv, amount, currency: cur };
-      });
+      const humanizedMovements = result.data.map((mv: any) => humanizeMovement(mv));
       return {
         content: [
           {

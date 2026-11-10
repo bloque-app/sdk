@@ -164,19 +164,34 @@ if (transactions.partial) {
 
 ### Comisiones
 
-Un movimiento que pertenece a una orden de swap (un envío, una recarga) trae `orderSig`, la orden que lo produjo, también en su reembolso. El movimiento que cobró la orden trae además `fee`: el total que pagó el cliente, en un solo monto. `fee.amount` usa el mismo formato en unidades mínimas que `amount`; `fee.asset` es el activo que entrega la orden, que puede ser distinto del `asset` del movimiento (un envío de COPM a una cuenta bancaria en COP reporta su comisión en COP).
+Un movimiento que pertenece a una orden de swap (un envío, una recarga) trae `orderSig`, la orden que lo produjo, también en su reembolso. Los movimientos de la operación que cobró la orden traen además `fee`: el total que pagó el cliente, en un solo monto. `fee.amount` usa el mismo formato en unidades mínimas que `amount`; `fee.asset` es el activo que entrega la orden, que puede ser distinto del `asset` del movimiento (un envío de COPM a una cuenta bancaria en COP reporta su comisión en COP).
 
 - Cuéntala una vez por `orderSig`: una orden puede aparecer más de una vez (por ejemplo, pendiente y luego liquidada).
-- Si la orden falla, al cliente no se le cobra: ignora `fee` en un movimiento con dirección `failed`, o si existe un reembolso con el mismo `orderSig`.
+- Si la orden falla, al cliente no se le cobra. Ignora `fee` en un movimiento con dirección `failed` (viene con `collapsed_view`) o con estado `cancelled`, `failed` o `ignored`, y cuando la orden tiene un reembolso: un movimiento aparte con el mismo `orderSig` y sin `fee`.
 - Solo la tienen las órdenes creadas desde que se empezaron a registrar comisiones: si no viene `fee`, significa "no registrada", no "sin comisión".
+- Un envío dividido entre varios destinos, o pagado en cuotas recurrentes, no la registra en ninguno.
 
 ```typescript title="fees.ts"
-const charged = new Map<string, MovementFee>();
-for (const tx of transactions.data) {
-  if (tx.fee && tx.orderSig && tx.direction !== 'failed') {
-    charged.set(tx.orderSig, tx.fee);
+import type { GlobalTransaction, MovementFee } from '@bloque/sdk';
+
+const NOT_CHARGED = new Set(['cancelled', 'failed', 'ignored']);
+
+function feesByOrder(txs: GlobalTransaction[]): Map<string, MovementFee> {
+  const charged = new Map<string, MovementFee>();
+  const refunded = new Set<string>();
+  for (const tx of txs) {
+    if (!tx.orderSig) continue;
+    if (!tx.fee) {
+      refunded.add(tx.orderSig);
+    } else if (tx.direction !== 'failed' && !NOT_CHARGED.has(tx.status)) {
+      charged.set(tx.orderSig, tx.fee);
+    }
   }
+  for (const order of refunded) charged.delete(order);
+  return charged;
 }
+
+const fees = feesByOrder(transactions.data);
 ```
 
 `card.movements()` devuelve los campos tal como vienen de la API: `fee` y `details.order_sig`.
