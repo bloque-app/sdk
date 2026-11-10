@@ -34,6 +34,7 @@ import type {
   ListAccountsResponse,
   ListMovementsResponse,
   ListTransactionsResponse,
+  MovementFeeWire,
   PolygonDetails,
   TransferRequest,
   TransferResponse,
@@ -58,6 +59,7 @@ import type {
   ListMovementsResult,
   ListTransactionsParams,
   ListTransactionsResult,
+  MovementFee,
   TokenBalance,
   TransferOptions,
   TransferParams,
@@ -72,6 +74,20 @@ import {
   mapVirtualAccountFromWire,
   VirtualClient,
 } from './virtual/virtual-client';
+
+/**
+ * The order a movement belongs to and what it cost the customer, when the
+ * API recorded them. Absent fields stay absent.
+ */
+function orderFields(
+  fee: MovementFeeWire | undefined,
+  orderSig: unknown,
+): { fee?: MovementFee; orderSig?: string } {
+  return {
+    ...(fee && { fee: { amount: fee.amount, asset: fee.asset } }),
+    ...(typeof orderSig === 'string' && { orderSig }),
+  };
+}
 
 /**
  * Union of all medium-specific mapped account types.
@@ -600,6 +616,7 @@ export class AccountsClient extends BaseClient {
         railName: tx.rail_name,
         details: tx.details,
         createdAt: tx.created_at,
+        ...orderFields(tx.fee, tx.details?.order_sig),
       })),
       pageSize: response.page_size,
       hasMore: response.has_more,
@@ -697,6 +714,7 @@ export class AccountsClient extends BaseClient {
         details: tx.details ?? {},
         createdAt: tx.created_at,
         type: tx.type,
+        ...orderFields(tx.fee, tx.details?.order_sig),
       })),
       pageSize: response.page_size,
       hasMore: response.has_more,

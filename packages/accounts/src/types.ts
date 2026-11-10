@@ -457,6 +457,23 @@ export interface MovementDetails {
   metadata?: Record<string, unknown>;
   /** Transaction type */
   type?: string;
+  /** Swap order that produced the movement, when recorded (also on its refund) */
+  order_sig?: string;
+}
+
+/**
+ * Total fee the customer paid on the order a movement belongs to: everything
+ * charged, in one amount.
+ */
+export interface MovementFee {
+  /** Fee amount in the asset's minor units, as a string (same format as `amount`) */
+  amount: string;
+  /**
+   * Asset the fee is expressed in, with its precision. It is the asset the
+   * order delivers, which can differ from the movement's own `asset`.
+   * @example "COP/2"
+   */
+  asset: string;
 }
 
 /**
@@ -473,8 +490,8 @@ export interface Movement {
   fromAccountId: string;
   /** Destination account ID */
   toAccountId: string;
-  /** Transaction direction */
-  direction: 'in' | 'out';
+  /** Transaction direction. `failed`: with `collapsed_view`, a pending movement that ended cancelled, failed or ignored */
+  direction: 'in' | 'out' | 'failed';
   /** Transaction type (deposit, withdraw, transfer) */
   type: MovementType;
   /** Transaction reference */
@@ -485,6 +502,20 @@ export interface Movement {
   details: MovementDetails;
   /** Creation timestamp */
   createdAt: string;
+  /**
+   * Total fee the customer paid on the order this movement belongs to.
+   *
+   * Set on the movements of the order that charged it (the debit of a
+   * payout, the credit of a deposit), only for orders created since fees
+   * started being recorded: absent means "not recorded", not "no fee".
+   * One order can be listed more than once (e.g. pending, then settled), so
+   * count it once per `orderSig`. If the order fails the customer is not
+   * charged: ignore it on a movement with direction `failed`, or when a
+   * refund with the same `orderSig` exists.
+   */
+  fee?: MovementFee;
+  /** Swap order that produced the movement, when recorded (also on its refund) */
+  orderSig?: string;
 }
 
 /**
@@ -578,8 +609,8 @@ export interface GlobalTransaction {
   fromAccountId: string;
   /** Destination account ID */
   toAccountId: string;
-  /** Transaction direction */
-  direction: 'in' | 'out';
+  /** Transaction direction. `failed`: with `collapsed_view`, a pending movement that ended cancelled, failed or ignored */
+  direction: 'in' | 'out' | 'failed';
   /** Transaction reference */
   reference: string;
   /** Rail/network name */
@@ -590,6 +621,20 @@ export interface GlobalTransaction {
   createdAt: string;
   /** Transaction type (when provided by API) */
   type?: MovementType;
+  /**
+   * Total fee the customer paid on the order this movement belongs to.
+   *
+   * Set on the movements of the order that charged it (the debit of a
+   * payout, the credit of a deposit), only for orders created since fees
+   * started being recorded: absent means "not recorded", not "no fee".
+   * One order can be listed more than once (e.g. pending, then settled), so
+   * count it once per `orderSig`. If the order fails the customer is not
+   * charged: ignore it on a movement with direction `failed`, or when a
+   * refund with the same `orderSig` exists.
+   */
+  fee?: MovementFee;
+  /** Swap order that produced the movement, when recorded (also on its refund) */
+  orderSig?: string;
 }
 
 /**
