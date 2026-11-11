@@ -262,7 +262,8 @@ export interface RateQuote {
   fee: string;
   /**
    * Each percentage and fixed component, in destination atoms. Each line is
-   * rounded down on its own, so their sum can be an atom below `fee`.
+   * rounded down on its own, so their sum can be an atom below `fee`. When the
+   * formula multiplies fees together, the gap can be larger.
    */
   fees: RateQuoteFee[];
 }
