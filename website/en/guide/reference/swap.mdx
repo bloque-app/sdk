@@ -154,7 +154,7 @@ const quote = calculateRateQuote(rates[0], '100000');
 //   { name: 'bloque_pct',     type: 'percentage', percentage: '1.75', amount: '1750', role: 'bloque_fee' }
 ```
 
-Every amount in the quote is in destination-asset atoms. Each fee line is rounded down on its own, so their sum can be one atom below `fee`. `calculateRateQuote()` throws when the fees exceed the amount.
+Every amount in the quote is in destination-asset atoms. Each fee line is rounded down on its own, so their sum can be one atom below `fee`. When the formula multiplies fees together, the gap can be larger. `calculateRateQuote()` throws when the fees exceed the amount.
 
 ## Complete Example Flow
 

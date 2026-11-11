@@ -154,7 +154,7 @@ const cotizacion = calculateRateQuote(rates[0], '100000');
 //   { name: 'bloque_pct',     type: 'percentage', percentage: '1.75', amount: '1750', role: 'bloque_fee' }
 ```
 
-Todos los montos de la cotización están en átomos del activo de destino. Cada línea de comisión se redondea hacia abajo por separado, así que su suma puede quedar un átomo por debajo de `fee`. `calculateRateQuote()` lanza un error cuando las comisiones superan el monto.
+Todos los montos de la cotización están en átomos del activo de destino. Cada línea de comisión se redondea hacia abajo por separado, así que su suma puede quedar un átomo por debajo de `fee`. Si la fórmula multiplica comisiones entre sí, la diferencia puede ser mayor. `calculateRateQuote()` lanza un error cuando las comisiones superan el monto.
 
 ## Ejemplo Completo de Flujo
 

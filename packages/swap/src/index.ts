@@ -93,6 +93,7 @@ export type {
   SpeiDepositInformation,
   SpeiPayoutInformation,
 } from './spei/types';
+
 // Swap client + top-level types
 export { SwapClient } from './swap-client';
 export type {
