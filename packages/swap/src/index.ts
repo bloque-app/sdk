@@ -71,6 +71,7 @@ export type {
   PseCustomerData,
   PsePaymentArgs,
 } from './pse/types';
+export { calculateRateQuote } from './quote';
 export { RtpClient } from './rtp/rtp-client';
 export type {
   CreateRtpBaseOrderParams,
@@ -99,12 +100,15 @@ export type {
   Fee,
   FeeComponent,
   FeeComponentType,
+  FeeRole,
   FindRatesParams,
   FindRatesResult,
   ListOrdersParams,
   ListOrdersResult,
   OrderStatus,
   RateLimits,
+  RateQuote,
+  RateQuoteFee,
   RateTuple,
   SwapRate,
 } from './types';

@@ -3,6 +3,7 @@ export type {
   Fee,
   FeeComponent,
   FeeComponentType,
+  FeeRole,
   FindRatesParams,
   FindRatesResult,
   ListBanksResult,
@@ -10,10 +11,14 @@ export type {
   ListOrdersResult,
   OrderStatus,
   RateLimits,
+  RateQuote,
+  RateQuoteFee,
   RateTuple,
   SwapOrder,
   SwapRate,
 } from '@bloque/sdk-swap';
+
+export { calculateRateQuote } from '@bloque/sdk-swap';
 
 import { SwapClient } from '@bloque/sdk-swap';
 import { getHttpClient } from './config';
