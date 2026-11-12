@@ -190,7 +190,7 @@ Uses **Changesets** for versioning:
 # 1. Create a changeset
 bun run changeset
 
-# 2. Version packages (updates package.json)
+# 2. Version packages (updates package.json and SDK_VERSION in core/src/version.ts)
 bun run version
 
 # 3. Publish (handled by GitHub Actions)

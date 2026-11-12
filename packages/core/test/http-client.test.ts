@@ -269,7 +269,7 @@ describe('HttpClient — X-Bloque-SDK header', () => {
     expect(capturedHeaders?.['X-Bloque-SDK']).toBe('spoofed@0.0.0');
   });
 
-  it('SDK_VERSION matches packages/sdk/package.json (nothing bumps version.ts automatically on release)', async () => {
+  it('SDK_VERSION matches packages/sdk/package.json', async () => {
     const sdkPackageJson = JSON.parse(
       readFileSync(join(import.meta.dir, '../../sdk/package.json'), 'utf-8'),
     ) as { version: string };

@@ -21,8 +21,8 @@
     "clean": "bun run -r --parallel --filter='./packages/*' clean",
     "dev": "bun run -r --parallel --filter='./packages/*' dev",
     "changeset": "changeset",
-    "version": "changeset version",
-    "bump": "bun scripts/bump.ts",
+    "version": "changeset version && bun scripts/sync-sdk-version.ts",
+    "bump": "bun scripts/bump.ts && bun scripts/sync-sdk-version.ts",
     "release:sdk-only": "bun run -r --parallel --filter='./packages/*' --filter='!@bloque/cli' release",
     "release": "bun run -r --parallel --filter='./packages/*' release"
   },
