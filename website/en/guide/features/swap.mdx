@@ -188,6 +188,52 @@ try {
 }
 ```
 
+## Withdraw a USDC Balance to Polygon
+
+Send your USDC balance to a Polygon address as Polygon USDC. First withdraw the balance to the operator account and approve that withdrawal with your passkey (outside this method; there is no SDK helper for it yet). Then create the order with the withdrawal's operation reference as `args.withdrawalOp`; one withdrawal backs one order. The owner approves the order too, so the call goes inside `withApproval`.
+
+```typescript
+import { withApproval } from '@bloque/sdk';
+
+// 1. Find the rate (BUSDC/6 → USDC/6, kusama → polygon)
+const rates = await userSession.swap.findRates({
+  fromAsset: 'BUSDC/6',
+  toAsset: 'USDC/6',
+  fromMediums: ['kusama'],
+  toMediums: ['polygon'],
+  amountSrc: '1000000',
+});
+
+// 2. Create the order; the owner approves on the link
+const result = await withApproval(
+  (approval) =>
+    userSession.swap.polygon.create(
+      {
+        rateSig: rates.rates[0].sig,
+        amountSrc: '1000000',
+        depositInformation: { walletAddress: '0x…your Polygon address' },
+        args: {
+          sourceAccountUrn: 'did:bloque:account:virtual:…',
+          withdrawalOp: '…operation reference of your withdrawal',
+        },
+      },
+      { approval },
+    ),
+  {
+    onApprovalRequired: (error) =>
+      console.log('Approve with your passkey:', error.approvalUrl),
+  },
+);
+
+// 3. Follow the order until it is completed or failed
+const { orders } = await userSession.swap.listOrders({
+  orderSig: result.order.orderSig,
+});
+console.log(orders[0]?.status);
+```
+
+The SDK checks `walletAddress` (`0x` plus 40 hex characters, not the zero address) `args.sourceAccountUrn` and `args.withdrawalOp` before sending anything, and throws `BloqueConfigError` if any is wrong. The server answers 400 `E_INVALID_WITHDRAWAL_OPERATION` when the reference is missing or malformed, and the order fails with `E_WITHDRAWAL_NOT_VERIFIED` or `E_WITHDRAWAL_ALREADY_USED`. See the [swap reference](../reference/swap#polygon-usdc-withdrawal-usdc-balance--polygon) for every field.
+
 ## Next Steps
 
 ## Listing PSE Banks

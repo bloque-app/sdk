@@ -1,0 +1,130 @@
+import { SDK, withApproval } from '../../../packages/sdk/src/index';
+
+/**
+ * Withdraw a USDC balance to a Polygon address, approved with your passkey.
+ *
+ * Edge: kusama -> polygon, BUSDC/6 -> USDC/6
+ *
+ * Inputs (arguments or environment):
+ *   bun examples/movements/payout/polygon-usdc-withdrawal.ts \
+ *     <sourceAccountUrn> <walletAddress> <amount> <withdrawalOp>
+ *   or SOURCE_ACCOUNT_URN, WALLET_ADDRESS, AMOUNT_SRC, WITHDRAWAL_OP.
+ *
+ * `amount` is in the asset's smallest unit (6 decimals): 1000000 = 1 USDC.
+ * Auth: ORIGIN, ORIGIN_KEY, USER_HANDLE (default '@nestor'), MODE
+ * ('sandbox' by default).
+ *
+ * Before this script: withdraw the amount from the source account to the
+ * operator account and approve that withdrawal with your passkey. That step
+ * happens outside this script (the SDK has no helper for it yet); pass its
+ * operation reference as <withdrawalOp>. One withdrawal backs one order.
+ *
+ * Steps: find the rate, create the order (the approval
+ * link is printed; approve it with your passkey), then poll the order until
+ * it is completed or failed.
+ */
+
+const [argUrn, argWallet, argAmount, argWithdrawalOp] = process.argv.slice(2);
+const sourceAccountUrn = argUrn ?? process.env.SOURCE_ACCOUNT_URN;
+const walletAddress = argWallet ?? process.env.WALLET_ADDRESS;
+const amountSrc = argAmount ?? process.env.AMOUNT_SRC;
+const withdrawalOp = argWithdrawalOp ?? process.env.WITHDRAWAL_OP;
+
+if (!sourceAccountUrn || !walletAddress || !amountSrc || !withdrawalOp) {
+  console.error(
+    'Usage: polygon-usdc-withdrawal.ts <sourceAccountUrn> <walletAddress> <amount> <withdrawalOp>\n' +
+      '(or SOURCE_ACCOUNT_URN, WALLET_ADDRESS, AMOUNT_SRC, WITHDRAWAL_OP)',
+  );
+  process.exit(1);
+}
+
+const bloque = new SDK({
+  origin: process.env.ORIGIN!,
+  auth: {
+    type: 'originKey',
+    originKey: process.env.ORIGIN_KEY!,
+  },
+  mode: (process.env.MODE as 'production' | 'sandbox') ?? 'sandbox',
+  platform: 'node',
+});
+
+const user = await bloque.connect(process.env.USER_HANDLE ?? '@nestor');
+
+if (!/^[1-9][0-9]*$/.test(amountSrc)) {
+  throw new Error(
+    `Amount must be a positive integer in 6-decimal units, got "${amountSrc}".`,
+  );
+}
+
+// No balance check: the amount already left the account in the withdrawal to
+// the operator account, so the source balance no longer reflects it.
+
+// 1. Rate
+const rates = await user.swap.findRates({
+  fromAsset: 'BUSDC/6',
+  toAsset: 'USDC/6',
+  fromMediums: ['kusama'],
+  toMediums: ['polygon'],
+  amountSrc,
+});
+
+if (rates.rates.length === 0) {
+  throw new Error('No Polygon USDC withdrawal rates available.');
+}
+
+const rate = rates.rates[0]!;
+console.log('Rate:', { sig: rate.sig, ratio: rate.ratio, fee: rate.fee.value });
+
+// 2. Create the order. The first call needs your passkey approval: the link is
+// printed, and withApproval waits for it and repeats the call once.
+const result = await withApproval(
+  (approval) =>
+    user.swap.polygon.create(
+      {
+        rateSig: rate.sig,
+        amountSrc,
+        depositInformation: { walletAddress },
+        args: { sourceAccountUrn, withdrawalOp },
+      },
+      { approval },
+    ),
+  {
+    onApprovalRequired: (error) =>
+      console.log('Approve with your passkey:', error.approvalUrl),
+  },
+);
+
+console.log('Order created:', {
+  requestId: result.requestId,
+  orderSig: result.order.orderSig,
+  status: result.order.status,
+  fromAmount: result.order.fromAmount,
+  toAmount: result.order.toAmount,
+});
+
+// 3. Poll until completed or failed
+const intervalMs = Number(process.env.POLL_INTERVAL_MS ?? 5000);
+const deadline = Date.now() + Number(process.env.POLL_TIMEOUT_MS ?? 600000);
+
+while (Date.now() < deadline) {
+  const { orders } = await user.swap.listOrders({
+    orderSig: result.order.orderSig,
+  });
+  const order = orders[0];
+  console.log('Order status:', order?.status ?? 'not found');
+
+  if (order?.status === 'completed') {
+    console.log('Done: Polygon USDC sent to', walletAddress);
+    process.exit(0);
+  }
+  if (order?.status === 'failed') {
+    console.error('Order failed:', order.failureReason, order.failureDetails);
+    process.exit(1);
+  }
+  await new Promise((resolve) => setTimeout(resolve, intervalMs));
+}
+
+console.error(
+  'Timed out waiting for the order. Check it again with listOrders.',
+);
+process.exit(1);
