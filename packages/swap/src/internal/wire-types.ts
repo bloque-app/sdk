@@ -153,6 +153,11 @@ export interface BancolombiaDepositInformation {
  * @internal
  * Create order input for PUT /api/order
  */
+/** Wire shape of a Polygon withdrawal destination. */
+export interface PolygonDepositInformation {
+  wallet_address: string;
+}
+
 export interface CreateOrderInput {
   taker_urn: string;
   type: OrderType;
@@ -162,7 +167,10 @@ export interface CreateOrderInput {
   webhook_url?: string;
   amount_src?: string;
   amount_dst?: string;
-  deposit_information: DepositInformation | BancolombiaDepositInformation;
+  deposit_information:
+    | DepositInformation
+    | BancolombiaDepositInformation
+    | PolygonDepositInformation;
   args?: Record<string, unknown>;
   node_id?: string;
   metadata?: Record<string, unknown>;

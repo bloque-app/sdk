@@ -59,6 +59,14 @@ export type {
   PixKeyType,
   PixPayoutInformation,
 } from './pix/types';
+export { PolygonClient } from './polygon/polygon-client';
+export type {
+  CreatePolygonOrderOptions,
+  CreatePolygonOrderParams,
+  CreatePolygonOrderResult,
+  PolygonDepositInformation,
+  PolygonSwapArgs,
+} from './polygon/types';
 export { PseClient } from './pse/pse-client';
 // PSE — only unique types
 export type {

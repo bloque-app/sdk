@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, mock } from 'bun:test';
 import {
   BloqueApprovalArgsRequiredError,
+  BloqueApprovalRequiredError,
   HttpClient,
   OPERATION_APPROVAL_HEADER,
   OPERATION_APPROVAL_RETURN_URL_HEADER,
@@ -9,6 +10,7 @@ import { BankTransferClient } from '../src/bank-transfer/bank-transfer-client';
 import { BrebClient } from '../src/breb/breb-client';
 import { ExternalUsBankSwapClient } from '../src/external-us-bank/external-us-bank-client';
 import { PixClient } from '../src/pix/pix-client';
+import { PolygonClient } from '../src/polygon/polygon-client';
 import { PseClient } from '../src/pse/pse-client';
 import { RtpClient } from '../src/rtp/rtp-client';
 import { SpeiClient } from '../src/spei/spei-client';
@@ -246,11 +248,26 @@ const orderCreates: Array<
         { idempotencyKey: 'k', approval },
       ),
   ],
+  [
+    'polygon.create',
+    (http, approval) =>
+      new PolygonClient(http).create(
+        {
+          rateSig: 'rate-sig',
+          amountSrc: '1000000',
+          depositInformation: {
+            walletAddress: '0x1111111111111111111111111111111111111111',
+          },
+          args: { sourceAccountUrn: 'did:bloque:account:virtual:acc-1' },
+        },
+        { idempotencyKey: 'k', approval },
+      ),
+  ],
 ];
 
 describe('swap order approval', () => {
   it('covers every order create', () => {
-    expect(orderCreates).toHaveLength(10);
+    expect(orderCreates).toHaveLength(11);
   });
 
   it.each(orderCreates)(
@@ -314,5 +331,37 @@ describe('swap order approval', () => {
 
     expect(error).toBeInstanceOf(BloqueApprovalArgsRequiredError);
     expect(error.args).toEqual(['account_urn']);
+  });
+
+  it('throws BloqueApprovalRequiredError on a 428 from polygon.create', async () => {
+    mockFetch([
+      () =>
+        json(428, {
+          error: true,
+          code: 'E_APPROVAL_REQUIRED',
+          message: 'E_APPROVAL_REQUIRED',
+          extra_details: {
+            approval_token: 'approval-token',
+            expires_at: Date.now() + 60_000,
+            approval_url: 'https://approve.example.com/a#token=approval-token',
+            summary: { operation: 'swap.take', fields: {} },
+          },
+        }),
+    ]);
+    const polygon = new PolygonClient(authedClient());
+
+    const error = await polygon
+      .create({
+        rateSig: 'rate-sig',
+        amountSrc: '1000000',
+        depositInformation: {
+          walletAddress: '0x1111111111111111111111111111111111111111',
+        },
+        args: { sourceAccountUrn: 'did:bloque:account:virtual:acc-1' },
+      })
+      .catch((e) => e);
+
+    expect(error).toBeInstanceOf(BloqueApprovalRequiredError);
+    expect(error.status).toBe(428);
   });
 });
