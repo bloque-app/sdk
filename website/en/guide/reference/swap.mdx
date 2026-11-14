@@ -16,6 +16,7 @@ The swap module is the boundary between external payment rails and Bloque accoun
 | `base` | `fromMediums` or `toMediums` | Base network (USDC) |
 | `breb` | `fromMediums` or `toMediums` | BRE-B instant payment key |
 | `rtp` | `toMediums` (cash-out only) | US instant bank payout via RTP |
+| `polygon` | `toMediums` (cash-out only) | Polygon USDC withdrawal |
 | `external-us-bank` | `fromMediums` (cash-in only) | US bank ACH on-ramp |
 | `bankTransfer` | `toMediums` (cash-out only) | Any Colombian bank (29 banks) |
 | `bancolombia` | `toMediums` (cash-out only) | Bancolombia bank account |
@@ -935,6 +936,51 @@ const result = await userSession.swap.rtp.create({
 | `args.txHash` | `string` | Yes | Transaction hash of the incoming USDC transfer |
 
 **Errors:** `E_RTP_SOURCE_ACCOUNT_REQUIRED` when `args.sourceAccountUrn` is missing. `E_RTP_TX_HASH_REQUIRED` when `args.txHash` is missing. The SDK throws `BloqueConfigError` before the request if `fromMedium` is `'base'` and `txHash` is empty.
+
+## Polygon USDC Withdrawal (USDC balance → Polygon)
+
+Withdraw your USDC balance to a Polygon address. The account owner approves the withdrawal with their passkey: the first call throws `BloqueApprovalRequiredError` with an `approvalUrl`, so wrap it in `withApproval`.
+
+```typescript
+import { withApproval } from '@bloque/sdk';
+
+const rates = await userSession.swap.findRates({
+  fromAsset: 'BUSDC/6',
+  toAsset: 'USDC/6',
+  fromMediums: ['kusama'],
+  toMediums: ['polygon'],
+  amountSrc: '1000000', // 1 USDC (6 decimals)
+});
+
+const result = await withApproval(
+  (approval) =>
+    userSession.swap.polygon.create(
+      {
+        rateSig: rates.rates[0].sig,
+        amountSrc: '1000000',
+        depositInformation: { walletAddress: '0x…your Polygon address' },
+        args: { sourceAccountUrn: 'did:bloque:account:virtual:…' },
+      },
+      { idempotencyKey: 'withdraw-2026-001', approval },
+    ),
+  {
+    onApprovalRequired: (error) =>
+      console.log('Approve with your passkey:', error.approvalUrl),
+  },
+);
+
+console.log(result.order.status); // 'in_progress' until the Polygon USDC arrives
+```
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `rateSig` | `string` | Yes | Rate signature from `findRates` |
+| `amountSrc` | `string` | Conditional | USDC balance to withdraw (required if `type` is `'src'`) |
+| `amountDst` | `string` | Conditional | Polygon USDC to receive (required if `type` is `'dst'`) |
+| `depositInformation.walletAddress` | `string` | Yes | Polygon address: `0x` followed by 40 hex characters, not the zero address |
+| `args.sourceAccountUrn` | `string` | Yes | Account whose USDC balance is withdrawn. It must be an account you own |
+
+The SDK throws `BloqueConfigError` before the request when `walletAddress` is not a valid Polygon address, when `args.sourceAccountUrn` is empty, or when the session has no URN. Poll `swap.listOrders({ orderSig })` until the order is `completed` or `failed`.
 
 ## External US Bank On-Ramp (ACH → Kusama)
 

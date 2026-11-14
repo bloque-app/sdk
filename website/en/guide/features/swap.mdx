@@ -188,6 +188,49 @@ try {
 }
 ```
 
+## Withdraw a USDC Balance to Polygon
+
+Send your USDC balance to a Polygon address as Polygon USDC. The account owner approves the withdrawal with their passkey, so the call goes inside `withApproval`.
+
+```typescript
+import { withApproval } from '@bloque/sdk';
+
+// 1. Find the rate (BUSDC/6 → USDC/6, kusama → polygon)
+const rates = await userSession.swap.findRates({
+  fromAsset: 'BUSDC/6',
+  toAsset: 'USDC/6',
+  fromMediums: ['kusama'],
+  toMediums: ['polygon'],
+  amountSrc: '1000000',
+});
+
+// 2. Create the order; the owner approves on the link
+const result = await withApproval(
+  (approval) =>
+    userSession.swap.polygon.create(
+      {
+        rateSig: rates.rates[0].sig,
+        amountSrc: '1000000',
+        depositInformation: { walletAddress: '0x…your Polygon address' },
+        args: { sourceAccountUrn: 'did:bloque:account:virtual:…' },
+      },
+      { approval },
+    ),
+  {
+    onApprovalRequired: (error) =>
+      console.log('Approve with your passkey:', error.approvalUrl),
+  },
+);
+
+// 3. Follow the order until it is completed or failed
+const { orders } = await userSession.swap.listOrders({
+  orderSig: result.order.orderSig,
+});
+console.log(orders[0]?.status);
+```
+
+The SDK checks `walletAddress` (`0x` plus 40 hex characters, not the zero address) and `args.sourceAccountUrn` before sending anything, and throws `BloqueConfigError` if either is wrong. See the [swap reference](../reference/swap#polygon-usdc-withdrawal-usdc-balance--polygon) for every field.
+
 ## Next Steps
 
 ## Listing PSE Banks
