@@ -56,7 +56,11 @@ export class PolygonClient extends BaseClient {
    *         rateSig: rates.rates[0].sig,
    *         amountSrc: '1000000',
    *         depositInformation: { walletAddress: '0x…' },
-   *         args: { sourceAccountUrn: 'did:bloque:account:virtual:…' },
+   *         args: {
+   *           sourceAccountUrn: 'did:bloque:account:virtual:…',
+   *           // Operation reference of your approved withdrawal to the operator account
+   *           withdrawalOp: '…',
+   *         },
    *       },
    *       { approval },
    *     ),
@@ -94,6 +98,13 @@ export class PolygonClient extends BaseClient {
       throw new BloqueConfigError('args.sourceAccountUrn is required');
     }
 
+    const withdrawalOp = params.args?.withdrawalOp?.trim();
+    if (!withdrawalOp) {
+      throw new BloqueConfigError(
+        'args.withdrawalOp is required: the operation reference of your withdrawal to the operator account',
+      );
+    }
+
     const orderType = params.type ?? 'src';
 
     const input: CreateOrderInput = {
@@ -104,7 +115,7 @@ export class PolygonClient extends BaseClient {
       to_medium: 'polygon',
       webhook_url: params.webhookUrl,
       deposit_information: { wallet_address: walletAddress },
-      args: { account_urn: sourceAccountUrn },
+      args: { account_urn: sourceAccountUrn, withdrawal_op: withdrawalOp },
     };
 
     if (orderType === 'src' && params.amountSrc) {

@@ -25,6 +25,13 @@ export interface PolygonSwapArgs {
    * account you own.
    */
   sourceAccountUrn: string;
+  /**
+   * The operation reference of your withdrawal of this amount from
+   * `sourceAccountUrn` to the operator account, which you approved with your
+   * passkey before creating the order. Pass it exactly as you received it.
+   * One withdrawal backs one order.
+   */
+  withdrawalOp: string;
 }
 
 /**

@@ -11,6 +11,7 @@ afterEach(() => {
 
 const WALLET = '0xAbCdEf0123456789aBcDeF0123456789abcdef01';
 const SOURCE = 'did:bloque:account:virtual:acc-1';
+const WITHDRAWAL_OP = 'op-withdrawal-1';
 
 function authedClient(urn: string | undefined = 'did:bloque:test:taker') {
   const http = new HttpClient({
@@ -75,7 +76,7 @@ const params: CreatePolygonOrderParams = {
   rateSig: 'rate-sig',
   amountSrc: '1000000',
   depositInformation: { walletAddress: WALLET },
-  args: { sourceAccountUrn: SOURCE },
+  args: { sourceAccountUrn: SOURCE, withdrawalOp: WITHDRAWAL_OP },
 };
 
 describe('PolygonClient.create', () => {
@@ -97,7 +98,7 @@ describe('PolygonClient.create', () => {
       to_medium: 'polygon',
       amount_src: '1000000',
       deposit_information: { wallet_address: WALLET },
-      args: { account_urn: SOURCE },
+      args: { account_urn: SOURCE, withdrawal_op: WITHDRAWAL_OP },
     });
     expect(calls[0].headers.get('Idempotency-Key')).toBe('k');
     expect(result.requestId).toBe('r');
@@ -118,7 +119,7 @@ describe('PolygonClient.create', () => {
       type: 'dst',
       amountDst: '990000',
       depositInformation: { walletAddress: WALLET },
-      args: { sourceAccountUrn: SOURCE },
+      args: { sourceAccountUrn: SOURCE, withdrawalOp: WITHDRAWAL_OP },
       webhookUrl: 'https://example.com/hook',
       metadata: { ref: 'x' },
       nodeId: 'n1',
@@ -159,12 +160,35 @@ describe('PolygonClient.create', () => {
     const calls = mockFetch();
 
     const error = await new PolygonClient(authedClient())
-      .create({ ...params, args: { sourceAccountUrn: '' } })
+      .create({
+        ...params,
+        args: { sourceAccountUrn: '', withdrawalOp: WITHDRAWAL_OP },
+      })
       .catch((e) => e);
 
     expect(error).toBeInstanceOf(BloqueConfigError);
     expect(calls).toHaveLength(0);
   });
+
+  it.each([
+    ['empty', ''],
+    ['blank', '   '],
+  ])(
+    'rejects a %s withdrawal operation before any request',
+    async (_n, withdrawalOp) => {
+      const calls = mockFetch();
+
+      const error = await new PolygonClient(authedClient())
+        .create({
+          ...params,
+          args: { sourceAccountUrn: SOURCE, withdrawalOp },
+        })
+        .catch((e) => e);
+
+      expect(error).toBeInstanceOf(BloqueConfigError);
+      expect(calls).toHaveLength(0);
+    },
+  );
 
   it('rejects when there is no session URN', async () => {
     const calls = mockFetch();

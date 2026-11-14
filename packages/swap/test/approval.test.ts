@@ -258,7 +258,10 @@ const orderCreates: Array<
           depositInformation: {
             walletAddress: '0x1111111111111111111111111111111111111111',
           },
-          args: { sourceAccountUrn: 'did:bloque:account:virtual:acc-1' },
+          args: {
+            sourceAccountUrn: 'did:bloque:account:virtual:acc-1',
+            withdrawalOp: 'op-withdrawal-1',
+          },
         },
         { idempotencyKey: 'k', approval },
       ),
@@ -357,7 +360,10 @@ describe('swap order approval', () => {
         depositInformation: {
           walletAddress: '0x1111111111111111111111111111111111111111',
         },
-        args: { sourceAccountUrn: 'did:bloque:account:virtual:acc-1' },
+        args: {
+          sourceAccountUrn: 'did:bloque:account:virtual:acc-1',
+          withdrawalOp: 'op-withdrawal-1',
+        },
       })
       .catch((e) => e);
 
