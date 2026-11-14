@@ -44,6 +44,12 @@ const bloque = new SDK({
 
 const user = await bloque.connect(process.env.USER_HANDLE ?? '@nestor');
 
+if (!/^[1-9][0-9]*$/.test(amountSrc)) {
+  throw new Error(
+    `Amount must be a positive integer in 6-decimal units, got "${amountSrc}".`,
+  );
+}
+
 // 1. Balance of the source account
 const balance = await user.accounts.balance(sourceAccountUrn);
 const usdc = balance['BUSDC/6'];

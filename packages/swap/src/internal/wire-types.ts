@@ -151,13 +151,16 @@ export interface BancolombiaDepositInformation {
 
 /**
  * @internal
- * Create order input for PUT /api/order
+ * Wire shape of a Polygon withdrawal destination.
  */
-/** Wire shape of a Polygon withdrawal destination. */
 export interface PolygonDepositInformation {
   wallet_address: string;
 }
 
+/**
+ * @internal
+ * Create order input for PUT /api/order
+ */
 export interface CreateOrderInput {
   taker_urn: string;
   type: OrderType;
