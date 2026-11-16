@@ -26,10 +26,9 @@ export interface PolygonSwapArgs {
    */
   sourceAccountUrn: string;
   /**
-   * The operation reference of your withdrawal of this amount from
-   * `sourceAccountUrn` to the operator account, which you approved with your
-   * passkey before creating the order. Pass it exactly as you received it.
-   * One withdrawal backs one order.
+   * The `withdrawalOp` that `polygon.withdraw` returned for this amount,
+   * account and wallet. Pass it exactly as you received it. One withdrawal
+   * backs one order, and an order that matches it needs no second approval.
    */
   withdrawalOp: string;
 }
@@ -98,4 +97,41 @@ export interface CreatePolygonOrderResult {
   execution?: ExecutionResult;
   /** Request ID for tracking */
   requestId: string;
+}
+
+/**
+ * Parameters for moving a USDC balance to the operator account (step 1 of a
+ * Polygon withdrawal).
+ */
+export interface WithdrawToOperatorParams {
+  /** URN of your account whose USDC balance is withdrawn. */
+  sourceAccountUrn: string;
+  /**
+   * Amount in the asset's smallest unit (6 decimals), as a positive integer
+   * string: `'1000000'` is 1 USDC.
+   */
+  amount: string;
+  /**
+   * Polygon address the order will pay: `0x` followed by 40 hex characters,
+   * not the zero address. It is part of what you approve.
+   */
+  walletAddress: string;
+}
+
+export interface WithdrawToOperatorOptions extends OperationApprovalOptions {
+  /**
+   * Optional stable key sent as `Idempotency-Key`. The same key with the
+   * same parameters returns the same withdrawal and moves nothing twice.
+   */
+  idempotencyKey?: string;
+}
+
+export interface WithdrawToOperatorResult {
+  /** Pass it unchanged as `args.withdrawalOp` to `polygon.create`. */
+  withdrawalOp: string;
+  sourceAccountUrn: string;
+  amount: string;
+  asset: string;
+  /** `pending` until the withdrawal settles, then `settled`. */
+  status: 'pending' | 'settled';
 }

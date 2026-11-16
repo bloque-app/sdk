@@ -190,10 +190,14 @@ try {
 
 ## Withdraw a USDC Balance to Polygon
 
-Send your USDC balance to a Polygon address as Polygon USDC. First withdraw the balance to the operator account and approve that withdrawal with your passkey (outside this method; there is no SDK helper for it yet). Then create the order with the withdrawal's operation reference as `args.withdrawalOp`; one withdrawal backs one order. The owner approves the order too, so the call goes inside `withApproval`.
+Send your USDC balance to a Polygon address as Polygon USDC, approved once with your passkey. First `polygon.withdraw` moves the amount to the operator account; its approval covers the account, the amount and the Polygon address. Then `polygon.create` takes the order with the withdrawal's `withdrawalOp`. An order that matches the withdrawal needs no second approval, and one withdrawal backs one order.
 
 ```typescript
 import { withApproval } from '@bloque/sdk';
+
+const sourceAccountUrn = 'did:bloque:account:virtual:…';
+const walletAddress = '0x…your Polygon address';
+const amountSrc = '1000000';
 
 // 1. Find the rate (BUSDC/6 → USDC/6, kusama → polygon)
 const rates = await userSession.swap.findRates({
@@ -201,22 +205,14 @@ const rates = await userSession.swap.findRates({
   toAsset: 'USDC/6',
   fromMediums: ['kusama'],
   toMediums: ['polygon'],
-  amountSrc: '1000000',
+  amountSrc,
 });
 
-// 2. Create the order; the owner approves on the link
-const result = await withApproval(
+// 2. Withdraw to the operator account; the owner approves on the link
+const withdrawal = await withApproval(
   (approval) =>
-    userSession.swap.polygon.create(
-      {
-        rateSig: rates.rates[0].sig,
-        amountSrc: '1000000',
-        depositInformation: { walletAddress: '0x…your Polygon address' },
-        args: {
-          sourceAccountUrn: 'did:bloque:account:virtual:…',
-          withdrawalOp: '…operation reference of your withdrawal',
-        },
-      },
+    userSession.swap.polygon.withdraw(
+      { sourceAccountUrn, amount: amountSrc, walletAddress },
       { approval },
     ),
   {
@@ -225,7 +221,22 @@ const result = await withApproval(
   },
 );
 
-// 3. Follow the order until it is completed or failed
+// 3. Create the order: it matches the withdrawal, so no second approval
+const result = await withApproval(
+  (approval) =>
+    userSession.swap.polygon.create(
+      {
+        rateSig: rates.rates[0].sig,
+        amountSrc,
+        depositInformation: { walletAddress },
+        args: { sourceAccountUrn, withdrawalOp: withdrawal.withdrawalOp },
+      },
+      { approval },
+    ),
+  { onApprovalRequired: (error) => console.log(error.approvalUrl) },
+);
+
+// 4. Follow the order until it is completed or failed
 const { orders } = await userSession.swap.listOrders({
   orderSig: result.order.orderSig,
 });

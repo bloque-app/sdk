@@ -1,39 +1,39 @@
 import { SDK, withApproval } from '../../../packages/sdk/src/index';
 
 /**
- * Withdraw a USDC balance to a Polygon address, approved with your passkey.
+ * Withdraw a USDC balance to a Polygon address, approved once with your
+ * passkey.
  *
  * Edge: kusama -> polygon, BUSDC/6 -> USDC/6
  *
  * Inputs (arguments or environment):
  *   bun examples/movements/payout/polygon-usdc-withdrawal.ts \
- *     <sourceAccountUrn> <walletAddress> <amount> <withdrawalOp>
- *   or SOURCE_ACCOUNT_URN, WALLET_ADDRESS, AMOUNT_SRC, WITHDRAWAL_OP.
+ *     <sourceAccountUrn> <walletAddress> <amount>
+ *   or SOURCE_ACCOUNT_URN, WALLET_ADDRESS, AMOUNT_SRC.
  *
  * `amount` is in the asset's smallest unit (6 decimals): 1000000 = 1 USDC.
  * Auth: ORIGIN, ORIGIN_KEY, USER_HANDLE (default '@nestor'), MODE
  * ('sandbox' by default).
  *
- * Before this script: withdraw the amount from the source account to the
- * operator account and approve that withdrawal with your passkey. That step
- * happens outside this script (the SDK has no helper for it yet); pass its
- * operation reference as <withdrawalOp>. One withdrawal backs one order.
- *
- * Steps: find the rate, create the order (the approval
- * link is printed; approve it with your passkey), then poll the order until
- * it is completed or failed.
+ * Steps:
+ * 1. Find the rate.
+ * 2. Withdraw the amount to the operator account. The approval link is
+ *    printed; approve it with your passkey. It covers the account, the amount
+ *    and the Polygon address.
+ * 3. Create the order with the withdrawal's reference. It matches what you
+ *    approved, so it needs no second approval.
+ * 4. Poll the order until it is completed or failed.
  */
 
-const [argUrn, argWallet, argAmount, argWithdrawalOp] = process.argv.slice(2);
+const [argUrn, argWallet, argAmount] = process.argv.slice(2);
 const sourceAccountUrn = argUrn ?? process.env.SOURCE_ACCOUNT_URN;
 const walletAddress = argWallet ?? process.env.WALLET_ADDRESS;
 const amountSrc = argAmount ?? process.env.AMOUNT_SRC;
-const withdrawalOp = argWithdrawalOp ?? process.env.WITHDRAWAL_OP;
 
-if (!sourceAccountUrn || !walletAddress || !amountSrc || !withdrawalOp) {
+if (!sourceAccountUrn || !walletAddress || !amountSrc) {
   console.error(
-    'Usage: polygon-usdc-withdrawal.ts <sourceAccountUrn> <walletAddress> <amount> <withdrawalOp>\n' +
-      '(or SOURCE_ACCOUNT_URN, WALLET_ADDRESS, AMOUNT_SRC, WITHDRAWAL_OP)',
+    'Usage: polygon-usdc-withdrawal.ts <sourceAccountUrn> <walletAddress> <amount>\n' +
+      '(or SOURCE_ACCOUNT_URN, WALLET_ADDRESS, AMOUNT_SRC)',
   );
   process.exit(1);
 }
@@ -56,9 +56,6 @@ if (!/^[1-9][0-9]*$/.test(amountSrc)) {
   );
 }
 
-// No balance check: the amount already left the account in the withdrawal to
-// the operator account, so the source balance no longer reflects it.
-
 // 1. Rate
 const rates = await user.swap.findRates({
   fromAsset: 'BUSDC/6',
@@ -75,8 +72,25 @@ if (rates.rates.length === 0) {
 const rate = rates.rates[0]!;
 console.log('Rate:', { sig: rate.sig, ratio: rate.ratio, fee: rate.fee.value });
 
-// 2. Create the order. The first call needs your passkey approval: the link is
-// printed, and withApproval waits for it and repeats the call once.
+// 2. Withdraw to the operator account. The first call needs your passkey
+// approval: the link is printed, and withApproval waits for it and repeats
+// the call once.
+const withdrawal = await withApproval(
+  (approval) =>
+    user.swap.polygon.withdraw(
+      { sourceAccountUrn, amount: amountSrc, walletAddress },
+      { approval },
+    ),
+  {
+    onApprovalRequired: (error) =>
+      console.log('Approve with your passkey:', error.approvalUrl),
+  },
+);
+console.log('Withdrawal:', withdrawal);
+
+// 3. Create the order with the withdrawal's reference. It matches the
+// withdrawal, so no second approval is asked; withApproval only covers the
+// case where it would be.
 const result = await withApproval(
   (approval) =>
     user.swap.polygon.create(
@@ -84,7 +98,7 @@ const result = await withApproval(
         rateSig: rate.sig,
         amountSrc,
         depositInformation: { walletAddress },
-        args: { sourceAccountUrn, withdrawalOp },
+        args: { sourceAccountUrn, withdrawalOp: withdrawal.withdrawalOp },
       },
       { approval },
     ),
@@ -102,7 +116,7 @@ console.log('Order created:', {
   toAmount: result.order.toAmount,
 });
 
-// 3. Poll until completed or failed
+// 4. Poll until completed or failed
 const intervalMs = Number(process.env.POLL_INTERVAL_MS ?? 5000);
 const deadline = Date.now() + Number(process.env.POLL_TIMEOUT_MS ?? 600000);
 

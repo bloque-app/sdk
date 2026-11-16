@@ -16,22 +16,120 @@ import type {
   CreatePolygonOrderResult,
   ExecutionResult,
   SwapOrder,
+  WithdrawToOperatorOptions,
+  WithdrawToOperatorParams,
+  WithdrawToOperatorResult,
 } from './types';
 
 const POLYGON_ADDRESS = /^0x[0-9a-fA-F]{40}$/;
 const ZERO_ADDRESS = /^0x0{40}$/;
+const MINOR_UNITS = /^[1-9][0-9]*$/;
+
+function checkWalletAddress(value: string | undefined, field: string): string {
+  const address = value?.trim();
+  if (
+    !address ||
+    !POLYGON_ADDRESS.test(address) ||
+    ZERO_ADDRESS.test(address)
+  ) {
+    throw new BloqueConfigError(
+      `${field} must be a Polygon address: 0x followed by 40 hex characters, and not the zero address`,
+    );
+  }
+  return address;
+}
+
+interface WithdrawalResponse {
+  withdrawal_op: string;
+  account_urn: string;
+  amount: string;
+  asset: string;
+  status: 'pending' | 'settled';
+}
 
 /**
  * Polygon client: withdraw a USDC balance to a Polygon address.
  */
 export class PolygonClient extends BaseClient {
   /**
-   * Withdraw a USDC balance to a Polygon address (`kusama` → `polygon`,
-   * `BUSDC/6` → `USDC/6`).
+   * Step 1 of a Polygon USDC withdrawal: move `amount` of your USDC balance
+   * from one of your accounts to the operator account, approved once with
+   * your passkey. The approval covers the account, the amount and the
+   * Polygon address the order will pay.
    *
-   * The account owner approves the withdrawal with their passkey: the first
-   * call throws `BloqueApprovalRequiredError` with an `approvalUrl`. Wrap the
-   * call in `withApproval` to wait for the approval and repeat it once.
+   * The first call throws `BloqueApprovalRequiredError` with an
+   * `approvalUrl`. Wrap the call in `withApproval` to wait for the approval
+   * and repeat it once. Then pass the returned `withdrawalOp` to
+   * `polygon.create` with the same account, amount and address: that order
+   * needs no second approval.
+   *
+   * @throws {BloqueConfigError} If an argument is invalid or there is no session
+   *
+   * @example
+   * ```typescript
+   * const withdrawal = await withApproval(
+   *   (approval) =>
+   *     bloque.swap.polygon.withdraw(
+   *       { sourceAccountUrn, amount: '1000000', walletAddress: '0x…' },
+   *       { approval },
+   *     ),
+   *   { onApprovalRequired: (e) => console.log('Approve:', e.approvalUrl) },
+   * );
+   * ```
+   */
+  async withdraw(
+    params: WithdrawToOperatorParams,
+    options?: WithdrawToOperatorOptions,
+  ): Promise<WithdrawToOperatorResult> {
+    if (!this.httpClient.urn) {
+      throw new BloqueConfigError(
+        'User URN is not available. Please connect to a session first.',
+      );
+    }
+    const sourceAccountUrn = params.sourceAccountUrn?.trim();
+    if (!sourceAccountUrn) {
+      throw new BloqueConfigError('sourceAccountUrn is required');
+    }
+    const amount = params.amount?.trim();
+    if (!amount || !MINOR_UNITS.test(amount)) {
+      throw new BloqueConfigError(
+        'amount must be a positive integer string in 6-decimal units',
+      );
+    }
+    const walletAddress = checkWalletAddress(
+      params.walletAddress,
+      'walletAddress',
+    );
+
+    const response = await this.httpClient.request<WithdrawalResponse>({
+      method: 'POST',
+      path: '/api/swap/busdc/holder-withdrawals',
+      body: {
+        account_urn: sourceAccountUrn,
+        amount,
+        wallet_address: walletAddress,
+      },
+      headers: operationApprovalHeaders(options),
+    });
+
+    return {
+      withdrawalOp: response.withdrawal_op,
+      sourceAccountUrn: response.account_urn,
+      amount: response.amount,
+      asset: response.asset,
+      status: response.status,
+    };
+  }
+
+  /**
+   * Step 2 of a Polygon USDC withdrawal: create the order (`kusama` →
+   * `polygon`, `BUSDC/6` → `USDC/6`) with the `withdrawalOp` from
+   * `polygon.withdraw`.
+   *
+   * When the order matches that withdrawal (same account, amount and
+   * Polygon address, within 24 hours, not used before), it needs no second
+   * approval. Otherwise the first call throws `BloqueApprovalRequiredError`
+   * with an `approvalUrl`; wrapping it in `withApproval` covers both cases.
    *
    * @param params - Order parameters including the destination address
    * @param options - Idempotency key and approval options
@@ -58,8 +156,8 @@ export class PolygonClient extends BaseClient {
    *         depositInformation: { walletAddress: '0x…' },
    *         args: {
    *           sourceAccountUrn: 'did:bloque:account:virtual:…',
-   *           // Operation reference of your approved withdrawal to the operator account
-   *           withdrawalOp: '…',
+   *           // From polygon.withdraw, with the same amount and address
+   *           withdrawalOp: withdrawal.withdrawalOp,
    *         },
    *       },
    *       { approval },
@@ -82,16 +180,10 @@ export class PolygonClient extends BaseClient {
       );
     }
 
-    const walletAddress = params.depositInformation?.walletAddress?.trim();
-    if (
-      !walletAddress ||
-      !POLYGON_ADDRESS.test(walletAddress) ||
-      ZERO_ADDRESS.test(walletAddress)
-    ) {
-      throw new BloqueConfigError(
-        'depositInformation.walletAddress must be a Polygon address: 0x followed by 40 hex characters, and not the zero address',
-      );
-    }
+    const walletAddress = checkWalletAddress(
+      params.depositInformation?.walletAddress,
+      'depositInformation.walletAddress',
+    );
 
     const sourceAccountUrn = params.args?.sourceAccountUrn?.trim();
     if (!sourceAccountUrn) {

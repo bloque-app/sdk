@@ -201,3 +201,105 @@ describe('PolygonClient.create', () => {
     expect(calls).toHaveLength(0);
   });
 });
+
+describe('PolygonClient.withdraw', () => {
+  function mockWithdrawal() {
+    const calls: Call[] = [];
+    globalThis.fetch = mock(
+      (url: string | URL | Request, init?: RequestInit) => {
+        calls.push({
+          url: String(url),
+          method: init?.method,
+          body: JSON.parse(String(init?.body)),
+          headers: new Headers(init?.headers),
+        });
+        return Promise.resolve(
+          new Response(
+            JSON.stringify({
+              withdrawal_op: 'did:aledgent:op:W1',
+              account_urn: SOURCE,
+              amount: '1000000',
+              asset: 'BUSDC/6',
+              status: 'pending',
+            }),
+            { status: 201, headers: { 'Content-Type': 'application/json' } },
+          ),
+        );
+      },
+    ) as unknown as typeof fetch;
+    return calls;
+  }
+
+  it('posts the account, amount and wallet, and maps the reference', async () => {
+    const calls = mockWithdrawal();
+
+    const result = await new PolygonClient(authedClient()).withdraw(
+      { sourceAccountUrn: SOURCE, amount: '1000000', walletAddress: WALLET },
+      { idempotencyKey: 'w-1', approval: 'signed-approval' },
+    );
+
+    expect(calls).toHaveLength(1);
+    expect(calls[0].method).toBe('POST');
+    expect(calls[0].url).toEndWith('/api/swap/busdc/holder-withdrawals');
+    expect(calls[0].body).toEqual({
+      account_urn: SOURCE,
+      amount: '1000000',
+      wallet_address: WALLET,
+    });
+    expect(calls[0].headers.get('Idempotency-Key')).toBe('w-1');
+    expect(calls[0].headers.get('x-bloque-operation-approval')).toBe(
+      'signed-approval',
+    );
+    expect(result).toEqual({
+      withdrawalOp: 'did:aledgent:op:W1',
+      sourceAccountUrn: SOURCE,
+      amount: '1000000',
+      asset: 'BUSDC/6',
+      status: 'pending',
+    });
+  });
+
+  it.each([
+    [
+      'no account',
+      { sourceAccountUrn: '', amount: '1000000', walletAddress: WALLET },
+    ],
+    [
+      'zero amount',
+      { sourceAccountUrn: SOURCE, amount: '0', walletAddress: WALLET },
+    ],
+    [
+      'decimal amount',
+      { sourceAccountUrn: SOURCE, amount: '1.5', walletAddress: WALLET },
+    ],
+    [
+      'bad wallet',
+      { sourceAccountUrn: SOURCE, amount: '1000000', walletAddress: '0x123' },
+    ],
+    [
+      'zero wallet',
+      {
+        sourceAccountUrn: SOURCE,
+        amount: '1000000',
+        walletAddress: `0x${'0'.repeat(40)}`,
+      },
+    ],
+  ])('refuses %s before any request', async (_n, p) => {
+    const calls = mockWithdrawal();
+    await expect(
+      new PolygonClient(authedClient()).withdraw(p),
+    ).rejects.toBeInstanceOf(BloqueConfigError);
+    expect(calls).toHaveLength(0);
+  });
+
+  it('needs a session', async () => {
+    mockWithdrawal();
+    await expect(
+      new PolygonClient(authedClient('')).withdraw({
+        sourceAccountUrn: SOURCE,
+        amount: '1000000',
+        walletAddress: WALLET,
+      }),
+    ).rejects.toBeInstanceOf(BloqueConfigError);
+  });
+});

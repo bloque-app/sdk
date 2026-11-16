@@ -939,7 +939,10 @@ const result = await userSession.swap.rtp.create({
 
 ## Polygon USDC Withdrawal (USDC balance → Polygon)
 
-Withdraw your USDC balance to a Polygon address. This takes two steps: first withdraw the balance to the operator account and approve that withdrawal with your passkey (outside this method; there is no SDK helper for it yet), then create the order passing the withdrawal's operation reference as `args.withdrawalOp`. One withdrawal backs one order. The account owner also approves the order: the first call throws `BloqueApprovalRequiredError` with an `approvalUrl`, so wrap it in `withApproval`.
+Withdraw your USDC balance to a Polygon address, approved once with your passkey. It takes two calls:
+
+1. `polygon.withdraw` moves the amount to the operator account. Its approval covers the account, the amount and the Polygon address. The first call throws `BloqueApprovalRequiredError` with an `approvalUrl`, so wrap it in `withApproval`. It returns `withdrawalOp`.
+2. `polygon.create` creates the order with that `withdrawalOp`. An order that matches the withdrawal (same account, amount and address, within 24 hours, not used before) needs no second approval. One withdrawal backs one order.
 
 ```typescript
 import { withApproval } from '@bloque/sdk';
@@ -952,6 +955,22 @@ const rates = await userSession.swap.findRates({
   amountSrc: '1000000', // 1 USDC (6 decimals)
 });
 
+const withdrawal = await withApproval(
+  (approval) =>
+    userSession.swap.polygon.withdraw(
+      {
+        sourceAccountUrn: 'did:bloque:account:virtual:…',
+        amount: '1000000',
+        walletAddress: '0x…your Polygon address',
+      },
+      { idempotencyKey: 'withdraw-2026-001', approval },
+    ),
+  {
+    onApprovalRequired: (error) =>
+      console.log('Approve with your passkey:', error.approvalUrl),
+  },
+);
+
 const result = await withApproval(
   (approval) =>
     userSession.swap.polygon.create(
@@ -961,10 +980,10 @@ const result = await withApproval(
         depositInformation: { walletAddress: '0x…your Polygon address' },
         args: {
           sourceAccountUrn: 'did:bloque:account:virtual:…',
-          withdrawalOp: '…operation reference of your withdrawal',
+          withdrawalOp: withdrawal.withdrawalOp,
         },
       },
-      { idempotencyKey: 'withdraw-2026-001', approval },
+      { idempotencyKey: 'order-2026-001', approval },
     ),
   {
     onApprovalRequired: (error) =>
@@ -982,9 +1001,9 @@ console.log(result.order.status); // 'in_progress' until the Polygon USDC arrive
 | `amountDst` | `string` | Conditional | Polygon USDC to receive (required if `type` is `'dst'`) |
 | `depositInformation.walletAddress` | `string` | Yes | Polygon address: `0x` followed by 40 hex characters, not the zero address |
 | `args.sourceAccountUrn` | `string` | Yes | Account whose USDC balance is withdrawn. It must be an account you own |
-| `args.withdrawalOp` | `string` | Yes | Operation reference of your approved withdrawal to the operator account. Sent as `args.withdrawal_op` |
+| `args.withdrawalOp` | `string` | Yes | The `withdrawalOp` from `polygon.withdraw`, for the same account, amount and address. Sent as `args.withdrawal_op` |
 
-The SDK throws `BloqueConfigError` before the request when `walletAddress` is not a valid Polygon address, when `args.sourceAccountUrn` or `args.withdrawalOp` is empty, or when the session has no URN. Poll `swap.listOrders({ orderSig })` until the order is `completed` or `failed`.
+`polygon.withdraw` takes `sourceAccountUrn`, `amount` (6-decimal minor units, a positive integer string) and `walletAddress`. Both methods throw `BloqueConfigError` before the request when `walletAddress` is not a valid Polygon address, when the account, the amount or `args.withdrawalOp` is missing or malformed, or when the session has no URN. Poll `swap.listOrders({ orderSig })` until the order is `completed` or `failed`.
 
 Errors for this route:
 
