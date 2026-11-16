@@ -66,6 +66,9 @@ export type {
   CreatePolygonOrderResult,
   PolygonDepositInformation,
   PolygonSwapArgs,
+  WithdrawToOperatorOptions,
+  WithdrawToOperatorParams,
+  WithdrawToOperatorResult,
 } from './polygon/types';
 export { PseClient } from './pse/pse-client';
 // PSE — only unique types
