@@ -16,6 +16,7 @@ El módulo swap es la frontera entre los rieles de pago externos y las cuentas B
 | `base` | `fromMediums` o `toMediums` | Red Base (USDC) |
 | `breb` | `fromMediums` o `toMediums` | Llave de pago instantáneo BRE-B |
 | `rtp` | `toMediums` (solo cash-out) | Pago instantáneo a banco US vía RTP |
+| `polygon` | `toMediums` (solo cash-out) | Retiro de USDC en Polygon |
 | `external-us-bank` | `fromMediums` (solo cash-in) | On-ramp ACH desde banco US |
 | `bankTransfer` | `toMediums` (solo cash-out) | Cualquier banco colombiano (29 bancos) |
 | `bancolombia` | `toMediums` (solo cash-out) | Cuenta bancaria Bancolombia |
@@ -833,6 +834,82 @@ const result = await userSession.swap.rtp.create({
   },
 });
 ```
+
+## Retiro de USDC en Polygon (saldo USDC → Polygon)
+
+Retira tu saldo USDC a una dirección de Polygon, con una sola aprobación de tu passkey. Son dos llamadas:
+
+1. `polygon.withdraw` mueve el monto a la cuenta del operador. Su aprobación cubre la cuenta, el monto y la dirección de Polygon. La primera llamada lanza `BloqueApprovalRequiredError` con un `approvalUrl`, así que envuélvela en `withApproval`. Devuelve `withdrawalOp`.
+2. `polygon.create` crea la orden con ese `withdrawalOp`. Una orden que coincide con el retiro (misma cuenta, monto y dirección, dentro de 24 horas, sin usar) no pide una segunda aprobación. Un retiro respalda una sola orden.
+
+```typescript
+import { withApproval } from '@bloque/sdk';
+
+const rates = await userSession.swap.findRates({
+  fromAsset: 'BUSDC/6',
+  toAsset: 'USDC/6',
+  fromMediums: ['kusama'],
+  toMediums: ['polygon'],
+  amountSrc: '1000000', // 1 USDC (6 decimales)
+});
+
+const withdrawal = await withApproval(
+  (approval) =>
+    userSession.swap.polygon.withdraw(
+      {
+        sourceAccountUrn: 'did:bloque:account:virtual:…',
+        amount: '1000000',
+        walletAddress: '0x…tu dirección de Polygon',
+      },
+      { idempotencyKey: 'withdraw-2026-001', approval },
+    ),
+  {
+    onApprovalRequired: (error) =>
+      console.log('Aprueba con tu passkey:', error.approvalUrl),
+  },
+);
+
+const result = await withApproval(
+  (approval) =>
+    userSession.swap.polygon.create(
+      {
+        rateSig: rates.rates[0].sig,
+        amountSrc: '1000000',
+        depositInformation: { walletAddress: '0x…tu dirección de Polygon' },
+        args: {
+          sourceAccountUrn: 'did:bloque:account:virtual:…',
+          withdrawalOp: withdrawal.withdrawalOp,
+        },
+      },
+      { idempotencyKey: 'order-2026-001', approval },
+    ),
+  {
+    onApprovalRequired: (error) =>
+      console.log('Aprueba con tu passkey:', error.approvalUrl),
+  },
+);
+
+console.log(result.order.status); // 'in_progress' hasta que llegue el USDC en Polygon
+```
+
+| Campo | Tipo | Requerido | Descripción |
+| --- | --- | --- | --- |
+| `rateSig` | `string` | Sí | Firma de tasa de `findRates` |
+| `amountSrc` | `string` | Condicional | Saldo USDC a retirar (requerido si `type` es `'src'`) |
+| `amountDst` | `string` | Condicional | USDC en Polygon a recibir (requerido si `type` es `'dst'`) |
+| `depositInformation.walletAddress` | `string` | Sí | Dirección de Polygon: `0x` seguido de 40 caracteres hex, distinta de la dirección cero |
+| `args.sourceAccountUrn` | `string` | Sí | Cuenta cuyo saldo USDC se retira. Debe ser una cuenta tuya |
+| `args.withdrawalOp` | `string` | Sí | El `withdrawalOp` de `polygon.withdraw`, para la misma cuenta, monto y dirección. Se envía como `args.withdrawal_op` |
+
+`polygon.withdraw` recibe `sourceAccountUrn`, `amount` (unidades mínimas de 6 decimales, un entero positivo en texto) y `walletAddress`. Ambos métodos lanzan `BloqueConfigError` antes de la petición cuando `walletAddress` no es una dirección de Polygon válida, cuando la cuenta, el monto o `args.withdrawalOp` faltan o son inválidos, o cuando la sesión no tiene URN. Consulta `swap.listOrders({ orderSig })` hasta que la orden esté `completed` o `failed`.
+
+Errores de esta ruta:
+
+| Código | Cuándo |
+| --- | --- |
+| `E_INVALID_WITHDRAWAL_OPERATION` | HTTP 400: `args.withdrawal_op` falta o está mal formado |
+| `E_WITHDRAWAL_NOT_VERIFIED` | La orden falla porque no se pudo verificar el retiro |
+| `E_WITHDRAWAL_ALREADY_USED` | La orden falla porque ese retiro ya respalda otra orden |
 
 ## On-Ramp Banco US Externo (ACH → Kusama)
 

@@ -1,5 +1,5 @@
 export type * from '@bloque/sdk-accounts';
-export type { BrebClient } from '@bloque/sdk-accounts';
+export type { BrebClient, PolygonClient } from '@bloque/sdk-accounts';
 export type * from '@bloque/sdk-agents';
 export type {
   AgentsClient,
@@ -55,6 +55,7 @@ export type * from '@bloque/sdk-swap';
 export type {
   BrebClient as SwapBrebClient,
   ExternalUsBankSwapClient,
+  PolygonClient as SwapPolygonClient,
 } from '@bloque/sdk-swap';
 export type {
   BloqueClients,

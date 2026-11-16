@@ -12,6 +12,7 @@ import type {
   Rate,
 } from './internal/wire-types';
 import { PixClient } from './pix/pix-client';
+import { PolygonClient } from './polygon/polygon-client';
 import { PseClient } from './pse/pse-client';
 import { RtpClient } from './rtp/rtp-client';
 import { SpeiClient } from './spei/spei-client';
@@ -36,6 +37,7 @@ import type {
  * - externalUsBank: US bank ACH on-ramp (external US bank → Kusama)
  * - spei: MXN pay-ins and payouts via SPEI
  * - pix: BRL pay-ins and payouts via PIX
+ * - polygon: withdraw a USDC balance to a Polygon address (approved with the owner's passkey)
  */
 export class SwapClient extends BaseClient {
   readonly pse: PseClient;
@@ -45,6 +47,7 @@ export class SwapClient extends BaseClient {
   readonly externalUsBank: ExternalUsBankSwapClient;
   readonly spei: SpeiClient;
   readonly pix: PixClient;
+  readonly polygon: PolygonClient;
 
   constructor(httpClient: HttpClient) {
     super(httpClient);
@@ -55,6 +58,7 @@ export class SwapClient extends BaseClient {
     this.externalUsBank = new ExternalUsBankSwapClient(this.httpClient);
     this.spei = new SpeiClient(this.httpClient);
     this.pix = new PixClient(this.httpClient);
+    this.polygon = new PolygonClient(this.httpClient);
   }
   /**
    * Find available exchange rates
