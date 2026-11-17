@@ -1,5 +1,15 @@
 # @bloque/sdk-agents
 
+## 0.29.0
+
+### Minor Changes
+
+- 8bfe3b2: `agents.apps.recommend()` now admits an onboarding job (`pending` + `id`). Poll `agents.onboarding.get(id)` until `ready` or `unavailable`.
+
+### Patch Changes
+
+- @bloque/sdk-core@0.29.0
+
 ## 0.28.0
 
 ### Minor Changes
