@@ -908,8 +908,8 @@ Errores de esta ruta:
 | Código | Cuándo |
 | --- | --- |
 | `E_INVALID_WITHDRAWAL_OPERATION` | HTTP 400: `args.withdrawal_op` falta o está mal formado |
-| `E_WITHDRAWAL_NOT_VERIFIED` | La orden falla porque no se pudo verificar el retiro |
-| `E_WITHDRAWAL_ALREADY_USED` | La orden falla porque ese retiro ya respalda otra orden |
+| `E_WITHDRAWAL_NOT_VERIFIED` | No se pudo verificar el retiro. La orden queda primero en `in_progress` mientras Bloque la revisa, y luego sigue sobre el mismo retiro; solo termina `failed` con este código si Bloque no puede continuar |
+| `E_WITHDRAWAL_ALREADY_USED` | La orden falla de inmediato: ese retiro ya respalda otra orden |
 
 ## On-Ramp Banco US Externo (ACH → Kusama)
 
