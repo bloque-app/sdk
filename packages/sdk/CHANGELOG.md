@@ -1,5 +1,30 @@
 # @bloque/sdk
 
+## 0.28.0
+
+### Minor Changes
+
+- e0df369: `agents.apps.recommend()` returns Bloque-native `included` cards and `source` `scored` | `failed` (ranking miss leaves `data` empty).
+- 9d5c86f: Withdraw a USDC balance to a Polygon address (`kusama` → `polygon`, `BUSDC/6` → `USDC/6`) with one passkey approval:
+
+  - New `bloque.swap.polygon.withdraw()` moves the amount to the operator account. Its approval covers the account, the amount and the Polygon address, so wrap it in `withApproval`. It returns `withdrawalOp`.
+  - New `bloque.swap.polygon.create()` creates the order with that `withdrawalOp` as `args.withdrawalOp`. An order that matches the withdrawal (same account, amount and address, within 24 hours) needs no second approval. One withdrawal backs one order.
+
+  Both check the wallet address, the account and the amount before sending.
+
+### Patch Changes
+
+- Updated dependencies [e0df369]
+- Updated dependencies [6527d36]
+- Updated dependencies [9d5c86f]
+  - @bloque/sdk-agents@0.28.0
+  - @bloque/sdk-core@0.28.0
+  - @bloque/sdk-swap@0.28.0
+  - @bloque/sdk-accounts@0.28.0
+  - @bloque/sdk-compliance@0.28.0
+  - @bloque/sdk-identity@0.28.0
+  - @bloque/sdk-orgs@0.28.0
+
 ## 0.27.0
 
 ### Minor Changes

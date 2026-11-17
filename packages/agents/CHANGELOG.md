@@ -1,5 +1,16 @@
 # @bloque/sdk-agents
 
+## 0.28.0
+
+### Minor Changes
+
+- e0df369: `agents.apps.recommend()` returns Bloque-native `included` cards and `source` `scored` | `failed` (ranking miss leaves `data` empty).
+
+### Patch Changes
+
+- Updated dependencies [6527d36]
+  - @bloque/sdk-core@0.28.0
+
 ## 0.27.0
 
 ### Patch Changes

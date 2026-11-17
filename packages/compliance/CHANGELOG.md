@@ -1,5 +1,12 @@
 # @bloque/sdk-compliance
 
+## 0.28.0
+
+### Patch Changes
+
+- Updated dependencies [6527d36]
+  - @bloque/sdk-core@0.28.0
+
 ## 0.27.0
 
 ### Patch Changes
