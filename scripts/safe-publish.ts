@@ -59,7 +59,10 @@ for (const field of ['dependencies', 'peerDependencies', 'optionalDependencies',
 }
 try {
   writeFileSync(join(cwd, 'package.json'), `${JSON.stringify(manifest, null, 2)}\n`);
-  execSync('npm publish --provenance --access public', { cwd, stdio: 'inherit' });
+  execSync('npm publish --provenance --access public --tag 0.28', {
+    cwd,
+    stdio: 'inherit',
+  });
 } catch (err: any) {
   process.exitCode = err.status ?? 1;
 } finally {
