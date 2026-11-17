@@ -660,4 +660,30 @@ describe('AgentsClient', () => {
       ],
     });
   });
+
+  it('apps.recommend returns a failed ranking when included is missing', async () => {
+    captureFetch(() =>
+      jsonResponse({
+        about: 'tengo una empresa de yorgurt llamada la peña',
+        story: '',
+        source: 'failed',
+        stories: 'template',
+        data: [],
+      }),
+    );
+
+    const result = await new AgentsClient(authedClient()).apps.recommend({
+      about: 'tengo una empresa de yorgurt llamada la peña',
+      name: 'David',
+    });
+
+    expect(result).toEqual({
+      about: 'tengo una empresa de yorgurt llamada la peña',
+      story: '',
+      source: 'failed',
+      stories: 'template',
+      data: [],
+      included: [],
+    });
+  });
 });

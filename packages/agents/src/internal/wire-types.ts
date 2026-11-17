@@ -151,11 +151,11 @@ export interface RecommendIncludedAppWire {
 }
 
 export interface RecommendAppsResponse {
-  about: string;
-  story: string;
+  about?: string;
+  story?: string;
   name?: string;
-  source: 'scored' | 'failed';
-  stories: 'model' | 'template';
-  data: RecommendedAppWire[];
-  included: RecommendIncludedAppWire[];
+  source?: 'scored' | 'failed';
+  stories?: 'model' | 'template';
+  data?: RecommendedAppWire[];
+  included?: RecommendIncludedAppWire[];
 }

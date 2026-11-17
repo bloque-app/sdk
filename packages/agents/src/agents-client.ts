@@ -346,12 +346,12 @@ export class AppsClient extends BaseClient {
       body,
     });
     const mapped: RecommendAppsResult = {
-      about: response.about,
-      story: response.story,
-      source: response.source,
-      stories: response.stories,
-      data: response.data.map(mapRecommendedApp),
-      included: response.included.map(mapIncludedApp),
+      about: response.about ?? params.about,
+      story: response.story ?? '',
+      source: response.source === 'scored' ? 'scored' : 'failed',
+      stories: response.stories === 'model' ? 'model' : 'template',
+      data: (response.data ?? []).map(mapRecommendedApp),
+      included: (response.included ?? []).map(mapIncludedApp),
     };
     if (response.name !== undefined) {
       mapped.name = response.name;
