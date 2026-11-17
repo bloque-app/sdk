@@ -1,5 +1,12 @@
 # @bloque/sdk-agents
 
+## 0.28.1
+
+### Patch Changes
+
+- a1e28b4: `agents.apps.recommend()` maps missing `data` and `included` to `[]` so a `source: "failed"` answer is returned instead of throwing.
+  - @bloque/sdk-core@0.28.1
+
 ## 0.28.0
 
 ### Minor Changes

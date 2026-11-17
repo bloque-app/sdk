@@ -1,5 +1,18 @@
 # @bloque/sdk
 
+## 0.28.1
+
+### Patch Changes
+
+- Updated dependencies [a1e28b4]
+  - @bloque/sdk-agents@0.28.1
+  - @bloque/sdk-core@0.28.1
+  - @bloque/sdk-accounts@0.28.1
+  - @bloque/sdk-compliance@0.28.1
+  - @bloque/sdk-identity@0.28.1
+  - @bloque/sdk-orgs@0.28.1
+  - @bloque/sdk-swap@0.28.1
+
 ## 0.28.0
 
 ### Minor Changes
