@@ -16,6 +16,7 @@ import type {
   RecommendAppsRequest,
   RecommendAppsResponse,
   RecommendedAppWire,
+  RecommendIncludedAppWire,
   WhatsAppChannelWire,
 } from './internal/wire-types';
 import type {
@@ -35,6 +36,7 @@ import type {
   RecommendAppsParams,
   RecommendAppsResult,
   RecommendedApp,
+  RecommendIncludedApp,
   WhatsAppChannel,
 } from './types';
 
@@ -127,6 +129,15 @@ function mapRecommendedApp(wire: RecommendedAppWire): RecommendedApp {
       message: turn.message,
     })),
     score: wire.score,
+  };
+}
+
+function mapIncludedApp(wire: RecommendIncludedAppWire): RecommendIncludedApp {
+  return {
+    id: wire.id,
+    name: wire.name,
+    availability: wire.availability,
+    story: wire.story,
   };
 }
 
@@ -306,7 +317,8 @@ export class AppsClient extends BaseClient {
    * Does not require an agent URN or `ready`. Works before and during
    * create. `about` is required (1–4000 characters). `name` is optional.
    * Each card's `score` is an integer fit 0–4. `source` is `scored` or
-   * `heuristic`. `stories` is `model` or `template`.
+   * `failed`. `stories` is `model` or `template`. `included` is Bloque-native
+   * capabilities (reminders, automations, PDF reports, payments).
    *
    * Errors: `400 E_INVALID_BODY`, `401`, `403 E_AGENT_FORBIDDEN`,
    * `502` / `503 E_AGENT_APPS_UNAVAILABLE`.
@@ -339,6 +351,7 @@ export class AppsClient extends BaseClient {
       source: response.source,
       stories: response.stories,
       data: response.data.map(mapRecommendedApp),
+      included: response.included.map(mapIncludedApp),
     };
     if (response.name !== undefined) {
       mapped.name = response.name;
