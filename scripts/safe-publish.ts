@@ -59,7 +59,7 @@ for (const field of ['dependencies', 'peerDependencies', 'optionalDependencies',
 }
 try {
   writeFileSync(join(cwd, 'package.json'), `${JSON.stringify(manifest, null, 2)}\n`);
-  execSync('npm publish --provenance --access public --tag v0.28', {
+  execSync('npm publish --provenance --access public --tag backport', {
     cwd,
     stdio: 'inherit',
   });
