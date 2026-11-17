@@ -4,6 +4,7 @@
 
 ### Patch Changes
 
+- a1e28b4: `agents.apps.recommend()` maps missing `data` and `included` to `[]` so a `source: "failed"` answer is returned instead of throwing.
 - Updated dependencies [a1e28b4]
   - @bloque/sdk-agents@0.28.1
   - @bloque/sdk-core@0.28.1
