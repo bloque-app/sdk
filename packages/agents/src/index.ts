@@ -31,6 +31,9 @@ export type {
   RecommendAppsTurn,
   RecommendAppsTurnRole,
   RecommendedApp,
+  RecommendIncludedApp,
+  RecommendIncludedAppId,
+  RecommendIncludedAvailability,
   WhatsAppChannel,
   WhatsAppChannelStatus,
 } from './types';

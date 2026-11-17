@@ -143,11 +143,19 @@ export interface RecommendedAppWire {
   score: 0 | 1 | 2 | 3 | 4;
 }
 
+export interface RecommendIncludedAppWire {
+  id: 'reminders' | 'automations' | 'pdf_reports' | 'payments';
+  name: string;
+  availability: 'included' | 'soon';
+  story: string;
+}
+
 export interface RecommendAppsResponse {
   about: string;
   story: string;
   name?: string;
-  source: 'scored' | 'heuristic';
+  source: 'scored' | 'failed';
   stories: 'model' | 'template';
   data: RecommendedAppWire[];
+  included: RecommendIncludedAppWire[];
 }

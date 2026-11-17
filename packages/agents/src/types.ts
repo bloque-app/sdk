@@ -222,13 +222,29 @@ export interface RecommendAppsTurn {
 export type RecommendAppsFit = 0 | 1 | 2 | 3 | 4;
 
 /**
- * How the cards were ranked. `scored` is the hosted ranker; `heuristic` is
- * the fallback when that ranker is not used.
+ * How the connectable cards were ranked. `scored` is the hosted ranker;
+ * `failed` means ranking did not complete and `data` may be empty.
  */
-export type RecommendAppsSource = 'scored' | 'heuristic';
+export type RecommendAppsSource = 'scored' | 'failed';
 
 /** How the story copy was produced. `model` is written copy; `template` is stock copy. */
 export type RecommendAppsStories = 'model' | 'template';
+
+/** Bloque-native capability shown next to ranked catalog cards. */
+export type RecommendIncludedAppId =
+  | 'reminders'
+  | 'automations'
+  | 'pdf_reports'
+  | 'payments';
+
+export type RecommendIncludedAvailability = 'included' | 'soon';
+
+export interface RecommendIncludedApp {
+  id: RecommendIncludedAppId;
+  name: string;
+  availability: RecommendIncludedAvailability;
+  story: string;
+}
 
 export interface RecommendedApp {
   name: string;
@@ -245,4 +261,5 @@ export interface RecommendAppsResult {
   source: RecommendAppsSource;
   stories: RecommendAppsStories;
   data: RecommendedApp[];
+  included: RecommendIncludedApp[];
 }

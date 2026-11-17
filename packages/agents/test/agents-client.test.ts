@@ -593,6 +593,22 @@ describe('AgentsClient', () => {
             score: 4,
           },
         ],
+        included: [
+          {
+            id: 'reminders',
+            name: 'Reminders',
+            availability: 'included',
+            story:
+              'When a visit is coming, tell Mr. Bloque what time to message you on WhatsApp.',
+          },
+          {
+            id: 'payments',
+            name: 'Payments',
+            availability: 'soon',
+            story:
+              'Coming soon, you can ask Mr. Bloque for a payment from WhatsApp.',
+          },
+        ],
       }),
     );
 
@@ -624,6 +640,22 @@ describe('AgentsClient', () => {
             { role: 'mr.bloque', message: 'I can open Gmail for invoices.' },
           ],
           score: 4,
+        },
+      ],
+      included: [
+        {
+          id: 'reminders',
+          name: 'Reminders',
+          availability: 'included',
+          story:
+            'When a visit is coming, tell Mr. Bloque what time to message you on WhatsApp.',
+        },
+        {
+          id: 'payments',
+          name: 'Payments',
+          availability: 'soon',
+          story:
+            'Coming soon, you can ask Mr. Bloque for a payment from WhatsApp.',
         },
       ],
     });
