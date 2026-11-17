@@ -574,41 +574,18 @@ describe('AgentsClient', () => {
     expect((error as BloqueNotFoundError).code).toBe('E_AGENT_APP_NOT_FOUND');
   });
 
-  it('apps.recommend POSTs /api/agents/apps/recommend and maps data', async () => {
+  it('apps.recommend POSTs /api/agents/apps/recommend and maps a pending job', async () => {
+    const id = '1367f238-f2e3-43f5-bf83-bd1cbadeab0b';
     const calls = captureFetch(() =>
       jsonResponse({
-        about: 'imports coffee and invoices in Gmail',
-        story: 'Start with email so invoices land in one place.',
-        name: 'Ada',
-        source: 'scored',
-        stories: 'model',
-        data: [
-          {
-            name: 'Email',
-            slugs: ['gmail', 'outlook'],
-            story: 'One inbox for this work.',
-            conversation: [
-              { role: 'mr.bloque', message: 'I can open Gmail for invoices.' },
-            ],
-            score: 4,
-          },
-        ],
-        included: [
-          {
-            id: 'reminders',
-            name: 'Reminders',
-            availability: 'included',
-            story:
-              'When a visit is coming, tell Mr. Bloque what time to message you on WhatsApp.',
-          },
-          {
-            id: 'payments',
-            name: 'Payments',
-            availability: 'soon',
-            story:
-              'Coming soon, you can ask Mr. Bloque for a payment from WhatsApp.',
-          },
-        ],
+        version: 2,
+        status: 'pending',
+        id,
+        status_url: `/api/agents/onboarding/${id}`,
+        input: {
+          about: 'imports coffee and invoices in Gmail',
+          name: 'Ada',
+        },
       }),
     );
 
@@ -626,38 +603,73 @@ describe('AgentsClient', () => {
       name: 'Ada',
     });
     expect(result).toEqual({
-      about: 'imports coffee and invoices in Gmail',
-      story: 'Start with email so invoices land in one place.',
-      name: 'Ada',
-      source: 'scored',
-      stories: 'model',
-      data: [
-        {
-          name: 'Email',
-          slugs: ['gmail', 'outlook'],
-          story: 'One inbox for this work.',
-          conversation: [
-            { role: 'mr.bloque', message: 'I can open Gmail for invoices.' },
-          ],
-          score: 4,
-        },
-      ],
-      included: [
-        {
-          id: 'reminders',
-          name: 'Reminders',
-          availability: 'included',
-          story:
-            'When a visit is coming, tell Mr. Bloque what time to message you on WhatsApp.',
-        },
-        {
-          id: 'payments',
-          name: 'Payments',
-          availability: 'soon',
-          story:
-            'Coming soon, you can ask Mr. Bloque for a payment from WhatsApp.',
-        },
-      ],
+      version: 2,
+      status: 'pending',
+      id,
+      statusUrl: `/api/agents/onboarding/${id}`,
+      input: {
+        about: 'imports coffee and invoices in Gmail',
+        name: 'Ada',
+      },
     });
+  });
+
+  it('onboarding.get polls until ready', async () => {
+    const id = '1367f238-f2e3-43f5-bf83-bd1cbadeab0b';
+    const calls = captureFetch(() =>
+      jsonResponse({
+        version: 2,
+        status: 'ready',
+        id,
+        input: { about: 'imports coffee and invoices in Gmail' },
+        perfil: {
+          negocio: 'café',
+          tiene_nombre: false,
+          ciudad: 'Tunja',
+          oficio: 'café',
+          handle: 'cafe',
+          url: 'cafe.demo',
+          avatar_url: 'https://l.dev-bloque.app/example',
+        },
+        intro: { titulo: 'Café', linea: 'Constancia', cta: 'Escribe' },
+        ejemplos: { instagram: { titulo: 'Instagram' } },
+        mucho_mas: { titulo: 'Más' },
+        cierre: {
+          pase_kicker: 'Empieza',
+          boton: 'Escribe',
+          pago_titulo: 'Café',
+        },
+      }),
+    );
+
+    const result = await new AgentsClient(authedClient()).onboarding.get(id);
+
+    expect(calls[0]?.url).toBe(
+      `https://api.dev-bloque.app/api/agents/onboarding/${id}`,
+    );
+    expect(calls[0]?.init?.method).toBe('GET');
+    expect(result.status).toBe('ready');
+    if (result.status !== 'ready') throw new Error('expected ready');
+    expect(result.perfil.ciudad).toBe('Tunja');
+    expect(result.intro.titulo).toBe('Café');
+    expect(result.mucho_mas.titulo).toBe('Más');
+  });
+
+  it('maps E_AGENT_ONBOARDING_NOT_FOUND (404) to BloqueNotFoundError', async () => {
+    captureFetch(() => errorResponse(404, 'E_AGENT_ONBOARDING_NOT_FOUND'));
+
+    let error: unknown;
+    try {
+      await new AgentsClient(authedClient()).onboarding.get(
+        'aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee',
+      );
+    } catch (e) {
+      error = e;
+    }
+
+    expect(error).toBeInstanceOf(BloqueNotFoundError);
+    expect((error as BloqueNotFoundError).code).toBe(
+      'E_AGENT_ONBOARDING_NOT_FOUND',
+    );
   });
 });

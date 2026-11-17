@@ -130,32 +130,26 @@ export interface RecommendAppsRequest {
   name?: string;
 }
 
-export interface RecommendAppsTurnWire {
-  role: 'owner' | 'mr.bloque';
-  message: string;
-}
-
-export interface RecommendedAppWire {
-  name: string;
-  slugs: string[];
-  story: string;
-  conversation?: RecommendAppsTurnWire[];
-  score: 0 | 1 | 2 | 3 | 4;
-}
-
-export interface RecommendIncludedAppWire {
-  id: 'reminders' | 'automations' | 'pdf_reports' | 'payments';
-  name: string;
-  availability: 'included' | 'soon';
-  story: string;
-}
-
-export interface RecommendAppsResponse {
-  about: string;
-  story: string;
-  name?: string;
-  source: 'scored' | 'failed';
-  stories: 'model' | 'template';
-  data: RecommendedAppWire[];
-  included: RecommendIncludedAppWire[];
+export interface OnboardingWire {
+  version: 2;
+  status: 'pending' | 'ready' | 'unavailable';
+  id?: string;
+  status_url?: string;
+  input: { about: string; name?: string };
+  progress?: 'admitted' | 'generating' | 'editing' | 'ready';
+  reason?:
+    | 'not_configured'
+    | 'queue_full'
+    | 'outcome_unknown'
+    | 'image_failed'
+    | 'storage_failed'
+    | 'copy_invalid'
+    | 'brief_failed'
+    | 'deadline'
+    | 'unavailable';
+  perfil?: unknown;
+  intro?: unknown;
+  ejemplos?: unknown;
+  mucho_mas?: unknown;
+  cierre?: unknown;
 }

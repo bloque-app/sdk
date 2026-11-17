@@ -13,10 +13,8 @@ import type {
   ListAgentAppsResponse,
   ListAgentsResponse,
   ListAppCatalogResponse,
+  OnboardingWire,
   RecommendAppsRequest,
-  RecommendAppsResponse,
-  RecommendedAppWire,
-  RecommendIncludedAppWire,
   WhatsAppChannelWire,
 } from './internal/wire-types';
 import type {
@@ -33,10 +31,8 @@ import type {
   ListAgentsResult,
   ListAppCatalogParams,
   ListAppCatalogResult,
+  OnboardingResult,
   RecommendAppsParams,
-  RecommendAppsResult,
-  RecommendedApp,
-  RecommendIncludedApp,
   WhatsAppChannel,
 } from './types';
 
@@ -119,26 +115,12 @@ function mapAgentAppConnect(wire: AgentAppConnectWire): AgentAppConnect {
   return mapped;
 }
 
-function mapRecommendedApp(wire: RecommendedAppWire): RecommendedApp {
+function mapOnboarding(wire: OnboardingWire): OnboardingResult {
+  const { status_url, ...rest } = wire;
   return {
-    name: wire.name,
-    slugs: wire.slugs,
-    story: wire.story,
-    conversation: (wire.conversation ?? []).map((turn) => ({
-      role: turn.role,
-      message: turn.message,
-    })),
-    score: wire.score,
-  };
-}
-
-function mapIncludedApp(wire: RecommendIncludedAppWire): RecommendIncludedApp {
-  return {
-    id: wire.id,
-    name: wire.name,
-    availability: wire.availability,
-    story: wire.story,
-  };
+    ...rest,
+    ...(status_url ? { statusUrl: status_url } : {}),
+  } as OnboardingResult;
 }
 
 function createHeaders(
@@ -312,61 +294,86 @@ export class AppsClient extends BaseClient {
   }
 
   /**
-   * Recommend catalog apps from a short description of the work.
+   * Start onboarding generation from a short description of the work.
    *
-   * Does not require an agent URN or `ready`. Works before and during
-   * create. `about` is required (1–4000 characters). `name` is optional.
-   * Each card's `score` is an integer fit 0–4. `source` is `scored` or
-   * `failed`. `stories` is `model` or `template`. `included` is Bloque-native
-   * capabilities (reminders, automations, PDF reports, payments).
+   * Does not require an agent URN or `ready`. Returns immediately with
+   * `status: "pending"`, an `id`, and `statusUrl`. Poll
+   * `agents.onboarding.get(id)` until `ready` or `unavailable`.
+   *
+   * `about` is required (1–4000 characters). `name` is optional (max 80).
+   * If the same note is already generating or ready, this returns that job.
    *
    * Errors: `400 E_INVALID_BODY`, `401`, `403 E_AGENT_FORBIDDEN`,
    * `502` / `503 E_AGENT_APPS_UNAVAILABLE`.
    *
    * @example
    * ```typescript
-   * const recommended = await clients.agents.apps.recommend({
+   * let job = await clients.agents.apps.recommend({
    *   about: 'imports coffee and invoices in Gmail',
    *   name: 'Ada',
    * });
-   * const firstSlug = recommended.data[0]?.slugs[0];
+   * while (job.status === 'pending') {
+   *   job = await clients.agents.onboarding.get(job.id);
+   * }
    * ```
    */
-  async recommend(params: RecommendAppsParams): Promise<RecommendAppsResult> {
+  async recommend(params: RecommendAppsParams): Promise<OnboardingResult> {
     const body: RecommendAppsRequest = { about: params.about };
     if (params.name !== undefined) {
       body.name = params.name;
     }
     const response = await this.httpClient.request<
-      RecommendAppsResponse,
+      OnboardingWire,
       RecommendAppsRequest
     >({
       method: 'POST',
       path: '/api/agents/apps/recommend',
       body,
     });
-    const mapped: RecommendAppsResult = {
-      about: response.about,
-      story: response.story,
-      source: response.source,
-      stories: response.stories,
-      data: response.data.map(mapRecommendedApp),
-      included: response.included.map(mapIncludedApp),
-    };
-    if (response.name !== undefined) {
-      mapped.name = response.name;
-    }
-    return mapped;
+    return mapOnboarding(response);
+  }
+}
+
+export class OnboardingClient extends BaseClient {
+  /**
+   * Poll onboarding generation started by `agents.apps.recommend()`.
+   *
+   * Does not require an agent URN. Poll until `status` is `ready` or
+   * `unavailable`. While `pending`, generation is still running.
+   * `progress` is `admitted`, `generating`, or `editing` when the API
+   * reports a stage. A ready body includes `perfil`, `intro`, `ejemplos`,
+   * `mucho_mas`, and `cierre`.
+   *
+   * Errors: `400 E_INVALID_BODY`, `401`, `403 E_AGENT_FORBIDDEN`,
+   * `404 E_AGENT_ONBOARDING_NOT_FOUND`,
+   * `502` / `503 E_AGENT_APPS_UNAVAILABLE`.
+   *
+   * @example
+   * ```typescript
+   * const job = await clients.agents.onboarding.get(id);
+   * if (job.status === 'ready') {
+   *   console.log(job.intro.titulo);
+   * }
+   * ```
+   */
+  async get(id: string): Promise<OnboardingResult> {
+    const response = await this.httpClient.request<OnboardingWire>({
+      method: 'GET',
+      path: `/api/agents/onboarding/${id}`,
+    });
+    return mapOnboarding(response);
   }
 }
 
 export class AgentsClient extends BaseClient {
   readonly apps: AppsClient;
+  readonly onboarding: OnboardingClient;
   readonly whatsapp: WhatsAppChannelClient;
 
   constructor(httpClient: HttpClient) {
     super(httpClient);
     this.apps = new AppsClient(this.httpClient);
+    this.onboarding = new OnboardingClient(this.httpClient);
     this.whatsapp = new WhatsAppChannelClient(this.httpClient);
   }
 
