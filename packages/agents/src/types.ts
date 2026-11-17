@@ -207,59 +207,198 @@ export interface ConnectAgentAppParams {
 export interface RecommendAppsParams {
   /** What the hosted agent is for. 1–4000 characters. */
   about: string;
-  /** Optional display name used in the recommendation copy. Max 80. */
+  /** Optional display name used in the walkthrough copy. Max 80. */
   name?: string;
 }
 
-export type RecommendAppsTurnRole = 'owner' | 'mr.bloque';
+export type OnboardingStatus = 'pending' | 'ready' | 'unavailable';
 
-export interface RecommendAppsTurn {
-  role: RecommendAppsTurnRole;
-  message: string;
+/** Generation stage when the API reports one. Pending jobs may omit it. */
+export type OnboardingProgress =
+  | 'admitted'
+  | 'generating'
+  | 'editing'
+  | 'ready';
+
+export type OnboardingReason =
+  | 'not_configured'
+  | 'queue_full'
+  | 'outcome_unknown'
+  | 'image_failed'
+  | 'storage_failed'
+  | 'copy_invalid'
+  | 'brief_failed'
+  | 'deadline'
+  | 'unavailable';
+
+export interface OnboardingInput {
+  about: string;
+  name?: string;
 }
 
-/** Integer fit of one card to the note. 0 is unrelated; 4 is an explicit request. */
-export type RecommendAppsFit = 0 | 1 | 2 | 3 | 4;
+export type OnboardingMuchoMasApp =
+  | 'whatsapp'
+  | 'instagram'
+  | 'recordatorio'
+  | 'correo'
+  | 'pdf'
+  | 'web'
+  | 'pagos'
+  | 'automatizacion';
+
+export interface OnboardingPerfil {
+  negocio: string;
+  tiene_nombre: boolean;
+  ciudad: string;
+  oficio: string;
+  handle: string;
+  url: string;
+  avatar_url: string;
+}
+
+export interface OnboardingIntro {
+  titulo: string;
+  linea: string;
+  cta: string;
+}
+
+export interface OnboardingConectar {
+  pregunta: string;
+  boton: string | null;
+  listo: string | null;
+}
+
+export interface OnboardingTextoTurn {
+  de: 'dueno' | 'bot';
+  texto: string;
+}
+
+export interface OnboardingPost {
+  imagen_url: string;
+  caption: string;
+  slides?: string[];
+  alt?: string;
+}
+
+export interface OnboardingEjemplos {
+  instagram: {
+    titulo: string;
+    explicacion: string;
+    chat: Array<
+      OnboardingTextoTurn & {
+        tipo?: 'foto';
+        imagen_url?: string;
+      }
+    >;
+    post: {
+      imagen_url: string;
+      caption: string;
+      likes: number;
+      tiempo: string;
+    };
+    posts?: OnboardingPost[];
+    conectar: OnboardingConectar;
+  };
+  comentarios: {
+    titulo: string;
+    explicacion: string;
+    chat: Array<
+      OnboardingTextoTurn & {
+        tipo?: 'archivo';
+        archivo?: { nombre: string; detalle: string };
+      }
+    >;
+    hilo: {
+      post_imagen_url: string;
+      cliente: string;
+      pregunta: string;
+      respuesta: string;
+      tiempo_respuesta: string;
+    };
+    conectar: OnboardingConectar;
+  };
+  web: {
+    titulo: string;
+    explicacion: string;
+    chat: OnboardingTextoTurn[];
+    pagina: {
+      url: string;
+      hero_url: string;
+      titulo: string;
+      subtitulo: string;
+      boton: string;
+      etiqueta: string;
+    };
+    conectar: OnboardingConectar;
+  };
+  correo: {
+    titulo: string;
+    explicacion: string;
+    chat: OnboardingTextoTurn[];
+    borrador: {
+      de: string;
+      asunto: string;
+      preview: string;
+      items: Array<{ concepto: string; precio: string }>;
+      total: string;
+    };
+    conectar: OnboardingConectar;
+  };
+}
+
+export interface OnboardingMuchoMas {
+  titulo: string;
+  subtitulo: string;
+  linea: string;
+  filas: Array<Array<{ app: OnboardingMuchoMasApp; texto: string }>>;
+}
+
+export interface OnboardingCierre {
+  pase_kicker: string;
+  boton: string;
+  pago_titulo: string;
+}
+
+export interface OnboardingPending {
+  version: 2;
+  status: 'pending';
+  id: string;
+  statusUrl: string;
+  input: OnboardingInput;
+  progress?: OnboardingProgress;
+}
+
+export interface OnboardingUnavailable {
+  version: 2;
+  status: 'unavailable';
+  id?: string;
+  statusUrl?: string;
+  input: OnboardingInput;
+  reason: OnboardingReason;
+  progress?: OnboardingProgress;
+}
+
+export interface OnboardingReady {
+  version: 2;
+  status: 'ready';
+  id: string;
+  input: { about: string };
+  progress?: OnboardingProgress;
+  perfil: OnboardingPerfil;
+  intro: OnboardingIntro;
+  ejemplos: OnboardingEjemplos;
+  mucho_mas: OnboardingMuchoMas;
+  cierre: OnboardingCierre;
+}
 
 /**
- * How the connectable cards were ranked. `scored` is the hosted ranker;
- * `failed` means ranking did not complete and `data` may be empty.
+ * Walkthrough job from `agents.apps.recommend()` or `agents.onboarding.get()`.
+ * Nested walkthrough fields keep the API's Spanish keys.
  */
-export type RecommendAppsSource = 'scored' | 'failed';
+export type OnboardingResult =
+  | OnboardingPending
+  | OnboardingUnavailable
+  | OnboardingReady;
 
-/** How the story copy was produced. `model` is written copy; `template` is stock copy. */
-export type RecommendAppsStories = 'model' | 'template';
-
-/** Bloque-native capability shown next to ranked catalog cards. */
-export type RecommendIncludedAppId =
-  | 'reminders'
-  | 'automations'
-  | 'pdf_reports'
-  | 'payments';
-
-export type RecommendIncludedAvailability = 'included' | 'soon';
-
-export interface RecommendIncludedApp {
-  id: RecommendIncludedAppId;
-  name: string;
-  availability: RecommendIncludedAvailability;
-  story: string;
-}
-
-export interface RecommendedApp {
-  name: string;
-  slugs: string[];
-  story: string;
-  conversation: RecommendAppsTurn[];
-  score: RecommendAppsFit;
-}
-
-export interface RecommendAppsResult {
-  about: string;
-  story: string;
-  name?: string;
-  source: RecommendAppsSource;
-  stories: RecommendAppsStories;
-  data: RecommendedApp[];
-  included: RecommendIncludedApp[];
-}
+/** @deprecated Use {@link OnboardingResult}. */
+export type RecommendAppsResult = OnboardingResult;

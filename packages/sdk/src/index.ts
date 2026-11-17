@@ -4,6 +4,7 @@ export type * from '@bloque/sdk-agents';
 export type {
   AgentsClient,
   AppsClient,
+  OnboardingClient,
   WhatsAppChannelClient,
 } from '@bloque/sdk-agents';
 export type * from '@bloque/sdk-compliance';

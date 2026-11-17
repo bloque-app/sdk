@@ -2,7 +2,7 @@
 
 Hosted personal agent client. One agent per Bloque user.
 
-## Register a user, deploy the agent, recommend an app, connect it, link WhatsApp
+## Register a user, deploy the agent, generate onboarding, connect an app, link WhatsApp
 
 Origin-key backend registers the identity. User-scoped clients create the hosted
 agent (that is the deploy: signup → hosted VM). Apps catalog, recommend, and
@@ -36,16 +36,13 @@ const agent = await clients.agents.create({
 // agent.status === "provisioning" — the hosted VM is deploying
 // Custom skill URLs are fetched on VM boot (.md or .zip).
 
-const recommended = await clients.agents.apps.recommend({
+let onboarding = await clients.agents.apps.recommend({
   about: 'imports coffee and invoices in Gmail',
   name: 'Ada',
 });
-const firstSlug = recommended.data[0]?.slugs[0];
-if (firstSlug) {
-  const connected = await clients.agents.apps.connect(agent.urn, {
-    app: firstSlug,
-  });
-  // Hand connected.connectUrl to the owner when status is "link_issued".
+while (onboarding.status === 'pending') {
+  await new Promise((r) => setTimeout(r, 2000));
+  onboarding = await clients.agents.onboarding.get(onboarding.id);
 }
 
 let current = agent;
