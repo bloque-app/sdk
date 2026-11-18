@@ -280,6 +280,7 @@ export interface OnboardingPost {
   alt?: string;
 }
 
+/** Ready walkthrough examples. Comentarios and web have no chat; Instagram still has `chat`, `post`, and optional designed `posts`. */
 export interface OnboardingEjemplos {
   instagram: {
     titulo: string;
@@ -302,12 +303,6 @@ export interface OnboardingEjemplos {
   comentarios: {
     titulo: string;
     explicacion: string;
-    chat: Array<
-      OnboardingTextoTurn & {
-        tipo?: 'archivo';
-        archivo?: { nombre: string; detalle: string };
-      }
-    >;
     hilo: {
       post_imagen_url: string;
       cliente: string;
@@ -320,7 +315,6 @@ export interface OnboardingEjemplos {
   web: {
     titulo: string;
     explicacion: string;
-    chat: OnboardingTextoTurn[];
     pagina: {
       url: string;
       hero_url: string;
