@@ -11,4 +11,4 @@
  * `packages/sdk/package.json` (scripts/sync-sdk-version.ts).
  */
 export const SDK_NAME = '@bloque/sdk';
-export const SDK_VERSION = '0.29.0';
+export const SDK_VERSION = '0.30.0';

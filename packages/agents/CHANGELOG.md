@@ -1,5 +1,15 @@
 # @bloque/sdk-agents
 
+## 0.30.0
+
+### Minor Changes
+
+- Ready onboarding walkthroughs no longer include `chat` on `comentarios` or `web`. Instagram still has `chat`, `post`, and optional designed `posts`.
+
+### Patch Changes
+
+- @bloque/sdk-core@0.30.0
+
 ## 0.29.0
 
 ### Minor Changes
