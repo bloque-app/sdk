@@ -1010,8 +1010,8 @@ Errors for this route:
 | Code | When |
 | --- | --- |
 | `E_INVALID_WITHDRAWAL_OPERATION` | HTTP 400: `args.withdrawal_op` is missing or malformed |
-| `E_WITHDRAWAL_NOT_VERIFIED` | The order fails because the withdrawal could not be verified |
-| `E_WITHDRAWAL_ALREADY_USED` | The order fails because that withdrawal already backs another order |
+| `E_WITHDRAWAL_NOT_VERIFIED` | The withdrawal could not be verified. The order first stays `in_progress` while Bloque reviews it, then continues on the same withdrawal; it ends `failed` with this code only if Bloque can't continue |
+| `E_WITHDRAWAL_ALREADY_USED` | The order fails at once: that withdrawal already backs another order |
 
 ## External US Bank On-Ramp (ACH → Kusama)
 
