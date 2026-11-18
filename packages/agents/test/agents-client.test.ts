@@ -632,7 +632,78 @@ describe('AgentsClient', () => {
           avatar_url: 'https://l.dev-bloque.app/example',
         },
         intro: { titulo: 'Café', linea: 'Constancia', cta: 'Escribe' },
-        ejemplos: { instagram: { titulo: 'Instagram' } },
+        ejemplos: {
+          instagram: {
+            titulo: 'Instagram',
+            explicacion: 'Publica',
+            chat: [
+              {
+                de: 'dueno',
+                texto: 'Foto',
+                tipo: 'foto',
+                imagen_url: 'https://l.dev-bloque.app/example',
+              },
+              { de: 'bot', texto: 'Bien' },
+              { de: 'bot', texto: 'Sigue' },
+            ],
+            post: {
+              imagen_url: 'https://l.dev-bloque.app/example',
+              caption: 'Café en Tunja',
+              likes: 42,
+              tiempo: 'hace 2 días',
+            },
+            posts: [
+              {
+                imagen_url: 'https://l.dev-bloque.app/example',
+                caption: 'Café en Tunja',
+                alt: 'Taza de café en Tunja',
+              },
+            ],
+            conectar: { pregunta: '¿Listo?', boton: 'Sí', listo: 'Hecho' },
+          },
+          comentarios: {
+            titulo: 'Comentarios',
+            explicacion: 'Responde',
+            hilo: {
+              post_imagen_url: 'https://l.dev-bloque.app/example',
+              cliente: 'Interesado',
+              pregunta: '¿Cómo?',
+              respuesta: 'Con un plan',
+              tiempo_respuesta: '1 día',
+            },
+            conectar: { pregunta: '¿Listo?', boton: 'Sí', listo: 'Hecho' },
+          },
+          web: {
+            titulo: 'Web',
+            explicacion: 'Página',
+            pagina: {
+              url: 'https://cafe.example.com',
+              hero_url: 'https://l.dev-bloque.app/example',
+              titulo: 'Café',
+              subtitulo: 'Tunja',
+              boton: 'Escribe',
+              etiqueta: 'Café',
+            },
+            conectar: { pregunta: '¿Página?', boton: null, listo: null },
+          },
+          correo: {
+            titulo: 'Correo',
+            explicacion: 'Borrador',
+            chat: [
+              { de: 'bot', texto: 'Correo' },
+              { de: 'dueno', texto: 'Sí' },
+              { de: 'bot', texto: 'Listo' },
+            ],
+            borrador: {
+              de: 'Ada',
+              asunto: 'Café',
+              preview: 'Constancia',
+              items: [{ concepto: 'Taza', precio: '—' }],
+              total: '—',
+            },
+            conectar: { pregunta: '¿Listo?', boton: 'Sí', listo: 'Hecho' },
+          },
+        },
         mucho_mas: { titulo: 'Más' },
         cierre: {
           pase_kicker: 'Empieza',
@@ -653,6 +724,12 @@ describe('AgentsClient', () => {
     expect(result.perfil.ciudad).toBe('Tunja');
     expect(result.intro.titulo).toBe('Café');
     expect(result.mucho_mas.titulo).toBe('Más');
+    expect(result.ejemplos.instagram.posts?.[0]?.alt).toBe(
+      'Taza de café en Tunja',
+    );
+    expect(result.ejemplos.comentarios).not.toHaveProperty('chat');
+    expect(result.ejemplos.web).not.toHaveProperty('chat');
+    expect(result.ejemplos.correo.chat).toHaveLength(3);
   });
 
   it('maps E_AGENT_ONBOARDING_NOT_FOUND (404) to BloqueNotFoundError', async () => {
